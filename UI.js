@@ -1,5 +1,10 @@
 class UI {
     constructor() {
+        // User input grid size
+        this.inputRows;
+        this.inputCols;
+        this.inputGrid = [];
+
         // Create the title input field
         this.titleLabel = createP('Title:');
         this.titleLabel.position(10, height + 5);
@@ -22,34 +27,79 @@ class UI {
         this.nextButton.mousePressed(() => this.displayAllShapes());
     }
 
-    displayAllShapes() {
-        // Clear the canvas
-        console.log("test");
+    setupInputGrid(_rows, _cols) {
+        this.inputRows = _rows;
+        this.inputCols = _cols;
+        this.resetInputGrid();
     }
-  
-    saveShape() {
-        if (activeShape.isValid()) {
-            // shape is valid, add new shape
-            let newShape = new Shape(rows, cols);
-            newShape.addTitle(this.titleInput.value());
-            newShape.grid = activeShape.grid;
 
-            shapes.push(newShape);
-            console.log(shapes);
-
-            // Reset active shape and UI
-            activeShape = new Shape(rows, cols);
-            this.resetCanvas();
+    resetInputGrid() {
+        for (let i = 0; i < this.inputRows; i++) {
+            this.inputGrid[i] = [];
+            for (let j = 0; j < this.inputCols; j++) {
+                this.inputGrid[i][j] = false;
+            }
         }
     }
 
-    resetCanvas() {
-      background(255);
-      this.titleInput.value('');
-      activeShape.drawGrid();
-      this.displayShapeTitles();
+    drawInputGrid() {
+        for (let x = 0; x < this.inputRows; x++) {
+            for (let y = 0; y < this.inputCols; y++) {
+                // draw cell
+                if (this.inputGrid[y][x]) {
+                    fill(0); // Fill black if the rect is clicked
+                } else {
+                    fill(255); // Fill white
+                }
+                rect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
     }
-  
+
+    selectInputCell(mouseX, mouseY) {
+        let gridX = Math.floor(mouseX / cellSize); // Column
+        let gridY = Math.floor(mouseY / cellSize); // Row
+
+        if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+            this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX]; // Toggle the state
+            this.drawInputGrid(); // Redraw to update clicked state
+        }
+    }
+
+    saveShape() {
+        // check if the shape is valid before saving
+        let gridHeight = this.inputGrid.length;
+        let bottomRow = this.inputGrid[gridHeight - 1];
+        // check if the bottom has at least 1 clicked cell
+        if (bottomRow.includes(true)) {
+            // find the shape title
+            let titleValue = this.titleInput.value();
+            if (titleValue === '') { // no title entered by user
+                titleValue = `shape-${shapes.length + 1}`;
+            }
+
+            // save the shape
+            let newShape = new Shape(titleValue);
+            newShape.saveUserInput(this.inputGrid);
+            shapes.push(newShape);
+            // console.log(JSON.stringify(shapes));
+
+            // Reset active shape and UI
+            this.resetCanvas();
+        } else {
+            alert('Shape must have a cell selected on the bottom row.');
+        }
+    }
+
+
+    resetCanvas() {
+        background(255);
+        this.titleInput.value('');
+        this.resetInputGrid();
+        this.drawInputGrid();
+        this.displayShapeTitles();
+    }
+
     displayShapeTitles() {
         // Start below the title input box
         let startY = this.titleInput.y + 25;
