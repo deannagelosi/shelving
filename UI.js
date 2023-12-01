@@ -68,8 +68,8 @@ class UI {
 
     saveShape() {
         // check if the shape is valid before saving
-        let gridHeight = this.inputGrid.length;
-        let bottomRow = this.inputGrid[gridHeight - 1];
+        let bottomRow = this.inputGrid[this.inputGrid.length - 1];
+
         // check if the bottom has at least 1 clicked cell
         if (bottomRow.includes(true)) {
             // find the shape title
@@ -80,8 +80,9 @@ class UI {
 
             // save the shape
             let newShape = new Shape(titleValue);
-            newShape.saveUserInput(this.inputGrid);
+            newShape.saveUserInput([...this.inputGrid]); // save a copy of the input grid
             shapes.push(newShape);
+            console.log(shapes);
             // console.log(JSON.stringify(shapes));
 
             // Reset active shape and UI
@@ -90,7 +91,6 @@ class UI {
             alert('Shape must have a cell selected on the bottom row.');
         }
     }
-
 
     resetCanvas() {
         background(255);
