@@ -7,6 +7,8 @@ class Shape {
     // bottom left corner of the shape, including overhangs
     this.posX;
     this.posY;
+    this.height;
+    this.width;
   }
 
   saveUserInput(_inputGrid) {
@@ -40,5 +42,7 @@ class Shape {
 
     this.shape = trimShape;
     this.inputGrid = _inputGrid;
+    this.height = this.shape.length;
+    this.width = this.shape[0].length;
   }
 }

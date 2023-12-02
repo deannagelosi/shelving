@@ -22,6 +22,7 @@ function setup() {
   loadShapeData();  
   shapeCase = new Case();
   shapeCase.sortShapes();
+  shapeCase.buildCase();
 }
 
 function draw() {
