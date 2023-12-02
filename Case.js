@@ -59,10 +59,10 @@ class Case {
     calcHeights() {
         // loop through each column, adding up their heights
         this.columnHeights = [];
-        for (let i = 0; i < this.positions.length; i++) {
+        for (let col = 0; col < this.positions.length; col++) {
             let totalHeight = 0;
-            for (let j = 0; j < this.positions[i].length; j++) {
-                totalHeight += this.positions[i][j].height;
+            for (let row = 0; row < this.positions[col].length; row++) {
+                totalHeight += this.positions[col][row].height;
             }
             this.columnHeights.push(totalHeight);
         }
@@ -73,11 +73,11 @@ class Case {
     calcShapesY() {
         // find the y value for every shape
         // loop each column, calculate the y value and set it to the shape
-        for (let i = 0; i < this.positions.length; i++) {
+        for (let col = 0; col < this.positions.length; col++) {
             // extra height on shorter columns
             let colBuffer = [0, 0, 0];
-            let numColShapes = this.positions[i].length;
-            if (this.columnHeights[i] < this.caseHeight) {
+            let numColShapes = this.positions[col].length;
+            if (this.columnHeights[col] < this.caseHeight) {
                 let heightDiff = (this.caseHeight - this.columnHeights[0]);
                 if (heightDiff % numColShapes == 0) {
                     colBuffer[0] = heightDiff / numColShapes;
@@ -89,13 +89,13 @@ class Case {
                     colBuffer[2] = Math.floor(heightDiff / numColShapes);
                 }
             }
-            for (let j = 0; j < this.positions[i].length; j++) {
-                if (j == 0) {
-                    this.positions[i][j].posY = 0;
+            for (let row = 0; row < this.positions[col].length; row++) {
+                if (row == 0) {
+                    this.positions[col][row].posY = 0;
                 }
                 else {
-                    let prevHeight = this.positions[i][j - 1].posY + this.positions[i][j - 1].height + colBuffer[j - 1];
-                    this.positions[i][j].posY = prevHeight + this.shapeBuffer;
+                    let prevHeight = this.positions[col][row - 1].posY + this.positions[col][row - 1].height;
+                    this.positions[col][row].posY = prevHeight + colBuffer[row - 1] + this.shapeBuffer;
                 }
             }
         }
