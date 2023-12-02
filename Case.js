@@ -3,9 +3,11 @@ class Case {
         this.caseWidth;
         this.caseHeight;
 
+        this.columnHeights = [];
+        this.rowWidths = [];
+
         this.shortShapes = [];
         this.tallShapes = [];
-        this.columnHeights = [];
         this.positions = []; // shape positions in the case
         this.shapeBuffer = 1; // space between shapes on top and sides
     }
@@ -28,6 +30,8 @@ class Case {
         // randomize shortShapes and tallShapes to reposition objects
         shuffle(this.shortShapes, true);
         shuffle(this.tallShapes, true);
+        // to do: could add sorting by width and height (ex: middle column widest on bottom)
+
         // create new 2D array with the following format (each row is a column in a case):
         // [[tallShapes[2], tallShapes[1], tallShapes[0],
         // [shortShapes[3], shortShapes[2], shortShapes[1], shortShapes[0]],
@@ -38,22 +42,16 @@ class Case {
             [this.tallShapes[5], this.tallShapes[4], this.tallShapes[3]]
         ];
 
-        // calculate the height of each column and set the height of the case
+        // calculate the height and width of each column and set the height of the case
         this.calcHeights();
+        this.calcWidths();
 
-        // calculate the y value for each shape
+        // calculate the y and x value for each shape
         this.calcShapesY();
 
-        // calculate the x value for each shape
-        this.calcShapesX();
-
-
-
-        // loop through each case row, adding up their widths
-        // add up the rows in the case
-        // set the widest row to the width of the case
-        // find the x value for every shape
-        // loop each row, calculate the x value and set it to the shape        
+        // display the case
+        this.displayCase();
+        this.displayShapes();
     }
 
     calcHeights() {
@@ -62,12 +60,36 @@ class Case {
         for (let col = 0; col < this.positions.length; col++) {
             let totalHeight = 0;
             for (let row = 0; row < this.positions[col].length; row++) {
-                totalHeight += this.positions[col][row].height;
+                totalHeight += this.positions[col][row].height + this.shapeBuffer;
             }
             this.columnHeights.push(totalHeight);
         }
+
         // find the column with the tallest height, set as case height
         this.caseHeight = Math.max(...this.columnHeights);
+    }
+
+    calcWidths() {
+        // loop through each row, adding up their widths
+        this.rowWidths = [];
+
+        // find the width of each row
+        for (let row = 0; row < this.positions.length; row++) {
+            let totalWidth = 0;
+            for (let col = 0; col < this.positions.length; col++) {
+                totalWidth += this.positions[col][row].width + (2 * this.shapeBuffer);
+            }
+            this.rowWidths.push(totalWidth);
+        }
+        // push the top row (middle column has 4 shapes)
+        let totalWidth = 0;
+        totalWidth += this.positions[0][2].width + (2 * this.shapeBuffer);
+        totalWidth += this.positions[1][3].width + (2 * this.shapeBuffer);
+        totalWidth += this.positions[2][2].width + (2 * this.shapeBuffer);
+        this.rowWidths.push(totalWidth);
+
+        // find the row with the widest width, set as case width
+        this.caseWidth = Math.max(...this.rowWidths);
     }
 
     calcShapesY() {
@@ -99,11 +121,46 @@ class Case {
                 }
             }
         }
-        console.log("column heights: ", this.columnHeights);
-        console.log(this.positions);
     }
 
     calcShapesX() {
+        console.log("row widths", this.rowWidths);
+
+        // left justify items in the first (left) column
+        // center items in the second (middle) column
+        // right justify items in the third (right) column
+        // loop the columns
+        for (let col = 0; col < this.positions.length; col++) {
+            // loop the rows
+            for (let row = 0; row < this.positions[col].length; row++) {
+                // calculate the x value
+                let shapeWidth = this.positions[col][row].width;
+                let colWidth = this.rowWidths[row];
+                let x;
+                if (col == 0) {
+                    x = 0;
+                } else if (col == 1) {
+                    x = (colWidth - shapeWidth) / 2;
+                } else if (col == 2) {
+                    x = colWidth - shapeWidth;
+                }
+                this.positions[col][row].posX = x;
+            }
+        }
+    }
+
+    displayCase() {
+        // display the outside edge of the case by drawing lines around the perimeter
+        stroke(0);
+        strokeWeight(2);
+        noFill();
+
+        let smallCell = cellSize / 4;
         
+        rect(20, 100, this.caseWidth * smallCell, this.caseHeight * smallCell);
+    }
+
+    displayShapes() {
+        // to do: here
     }
 }
