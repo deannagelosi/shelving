@@ -5,6 +5,7 @@ let rows = width / cellSize;
 let cols = height / cellSize;
 let shapes = [];
 let ui;
+let shapeCase;
 
 function preload() {
   shapeData = loadJSON('data/test-shapes.json');
@@ -18,7 +19,9 @@ function setup() {
   ui = new UI(); // setup buttons and input fields
   // ui.setupInputGrid(rows, cols); // setup input grid  
 
-  loadShapeData();
+  loadShapeData();  
+  shapeCase = new Case();
+  shapeCase.sortShapes();
 }
 
 function draw() {
