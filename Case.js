@@ -2,6 +2,7 @@ class Case {
     constructor() {
         this.caseWidth;
         this.caseHeight;
+        this.caseGrid = [];
 
         this.columnHeights = [];
         this.rowWidths = [];
@@ -32,10 +33,6 @@ class Case {
         shuffle(this.tallShapes, true);
         // to do: could add sorting by width and height (ex: middle column widest on bottom)
 
-        // create new 2D array with the following format (each row is a column in a case):
-        // [[tallShapes[2], tallShapes[1], tallShapes[0],
-        // [shortShapes[3], shortShapes[2], shortShapes[1], shortShapes[0]],
-        // [tallShapes[5], tallShapes[4], tallShapes[3]]
         this.positions = [
             [this.tallShapes[2], this.tallShapes[1], this.tallShapes[0]],
             [this.shortShapes[3], this.shortShapes[2], this.shortShapes[1], this.shortShapes[0]],
@@ -48,10 +45,12 @@ class Case {
 
         // calculate the y and x value for each shape
         this.calcShapesY();
+        this.calcShapesX();
 
         // display the case
         this.displayCase();
         this.displayShapes();
+        // console.log(this.caseGrid);
     }
 
     calcHeights() {
@@ -124,11 +123,10 @@ class Case {
     }
 
     calcShapesX() {
-        console.log("row widths", this.rowWidths);
-
         // left justify items in the first (left) column
         // center items in the second (middle) column
         // right justify items in the third (right) column
+        
         // loop the columns
         for (let col = 0; col < this.positions.length; col++) {
             // loop the rows
@@ -155,12 +153,43 @@ class Case {
         strokeWeight(2);
         noFill();
 
-        let smallCell = cellSize / 4;
-        
-        rect(20, 100, this.caseWidth * smallCell, this.caseHeight * smallCell);
+        rect(0, 0, this.caseWidth * caseCellSize, this.caseHeight * caseCellSize);
     }
 
     displayShapes() {
-        // to do: here
+        for (let i = 0; i < this.caseHeight; i++) {
+            this.caseGrid[i] = [];
+            for (let j = 0; j < this.caseWidth; j++) {
+                this.caseGrid[i][j] = false;
+            }
+        }
+
+        for (let i = 0; i < shapes.length; i++) {
+            let shape = shapes[i];
+            let shapeX = shape.posX;
+            let shapeY = shape.posY;
+            let shapeHeight = shape.height;
+            let shapeWidth = shape.width;
+
+            for (let y = 0; y < shapeHeight; y++) {
+                for (let x = 0; x < shapeWidth; x++) {
+                    if (shape.shape[y][x]) {
+                        this.caseGrid[shapeY + y][shapeX + x] = true;
+                    }
+                }
+            }
+        }
+
+        for (let y = 0; y < this.caseGrid.length; y++) {
+            for (let x = 0; x < this.caseGrid[0].length; x++) {
+                // draw cell
+                if (this.caseGrid[y][x]) {
+                    fill(0);
+                } else {
+                    fill(255);
+                }
+                rect(x * caseCellSize, y * caseCellSize, caseCellSize, caseCellSize);
+            }
+        }
     }
 }
