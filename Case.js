@@ -82,12 +82,6 @@ class Case {
             }
             this.rowWidths.push(totalWidth);
         }
-        // push the top row (middle column has 4 shapes)
-        let totalWidth = 0;
-        totalWidth += this.positions[0][2].width + (2 * this.shapeBuffer);
-        totalWidth += this.positions[1][3].width + (2 * this.shapeBuffer);
-        totalWidth += this.positions[2][2].width + (2 * this.shapeBuffer);
-        this.rowWidths.push(totalWidth);
 
         // find the row with the widest width, set as case width
         this.caseWidth = Math.max(...this.rowWidths);
@@ -135,14 +129,13 @@ class Case {
             for (let row = 0; row < this.positions[col].length; row++) {
                 // calculate the x value
                 let shapeWidth = this.positions[col][row].width;
-                let colWidth = this.rowWidths[row];
                 let x;
                 if (col == 0) {
-                    x = 0;
+                    x = this.shapeBuffer;
                 } else if (col == 1) {
-                    x = Math.floor((colWidth - shapeWidth) / 2);
+                    x = Math.floor((this.caseWidth - shapeWidth) / 2);
                 } else if (col == 2) {
-                    x = colWidth - shapeWidth;
+                    x = this.caseWidth - shapeWidth - this.shapeBuffer;
                 }
                 this.positions[col][row].posX = x;
             }
