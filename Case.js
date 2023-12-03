@@ -51,7 +51,6 @@ class Case {
         // display the case
         this.displayCase();
         this.displayShapes();
-        // console.log(this.caseGrid);
     }
 
     calcHeights() {
