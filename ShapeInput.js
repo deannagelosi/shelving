@@ -56,12 +56,11 @@ class ShapeInput {
                 } else {
                     fill(255); // Fill white
                 }
-                let xPos = (x * this.inputCellSize);
-                let yPos = (y * this.inputCellSize);
-                let rectX = this.lrPadding + xPos;
-                let rectY = this.tbPadding + (this.gridHeight - this.inputCellSize) - yPos; // draw from bottom up
 
-                rect(rectX, rectY, this.inputCellSize, this.inputCellSize);
+                let rectX = x * this.inputCellSize
+                let rectY = (this.gridHeight - this.inputCellSize) - (y * this.inputCellSize); // draw from bottom up
+
+                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputCellSize, this.inputCellSize);
             }
         }
     }

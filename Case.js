@@ -3,7 +3,9 @@ class Case {
         this.caseWidth;
         this.caseHeight;
         this.caseGrid = [];
-        this.caseCellSize = 25;
+        this.caseCellSize = 20;
+        this.tbPadding = 25; // left right
+        this.lrPadding = 25; // left right
 
         this.columnHeights = [];
         this.rowWidths = [];
@@ -49,8 +51,8 @@ class Case {
         this.calcShapesX();
 
         // display the case
-        this.displayCase();
         this.displayShapes();
+        this.displayCase();
     }
 
     calcHeights() {
@@ -150,10 +152,9 @@ class Case {
     displayCase() {
         // display the outside edge of the case by drawing lines around the perimeter
         stroke(0);
-        strokeWeight(2);
+        strokeWeight(3);
         noFill();
-
-        rect(0, 0, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
+        rect(this.lrPadding, this.tbPadding, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
     }
 
     displayShapes() {
@@ -183,15 +184,20 @@ class Case {
         }
 
         // display the case grid
-        for (let y = 0; y < this.caseGrid.length; y++) {
-            for (let x = 0; x < this.caseGrid[0].length; x++) {
+        strokeWeight(0.5);
+        for (let x = 0; x < this.caseWidth; x++) {
+            for (let y = 0; y < this.caseHeight; y++) {
                 // draw cell
                 if (this.caseGrid[y][x]) {
                     fill(0);
                 } else {
                     fill(255);
                 }
-                rect(x * this.caseCellSize, y * this.caseCellSize, this.caseCellSize, this.caseCellSize);
+                let caseGridHeight = this.caseHeight * this.caseCellSize;
+
+                let rectX = x * this.caseCellSize;
+                let rectY = (caseGridHeight - this.caseCellSize) - (y * this.caseCellSize); // draw from bottom up
+                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.caseCellSize, this.caseCellSize);
             }
         }
     }
