@@ -1,7 +1,7 @@
 class Shape {
   constructor(_title) {
     this.shape = [];
-    this.shapeBoundary = [];
+    this.boundaryShape = [];
     this.inputGrid = [];
     this.title = _title;
     // bottom left corner of the shape, including overhangs
@@ -40,7 +40,25 @@ class Shape {
       }
     }
 
+    // create and save a shape that represents the boundary
+    let boundaryShape = [];
+    for (let i = 0; i < trimShape.length; i++) {
+      let newRow = [...trimShape[i]];
+      newRow.unshift(false);
+      newRow.push(false);
+      boundaryShape.push(newRow);
+    }
+    
+    for (let i = 0; i < boundaryShape.length; i++) {
+      let firstTrue = boundaryShape[i].indexOf(true);
+      let lastTrue = boundaryShape[i].lastIndexOf(true);
+      boundaryShape[i][firstTrue - 1] = true;
+      boundaryShape[i][lastTrue + 1] = true;
+    }
+    boundaryShape.push([...boundaryShape[boundaryShape.length - 1]]);
+    
     this.shape = trimShape;
+    this.boundaryShape = boundaryShape;
     this.inputGrid = _inputGrid;
     this.height = this.shape.length;
     this.width = this.shape[0].length;
