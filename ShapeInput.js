@@ -1,9 +1,11 @@
-class UI {
+class ShapeInput {
     constructor() {
         // User input grid size
         this.inputRows;
         this.inputCols;
         this.inputGrid = [];
+        this.inputCellSize = 50;
+        this.padding = 100;
 
         // Create the title input field
         this.titleLabel = createP('Title:');
@@ -25,11 +27,9 @@ class UI {
             this.saveButton.x + this.saveButton.width + 10, height + 20
         );
         this.nextButton.mousePressed(() => this.displayAllShapes());
-    }
 
-    setupInputGrid(_rows, _cols) {
-        this.inputRows = _rows;
-        this.inputCols = _cols;
+        this.inputRows = (canvasWidth - (this.padding * 2)) / this.inputCellSize;
+        this.inputCols = (canvasHeight - (this.padding * 2)) / this.inputCellSize;
         this.resetInputGrid();
     }
 
@@ -43,6 +43,8 @@ class UI {
     }
 
     drawInputGrid() {
+        let gridHeight = this.inputRows * this.inputCellSize;
+
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
                 // draw cell
@@ -51,19 +53,28 @@ class UI {
                 } else {
                     fill(255); // Fill white
                 }
-                rect(x * cellSize, y * cellSize, cellSize, cellSize);
+                let rectX = this.padding + (x * this.inputCellSize);
+                let rectY = (gridHeight + this.padding/2) - (y * this.inputCellSize); // draw from bottom up
+                rect(rectX, rectY, this.inputCellSize, this.inputCellSize);
             }
         }
     }
 
     selectInputCell(mouseX, mouseY) {
-        let gridX = Math.floor(mouseX / cellSize); // Column
-        let gridY = Math.floor(mouseY / cellSize); // Row
+        let xValid = mouseX >= this.padding && mouseX <= canvasWidth - this.padding;
+        let yValid = mouseY >= this.padding && mouseY <= canvasHeight - this.padding;
+        if (xValid && yValid) {
 
-        if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-            this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX]; // Toggle the state
-            this.drawInputGrid(); // Redraw to update clicked state
+            let gridX = Math.floor((mouseX - this.padding) / this.inputCellSize); // Column
+            let gridY = Math.floor((canvasHeight - this.padding - mouseY) / this.inputCellSize); // Row
+
+            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+                this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX]; // Toggle the state
+                console.log("inputGrid: ", this.inputGrid);
+                this.drawInputGrid(); // Redraw to update clicked state
+            }
         }
+
     }
 
     saveShape() {
@@ -82,8 +93,8 @@ class UI {
             let newShape = new Shape(titleValue);
             newShape.saveUserInput([...this.inputGrid]); // save a copy of the input grid
             shapes.push(newShape);
-            console.log(shapes);
-            // console.log(JSON.stringify(shapes));
+            // console.log(shapes);
+            console.log(JSON.stringify(shapes));
 
             // Reset active shape and UI
             this.resetCanvas();

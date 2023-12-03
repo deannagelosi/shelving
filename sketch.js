@@ -1,11 +1,8 @@
-let width = 500;
-let height = 500;
-let cellSize = 100;
-let caseCellSize = 25;
-let rows = width / cellSize;
-let cols = height / cellSize;
+let canvasWidth = 800;
+let canvasHeight = 800;
+
 let shapes = [];
-let ui;
+let shapeInput;
 let shapeCase;
 
 function preload() {
@@ -13,29 +10,28 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(width + 200, height + 200);
+  createCanvas(canvasWidth, canvasHeight);
   textSize(16);
   fill(0);
 
-  // ui = new UI(); // setup buttons and input fields
-  // ui.setupInputGrid(rows, cols); // setup input grid  
+  shapeInput = new ShapeInput(); // setup buttons and input fields
 
-  loadShapeData();  
-  shapeCase = new Case();
-  shapeCase.sortShapes();
-  shapeCase.buildCase();
+  // loadShapeData();  
+  // shapeCase = new Case();
+  // shapeCase.sortShapes();
+  // shapeCase.buildCase();
 }
 
 function draw() {
   // background(255);
   // display the input grid
-  // ui.drawInputGrid();
+  shapeInput.drawInputGrid();
 
   noLoop();
 }
 
 function mousePressed() {
-  ui.selectInputCell(mouseX, mouseY);
+  shapeInput.selectInputCell(mouseX, mouseY);
 }
 
 function loadShapeData() {
