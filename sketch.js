@@ -5,6 +5,8 @@ let shapes = [];
 let shapeInput;
 let shapeCase;
 
+let inputView = false;
+
 function preload() {
   shapeData = loadJSON('data/test-shapes.json');
 }
@@ -14,24 +16,32 @@ function setup() {
   textSize(16);
   fill(0);
 
-  shapeInput = new ShapeInput(); // setup buttons and input fields
+  if (inputView) {
+    shapeInput = new ShapeInput(); // setup buttons and input fields
+  } else {
+    // case view
+    loadShapeData();  
+    shapeCase = new Case();
+    shapeCase.sortShapes();
+    shapeCase.buildCase();
+  }
 
-  // loadShapeData();  
-  // shapeCase = new Case();
-  // shapeCase.sortShapes();
-  // shapeCase.buildCase();
 }
 
 function draw() {
-  // background(255);
-  // display the input grid
-  shapeInput.drawInputGrid();
+  if (inputView) {
+    background(255);
+    // display the input grid
+    shapeInput.drawInputGrid();
+  }
 
   noLoop();
 }
 
 function mousePressed() {
-  shapeInput.selectInputCell(mouseX, mouseY);
+  if (inputView) {
+    shapeInput.selectInputCell(mouseX, mouseY);
+  }
 }
 
 function loadShapeData() {
