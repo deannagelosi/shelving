@@ -1,9 +1,89 @@
 [
     {
+        "shape": [
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
                 false,
                 false,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false,
                 false,
                 false
@@ -13,6 +93,11 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                false,
                 false
             ],
             [
@@ -20,6 +105,11 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                false,
                 false
             ],
             [
@@ -27,6 +117,11 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                false,
                 false
             ],
             [
@@ -34,36 +129,81 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false
             ]
         ],
-        "title": "shape-1"
+        "title": "shape-1",
+        "height": 8,
+        "width": 7
     },
     {
-        "inputGrid": [
+        "shape": [
             [
-                false,
-                false,
-                false,
-                false,
-                true
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
-                true
-            ],
-            [
-                false,
-                false,
-                true,
-                true,
-                true
-            ],
-            [
-                false,
                 true,
                 true,
                 true,
@@ -71,177 +211,989 @@
             ],
             [
                 true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true
+            ],
+            [
                 true,
                 true,
                 true,
                 true
             ]
         ],
-        "title": "shape-2"
+        "shapeBoundary": [],
+        "inputGrid": [
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ]
+        ],
+        "title": "shape-2",
+        "height": 10,
+        "width": 4
     },
     {
-        "inputGrid": [
+        "shape": [
             [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
                 true,
                 false,
+                false
+            ],
+            [
                 false,
                 false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 true
             ],
             [
                 true,
-                false,
-                false,
-                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 true
             ],
             [
+                false,
                 true,
-                false,
-                false,
-                false,
-                true
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
             ],
             [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
                 true,
                 false,
-                false,
-                false,
-                true
+                false
             ],
             [
+                false,
+                false,
+                false,
                 true,
                 true,
                 true,
-                true,
-                true
+                false,
+                false,
+                false
             ]
         ],
-        "title": "shape-3"
+        "shapeBoundary": [],
+        "inputGrid": [
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ]
+        ],
+        "title": "shape-3",
+        "height": 9,
+        "width": 9
     },
     {
-        "inputGrid": [
+        "shape": [
             [
                 true,
                 true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
                 true,
                 true,
                 true
             ],
             [
                 false,
+                true,
+                false
+            ]
+        ],
+        "shapeBoundary": [],
+        "inputGrid": [
+            [
+                false,
+                false,
                 false,
                 true,
+                true,
+                true,
+                false,
+                false,
                 false,
                 false
             ],
             [
                 false,
                 false,
+                false,
                 true,
+                true,
+                true,
+                false,
+                false,
                 false,
                 false
             ],
             [
                 false,
                 false,
+                false,
                 true,
+                true,
+                true,
+                false,
+                false,
                 false,
                 false
             ],
             [
                 false,
                 false,
+                false,
                 true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false
             ]
         ],
-        "title": "shape-4"
+        "title": "shape-4",
+        "height": 5,
+        "width": 3
     },
     {
+        "shape": [
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                false
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                false,
+                false,
                 false,
                 false
             ],
             [
                 false,
-                true,
+                false,
                 false,
                 true,
+                true,
+                true,
+                false,
+                false,
+                false,
                 false
             ],
             [
                 false,
-                true,
-                true,
-                true,
-                false
-            ],
-            [
+                false,
                 false,
                 true,
                 true,
                 true,
+                false,
+                false,
+                false,
                 false
             ],
             [
                 false,
+                false,
+                false,
                 true,
                 true,
                 true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false
             ]
         ],
-        "title": "shape-5"
+        "title": "shape-5",
+        "height": 6,
+        "width": 3
     },
     {
-        "inputGrid": [
+        "shape": [
             [
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
                 true,
                 true,
-                true,
-                false
-            ],
-            [
-                false,
-                true,
-                true,
-                true,
-                false
-            ],
-            [
-                false,
-                false,
                 true,
                 false,
                 false
             ],
             [
+                true,
+                true,
+                true,
                 false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
                 false,
+                false
+            ],
+            [
+                true,
+                true,
                 true,
                 false,
                 false
             ]
         ],
-        "title": "shape-6"
+        "shapeBoundary": [],
+        "inputGrid": [
+            [
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ]
+        ],
+        "title": "shape-6",
+        "height": 6,
+        "width": 5
     },
     {
+        "shape": [
+            [
+                false,
+                false,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -253,119 +1205,509 @@
                 false,
                 false,
                 false,
-                true
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
             ],
             [
                 false,
                 false,
-                true,
                 false,
-                true
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
             ],
             [
-                true,
                 false,
-                true,
                 false,
-                true
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
             ],
             [
-                true,
-                true,
-                true,
-                true,
-                true
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
             ]
         ],
-        "title": "shape-7"
+        "title": "shape-7",
+        "height": 4,
+        "width": 5
     },
     {
+        "shape": [
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
                 true,
                 true,
                 false,
+                false
+            ],
+            [
                 false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false
             ],
             [
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false,
                 false
             ],
             [
-                true,
-                true,
                 false,
                 false,
-                false
-            ],
-            [
-                true,
-                true,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false,
                 false
             ],
             [
-                true,
-                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false,
                 false
             ]
         ],
-        "title": "shape-8"
+        "title": "shape-8",
+        "height": 4,
+        "width": 10
     },
     {
+        "shape": [
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                false
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
                 false,
                 false,
+                false,
+                false,
                 true,
                 true,
-                true
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
             ],
             [
                 false,
                 false,
                 false,
                 true,
-                true
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
             ],
             [
                 false,
                 false,
-                true,
-                true,
-                true
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
             ],
             [
                 false,
                 false,
                 false,
-                true,
-                true
-            ],
-            [
                 false,
                 false,
-                true,
-                true,
-                true
+                false,
+                false,
+                false,
+                false,
+                false
             ]
         ],
-        "title": "shape-9"
+        "title": "shape-9",
+        "height": 8,
+        "width": 6
     },
     {
+        "shape": [
+            [
+                false,
+                false,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                false,
+                false
+            ]
+        ],
+        "shapeBoundary": [],
         "inputGrid": [
             [
                 false,
                 false,
                 false,
                 false,
+                false,
+                true,
+                false,
+                false,
+                false,
                 false
             ],
             [
@@ -373,30 +1715,112 @@
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                false,
+                false,
                 false
             ],
             [
                 false,
+                false,
+                false,
                 true,
                 true,
                 true,
-                true
+                true,
+                true,
+                false,
+                false
             ],
             [
                 false,
+                false,
+                false,
                 true,
                 true,
                 true,
-                true
+                true,
+                true,
+                false,
+                false
             ],
             [
                 false,
                 false,
+                false,
                 true,
                 true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false
             ]
         ],
-        "title": "shape-10"
+        "title": "shape-10",
+        "height": 8,
+        "width": 5
     }
 ]
