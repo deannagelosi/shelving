@@ -13,7 +13,6 @@ class Case {
         this.shortShapes = [];
         this.tallShapes = [];
         this.positions = []; // shape positions in the case
-        this.shapeBuffer = 1; // space between shapes on top and sides
     }
 
     sortShapes() {
@@ -53,6 +52,8 @@ class Case {
         // display the case
         this.displayShapes();
         this.displayCase();
+
+        // this.printCoords();
     }
 
     calcHeights() {
@@ -61,7 +62,7 @@ class Case {
         for (let col = 0; col < this.positions.length; col++) {
             let totalHeight = 0;
             for (let row = 0; row < this.positions[col].length; row++) {
-                totalHeight += this.positions[col][row].height + this.shapeBuffer;
+                totalHeight += this.positions[col][row].height;
             }
             this.columnHeights.push(totalHeight);
         }
@@ -78,7 +79,7 @@ class Case {
         for (let row = 0; row < this.positions.length; row++) {
             let totalWidth = 0;
             for (let col = 0; col < this.positions.length; col++) {
-                totalWidth += this.positions[col][row].width + (2 * this.shapeBuffer);
+                totalWidth += this.positions[col][row].width;
             }
             this.rowWidths.push(totalWidth);
         }
@@ -112,7 +113,7 @@ class Case {
                 }
                 else {
                     let prevHeight = this.positions[col][row - 1].posY + this.positions[col][row - 1].height;
-                    this.positions[col][row].posY = prevHeight + colBuffer[row - 1] + this.shapeBuffer;
+                    this.positions[col][row].posY = prevHeight + colBuffer[row - 1];
                 }
             }
         }
@@ -131,15 +132,39 @@ class Case {
                 let shapeWidth = this.positions[col][row].width;
                 let x;
                 if (col == 0) {
-                    x = this.shapeBuffer;
+                    x = 0;
                 } else if (col == 1) {
                     x = Math.floor((this.caseWidth - shapeWidth) / 2);
                 } else if (col == 2) {
-                    x = this.caseWidth - shapeWidth - this.shapeBuffer;
+                    x = this.caseWidth - shapeWidth;
                 }
                 this.positions[col][row].posX = x;
             }
         }
+    }
+
+    printCoords() {
+        for (let col = 0; col < this.positions.length; col++) {
+            for (let row = 0; row < this.positions[col].length; row++) {
+                let shape = this.positions[col][row];
+                console.log(`${shape.title}: ${shape.posX}, ${shape.posY}, col: ${col}, row: ${row}`);
+            }
+        }
+    }
+
+    centerAdjust() {
+        // loop all shapes in column 1
+        // for each shape, check for collisions including boundary buffer on the left and right
+        // if collision on left, move shape right by one cell
+        // if collision on right, move shape left by one cell
+        // loop again until no collisions or max attempts reached
+        // call buildCase() to recalculate the case
+
+
+    }
+
+    detectCollision() {
+        // 
     }
 
     displayCase() {
@@ -155,7 +180,7 @@ class Case {
         for (let i = 0; i < this.caseHeight; i++) {
             this.caseGrid[i] = [];
             for (let j = 0; j < this.caseWidth; j++) {
-                this.caseGrid[i][j] = false;
+                this.caseGrid[i][j] = 0; // 0 is empty
             }
         }
 
@@ -164,13 +189,23 @@ class Case {
             let shape = shapes[i];
             let shapeX = shape.posX;
             let shapeY = shape.posY;
-            let shapeHeight = shape.height;
-            let shapeWidth = shape.width;
+            let shapeHeight = shape.shape.length;
+            let shapeWidth = shape.shape[0].length;
 
+            // place boundary shape
+            for (let y = 0; y < shape.height; y++) { // loop the boundary shape height and width
+                for (let x = 0; x < shape.width; x++) {
+                    if (shape.boundaryShape[y][x]) {
+                        this.caseGrid[shapeY + y][shapeX + x] = 2; // 2 is filled with a boundary for a shape
+                    }
+                }
+            }
+
+            // place shape
             for (let y = 0; y < shapeHeight; y++) {
                 for (let x = 0; x < shapeWidth; x++) {
                     if (shape.shape[y][x]) {
-                        this.caseGrid[shapeY + y][shapeX + x] = true;
+                        this.caseGrid[shapeY + y][shapeX + x + 1] = 1; // 1 is filled with a shape
                     }
                 }
             }
@@ -181,10 +216,13 @@ class Case {
         for (let x = 0; x < this.caseWidth; x++) {
             for (let y = 0; y < this.caseHeight; y++) {
                 // draw cell
-                if (this.caseGrid[y][x]) {
-                    fill(0);
-                } else {
-                    fill(255);
+                if (this.caseGrid[y][x] == 1) {
+                    fill(0); // black (shape)
+                } else if (this.caseGrid[y][x] == 2) {
+                    fill("pink"); // pink (boundary shape)
+                }
+                else if (this.caseGrid[y][x] == 0){
+                    fill(255); // white (empty)
                 }
                 let caseGridHeight = this.caseHeight * this.caseCellSize;
 
