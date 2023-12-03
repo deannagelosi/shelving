@@ -17,7 +17,7 @@ class Case {
 
     sortShapes() {
         shapes.sort(function (a, b) {
-            return a.height - b.height;
+            return a.boundaryHeight - b.boundaryHeight;
         });
         // four shortest shapes for middle column
         for (let i = 0; i < shapes.length; i++) {
@@ -62,7 +62,7 @@ class Case {
         for (let col = 0; col < this.positions.length; col++) {
             let totalHeight = 0;
             for (let row = 0; row < this.positions[col].length; row++) {
-                totalHeight += this.positions[col][row].height;
+                totalHeight += this.positions[col][row].boundaryHeight;
             }
             this.columnHeights.push(totalHeight);
         }
@@ -79,7 +79,7 @@ class Case {
         for (let row = 0; row < this.positions.length; row++) {
             let totalWidth = 0;
             for (let col = 0; col < this.positions.length; col++) {
-                totalWidth += this.positions[col][row].width;
+                totalWidth += this.positions[col][row].boundaryWidth;
             }
             this.rowWidths.push(totalWidth);
         }
@@ -112,7 +112,7 @@ class Case {
                     this.positions[col][row].posY = 0;
                 }
                 else {
-                    let prevHeight = this.positions[col][row - 1].posY + this.positions[col][row - 1].height;
+                    let prevHeight = this.positions[col][row - 1].posY + this.positions[col][row - 1].boundaryHeight;
                     this.positions[col][row].posY = prevHeight + colBuffer[row - 1];
                 }
             }
@@ -129,7 +129,7 @@ class Case {
             // loop the rows
             for (let row = 0; row < this.positions[col].length; row++) {
                 // calculate the x value
-                let shapeWidth = this.positions[col][row].width;
+                let shapeWidth = this.positions[col][row].boundaryWidth;
                 let x;
                 if (col == 0) {
                     x = 0;
@@ -187,25 +187,20 @@ class Case {
         // place shapes in the grid
         for (let i = 0; i < shapes.length; i++) {
             let shape = shapes[i];
-            let shapeX = shape.posX;
-            let shapeY = shape.posY;
-            let shapeHeight = shape.shape.length;
-            let shapeWidth = shape.shape[0].length;
-
             // place boundary shape
-            for (let y = 0; y < shape.height; y++) { // loop the boundary shape height and width
-                for (let x = 0; x < shape.width; x++) {
+            for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
+                for (let x = 0; x < shape.boundaryWidth; x++) {
                     if (shape.boundaryShape[y][x]) {
-                        this.caseGrid[shapeY + y][shapeX + x] = 2; // 2 is filled with a boundary for a shape
+                        this.caseGrid[shape.posY + y][shape.posX + x] = 2; // 2 is filled with a boundary for a shape
                     }
                 }
             }
 
             // place shape
-            for (let y = 0; y < shapeHeight; y++) {
-                for (let x = 0; x < shapeWidth; x++) {
+            for (let y = 0; y < shape.shapeHeight; y++) {
+                for (let x = 0; x < shape.shapeWidth; x++) {
                     if (shape.shape[y][x]) {
-                        this.caseGrid[shapeY + y][shapeX + x + 1] = 1; // 1 is filled with a shape
+                        this.caseGrid[shape.posY + y][shape.posX + x + 1] = 1; // 1 is filled with a shape
                     }
                 }
             }

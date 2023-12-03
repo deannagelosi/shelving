@@ -7,8 +7,10 @@ class Shape {
     // bottom left corner of the shape, including overhangs
     this.posX;
     this.posY;
-    this.height;
-    this.width;
+    this.shapeHeight;
+    this.shapeWidth;
+    this.boundaryHeight;
+    this.boundaryWidth;
   }
 
   saveUserInput(_inputGrid) {
@@ -57,10 +59,15 @@ class Shape {
     }
     boundaryShape.push([...boundaryShape[boundaryShape.length - 1]]);
     
+    // save grids
     this.shape = trimShape;
     this.boundaryShape = boundaryShape;
     this.inputGrid = _inputGrid;
-    this.height = this.shape.length;
-    this.width = this.shape[0].length;
+
+    // set height and widths
+    this.boundaryHeight = this.boundaryShape.length;
+    this.boundaryWidth = this.boundaryShape[0].length;
+    this.shapeHeight = this.shape.length;
+    this.shapeWidth = this.shape[0].length;
   }
 }
