@@ -3,6 +3,7 @@ class Case {
         this.caseWidth;
         this.caseHeight;
         this.caseGrid = [];
+        this.caseCellSize = 25;
 
         this.columnHeights = [];
         this.rowWidths = [];
@@ -34,9 +35,9 @@ class Case {
         // to do: could add sorting by width and height (ex: middle column widest on bottom)
 
         this.positions = [
-            [this.tallShapes[2], this.tallShapes[1], this.tallShapes[0]],
+            [this.tallShapes[5], this.tallShapes[4], this.tallShapes[3]],
             [this.shortShapes[3], this.shortShapes[2], this.shortShapes[1], this.shortShapes[0]],
-            [this.tallShapes[5], this.tallShapes[4], this.tallShapes[3]]
+            [this.tallShapes[2], this.tallShapes[1], this.tallShapes[0]]
         ];
 
         // calculate the height and width of each column and set the height of the case
@@ -126,7 +127,7 @@ class Case {
         // left justify items in the first (left) column
         // center items in the second (middle) column
         // right justify items in the third (right) column
-        
+
         // loop the columns
         for (let col = 0; col < this.positions.length; col++) {
             // loop the rows
@@ -138,7 +139,7 @@ class Case {
                 if (col == 0) {
                     x = 0;
                 } else if (col == 1) {
-                    x = (colWidth - shapeWidth) / 2;
+                    x = Math.floor((colWidth - shapeWidth) / 2);
                 } else if (col == 2) {
                     x = colWidth - shapeWidth;
                 }
@@ -153,10 +154,11 @@ class Case {
         strokeWeight(2);
         noFill();
 
-        rect(0, 0, this.caseWidth * caseCellSize, this.caseHeight * caseCellSize);
+        rect(0, 0, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
     }
 
     displayShapes() {
+        // initialize grid case as all false
         for (let i = 0; i < this.caseHeight; i++) {
             this.caseGrid[i] = [];
             for (let j = 0; j < this.caseWidth; j++) {
@@ -164,6 +166,7 @@ class Case {
             }
         }
 
+        // place shapes in the grid
         for (let i = 0; i < shapes.length; i++) {
             let shape = shapes[i];
             let shapeX = shape.posX;
@@ -180,6 +183,7 @@ class Case {
             }
         }
 
+        // display the case grid
         for (let y = 0; y < this.caseGrid.length; y++) {
             for (let x = 0; x < this.caseGrid[0].length; x++) {
                 // draw cell
@@ -188,7 +192,7 @@ class Case {
                 } else {
                     fill(255);
                 }
-                rect(x * caseCellSize, y * caseCellSize, caseCellSize, caseCellSize);
+                rect(x * this.caseCellSize, y * this.caseCellSize, this.caseCellSize, this.caseCellSize);
             }
         }
     }
