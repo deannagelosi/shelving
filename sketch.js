@@ -40,6 +40,10 @@ function draw() {
     shapeInput.drawInputGrid();
   } else {
     shapeCase.buildCase(); // sets buildIssue to true if there's an issue
+    if (buildIssue == false) {
+      shapeCase.buildBoards();
+      shapeCase.displayBoards();
+    }
   }
   
   if (buildIssue == false) { //

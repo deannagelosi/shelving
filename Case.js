@@ -13,6 +13,8 @@ class Case {
         this.shortShapes = [];
         this.tallShapes = [];
         this.positions = []; // shape positions in the case
+
+        this.allBoards = [];
     }
 
     sortShapes() {
@@ -43,9 +45,41 @@ class Case {
 
         // display the case and shapes
         this.displayShapes();
-        this.displayCase();
+        // this.displayCase();
 
         // this.printCoords();
+    }
+
+    buildBoards() {
+        // working from the bottom of the case to the top
+        // draw the floor boards for every shape
+        // for the first row (bottom floor), the floor board is the same width as the case
+        // loop through the rest of the shapes (except the bottom row) 
+        // draw a line that starts at x = 0, y = the shape's y value to x = case width, y = shape's y value
+
+        this.allBoards = [];
+        let board = new Board();
+        board.startCoords = [0, 0];
+        board.endCoords = [this.caseWidth, 0];
+
+        this.allBoards.push(board);
+    }
+
+    displayBoards() {
+        // draw the boards
+        for (let i = 0; i < this.allBoards.length; i++) {
+            let board = this.allBoards[i];
+            stroke("red");
+            strokeWeight(3);
+
+            // translate to the case's position and cell size
+            let startX = this.lrPadding + board.startCoords[0];
+            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) + board.startCoords[1]; // draw from bottom up
+            let endX = this.lrPadding + (board.endCoords[0] * this.caseCellSize);
+            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) + board.endCoords[1]; // draw from bottom up
+
+            line(startX, startY, endX, endY);
+        }
     }
 
     shuffleCaseLayout() {
