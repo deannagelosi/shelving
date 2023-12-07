@@ -58,11 +58,24 @@ class Case {
         // draw a line that starts at x = 0, y = the shape's y value to x = case width, y = shape's y value
 
         this.allBoards = [];
+        // bottom row
         let board = new Board();
         board.startCoords = [0, 0];
         board.endCoords = [this.caseWidth, 0];
-
         this.allBoards.push(board);
+
+        // all other rows
+        for (let col = 0; col < this.positions.length; col++) {
+            for (let row = 0; row < this.positions[col].length; row++) {
+                if (row != 0) {
+                    // draw a horizontal line for this shape's floor, using its y-value
+                    let board = new Board();
+                    board.startCoords = [0, this.positions[col][row].posY];
+                    board.endCoords = [this.caseWidth, this.positions[col][row].posY];
+                    this.allBoards.push(board);
+                }
+            }
+        }
     }
 
     displayBoards() {
@@ -74,9 +87,9 @@ class Case {
 
             // translate to the case's position and cell size
             let startX = this.lrPadding + board.startCoords[0];
-            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) + board.startCoords[1]; // draw from bottom up
+            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (this.caseCellSize * board.startCoords[1]); // draw from bottom up
             let endX = this.lrPadding + (board.endCoords[0] * this.caseCellSize);
-            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) + board.endCoords[1]; // draw from bottom up
+            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (this.caseCellSize * board.endCoords[1]); // draw from bottom up
 
             line(startX, startY, endX, endY);
         }
