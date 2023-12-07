@@ -30,30 +30,34 @@ class Case {
     }
 
     buildCase() {
+        this.shuffleCaseLayout();
+
+        // calculate height & width of each column and set height & width of the case
+        this.calcHeights();
+        this.calcWidths();
+
+        // calculate the y and x value for each shape and place them in the case grid
+        this.calcShapesY();
+        this.calcShapesX();
+        this.placeShapes();
+
+        // display the case and shapes
+        this.displayShapes();
+        this.displayCase();
+
+        // this.printCoords();
+    }
+
+    shuffleCaseLayout() {
         // randomize shortShapes and tallShapes to reposition objects
         shuffle(this.shortShapes, true);
         shuffle(this.tallShapes, true);
         // to do: could add sorting by width and height (ex: middle column widest on bottom)
-
         this.positions = [
             [this.tallShapes[5], this.tallShapes[4], this.tallShapes[3]],
             [this.shortShapes[3], this.shortShapes[2], this.shortShapes[1], this.shortShapes[0]],
             [this.tallShapes[2], this.tallShapes[1], this.tallShapes[0]]
         ];
-
-        // calculate the height and width of each column and set the height of the case
-        this.calcHeights();
-        this.calcWidths();
-
-        // calculate the y and x value for each shape
-        this.calcShapesY();
-        this.calcShapesX();
-
-        // display the case
-        this.displayShapes();
-        this.displayCase();
-
-        // this.printCoords();
     }
 
     calcHeights() {
@@ -152,30 +156,7 @@ class Case {
         }
     }
 
-    centerAdjust() {
-        // loop all shapes in column 1
-        // for each shape, check for collisions including boundary buffer on the left and right
-        // if collision on left, move shape right by one cell
-        // if collision on right, move shape left by one cell
-        // loop again until no collisions or max attempts reached
-        // call buildCase() to recalculate the case
-
-
-    }
-
-    detectCollision() {
-        // 
-    }
-
-    displayCase() {
-        // display the outside edge of the case by drawing lines around the perimeter
-        stroke(0);
-        strokeWeight(3);
-        noFill();
-        rect(this.lrPadding, this.tbPadding, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
-    }
-
-    displayShapes() {
+    placeShapes() {
         // initialize grid case as all false
         for (let i = 0; i < this.caseHeight; i++) {
             this.caseGrid[i] = [];
@@ -184,13 +165,20 @@ class Case {
             }
         }
 
-        // place shapes in the grid
+        // place boundaries and shapes in the grid, looping if there's a collision
         for (let i = 0; i < shapes.length; i++) {
             let shape = shapes[i];
             // place boundary shape
             for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
                 for (let x = 0; x < shape.boundaryWidth; x++) {
                     if (shape.boundaryShape[y][x]) {
+                        // check for collision (cell already occupied)
+                        if (this.caseGrid[shape.posY + y][shape.posX + x] != 0) {
+                            console.log("collision");
+                            // shape boundary collision, try again
+                            buildIssue = true;
+                            return;
+                        }
                         this.caseGrid[shape.posY + y][shape.posX + x] = 2; // 2 is filled with a boundary for a shape
                     }
                 }
@@ -205,7 +193,9 @@ class Case {
                 }
             }
         }
+    }
 
+    displayShapes() {
         // display the case grid
         strokeWeight(0.5);
         for (let x = 0; x < this.caseWidth; x++) {
@@ -216,7 +206,7 @@ class Case {
                 } else if (this.caseGrid[y][x] == 2) {
                     fill("pink"); // pink (boundary shape)
                 }
-                else if (this.caseGrid[y][x] == 0){
+                else if (this.caseGrid[y][x] == 0) {
                     fill(255); // white (empty)
                 }
                 let caseGridHeight = this.caseHeight * this.caseCellSize;
@@ -226,5 +216,13 @@ class Case {
                 rect(this.lrPadding + rectX, this.tbPadding + rectY, this.caseCellSize, this.caseCellSize);
             }
         }
+    }
+
+    displayCase() {
+        // display the outside edge of the case by drawing lines around the perimeter
+        stroke(0);
+        strokeWeight(3);
+        noFill();
+        rect(this.lrPadding, this.tbPadding, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
     }
 }

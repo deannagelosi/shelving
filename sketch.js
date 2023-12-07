@@ -7,6 +7,8 @@ let shapeCase;
 
 let inputView = false;
 
+let buildIssue = false;
+
 function preload() {
   shapeData = loadJSON('data/test-shapes.json');
 }
@@ -20,22 +22,29 @@ function setup() {
     shapeInput = new ShapeInput(); // setup buttons and input fields
   } else {
     // case view
-    loadShapeData();  
+    loadShapeData();
     shapeCase = new Case();
     shapeCase.sortShapes();
-    shapeCase.buildCase();
   }
-
 }
 
 function draw() {
+  clear();
+  background(255);
+  
+  buildIssue = false;
+  
   if (inputView) {
     background(255);
     // display the input grid
     shapeInput.drawInputGrid();
+  } else {
+    shapeCase.buildCase(); // sets buildIssue to true if there's an issue
   }
-
-  noLoop();
+  
+  if (buildIssue == false) { //
+    noLoop(); // no issue, stop looping
+  }
 }
 
 function mousePressed() {
