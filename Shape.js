@@ -9,11 +9,12 @@ class Shape {
     this.posY;
     this.shapeHeight;
     this.shapeWidth;
+    this.shapeDepth;
     this.boundaryHeight;
     this.boundaryWidth;
   }
 
-  saveUserInput(_inputGrid) {
+  saveUserInput(_inputGrid, _depthValue) {
     // to do: only save the shape, without the empty input space around it
     // - note: _inputGrid[0] is the top row, not bottom. flip it.
 
@@ -94,6 +95,7 @@ class Shape {
     this.boundaryWidth = this.boundaryShape[0].length;
     this.shapeHeight = this.shape.length;
     this.shapeWidth = this.shape[0].length;
+    this.shapeDepth = _depthValue;
   }
 
   // Function to set values to true between two indices

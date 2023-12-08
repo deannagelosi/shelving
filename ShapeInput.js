@@ -13,7 +13,14 @@ class ShapeInput {
         this.titleLabel.position(this.lrPadding, height + 5);
         this.titleInput = createInput('');
         this.titleInput.position(this.lrPadding + 40, height + 20);
-        this.titleInput.attribute('maxlength', '25');
+        this.titleInput.attribute('size', '20');
+
+        // Create the depth input field
+        this.depthLabel = createP('Depth:');
+        this.depthLabel.position(this.lrPadding, height + 50);
+        this.depthInput = createInput('');
+        this.depthInput.position(this.lrPadding + 50, height + 65);
+        this.depthInput.attribute('size', '8');
 
         // Create the SAVE button
         this.saveButton = createButton('SAVE');
@@ -46,8 +53,6 @@ class ShapeInput {
     }
 
     drawInputGrid() {
-
-
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
                 // draw cell
@@ -91,9 +96,14 @@ class ShapeInput {
                 titleValue = `shape-${shapes.length + 1}`;
             }
 
+            let depthValue = this.depthInput.value();
+            if (depthValue === '') { // no depth entered by user
+                console.log('no depth entered');
+            }
+
             // save the shape
             let newShape = new Shape(titleValue);
-            newShape.saveUserInput([...this.inputGrid]); // save a copy of the input grid
+            newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
             shapes.push(newShape);
             // console.log(shapes);
             console.log(JSON.stringify(shapes));
@@ -108,6 +118,7 @@ class ShapeInput {
     resetCanvas() {
         background(255);
         this.titleInput.value('');
+        this.depthInput.value('');
         this.resetInputGrid();
         this.drawInputGrid();
         this.displayShapeTitles();
@@ -115,11 +126,11 @@ class ShapeInput {
 
     displayShapeTitles() {
         // Start below the title input box
-        let startY = this.titleInput.y + 25;
+        let startY = this.titleInput.y + 75;
         // Display each shape's title
         for (let i = 0; i < shapes.length; i++) {
             let shapeTitle = createP(`${shapes[i].title}`);
-            shapeTitle.position(10, startY + (i * 25));
+            shapeTitle.position(50, startY + (i * 25));
         }
     }
 }
