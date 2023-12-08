@@ -6,10 +6,10 @@ class Case {
         this.caseCellSize = 20;
         this.tbPadding = 25; // left right
         this.lrPadding = 25; // left right
-        
+
         this.columnHeights = [];
         this.rowWidths = [];
-        
+
         this.middleShapes = [];
         this.sideShapes = [];
         this.positions = []; // shape positions in the case
@@ -22,12 +22,12 @@ class Case {
     sortShapes(_method) {
         if (_method == "height") {
             // sort by height
-        shapes.sort(function (a, b) {
-            return a.boundaryHeight - b.boundaryHeight;
-        });
-        // four shortest shapes for middle column
-        for (let i = 0; i < shapes.length; i++) {
-            if (i < 4) {
+            shapes.sort(function (a, b) {
+                return a.boundaryHeight - b.boundaryHeight;
+            });
+            // four shortest shapes for middle column
+            for (let i = 0; i < shapes.length; i++) {
+                if (i < 4) {
                     this.middleShapes.push(shapes[i]);
                 } else {
                     this.sideShapes.push(shapes[i]);
@@ -40,7 +40,7 @@ class Case {
             for (let i = 0; i < shapes.length; i++) {
                 if (i < 4) {
                     this.middleShapes.push(shapes[i]);
-            } else {
+                } else {
                     this.sideShapes.push(shapes[i]);
                 }
             }
@@ -487,11 +487,22 @@ class Case {
         // loop through each row, adding up their widths
         this.rowWidths = [];
 
+        let maxRowLength = 0;
+        for (let col = 0; col < this.positions.length; col++) {
+            if (this.positions[col].length > maxRowLength) {
+                maxRowLength = this.positions[col].length;
+            }
+        }
+
         // find the width of each row
-        for (let row = 0; row < this.positions.length; row++) {
+        for (let row = 0; row < maxRowLength; row++) {
             let totalWidth = 0;
             for (let col = 0; col < this.positions.length; col++) {
+                if (this.positions[col][row] != undefined) {
                 totalWidth += this.positions[col][row].boundaryWidth;
+                } else if (this.positions[col][row - 1] != undefined) {
+                    totalWidth += this.positions[col][row - 1].boundaryWidth;
+                }
             }
             this.rowWidths.push(totalWidth);
         }
@@ -508,7 +519,7 @@ class Case {
             let colBuffer = [0, 0, 0];
             let numColShapes = this.positions[col].length;
             if (this.columnHeights[col] < this.caseHeight) {
-                let heightDiff = (this.caseHeight - this.columnHeights[0]);
+                let heightDiff = (this.caseHeight - this.columnHeights[col]);
                 if (heightDiff % numColShapes == 0) {
                     colBuffer[0] = heightDiff / numColShapes;
                     colBuffer[1] = heightDiff / numColShapes;
@@ -573,6 +584,16 @@ class Case {
             for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
                 for (let x = 0; x < shape.boundaryWidth; x++) {
                     if (shape.boundaryShape[y][x]) {
+                        // // check if going out of bounds, report which axis
+                        // if (this.caseGrid[shape.posY + y] == undefined) {
+                        //     // out of bounds, y axis
+                        //     buildIssue = true;
+                        //     return;
+                        // } else if (this.caseGrid[shape.posY + y][shape.posX + x] == undefined) {
+                        //     // out of bounds, x axis
+                        //     buildIssue = true;
+                        //     return;
+                        // }
                         // check for collision (cell already occupied)
                         if (this.caseGrid[shape.posY + y][shape.posX + x] != 0) {
                             // shape boundary collision, try again
@@ -627,7 +648,6 @@ class Case {
         textSize(14);
         textAlign(CENTER, CENTER); // center on coordinates
         fill(255);
-        console.log(this.shapeTitles);
         for (let i = 0; i < this.shapeTitles.length; i++) {
             let title = this.shapeTitles[i][0];
             let titleX = this.shapeTitles[i][1];

@@ -83,7 +83,6 @@ class ShapeInput {
                 this.drawInputGrid(); // Redraw to update clicked state
             }
         }
-
     }
 
     saveShape() {
