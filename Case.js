@@ -79,17 +79,20 @@ class Case {
             // find the closest board to the left of this board (closest y value)
             let neighborBoards = this.getClosestBoardsLR(board); // [left, right]
             let leftBoard = neighborBoards[0];
-            // let rightBoard = neighborBoards[1];
+            let rightBoard = neighborBoards[1];
 
             // Note: position data is stored as [y, x]
+
+            // == Left Side ==
             let xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
             // abort case if a distance is negative
             if (xDistLeft < 0) {
+                // x position overlap, try again
                 buildIssue = true;
                 return;
             }
 
-            // grow the left and right boards till they meet
+            // grow the left and center boards till they meet
             let attempts = 10;
             while (xDistLeft > 0 && attempts > 0) {
                 if (xDistLeft >= 2) {
@@ -113,6 +116,47 @@ class Case {
                 // update xDistLeft, aborting if it goes negative
                 xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
                 if (xDistLeft < 0) {
+                    // x position overlap, try again
+                    buildIssue = true;
+                    return;
+                }
+                attempts--;
+            }
+
+            // == Right Side ==
+            let xDistRight = rightBoard.startCoords[1] - board.endCoords[1];
+            // abort case if a distance is negative
+            if (xDistRight < 0) {
+                // x position overlap, try again
+                buildIssue = true;
+                return;
+            }
+
+            // grow the right and center boards till they meet
+            attempts = 10;
+            while (xDistRight > 0 && attempts > 0) {
+                if (xDistRight >= 2) {
+                    // can grow both sides if possible
+                    if (this.allowGrowRight(rightBoard)) {
+                        rightBoard.startCoords[1] -= 1;
+                    }
+                    if (this.allowGrowCenterEnd(board)) {
+                        board.endCoords[1] += 1;
+                    }
+                }
+                else if (xDistRight == 1) {
+                    // can only grow one side, trying left first
+                    if (this.allowGrowRight(rightBoard)) {
+                        rightBoard.startCoords[1] -= 1;
+                    }
+                    else if (this.allowGrowCenterEnd(board)) {
+                        board.endCoords[1] += 1;
+                    }
+                }
+                // update xDistRight, aborting if it goes negative
+                xDistRight = rightBoard.startCoords[1] - board.endCoords[1];
+                if (xDistRight < 0) {
+                    // x position overlap, try again
                     buildIssue = true;
                     return;
                 }
@@ -150,6 +194,34 @@ class Case {
         return false;
     }
 
+    allowGrowRight(_rightBoard) {
+        // check if the left board is allowed to grow on it's end side
+        let rightBoardStartX = _rightBoard.startCoords[1];
+        let rightBoardStartY = _rightBoard.startCoords[0];
+
+        if (rightBoardStartY - 1 >= 0) { // not the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[rightBoardStartY][rightBoardStartX - 1];
+            let nextBottomCell = this.caseGrid[rightBoardStartY - 1][rightBoardStartX - 1];
+
+            if (nextTopCell == 0 || nextBottomCell == 0) {
+                return true;
+                // "allowed to grow right board (start side)"
+            }
+        } else { // at the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell1 = this.caseGrid[rightBoardStartY + 1][rightBoardStartX - 1];
+            let nextTopCell2 = this.caseGrid[rightBoardStartY][rightBoardStartX - 1];
+
+            if (nextTopCell1 == 0 && nextTopCell2 == 0) {
+                return true;
+                // "allowed to grow right board (start side)"
+            }
+        }
+
+        return false;
+    }
+
     allowGrowCenterStart(_centerBoard) {
         // check if a center board is allowed to grow on it's starting side
         let boardStartX = _centerBoard.startCoords[1];
@@ -177,23 +249,50 @@ class Case {
         return false;
     }
 
+    allowGrowCenterEnd(_centerBoard) {
+        // check if a center board is allowed to grow on it's starting side
+        let boardEndX = _centerBoard.endCoords[1];
+        let boardEndY = _centerBoard.endCoords[0];
+
+        if (boardEndY - 1 >= 0) { // not the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[boardEndY][boardEndX];
+            let nextBottomCell = this.caseGrid[boardEndY - 1][boardEndX];
+
+            if (nextTopCell == 0 || nextBottomCell == 0) {
+                return true;
+                // "allowed to grow center board (start side"
+            }
+        } else { // at the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[boardEndY][boardEndX]
+
+            if (nextTopCell == 0) {
+                return true;
+                // "allowed to grow left board (end side)"
+            }
+        }
+
+        return false;
+    }
+
     getClosestBoardsLR(searchBoard) {
         // find the boards that are the closest neighbor (by y value) on the left and right
-        let closestBoardLeft = this.horizontalBoards[0];
-        let closestBoardRight = this.horizontalBoards[0];
-
+        
         // find closest board on the left
         let leftBoards = this.getBoardsByCol(0);
+        let closestBoardLeft = leftBoards[0];
         for (let i = 0; i < leftBoards.length; i++) {
             let currDistY = Math.abs(searchBoard.startCoords[0] - closestBoardLeft.endCoords[0]);
             let newDistY = Math.abs(searchBoard.startCoords[0] - leftBoards[i].endCoords[0]);
-
+            
             if (newDistY < currDistY) {
                 closestBoardLeft = leftBoards[i];
             }
         }
         // find closest board on the right
         let rightBoards = this.getBoardsByCol(2);
+        let closestBoardRight = rightBoards[0];
         for (let i = 0; i < rightBoards.length; i++) {
             let currDistY = Math.abs(searchBoard.endCoords[0] - closestBoardRight.startCoords[0]);
             let newDistY = Math.abs(searchBoard.endCoords[0] - rightBoards[i].startCoords[0]);
@@ -359,7 +458,6 @@ class Case {
                     if (shape.boundaryShape[y][x]) {
                         // check for collision (cell already occupied)
                         if (this.caseGrid[shape.posY + y][shape.posX + x] != 0) {
-                            console.log("collision");
                             // shape boundary collision, try again
                             buildIssue = true;
                             return;
