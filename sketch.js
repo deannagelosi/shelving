@@ -39,9 +39,14 @@ function draw() {
     // display the input grid
     shapeInput.drawInputGrid();
   } else {
-    shapeCase.buildCase(); // sets buildIssue to true if there's an issue
+    // create the case. set buildIssue true if there's an issue
+    shapeCase.buildCase();
+    shapeCase.buildBoards();
+    shapeCase.adjustBoards();
+
     if (buildIssue == false) {
-      shapeCase.buildBoards();
+      // display the case
+      shapeCase.displayShapes(); // display the grid
       shapeCase.displayBoards();
     }
   }

@@ -14,7 +14,8 @@ class Case {
         this.tallShapes = [];
         this.positions = []; // shape positions in the case
 
-        this.allBoards = [];
+        this.horizontalBoards = [];
+        this.verticalBoards = [];
     }
 
     sortShapes() {
@@ -42,54 +43,192 @@ class Case {
         this.calcShapesY();
         this.calcShapesX();
         this.placeShapes();
-
-        // display the case and shapes
-        this.displayShapes();
-        // this.displayCase();
-
-        // this.printCoords();
     }
 
     buildBoards() {
         // working from the bottom of the case to the top
-        // draw the floor boards for every shape
-        // for the first row (bottom floor), the floor board is the same width as the case
-        // loop through the rest of the shapes (except the bottom row) 
-        // draw a line that starts at x = 0, y = the shape's y value to x = case width, y = shape's y value
+        this.horizontalBoards = [];
 
-        this.allBoards = [];
-        // bottom row
-        let board = new Board();
-        board.startCoords = [0, 0];
-        board.endCoords = [this.caseWidth, 0];
-        this.allBoards.push(board);
-
-        // all other rows
+        // loop all the shapes, build a board under each shape
         for (let col = 0; col < this.positions.length; col++) {
             for (let row = 0; row < this.positions[col].length; row++) {
-                if (row != 0) {
-                    // draw a horizontal line for this shape's floor, using its y-value
-                    let board = new Board();
-                    board.startCoords = [0, this.positions[col][row].posY];
-                    board.endCoords = [this.caseWidth, this.positions[col][row].posY];
-                    this.allBoards.push(board);
-                }
+                // draw a horizontal line for this shape's floor, using its y-value
+                let shape = this.positions[col][row];
+                let startX = shape.posX;
+                let startY = this.positions[col][row].posY;
+                let endX = shape.posX + shape.boundaryWidth;
+                let endY = this.positions[col][row].posY;
+
+                // create and save board
+                let board = new Board();
+                board.startCoords = [startY, startX];
+                board.endCoords = [endY, endX];
+                board.col = col;
+                this.horizontalBoards.push(board);
             }
         }
     }
 
+    adjustBoards() {
+        // modify the boards to fit the case
+        
+        // loop the middle column boards
+        let centerBoards = this.getBoardsByCol(1);
+        for (let i = 0; i < centerBoards.length; i++) {
+            let board = centerBoards[i];
+            // find the closest board to the left of this board (closest y value)
+            let neighborBoards = this.getClosestBoardsLR(board); // [left, right]
+            let leftBoard = neighborBoards[0];
+            // let rightBoard = neighborBoards[1];
+
+            // Note: position data is stored as [y, x]
+            let xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
+            // abort case if a distance is negative
+            if (xDistLeft < 0) {
+                buildIssue = true;
+                return;
+            }
+
+            // grow the left and right boards till they meet
+            let attempts = 10;
+            while (xDistLeft > 0 && attempts > 0) {
+                if (xDistLeft >= 2) {
+                    // can grow both sides if possible
+                    if (this.allowGrowLeft(leftBoard)) {
+                        leftBoard.endCoords[1] += 1;
+                    }
+                    if (this.allowGrowCenterStart(board)) {
+                        board.startCoords[1] -= 1;
+                    }
+                }
+                else if (xDistLeft == 1) {
+                    // can only grow one side, trying left first
+                    if (this.allowGrowLeft(leftBoard)) {
+                        leftBoard.endCoords[1] += 1;
+                    }
+                    else if (this.allowGrowCenterStart(board)) {
+                        board.startCoords[1] -= 1;
+                    }
+                }
+                // update xDistLeft, aborting if it goes negative
+                xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
+                if (xDistLeft < 0) {
+                    buildIssue = true;
+                    return;
+                }
+                attempts--;
+            }
+        }
+
+    }
+
+    allowGrowLeft(_leftBoard) {
+        // check if the left board is allowed to grow on it's end side
+        let leftBoardEndX = _leftBoard.endCoords[1];
+        let leftBoardEndY = _leftBoard.endCoords[0];
+
+        if (leftBoardEndY - 1 >= 0) { // not the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[leftBoardEndY][leftBoardEndX];
+            let nextBottomCell = this.caseGrid[leftBoardEndY - 1][leftBoardEndX];
+
+            if (nextTopCell == 0 || nextBottomCell == 0) {
+                return true;
+                // "allowed to grow left board (end side)"
+            }
+        } else { // at the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell1 = this.caseGrid[leftBoardEndY + 1][leftBoardEndX];
+            let nextTopCell2 = this.caseGrid[leftBoardEndY][leftBoardEndX];
+
+            if (nextTopCell1 == 0 && nextTopCell2 == 0) {
+                return true;
+                // "allowed to grow left board (end side)"
+            }
+        }
+
+        return false;
+    }
+
+    allowGrowCenterStart(_centerBoard) {
+        // check if a center board is allowed to grow on it's starting side
+        let boardStartX = _centerBoard.startCoords[1];
+        let boardStartY = _centerBoard.startCoords[0];
+
+        if (boardStartY - 1 >= 0) { // not the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[boardStartY][boardStartX - 1];
+            let nextBottomCell = this.caseGrid[boardStartY - 1][boardStartX - 1];
+
+            if (nextTopCell == 0 || nextBottomCell == 0) {
+                return true;
+                // "allowed to grow center board (start side"
+            }
+        } else { // at the bottom
+            // check if the top/bottom grid the next column over is occupied
+            let nextTopCell = this.caseGrid[boardStartY][boardStartX - 1]
+
+            if (nextTopCell == 0) {
+                return true;
+                // "allowed to grow left board (end side)"
+            }
+        }
+
+        return false;
+    }
+
+    getClosestBoardsLR(searchBoard) {
+        // find the boards that are the closest neighbor (by y value) on the left and right
+        let closestBoardLeft = this.horizontalBoards[0];
+        let closestBoardRight = this.horizontalBoards[0];
+
+        // find closest board on the left
+        let leftBoards = this.getBoardsByCol(0);
+        for (let i = 0; i < leftBoards.length; i++) {
+            let currDistY = Math.abs(searchBoard.startCoords[0] - closestBoardLeft.endCoords[0]);
+            let newDistY = Math.abs(searchBoard.startCoords[0] - leftBoards[i].endCoords[0]);
+
+            if (newDistY < currDistY) {
+                closestBoardLeft = leftBoards[i];
+            }
+        }
+        // find closest board on the right
+        let rightBoards = this.getBoardsByCol(2);
+        for (let i = 0; i < rightBoards.length; i++) {
+            let currDistY = Math.abs(searchBoard.endCoords[0] - closestBoardRight.startCoords[0]);
+            let newDistY = Math.abs(searchBoard.endCoords[0] - rightBoards[i].startCoords[0]);
+
+            if (newDistY < currDistY) {
+                closestBoardRight = rightBoards[i];
+            }
+        }
+
+        return [closestBoardLeft, closestBoardRight];
+    }
+
+    getBoardsByCol(_col) {
+        let boards = [];
+        for (let i = 0; i < this.horizontalBoards.length; i++) {
+            let board = this.horizontalBoards[i];
+            if (board.col == _col) {
+                boards.push(board);
+            }
+        }
+        return boards;
+    }
+
     displayBoards() {
         // draw the boards
-        for (let i = 0; i < this.allBoards.length; i++) {
-            let board = this.allBoards[i];
+        for (let i = 0; i < this.horizontalBoards.length; i++) {
+            let board = this.horizontalBoards[i];
             stroke("red");
             strokeWeight(3);
 
             // translate to the case's position and cell size
-            let startX = this.lrPadding + board.startCoords[0];
-            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (this.caseCellSize * board.startCoords[1]); // draw from bottom up
-            let endX = this.lrPadding + (board.endCoords[0] * this.caseCellSize);
-            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (this.caseCellSize * board.endCoords[1]); // draw from bottom up
+            let startX = this.lrPadding + (board.startCoords[1] * this.caseCellSize);
+            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (board.startCoords[0] * this.caseCellSize); // draw from bottom up
+            let endX = this.lrPadding + (board.endCoords[1] * this.caseCellSize);
+            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (board.endCoords[0] * this.caseCellSize); // draw from bottom up
 
             line(startX, startY, endX, endY);
         }
@@ -101,9 +240,9 @@ class Case {
         shuffle(this.tallShapes, true);
         // to do: could add sorting by width and height (ex: middle column widest on bottom)
         this.positions = [
-            [this.tallShapes[5], this.tallShapes[4], this.tallShapes[3]],
-            [this.shortShapes[3], this.shortShapes[2], this.shortShapes[1], this.shortShapes[0]],
-            [this.tallShapes[2], this.tallShapes[1], this.tallShapes[0]]
+            [this.tallShapes[0], this.tallShapes[1], this.tallShapes[2]],
+            [this.shortShapes[0], this.shortShapes[1], this.shortShapes[2], this.shortShapes[3]],
+            [this.tallShapes[3], this.tallShapes[4], this.tallShapes[5]]
         ];
     }
 
@@ -244,6 +383,7 @@ class Case {
 
     displayShapes() {
         // display the case grid
+        stroke(0);
         strokeWeight(0.5);
         for (let x = 0; x < this.caseWidth; x++) {
             for (let y = 0; y < this.caseHeight; y++) {
