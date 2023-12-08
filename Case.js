@@ -71,7 +71,7 @@ class Case {
 
     adjustBoards() {
         // modify the boards to fit the case
-        
+
         // loop the middle column boards
         let centerBoards = this.getBoardsByCol(1);
         for (let i = 0; i < centerBoards.length; i++) {
@@ -231,6 +231,14 @@ class Case {
             let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (board.endCoords[0] * this.caseCellSize); // draw from bottom up
 
             line(startX, startY, endX, endY);
+
+            // draw dots at the start and end coords
+            fill(0); // Black color for the dots
+            noStroke(); // No border for the dots
+            // Draw a dot at the startCoords and endCoords
+            circle(startX, startY, 10); // x, y, size
+            circle(endX, endY, 10); // x, y, size
+
         }
     }
 
@@ -333,15 +341,6 @@ class Case {
         }
     }
 
-    printCoords() {
-        for (let col = 0; col < this.positions.length; col++) {
-            for (let row = 0; row < this.positions[col].length; row++) {
-                let shape = this.positions[col][row];
-                console.log(`${shape.title}: ${shape.posX}, ${shape.posY}, col: ${col}, row: ${row}`);
-            }
-        }
-    }
-
     placeShapes() {
         // initialize grid case as all false
         for (let i = 0; i < this.caseHeight; i++) {
@@ -403,13 +402,5 @@ class Case {
                 rect(this.lrPadding + rectX, this.tbPadding + rectY, this.caseCellSize, this.caseCellSize);
             }
         }
-    }
-
-    displayCase() {
-        // display the outside edge of the case by drawing lines around the perimeter
-        stroke(0);
-        strokeWeight(3);
-        noFill();
-        rect(this.lrPadding, this.tbPadding, this.caseWidth * this.caseCellSize, this.caseHeight * this.caseCellSize);
     }
 }
