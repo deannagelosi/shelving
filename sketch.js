@@ -1,5 +1,5 @@
 let canvasWidth = 700;
-let canvasHeight = 625;
+let canvasHeight = 650;
 
 let shapes = [];
 let shapeInput;
