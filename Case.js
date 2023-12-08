@@ -6,13 +6,14 @@ class Case {
         this.caseCellSize = 20;
         this.tbPadding = 25; // left right
         this.lrPadding = 25; // left right
-
+        
         this.columnHeights = [];
         this.rowWidths = [];
-
+        
         this.shortShapes = [];
         this.tallShapes = [];
         this.positions = []; // shape positions in the case
+        this.shapeTitles = []; // positions of the shape titles
 
         this.horizontalBoards = [];
         this.verticalBoards = [];
@@ -548,6 +549,8 @@ class Case {
                 this.caseGrid[i][j] = 0; // 0 is empty
             }
         }
+        // initialize shape titles array as empty
+        this.shapeTitles = [];
 
         // place boundaries and shapes in the grid, looping if there's a collision
         for (let i = 0; i < shapes.length; i++) {
@@ -575,6 +578,11 @@ class Case {
                     }
                 }
             }
+
+            // store shape title placements for display          
+            let titleX = shape.posX + Math.ceil(shape.shapeWidth / 2) + 1;
+            let titleY = shape.posY + Math.ceil(shape.shapeHeight / 2) - 0.5;
+            this.shapeTitles.push([shape.title, titleX, titleY]);
         }
     }
 
@@ -599,6 +607,19 @@ class Case {
                 let rectY = (caseGridHeight - this.caseCellSize) - (y * this.caseCellSize); // draw from bottom up
                 rect(this.lrPadding + rectX, this.tbPadding + rectY, this.caseCellSize, this.caseCellSize);
             }
+        }
+
+        // display the shape titles
+        textSize(14);
+        textAlign(CENTER, CENTER); // center on coordinates
+        fill(255);
+        console.log(this.shapeTitles);
+        for (let i = 0; i < this.shapeTitles.length; i++) {
+            let title = this.shapeTitles[i][0];
+            let titleX = this.shapeTitles[i][1];
+            let titleY = this.shapeTitles[i][2];
+
+            text(title, this.lrPadding + (titleX * this.caseCellSize), this.tbPadding + (this.caseHeight * this.caseCellSize) - (titleY * this.caseCellSize));
         }
     }
 }
