@@ -105,7 +105,7 @@ class ShapeInput {
             let newShape = new Shape(titleValue);
             newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
             shapes.push(newShape);
-            // console.log(shapes);
+            // console log the json
             console.log(JSON.stringify(shapes));
 
             // Reset active shape and UI

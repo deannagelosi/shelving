@@ -24,16 +24,16 @@ function setup() {
     // case view
     loadShapeData();
     shapeCase = new Case();
-    shapeCase.sortShapes();
+    shapeCase.sortShapes('random'); // 'height' or 'random'
   }
 }
 
 function draw() {
   clear();
   background(255);
-  
+
   buildIssue = false;
-  
+
   if (inputView) {
     background(255);
     // display the input grid
@@ -52,7 +52,7 @@ function draw() {
       shapeCase.displayBoards();
     }
   }
-  
+
   if (buildIssue == false) { //
     noLoop(); // no issue, stop looping
   }

@@ -10,8 +10,8 @@ class Case {
         this.columnHeights = [];
         this.rowWidths = [];
         
-        this.shortShapes = [];
-        this.tallShapes = [];
+        this.middleShapes = [];
+        this.sideShapes = [];
         this.positions = []; // shape positions in the case
         this.shapeTitles = []; // positions of the shape titles
 
@@ -19,16 +19,30 @@ class Case {
         this.verticalBoards = [];
     }
 
-    sortShapes() {
+    sortShapes(_method) {
+        if (_method == "height") {
+            // sort by height
         shapes.sort(function (a, b) {
             return a.boundaryHeight - b.boundaryHeight;
         });
         // four shortest shapes for middle column
         for (let i = 0; i < shapes.length; i++) {
             if (i < 4) {
-                this.shortShapes.push(shapes[i]);
+                    this.middleShapes.push(shapes[i]);
+                } else {
+                    this.sideShapes.push(shapes[i]);
+                }
+            }
+        } else if (_method == "random") {
+            // sort by random
+            shuffle(shapes, true);
+            // four shortest shapes for middle column
+            for (let i = 0; i < shapes.length; i++) {
+                if (i < 4) {
+                    this.middleShapes.push(shapes[i]);
             } else {
-                this.tallShapes.push(shapes[i]);
+                    this.sideShapes.push(shapes[i]);
+                }
             }
         }
     }
@@ -44,6 +58,18 @@ class Case {
         this.calcShapesY();
         this.calcShapesX();
         this.placeShapes();
+    }
+
+    shuffleCaseLayout() {
+        // randomize middleShapes and sideShapes to reposition objects
+        shuffle(this.middleShapes, true);
+        shuffle(this.sideShapes, true);
+        // to do: could add sorting by width and height (ex: middle column widest on bottom)
+        this.positions = [
+            [this.sideShapes[0], this.sideShapes[1], this.sideShapes[2]],
+            [this.middleShapes[0], this.middleShapes[1], this.middleShapes[2], this.middleShapes[3]],
+            [this.sideShapes[3], this.sideShapes[4], this.sideShapes[5]]
+        ];
     }
 
     buildHorizontalBoards() {
@@ -442,18 +468,6 @@ class Case {
         }
     }
 
-    shuffleCaseLayout() {
-        // randomize shortShapes and tallShapes to reposition objects
-        shuffle(this.shortShapes, true);
-        shuffle(this.tallShapes, true);
-        // to do: could add sorting by width and height (ex: middle column widest on bottom)
-        this.positions = [
-            [this.tallShapes[0], this.tallShapes[1], this.tallShapes[2]],
-            [this.shortShapes[0], this.shortShapes[1], this.shortShapes[2], this.shortShapes[3]],
-            [this.tallShapes[3], this.tallShapes[4], this.tallShapes[5]]
-        ];
-    }
-
     calcHeights() {
         // loop through each column, adding up their heights
         this.columnHeights = [];
@@ -527,14 +541,14 @@ class Case {
             // loop the rows
             for (let row = 0; row < this.positions[col].length; row++) {
                 // calculate the x value
-                let shapeWidth = this.positions[col][row].boundaryWidth;
+                let boundaryWidth = this.positions[col][row].boundaryWidth;
                 let x;
                 if (col == 0) {
                     x = 0;
                 } else if (col == 1) {
-                    x = Math.floor((this.caseWidth - shapeWidth) / 2);
+                    x = Math.floor((this.caseWidth - boundaryWidth) / 2);
                 } else if (col == 2) {
-                    x = this.caseWidth - shapeWidth;
+                    x = this.caseWidth - boundaryWidth;
                 }
                 this.positions[col][row].posX = x;
             }
