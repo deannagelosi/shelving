@@ -10,7 +10,7 @@ let inputView = false;
 let buildIssue = false;
 
 function preload() {
-  shapeData = loadJSON('data/test-shapes.json');
+  shapeData = loadJSON('data/sunny-shapes.json');
 }
 
 function setup() {
