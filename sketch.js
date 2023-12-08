@@ -41,8 +41,10 @@ function draw() {
   } else {
     // create the case. set buildIssue true if there's an issue
     shapeCase.buildCase();
-    shapeCase.buildBoards();
+    shapeCase.buildPerimeterBoards();
+    shapeCase.buildHorizontalBoards();
     shapeCase.adjustBoards();
+    shapeCase.buildVerticalBoards();
 
     if (buildIssue == false) {
       // display the case

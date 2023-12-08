@@ -45,10 +45,8 @@ class Case {
         this.placeShapes();
     }
 
-    buildBoards() {
+    buildHorizontalBoards() {
         // working from the bottom of the case to the top
-        this.horizontalBoards = [];
-
         // loop all the shapes, build a board under each shape
         for (let col = 0; col < this.positions.length; col++) {
             for (let row = 0; row < this.positions[col].length; row++) {
@@ -278,14 +276,14 @@ class Case {
 
     getClosestBoardsLR(searchBoard) {
         // find the boards that are the closest neighbor (by y value) on the left and right
-        
+
         // find closest board on the left
         let leftBoards = this.getBoardsByCol(0);
         let closestBoardLeft = leftBoards[0];
         for (let i = 0; i < leftBoards.length; i++) {
             let currDistY = Math.abs(searchBoard.startCoords[0] - closestBoardLeft.endCoords[0]);
             let newDistY = Math.abs(searchBoard.startCoords[0] - leftBoards[i].endCoords[0]);
-            
+
             if (newDistY < currDistY) {
                 closestBoardLeft = leftBoards[i];
             }
@@ -316,8 +314,73 @@ class Case {
         return boards;
     }
 
+    buildPerimeterBoards() {
+        this.horizontalBoards = [];
+        this.verticalBoards = [];
+
+        let topBoard = new Board();
+        let leftBoard = new Board();
+        let rightBoard = new Board();
+
+        topBoard.startCoords = [this.caseHeight, 0];
+        topBoard.endCoords = [this.caseHeight, this.caseWidth];
+        this.horizontalBoards.push(topBoard);
+
+        leftBoard.startCoords = [0, 0];
+        leftBoard.endCoords = [this.caseHeight, 0];
+        this.verticalBoards.push(leftBoard);
+
+        rightBoard.startCoords = [0, this.caseWidth];
+        rightBoard.endCoords = [this.caseHeight, this.caseWidth];
+        this.verticalBoards.push(rightBoard);
+    }
+
+    buildVerticalBoards() {
+        let leftBoards = this.getBoardsByCol(0);
+        // loop the left boards, building a vertical board at each end point
+        for (let i = 0; i < leftBoards.length; i++) {
+            let board = leftBoards[i];
+            let endY = board.endCoords[0];
+            let endX = board.endCoords[1];
+            let vertStartCoords = [endY, endX];
+            let vertEndCoords = [endY + 1, endX]; // prevents matching with a neighbor or itself at the same y value
+
+            // start moving up until intersecting with an existing horizontal board
+            let intersectionFound = false;
+            for (let j = 0; j < this.caseHeight; j++) {
+                for (let k = 0; k < this.horizontalBoards.length; k++) {
+                    // [y, x]
+                    let startCoordsHorizBoard = this.horizontalBoards[k].startCoords;
+                    let endCoordsHorizBoard = this.horizontalBoards[k].endCoords;
+                    // check if the vertical board has crossed a horizontal board's y value
+                    if (vertEndCoords[0] == startCoordsHorizBoard[0]) {
+                        // is the vertical board's end x value between the horizontal board start x value and end x value
+                        if (vertEndCoords[1] >= startCoordsHorizBoard[1] && vertEndCoords[1] <= endCoordsHorizBoard[1]) {
+                            // vertical board intersects with a horizontal board, stop moving up
+                            // set to the same y-value
+                            vertEndCoords[0] = startCoordsHorizBoard[0];
+                            intersectionFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (intersectionFound == false) {
+                    // if no intersection, move end point up by one cell
+                    vertEndCoords[0] += 1;
+                } else {
+                    break;
+                }
+            }
+            // create and save vertical board
+            let vertBoard = new Board();
+            vertBoard.startCoords = vertStartCoords;
+            vertBoard.endCoords = vertEndCoords;
+            this.verticalBoards.push(vertBoard);
+        }
+    }
+
     displayBoards() {
-        // draw the boards
+        // draw the horizontal boards
         for (let i = 0; i < this.horizontalBoards.length; i++) {
             let board = this.horizontalBoards[i];
             stroke("red");
@@ -337,7 +400,28 @@ class Case {
             // Draw a dot at the startCoords and endCoords
             circle(startX, startY, 10); // x, y, size
             circle(endX, endY, 10); // x, y, size
+        }
 
+        // draw the vertical boards
+        for (let i = 0; i < this.verticalBoards.length; i++) {
+            let board = this.verticalBoards[i];
+            stroke("red");
+            strokeWeight(3);
+
+            // translate to the case's position and cell size
+            let startX = this.lrPadding + (board.startCoords[1] * this.caseCellSize);
+            let startY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (board.startCoords[0] * this.caseCellSize); // draw from bottom up
+            let endX = this.lrPadding + (board.endCoords[1] * this.caseCellSize);
+            let endY = this.tbPadding + (this.caseHeight * this.caseCellSize) - (board.endCoords[0] * this.caseCellSize); // draw from bottom up
+
+            line(startX, startY, endX, endY);
+
+            // draw dots at the start and end coords
+            fill(0); // Black color for the dots
+            noStroke(); // No border for the dots
+            // Draw a dot at the startCoords and endCoords
+            circle(startX, startY, 10); // x, y, size
+            circle(endX, endY, 10); // x, y, size
         }
     }
 
