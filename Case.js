@@ -336,14 +336,30 @@ class Case {
     }
 
     buildVerticalBoards() {
-        let leftBoards = this.getBoardsByCol(0);
+        this.buildVertBoardsPos(0, "end");
+        this.buildVertBoardsPos(1, "start");
+        this.buildVertBoardsPos(1, "end");
+        this.buildVertBoardsPos(2, "start");
+    }
+
+    buildVertBoardsPos(col, startPt) {
+        let boards = this.getBoardsByCol(col);
         // loop the left boards, building a vertical board at each end point
-        for (let i = 0; i < leftBoards.length; i++) {
-            let board = leftBoards[i];
-            let endY = board.endCoords[0];
-            let endX = board.endCoords[1];
-            let vertStartCoords = [endY, endX];
-            let vertEndCoords = [endY + 1, endX]; // prevents matching with a neighbor or itself at the same y value
+        for (let i = 0; i < boards.length; i++) {
+            let board = boards[i];
+            // the start coords for the vertical line
+            let startY;
+            let startX;
+            if (startPt == "start") {
+                startY = board.startCoords[0];
+                startX = board.startCoords[1];
+            } else if (startPt == "end") {
+                startY = board.endCoords[0];
+                startX = board.endCoords[1];
+            }
+
+            let vertStartCoords = [startY, startX];
+            let vertEndCoords = [startY + 1, startX]; // prevents matching with a neighbor or itself at the same y value
 
             // start moving up until intersecting with an existing horizontal board
             let intersectionFound = false;
