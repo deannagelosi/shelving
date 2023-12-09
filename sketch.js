@@ -39,16 +39,17 @@ function draw() {
     // display the input grid
     shapeInput.drawInputGrid();
   } else {
-    // create the case. set buildIssue true if there's an issue
+    // create the case, setting buildIssue true if there's an issue
     shapeCase.layoutShapes();
     shapeCase.buildPerimeterBoards();
     shapeCase.buildHorizontalBoards();
     shapeCase.buildVerticalBoards();
+    shapeCase.mergeAllBoards();
 
     if (buildIssue == false) {
       // display the case
       shapeCase.displayShapes(); // display the grid
-      shapeCase.displayBoards();
+      shapeCase.displayBoards(); // display the boards
     }
   }
 

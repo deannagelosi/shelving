@@ -350,6 +350,75 @@ class Case {
         }
     }
 
+    mergeAllBoards() {
+        // merge all horizontal and vertical boards
+        this.horizontalBoards = this.mergeBoards(this.horizontalBoards, 0);
+        this.verticalBoards = this.mergeBoards(this.verticalBoards, 1);
+    }
+
+    mergeBoards(_boards, _axis) {
+        // [y, x]
+        // == Sort the boards based on shared axis == //
+        _boards.sort((a, b) => a.startCoords[_axis] - b.startCoords[_axis]);
+
+        // == Merge touching boards ==
+        // start over on each merge and stop when no more merges are happening
+        let merged = true;
+        while (merged == true) {
+            merged = false;
+
+            // loop through each board and check if touching any other boards (excluding itself)
+            for (let i = 0; i < _boards.length; i++) {
+                let currBoard = _boards[i];
+
+                let otherBoards = _boards.filter(object => object !== currBoard);
+                let found = otherBoards.find(board => this.isTouching(currBoard, board, _axis));
+
+                if (found) {
+                    // create a new board that is the combination of the two touching boards
+                    let mergedBoard = new Board();
+                    mergedBoard.startCoords = currBoard.startCoords;
+                    mergedBoard.endCoords = found.endCoords;
+                    
+                    // remove the two original boards and add the new merged board
+                    _boards = _boards.filter(object => object !== currBoard);
+                    _boards = _boards.filter(object => object !== found);
+                    _boards.push(mergedBoard);
+
+                    // a merge was found, start over looking for more merges
+                    merged = true;
+                    break;
+                }
+            }
+        }
+
+        return _boards;
+    }
+
+    isTouching(_board1, _board2, _axis) {
+        let currBoard = _board1;
+        let otherBoard = _board2;
+        let touching = false;
+        if (_axis == 0) { // y axis
+            // horizontal boards - y's equal and x's touching or overlapping
+            let yTouching = currBoard.endCoords[0] == otherBoard.startCoords[0];
+            let xTouching = currBoard.endCoords[1] >= otherBoard.startCoords[1] && currBoard.endCoords[1] <= otherBoard.endCoords[1];
+
+            if (yTouching && xTouching) {
+                touching = true;
+            }
+        } else if (_axis == 1) { // x axis
+            // vertical boards - x's equal and y's touching or overlapping
+            let xTouching = currBoard.endCoords[1] == otherBoard.startCoords[1];
+            let yTouching = currBoard.endCoords[0] >= otherBoard.startCoords[0] && currBoard.endCoords[0] <= otherBoard.endCoords[0];
+            
+            if (xTouching && yTouching) {
+                touching = true;
+            }
+        }
+        return touching;
+    }
+
     displayBoards() {
         // draw the horizontal boards
         for (let i = 0; i < this.horizontalBoards.length; i++) {
@@ -366,11 +435,11 @@ class Case {
             line(startX, startY, endX, endY);
 
             // draw dots at the start and end coords
-            fill(0); // Black color for the dots
+            fill("orange"); // Black color for the dots
             noStroke(); // No border for the dots
             // Draw a dot at the startCoords and endCoords
-            circle(startX, startY, 10); // x, y, size
-            circle(endX, endY, 10); // x, y, size
+            circle(startX, startY, 15); // x, y, size
+            circle(endX, endY, 15); // x, y, size
         }
 
         // draw the vertical boards
@@ -388,11 +457,11 @@ class Case {
             line(startX, startY, endX, endY);
 
             // draw dots at the start and end coords
-            fill(0); // Black color for the dots
+            fill("green"); // Black color for the dots
             noStroke(); // No border for the dots
             // Draw a dot at the startCoords and endCoords
-            circle(startX, startY, 10); // x, y, size
-            circle(endX, endY, 10); // x, y, size
+            circle(startX, startY, 8); // x, y, size
+            circle(endX, endY, 8); // x, y, size
         }
     }
 
