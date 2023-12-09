@@ -70,7 +70,7 @@ function loadShapeData() {
       let inputShape = shapeData[key];
       // create shape
       let newShape = new Shape(inputShape.title);
-      newShape.saveUserInput(inputShape.inputGrid);
+      newShape.saveUserInput(inputShape.inputGrid, parseInt(inputShape.shapeDepth));
       shapes.push(newShape);
     }
   }
