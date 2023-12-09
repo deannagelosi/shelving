@@ -354,6 +354,22 @@ class Case {
         // merge all horizontal and vertical boards
         this.horizontalBoards = this.mergeBoards(this.horizontalBoards, 0);
         this.verticalBoards = this.mergeBoards(this.verticalBoards, 1);
+
+        // discard case if any boards are too short (only 1 cell long)
+        for (let i = 0; i < this.horizontalBoards.length; i++) {
+            let board = this.horizontalBoards[i];
+            if (board.getLength() < 2) {
+                buildIssue = true;
+                return;
+            }
+        }
+        for (let i = 0; i < this.verticalBoards.length; i++) {
+            let board = this.verticalBoards[i];
+            if (board.getLength() < 2) {
+                buildIssue = true;
+                return;
+            }
+        }
     }
 
     mergeBoards(_boards, _axis) {
