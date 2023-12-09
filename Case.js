@@ -5,7 +5,7 @@ class Case {
         this.caseGrid = [];
         this.caseCellSize = 20;
         this.tbPadding = 25; // left right
-        this.lrPadding = 25; // left right
+        this.lrPadding = 45; // left right
 
         this.columnHeights = [];
         this.rowWidths = [];
@@ -655,6 +655,26 @@ class Case {
                 let rectY = (caseGridHeight - this.caseCellSize) - (y * this.caseCellSize); // draw from bottom up
                 rect(this.lrPadding + rectX, this.tbPadding + rectY, this.caseCellSize, this.caseCellSize);
             }
+        }
+
+        // display grid numbers
+        textSize(14);
+        textAlign(CENTER, CENTER);
+        // y axis
+        let numX = (this.lrPadding / 1.5);
+        let numY = this.tbPadding + (this.caseCellSize / 2);
+        for (let i = this.caseHeight; i > 0; i--) {
+            fill(i % 5 === 0 ? "black" : "grey");
+            text(i, numX, numY);
+            numY += this.caseCellSize;
+        }
+        // x axis
+        numX = this.lrPadding + (this.caseCellSize / 2);
+        numY = this.tbPadding + (this.caseHeight * this.caseCellSize) + (this.caseCellSize * 0.75);
+        for (let i = 1; i <= this.caseWidth; i++) {
+            fill(i % 5 === 0 ? "black" : "grey");
+            text(i, numX, numY);
+            numX += this.caseCellSize;
         }
 
         // display the shape titles
