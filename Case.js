@@ -47,14 +47,15 @@ class Case {
         }
     }
 
-    buildCase() {
+    layoutShapes() {
+        // shuffle the shape layout
         this.shuffleCaseLayout();
 
         // calculate height & width of each column and set height & width of the case
         this.calcHeights();
         this.calcWidths();
 
-        // calculate the y and x value for each shape and place them in the case grid
+        // calculate y and x position for each shape and place them in the case grid
         this.calcShapesY();
         this.calcShapesX();
         this.placeShapes();
@@ -73,8 +74,9 @@ class Case {
     }
 
     buildHorizontalBoards() {
-        // working from the bottom of the case to the top
-        // loop all the shapes, build a board under each shape
+        // === Build initial short boards under each shape ===
+
+        // working from bottom of case to top, build a board under each shape
         for (let col = 0; col < this.positions.length; col++) {
             for (let row = 0; row < this.positions[col].length; row++) {
                 // draw a horizontal line for this shape's floor, using its y-value
@@ -92,24 +94,21 @@ class Case {
                 this.horizontalBoards.push(board);
             }
         }
-    }
 
-    adjustBoards() {
-        // modify the boards to fit the case
+        // === Grow the boards left and right ===
 
         // loop the middle column boards
         let centerBoards = this.getBoardsByCol(1);
         for (let i = 0; i < centerBoards.length; i++) {
-            let board = centerBoards[i];
+            let centerBoard = centerBoards[i];
             // find the closest board to the left of this board (closest y value)
-            let neighborBoards = this.getClosestBoardsLR(board); // [left, right]
+            let neighborBoards = this.getClosestBoardsLR(centerBoard); // [left, right]
             let leftBoard = neighborBoards[0];
             let rightBoard = neighborBoards[1];
-
             // Note: position data is stored as [y, x]
 
             // == Left Side ==
-            let xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
+            let xDistLeft = centerBoard.startCoords[1] - leftBoard.endCoords[1];
             // abort case if a distance is negative
             if (xDistLeft < 0) {
                 // x position overlap, try again
@@ -117,29 +116,30 @@ class Case {
                 return;
             }
 
-            // grow the left and center boards till they meet
             let attempts = 10;
             while (xDistLeft > 0 && attempts > 0) {
+                let leftGrow = this.allowGrowth(leftBoard, "end");
+                let centerGrow = this.allowGrowth(centerBoard, "start");
+
                 if (xDistLeft >= 2) {
-                    // can grow both sides if possible
-                    if (this.allowGrowLeft(leftBoard)) {
+                    // can grow both sides if allowed
+                    if (leftGrow) {
                         leftBoard.endCoords[1] += 1;
                     }
-                    if (this.allowGrowCenterStart(board)) {
-                        board.startCoords[1] -= 1;
+                    if (centerGrow) {
+                        centerBoard.startCoords[1] -= 1;
                     }
-                }
-                else if (xDistLeft == 1) {
+                } else if (xDistLeft == 1) {
                     // can only grow one side, trying left first
-                    if (this.allowGrowLeft(leftBoard)) {
+                    if (leftGrow) {
                         leftBoard.endCoords[1] += 1;
                     }
-                    else if (this.allowGrowCenterStart(board)) {
-                        board.startCoords[1] -= 1;
+                    else if (centerGrow) {
+                        centerBoard.startCoords[1] -= 1;
                     }
                 }
                 // update xDistLeft, aborting if it goes negative
-                xDistLeft = board.startCoords[1] - leftBoard.endCoords[1];
+                xDistLeft = centerBoard.startCoords[1] - leftBoard.endCoords[1];
                 if (xDistLeft < 0) {
                     // x position overlap, try again
                     buildIssue = true;
@@ -149,7 +149,7 @@ class Case {
             }
 
             // == Right Side ==
-            let xDistRight = rightBoard.startCoords[1] - board.endCoords[1];
+            let xDistRight = rightBoard.startCoords[1] - centerBoard.endCoords[1];
             // abort case if a distance is negative
             if (xDistRight < 0) {
                 // x position overlap, try again
@@ -157,29 +157,30 @@ class Case {
                 return;
             }
 
-            // grow the right and center boards till they meet
             attempts = 10;
             while (xDistRight > 0 && attempts > 0) {
+                let rightGrow = this.allowGrowth(rightBoard, "start");
+                let centerGrow = this.allowGrowth(centerBoard, "end");
+
                 if (xDistRight >= 2) {
-                    // can grow both sides if possible
-                    if (this.allowGrowRight(rightBoard)) {
+                    // can grow both sides if allowed
+                    if (rightGrow) {
                         rightBoard.startCoords[1] -= 1;
                     }
-                    if (this.allowGrowCenterEnd(board)) {
-                        board.endCoords[1] += 1;
+                    if (centerGrow) {
+                        centerBoard.endCoords[1] += 1;
                     }
-                }
-                else if (xDistRight == 1) {
+                } else if (xDistRight == 1) {
                     // can only grow one side, trying left first
-                    if (this.allowGrowRight(rightBoard)) {
+                    if (rightGrow) {
                         rightBoard.startCoords[1] -= 1;
                     }
-                    else if (this.allowGrowCenterEnd(board)) {
-                        board.endCoords[1] += 1;
+                    else if (centerGrow) {
+                        centerBoard.endCoords[1] += 1;
                     }
                 }
                 // update xDistRight, aborting if it goes negative
-                xDistRight = rightBoard.startCoords[1] - board.endCoords[1];
+                xDistRight = rightBoard.startCoords[1] - centerBoard.endCoords[1];
                 if (xDistRight < 0) {
                     // x position overlap, try again
                     buildIssue = true;
@@ -191,15 +192,24 @@ class Case {
 
     }
 
-    allowGrowLeft(_leftBoard) {
-        // check if the left board is allowed to grow on it's end side
-        let leftBoardEndX = _leftBoard.endCoords[1];
-        let leftBoardEndY = _leftBoard.endCoords[0];
+    allowGrowth(_board, _side) {
+        // check if the board is allowed to grow on the side requested
+        let boardGrowX;
+        let boardGrowY;
+        if (_side == "end") {
+            // grow from the end side
+            boardGrowX = _board.endCoords[1]; // look one cell to the right
+            boardGrowY = _board.endCoords[0];
+        } else if (_side == "start") {
+            // grow from the start side
+            boardGrowX = _board.startCoords[1] - 1; // look one cell to the left
+            boardGrowY = _board.startCoords[0];
+        }
 
-        if (leftBoardEndY - 1 >= 0) { // not the bottom
+        if (boardGrowY - 1 >= 0) { // not the bottom
             // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[leftBoardEndY][leftBoardEndX];
-            let nextBottomCell = this.caseGrid[leftBoardEndY - 1][leftBoardEndX];
+            let nextTopCell = this.caseGrid[boardGrowY][boardGrowX];
+            let nextBottomCell = this.caseGrid[boardGrowY - 1][boardGrowX];
 
             if (nextTopCell == 0 || nextBottomCell == 0) {
                 return true;
@@ -207,92 +217,10 @@ class Case {
             }
         } else { // at the bottom
             // check if the top/bottom grid the next column over is occupied
-            let nextTopCell1 = this.caseGrid[leftBoardEndY + 1][leftBoardEndX];
-            let nextTopCell2 = this.caseGrid[leftBoardEndY][leftBoardEndX];
+            let nextTopCell1 = this.caseGrid[boardGrowY + 1][boardGrowX];
+            let nextTopCell2 = this.caseGrid[boardGrowY][boardGrowX];
 
             if (nextTopCell1 == 0 && nextTopCell2 == 0) {
-                return true;
-                // "allowed to grow left board (end side)"
-            }
-        }
-
-        return false;
-    }
-
-    allowGrowRight(_rightBoard) {
-        // check if the left board is allowed to grow on it's end side
-        let rightBoardStartX = _rightBoard.startCoords[1];
-        let rightBoardStartY = _rightBoard.startCoords[0];
-
-        if (rightBoardStartY - 1 >= 0) { // not the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[rightBoardStartY][rightBoardStartX - 1];
-            let nextBottomCell = this.caseGrid[rightBoardStartY - 1][rightBoardStartX - 1];
-
-            if (nextTopCell == 0 || nextBottomCell == 0) {
-                return true;
-                // "allowed to grow right board (start side)"
-            }
-        } else { // at the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell1 = this.caseGrid[rightBoardStartY + 1][rightBoardStartX - 1];
-            let nextTopCell2 = this.caseGrid[rightBoardStartY][rightBoardStartX - 1];
-
-            if (nextTopCell1 == 0 && nextTopCell2 == 0) {
-                return true;
-                // "allowed to grow right board (start side)"
-            }
-        }
-
-        return false;
-    }
-
-    allowGrowCenterStart(_centerBoard) {
-        // check if a center board is allowed to grow on it's starting side
-        let boardStartX = _centerBoard.startCoords[1];
-        let boardStartY = _centerBoard.startCoords[0];
-
-        if (boardStartY - 1 >= 0) { // not the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[boardStartY][boardStartX - 1];
-            let nextBottomCell = this.caseGrid[boardStartY - 1][boardStartX - 1];
-
-            if (nextTopCell == 0 || nextBottomCell == 0) {
-                return true;
-                // "allowed to grow center board (start side"
-            }
-        } else { // at the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[boardStartY][boardStartX - 1]
-
-            if (nextTopCell == 0) {
-                return true;
-                // "allowed to grow left board (end side)"
-            }
-        }
-
-        return false;
-    }
-
-    allowGrowCenterEnd(_centerBoard) {
-        // check if a center board is allowed to grow on it's starting side
-        let boardEndX = _centerBoard.endCoords[1];
-        let boardEndY = _centerBoard.endCoords[0];
-
-        if (boardEndY - 1 >= 0) { // not the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[boardEndY][boardEndX];
-            let nextBottomCell = this.caseGrid[boardEndY - 1][boardEndX];
-
-            if (nextTopCell == 0 || nextBottomCell == 0) {
-                return true;
-                // "allowed to grow center board (start side"
-            }
-        } else { // at the bottom
-            // check if the top/bottom grid the next column over is occupied
-            let nextTopCell = this.caseGrid[boardEndY][boardEndX]
-
-            if (nextTopCell == 0) {
                 return true;
                 // "allowed to grow left board (end side)"
             }
@@ -499,7 +427,7 @@ class Case {
             let totalWidth = 0;
             for (let col = 0; col < this.positions.length; col++) {
                 if (this.positions[col][row] != undefined) {
-                totalWidth += this.positions[col][row].boundaryWidth;
+                    totalWidth += this.positions[col][row].boundaryWidth;
                 } else if (this.positions[col][row - 1] != undefined) {
                     totalWidth += this.positions[col][row - 1].boundaryWidth;
                 }
