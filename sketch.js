@@ -67,6 +67,19 @@ function mousePressed() {
   }
 }
 
+function keyPressed() {
+  if (key === 's' || key === 'S') {
+    // export case as svg
+    let caseExport = new CaseExport();
+    caseExport.calcDepth();
+    // caseExport.calcPOI();
+    caseExport.layoutRects();
+    // caseExport.layoutPOI();
+    caseExport.displayExport();
+    console.log("did it work")
+  }
+}
+
 function loadShapeData() {
   for (let key in shapeData) {
     if (shapeData.hasOwnProperty(key)) {
