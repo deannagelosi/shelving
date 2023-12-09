@@ -55,6 +55,9 @@ function draw() {
 
   if (buildIssue == false) { //
     noLoop(); // no issue, stop looping
+  } else {
+    console.log('build issue');
+    loop(); // issue, keep looping
   }
 }
 

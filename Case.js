@@ -370,6 +370,49 @@ class Case {
                 return;
             }
         }
+
+        // discard if a single cell gap exists between two vertical boards
+        // sort vert boards by x ([y, x]), then check adjacent boards. skip last board.
+        this.verticalBoards.sort((a, b) => a.startCoords[1] - b.startCoords[1]);
+        for (let i = 0; i < this.verticalBoards.length - 1; i++) {
+            let boardCounter = 1;
+            let currBoard = this.verticalBoards[i];
+            let nextBoard = this.verticalBoards[i + boardCounter];
+            let distanceX = Math.abs(nextBoard.startCoords[1] - currBoard.endCoords[1]);
+
+            while (distanceX == 1) {
+                // adjacent on x axis. check if the y values overlap for each board
+                if (currBoard.startCoords[0] > nextBoard.startCoords[0] && currBoard.startCoords[0] < nextBoard.endCoords[0]) {
+                    buildIssue = true;
+                    return;
+                }
+                if (nextBoard.startCoords[0] > currBoard.startCoords[0] && nextBoard.startCoords[0] < currBoard.endCoords[0]) {
+                    buildIssue = true;
+                    return;
+                }
+                if (currBoard.endCoords[0] > nextBoard.startCoords[0] && currBoard.endCoords[0] < nextBoard.endCoords[0]) {
+                    buildIssue = true;
+                    return;
+                }
+                if (nextBoard.endCoords[0] > currBoard.startCoords[0] && nextBoard.endCoords[0] < currBoard.endCoords[0]) {
+                    buildIssue = true;
+                    return;
+                }
+                // same start and ends on both
+                if (currBoard.startCoords[0] == nextBoard.startCoords[0] && currBoard.endCoords[0] == nextBoard.endCoords[0]) {
+                    buildIssue = true;
+                    return;
+                }
+                // check if next board is also adjacent
+                boardCounter++;
+                nextBoard = this.verticalBoards[i + boardCounter];
+                if (nextBoard != undefined) {
+                    distanceX = Math.abs(nextBoard.startCoords[1] - currBoard.endCoords[1]);
+                } else {
+                    break;
+                }
+            }
+        }
     }
 
     mergeBoards(_boards, _axis) {
@@ -395,7 +438,7 @@ class Case {
                     let mergedBoard = new Board();
                     mergedBoard.startCoords = currBoard.startCoords;
                     mergedBoard.endCoords = found.endCoords;
-                    
+
                     // remove the two original boards and add the new merged board
                     _boards = _boards.filter(object => object !== currBoard);
                     _boards = _boards.filter(object => object !== found);
@@ -427,7 +470,7 @@ class Case {
             // vertical boards - x's equal and y's touching or overlapping
             let xTouching = currBoard.endCoords[1] == otherBoard.startCoords[1];
             let yTouching = currBoard.endCoords[0] >= otherBoard.startCoords[0] && currBoard.endCoords[0] <= otherBoard.endCoords[0];
-            
+
             if (xTouching && yTouching) {
                 touching = true;
             }
