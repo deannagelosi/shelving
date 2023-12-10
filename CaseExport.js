@@ -6,7 +6,7 @@ class CaseExport {
     // lays out boards
     constructor() {
         // in inches
-        this.bedWidth = 400;
+        this.bedWidth = 600;
         this.bedHeight = 400; // 28
         this.pixelRes = 10; // pixels per inch
         this.graphic = createGraphics(this.bedWidth * this.pixelRes, this.bedHeight * this.pixelRes);
@@ -32,6 +32,7 @@ class CaseExport {
         let rectTopLeftY = 10;
         let rectHeight = this.maxDepth;
         let endJointX = 25;
+
         //== Horizontal Boards ==//
         // sort the boards by length
         shapeCase.horizontalBoards.sort((a, b) => b.getLength() - a.getLength());
@@ -52,7 +53,7 @@ class CaseExport {
             this.graphic.fill(0);
 
             this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
-            this.graphic.text(endType, (endJointX * 2.25) + (rectWidth * this.pixelRes), rectTopLeftY + (rectHeight * this.pixelRes) / 2);
+            this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
 
             // updates y position for the next rectangle
             rectTopLeftY += rectHeight * this.pixelRes + 10;
@@ -80,7 +81,7 @@ class CaseExport {
             this.graphic.fill(0);
 
             this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
-            this.graphic.text(endType, (endJointX * 2) + (rectWidth * this.pixelRes) - 10, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
+            this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
 
             // updates y position for the next rectangle
             rectTopLeftY += rectHeight * this.pixelRes + 10;
@@ -90,6 +91,7 @@ class CaseExport {
     }
 
     layoutPOI() { }
+
     displayExport() {
         // display the graphics buffer in browser
         background(255);

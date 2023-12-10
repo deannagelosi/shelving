@@ -45,7 +45,6 @@ function draw() {
     shapeCase.buildHorizontalBoards();
     shapeCase.buildVerticalBoards();
     shapeCase.mergeAllBoards();
-    shapeCase.addJoints();
 
     if (buildIssue == false) {
       // display the case
@@ -70,6 +69,9 @@ function mousePressed() {
 
 function keyPressed() {
   if (key === 's' || key === 'S') {
+    // build the joints
+    shapeCase.addJoints();
+
     // export case as svg
     let caseExport = new CaseExport();
     caseExport.calcDepth();

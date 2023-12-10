@@ -36,4 +36,16 @@ class Board {
         // return the start and end coordinates
         return [this.startCoords, this.endCoords];
     }
+
+    getOrientation() {
+        // [y, x]
+        if (this.startCoords[0] == this.endCoords[0]) {
+            // same y, horizontal board
+            return 0;
+        }
+        else if (this.startCoords[1] == this.endCoords[1]) {
+            // same x, vertical board
+            return 1;
+        }
+    }
 }
