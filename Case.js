@@ -454,6 +454,20 @@ class Case {
         return _boards;
     }
 
+    labelBoards() {
+        // sort horizontal boards by y value and then label them
+        this.horizontalBoards.sort((a, b) => a.startCoords[0] - b.startCoords[0]);
+        this.horizontalBoards.forEach((board, index) => {
+            board.boardLabel =  String.fromCharCode(65 + index);
+        })
+
+        // sort vertical boards by x value and then label them
+        this.verticalBoards.sort((a, b) => a.startCoords[1] - b.startCoords[1]);
+        this.verticalBoards.forEach((board, index) => {
+            board.boardLabel =  index + 1;
+        })
+    }
+
     addJoints() {
         // add joints to the boards along all vertical and horizontal intersections
         this.axisJoints(0); // y axis

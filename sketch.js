@@ -45,6 +45,7 @@ function draw() {
     shapeCase.buildHorizontalBoards();
     shapeCase.buildVerticalBoards();
     shapeCase.mergeAllBoards();
+    shapeCase.labelBoards();
 
     if (buildIssue == false) {
       // display the case

@@ -103,6 +103,15 @@ class CaseExport {
                     this.graphic.rect(tJoints[i][0], tJoints[i][1], this.cutWidth * this.pixelRes, slotHeight * this.pixelRes);
                 }
             });
+
+            // print board label name
+            this.graphic.textSize(24);
+            this.graphic.textAlign(LEFT, CENTER);
+            this.graphic.fill(0);
+            let boardLabel = currBoard.boardLabel;
+            let boardLabelX = rectTopLeftX + (0.5 * this.pixelRes);
+            let boardLabelY = rectTopLeftY + (0.5 * this.pixelRes);
+            this.graphic.text(boardLabel, boardLabelX, boardLabelY);
         }
     }
 

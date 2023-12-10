@@ -10,8 +10,9 @@ class Board {
         this.poi = { // points of interest
             endJoints: ["", ""], // [start edge, end edge]
             tJoints: [], // array of x-values for T-joint holes 
-            labels: [],
+            shapes: [{}], // array of objs with shape name and x-value position
         }
+        this.boardLabel;
     }
 
     getLength() {
