@@ -1,9 +1,6 @@
 class CaseExport {
-    // makes rectangles
-    // makes joinery
     // makes labels
     // makes svg
-    // lays out boards
     constructor() {
         // in inches
         this.bedWidth = 600;
@@ -11,7 +8,10 @@ class CaseExport {
         this.pixelRes = 10; // pixels per inch
         this.graphic = createGraphics(this.bedWidth * this.pixelRes, this.bedHeight * this.pixelRes);
         this.maxDepth = 0;
-        this.cutWidth = 0.25;
+        this.boardThickness = 0.25;
+        this.cutWidth = this.boardThickness;
+        this.boardLengthAdjust = this.boardThickness;
+        this.lengthMod = 2; // cells are 0.5 inches, so multiply by 2 to get length in inches
     }
 
     calcDepth() {
@@ -37,12 +37,12 @@ class CaseExport {
         let rectTopLeftY = 10;
         let endJointX = 25 + _LBuffer;
 
-        //== Horizontal Boards ==//
+        //== Print Boards ==//
         // sort the boards by length
         _boards.sort((a, b) => b.getLength() - a.getLength());
         for (let i = 0; i < _boards.length; i++) {
             let currBoard = _boards[i];
-            let rectWidth = currBoard.getLength();
+            let rectWidth = (currBoard.getLength() / this.lengthMod) + (this.boardLengthAdjust * this.pixelRes);
             this.graphic.noFill();
             this.graphic.strokeWeight(1);
             this.graphic.rect(rectTopLeftX, rectTopLeftY, rectWidth * this.pixelRes, rectHeight * this.pixelRes);
@@ -61,10 +61,23 @@ class CaseExport {
             this.buildJoinery(startType, rectTopLeftX, rectTopLeftY);
             this.buildJoinery(endType, rectTopLeftX + (rectWidth * this.pixelRes) - (this.cutWidth * this.pixelRes), rectTopLeftY);
 
+            // t-joint slots
+            currBoard.poi.tJoints.forEach((tJoint) => {
+                this.graphic.noFill();
+                // divide by 2 because cells are 0.5 inches and T-Joints are number of cells
+                let tJointX = rectTopLeftX + ((tJoint / this.lengthMod) * this.pixelRes);
+                tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
+                let tJointY = rectTopLeftY + (1 * this.pixelRes);
+                let tJoints = [[tJointX, tJointY], [tJointX, tJointY + (2 * this.pixelRes)]];
+                let slotHeight = 1;
+                for (let i = 0; i < tJoints.length; i++) {
+                    this.graphic.rect(tJoints[i][0], tJoints[i][1], this.cutWidth * this.pixelRes, slotHeight * this.pixelRes);
+                }
+            });
+
             // updates y position for the next rectangle
             rectTopLeftY += rectHeight * this.pixelRes + 10;
         }
-
     }
 
     buildJoinery(_type, _rectX, _rectY) {
