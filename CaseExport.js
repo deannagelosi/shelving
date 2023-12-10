@@ -3,15 +3,19 @@ class CaseExport {
     // makes svg
     constructor() {
         // in inches
-        this.bedWidth = 600;
-        this.bedHeight = 400; // 28
-        this.pixelRes = 10; // pixels per inch
-        this.graphic = createGraphics(this.bedWidth * this.pixelRes, this.bedHeight * this.pixelRes);
+        this.bedWidth = 40; // 40
+        this.bedHeight = 28; // 28
+        this.pixelRes = 96; // pixels per inch
+        this.graphic = createGraphics(45 * this.pixelRes, 60 * this.pixelRes, SVG);
         this.maxDepth = 0;
         this.boardThickness = 0.25;
         this.cutWidth = this.boardThickness;
         this.boardLengthAdjust = this.boardThickness;
         this.lengthMod = 2; // cells are 0.5 inches, so multiply by 2 to get length in inches
+        this.printGap = 0.5 * this.pixelRes; // gap between printed boards
+
+        this.bedRows = [0, 0, 0, 0, 0]; // 5 rows
+        this.beds = [[...this.bedRows], [...this.bedRows]];
     }
 
     calcDepth() {
@@ -25,27 +29,52 @@ class CaseExport {
         this.maxDepth += 1; // add buffer for depth
     }
 
-    layoutRects() {
-        this.generateRects(shapeCase.horizontalBoards, 0);
-        this.generateRects(shapeCase.verticalBoards, 340);
+    printBed() {
+        // print the bed
+        this.graphic.noFill();
+        this.graphic.strokeWeight(1);
+
+        // first bed
+        this.graphic.rect(0, 0, this.bedWidth * this.pixelRes, this.bedHeight * this.pixelRes);
+        // second bed if used
+        if (this.beds[1][0] > 0) {
+            this.graphic.rect(0, (this.bedHeight * this.pixelRes), this.bedWidth * this.pixelRes, this.bedHeight * this.pixelRes);
+        }
     }
 
-    generateRects(_boards, _LBuffer) {
+    layoutRects() {
+        this.generateRects(shapeCase.horizontalBoards);
+        this.generateRects(shapeCase.verticalBoards);
+    }
+
+    generateRects(_boards) {
         // use graphicsBuffer to draw the rectangles
         let rectHeight = this.maxDepth;
-        let rectTopLeftX = 30 + _LBuffer;
-        let rectTopLeftY = 10;
-        let endJointX = 25 + _LBuffer;
 
         //== Print Boards ==//
         // sort the boards by length
         _boards.sort((a, b) => b.getLength() - a.getLength());
         for (let i = 0; i < _boards.length; i++) {
             let currBoard = _boards[i];
-            let rectWidth = (currBoard.getLength() / this.lengthMod) + (this.boardLengthAdjust * this.pixelRes);
+            let rectWidth = (currBoard.getLength() / this.lengthMod) + (this.boardLengthAdjust);
             this.graphic.noFill();
             this.graphic.strokeWeight(1);
+
+            // find a space for the rectangle in the print bed rows
+            let bedLocation = this.findBedSpace(rectWidth); // [bed, row]
+            let bed = bedLocation[0];
+            let row = bedLocation[1];
+
+            // calc the top left corner location of the rectangle
+            let rectTopLeftX = (this.beds[bed][row] * this.pixelRes) + this.printGap
+            let bedY = (bed * (this.bedHeight * this.pixelRes));
+            let rowY = this.printGap + (row * ((rectHeight * this.pixelRes) + this.printGap));
+            let rectTopLeftY = bedY + rowY;
+
+            // print the rectangle
             this.graphic.rect(rectTopLeftX, rectTopLeftY, rectWidth * this.pixelRes, rectHeight * this.pixelRes);
+            // mark the bed row space as used
+            this.beds[bed][row] += rectWidth + (this.printGap / this.pixelRes);
 
             // == Points of Interest == //
             // print end joint type label
@@ -55,8 +84,8 @@ class CaseExport {
 
             let startType = currBoard.poi.endJoints[0];
             let endType = currBoard.poi.endJoints[1];
-            this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
-            this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
+            // this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
+            // this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
 
             this.buildJoinery(startType, rectTopLeftX, rectTopLeftY);
             this.buildJoinery(endType, rectTopLeftX + (rectWidth * this.pixelRes) - (this.cutWidth * this.pixelRes), rectTopLeftY);
@@ -66,7 +95,7 @@ class CaseExport {
                 this.graphic.noFill();
                 // divide by 2 because cells are 0.5 inches and T-Joints are number of cells
                 let tJointX = rectTopLeftX + ((tJoint / this.lengthMod) * this.pixelRes);
-                tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
+                // tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
                 let tJointY = rectTopLeftY + (1 * this.pixelRes);
                 let tJoints = [[tJointX, tJointY], [tJointX, tJointY + (2 * this.pixelRes)]];
                 let slotHeight = 1;
@@ -74,9 +103,23 @@ class CaseExport {
                     this.graphic.rect(tJoints[i][0], tJoints[i][1], this.cutWidth * this.pixelRes, slotHeight * this.pixelRes);
                 }
             });
+        }
+    }
 
-            // updates y position for the next rectangle
-            rectTopLeftY += rectHeight * this.pixelRes + 10;
+    findBedSpace(_rectWidth) {
+        // calc space in inches, not at image pixelRes
+        for (let bed = 0; bed < this.beds.length; bed++) {
+            for (let row = 0; row < this.beds[bed].length; row++) {
+
+                let rowOccupiedWidth = this.beds[bed][row];
+                let bedWidth = this.bedWidth;
+                let rowRemainingWidth = bedWidth - rowOccupiedWidth;
+                let spaceNeeded = _rectWidth + ((this.printGap / this.pixelRes) * 2);
+
+                if (rowRemainingWidth >= spaceNeeded) {
+                    return [bed, row];
+                }
+            }
         }
     }
 
