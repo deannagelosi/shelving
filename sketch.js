@@ -76,7 +76,9 @@ function keyPressed() {
     let caseExport = new CaseExport();
     caseExport.calcDepth();
     caseExport.layoutRects();
-    caseExport.displayExport()
+    caseExport.printBed();
+    // caseExport.displayExport()
+    caseExport.graphic.save("caseBoards.svg")
   }
 }
 
