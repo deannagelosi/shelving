@@ -75,9 +75,7 @@ function keyPressed() {
     // export case as svg
     let caseExport = new CaseExport();
     caseExport.calcDepth();
-    // caseExport.calcPOI();
     caseExport.layoutRects();
-    // caseExport.layoutPOI();
     caseExport.displayExport()
   }
 }
