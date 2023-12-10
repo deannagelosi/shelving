@@ -460,6 +460,7 @@ class Case {
             // loop each board and search for another board with a matching edge
             let horizBoard = this.horizontalBoards[i];
             let vertBoards = this.verticalBoards.filter(board => this.hasMatchingCoord(horizBoard, board, 0));
+            console.log("vertBoards: ", vertBoards.length);
             if (vertBoards.length > 0) {
                 for (let j = 0; j < vertBoards.length; j++) {
                     // found a board with a matching end (start or end) coordinate
@@ -470,13 +471,52 @@ class Case {
                     horizBoard.poi.endJoints[horizResult] = "pin";
                     vertBoard.poi.endJoints[vertResult] = "slot";
                 }
-
-            } else if (vertBoards.length == 0) {
+            } 
+            if (vertBoards.length == 1) {
+                // horizBoard has T-joints on one end
+                // determine which end has the T-joint
+                let matchResult = this.hasMatchingCoord(horizBoard, vertBoards[0], 1);
+                let horizResult = matchResult[0]; // either 0 (start) or 1 (end)
+                let whichEndIsTJoint = (horizResult == 0) ? 1 : 0; // if horizResult is 0, then the T-joint is on the end (1)
+                let horizCoords = horizBoard.getCoords()[whichEndIsTJoint]; // [y, x]
+                let vertBoard = this.findIntersectingVertBoard(horizCoords);
+                let tJointLoc = Math.abs(vertBoard.startCoords[0] - horizCoords[0]);
+                vertBoard.poi.tJoints.push(tJointLoc);
+                horizBoard.poi.endJoints[whichEndIsTJoint] = "pin"; // add pins to the horizBoard
+            }
+            if (vertBoards.length == 0) {
                 // horizBoard has T-joints on both ends
+                // board touching the start coords on the horizontal board
+                let startVertBoard = this.findIntersectingVertBoard(horizBoard.startCoords);
+                console.log("startVertBoard.startCoords[0]", startVertBoard.startCoords[0]);
+                console.log("horizBoard.startCoords[0]", horizBoard.startCoords[0]);
+                let startBoardTJoint = Math.abs(startVertBoard.startCoords[0] - horizBoard.startCoords[0]);
+                startVertBoard.poi.tJoints.push(startBoardTJoint);
+                horizBoard.poi.endJoints[0] = "pin"; // add pins to the horizBoard
+
+                // board touching the end coords on the horizontal board
+                let endVertBoard = this.findIntersectingVertBoard(horizBoard.endCoords);
+                let endBoardTJoint = Math.abs(endVertBoard.startCoords[0] - horizBoard.endCoords[0]);
+                endVertBoard.poi.tJoints.push(endBoardTJoint);
+                horizBoard.poi.endJoints[1] = "pin"; // add pins to the horizBoard
             }
 
 
         }
+    }
+
+    findIntersectingVertBoard(coords) {
+        // loop the vertical boards and check if any intersect with the coords
+        for (let i = 0; i < this.verticalBoards.length; i++) {
+            let vertBoard = this.verticalBoards[i];
+            // check if the coords are between the start and end coords of the vertBoard
+            if (coords[0] > vertBoard.startCoords[0] && coords[0] < vertBoard.endCoords[0]) {
+                if (coords[1] == vertBoard.startCoords[1]) {
+                    return vertBoard;
+                }
+            }
+        }
+        return null;
     }
 
     hasMatchingCoord(board1, board2, mode) {

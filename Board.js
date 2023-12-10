@@ -9,7 +9,7 @@ class Board {
 
         this.poi = { // points of interest
             endJoints: ["", ""], // [start edge, end edge]
-            tJoints: [],
+            tJoints: [], // array of x-values for T-joint holes 
             labels: [],
         }
     }
