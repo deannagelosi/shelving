@@ -5,14 +5,15 @@ class CaseExport {
         // in inches
         this.bedWidth = 40; // 40
         this.bedHeight = 28; // 28
-        this.pixelRes = 96; // pixels per inch
+        this.pixelRes = 300; // pixels per inch
         this.graphic = createGraphics(45 * this.pixelRes, 60 * this.pixelRes, SVG);
         this.maxDepth = 0;
         this.boardThickness = 0.25;
-        this.cutWidth = this.boardThickness;
+        this.vertKerf = 0.02; // kerf for vertical cuts
+        this.cutWidth = this.boardThickness - this.vertKerf;
         this.boardLengthAdjust = this.boardThickness;
         this.lengthMod = 2; // cells are 0.5 inches, so multiply by 2 to get length in inches
-        this.printGap = 0.5 * this.pixelRes; // gap between printed boards
+        this.printGap = 0.25 * this.pixelRes; // gap between printed boards
 
         this.bedRows = [0, 0, 0, 0, 0]; // 5 rows
         this.beds = [[...this.bedRows], [...this.bedRows]];
@@ -42,7 +43,17 @@ class CaseExport {
         }
     }
 
+    printAlignment() {
+        // == Print Alignment Indicators == //
+        let align = 60;
+        this.graphic.strokeWeight(0.5);
+        this.graphic.noFill();
+        this.graphic.rect(0, 0, align, align);
+        this.graphic.rect((this.bedWidth * this.pixelRes) - align, 0, align, align);
+    }
+
     layoutRects() {
+        this.printAlignment();
         this.generateRects(shapeCase.horizontalBoards);
         this.generateRects(shapeCase.verticalBoards);
     }
@@ -87,7 +98,9 @@ class CaseExport {
             // this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
             // this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
 
+            // joinery on the start side of the board
             this.buildJoinery(startType, rectTopLeftX, rectTopLeftY);
+            // joinery on the end side of the board
             this.buildJoinery(endType, rectTopLeftX + (rectWidth * this.pixelRes) - (this.cutWidth * this.pixelRes), rectTopLeftY);
 
             // t-joint slots
@@ -105,7 +118,7 @@ class CaseExport {
             });
 
             // print board label name
-            this.graphic.textSize(24);
+            this.graphic.textSize(50);
             this.graphic.textAlign(LEFT, CENTER);
             this.graphic.fill(0);
             let boardLabel = currBoard.boardLabel;
