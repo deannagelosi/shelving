@@ -460,7 +460,6 @@ class Case {
             // loop each board and search for another board with a matching edge
             let horizBoard = this.horizontalBoards[i];
             let vertBoards = this.verticalBoards.filter(board => this.hasMatchingCoord(horizBoard, board, 0));
-            console.log("vertBoards: ", vertBoards.length);
             if (vertBoards.length > 0) {
                 for (let j = 0; j < vertBoards.length; j++) {
                     // found a board with a matching end (start or end) coordinate
@@ -488,8 +487,6 @@ class Case {
                 // horizBoard has T-joints on both ends
                 // board touching the start coords on the horizontal board
                 let startVertBoard = this.findIntersectingVertBoard(horizBoard.startCoords);
-                console.log("startVertBoard.startCoords[0]", startVertBoard.startCoords[0]);
-                console.log("horizBoard.startCoords[0]", horizBoard.startCoords[0]);
                 let startBoardTJoint = Math.abs(startVertBoard.startCoords[0] - horizBoard.startCoords[0]);
                 startVertBoard.poi.tJoints.push(startBoardTJoint);
                 horizBoard.poi.endJoints[0] = "pin"; // add pins to the horizBoard
