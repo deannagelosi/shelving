@@ -8,7 +8,7 @@ class Board {
         this.col; // column the board was initially in before merging
 
         this.poi = { // points of interest
-            endJoints: [],
+            endJoints: ["", ""], // [start edge, end edge]
             tJoints: [],
             labels: [],
         }
@@ -30,5 +30,10 @@ class Board {
         }
 
         return null; // error
+    }
+
+    getCoords() {
+        // return the start and end coordinates
+        return [this.startCoords, this.endCoords];
     }
 }

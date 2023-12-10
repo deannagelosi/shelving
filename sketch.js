@@ -45,6 +45,7 @@ function draw() {
     shapeCase.buildHorizontalBoards();
     shapeCase.buildVerticalBoards();
     shapeCase.mergeAllBoards();
+    shapeCase.addJoints();
 
     if (buildIssue == false) {
       // display the case
@@ -75,8 +76,7 @@ function keyPressed() {
     // caseExport.calcPOI();
     caseExport.layoutRects();
     // caseExport.layoutPOI();
-    caseExport.displayExport();
-    console.log("did it work")
+    caseExport.displayExport()
   }
 }
 

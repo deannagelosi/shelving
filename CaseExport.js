@@ -24,7 +24,7 @@ class CaseExport {
         this.maxDepth += 1; // add buffer for depth
     }
 
-    calcPOI() {}
+    calcPOI() { }
 
     layoutRects() {
         // use graphicsBuffer to draw the rectangles
@@ -36,15 +36,32 @@ class CaseExport {
         shapeCase.horizontalBoards.sort((a, b) => b.getLength() - a.getLength());
 
         for (let i = 0; i < shapeCase.horizontalBoards.length; i++) {
-            let rectWidth = shapeCase.horizontalBoards[i].getLength();
+            let currBoard = shapeCase.horizontalBoards[i];
+            let rectWidth = currBoard.getLength();
             this.graphic.noFill();
             this.graphic.rect(topLeftX, topLeftY, rectWidth * this.pixelRes, rectHeight * this.pixelRes);
 
+            // == Points of Interest == //
+            // print end joint type on top of rectangles
+            let startType = currBoard.poi.endJoints[0];
+            let endType = currBoard.poi.endJoints[1];
+
+            // display the shape titles
+            this.graphic.textSize(14);
+            this.graphic.textAlign(LEFT, CENTER);
+            this.graphic.fill(0);
+
+            this.graphic.text(startType, topLeftX + 10, topLeftY + (rectHeight * this.pixelRes) / 2);
+            this.graphic.text(endType, topLeftX + (rectWidth * this.pixelRes) - 10, topLeftY + (rectHeight * this.pixelRes) / 2);
+
+            // updates y position for the next rectangle
             topLeftY += rectHeight * this.pixelRes + 10;
         }
+
+
     }
 
-    layoutPOI() {}
+    layoutPOI() { }
     displayExport() {
         // display the graphics buffer in browser
         background(255);

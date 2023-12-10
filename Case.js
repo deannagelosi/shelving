@@ -454,6 +454,67 @@ class Case {
         return _boards;
     }
 
+    addJoints() {
+        // loop all the horizontal boards
+        for (let i = 0; i < this.horizontalBoards.length; i++) {
+            // loop each board and search for another board with a matching edge
+            let horizBoard = this.horizontalBoards[i];
+            let vertBoards = this.verticalBoards.filter(board => this.hasMatchingCoord(horizBoard, board, 0));
+            if (vertBoards.length > 0) {
+                for (let j = 0; j < vertBoards.length; j++) {
+                    // found a board with a matching end (start or end) coordinate
+                    let vertBoard = vertBoards[j];
+                    let matchResult = this.hasMatchingCoord(horizBoard, vertBoard, 1);
+                    let horizResult = matchResult[0];
+                    let vertResult = matchResult[1];
+                    horizBoard.poi.endJoints[horizResult] = "pin";
+                    vertBoard.poi.endJoints[vertResult] = "slot";
+                }
+
+            } else if (vertBoards.length == 0) {
+                // horizBoard has T-joints on both ends
+            }
+
+
+        }
+    }
+
+    hasMatchingCoord(board1, board2, mode) {
+        // if mode = 0, return Boolean
+        // if mode = 1, return which coord matched (startCoord or endCoord)
+        let coords1 = board1.getCoords(); // [[y1, x1], [y2, x2]]
+        let coords2 = board2.getCoords(); // [[y1, x1], [y2, x2]]
+
+        for (let i = 0; i < coords1.length; i++) {
+            for (let j = 0; j < coords2.length; j++) {
+                if (coords1[i][0] === coords2[j][0] && coords1[i][1] === coords2[j][1]) {
+                    if (mode == 0) {
+                        // a matching coord was found, return true
+                        return true;
+                    } else if (mode == 1) {
+                        // return which coord matched
+                        let board1Edge;
+                        let board2Edge;
+                        if (i == 0) {
+                            board1Edge = 0; // 0 is always start
+                        } else if (i == 1) {
+                            board1Edge = 1; // 1 is always end
+                        }
+
+                        if (j == 0) {
+                            board2Edge = 0; // 0 is always start
+                        } else if (j == 1) {
+                            board2Edge = 1; // 1 is always end
+                        }
+
+                        return [board1Edge, board2Edge];
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     isTouching(_board1, _board2, _axis) {
         let currBoard = _board1;
         let otherBoard = _board2;
