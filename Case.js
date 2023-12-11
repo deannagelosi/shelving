@@ -413,6 +413,33 @@ class Case {
                 }
             }
         }
+
+        // discard if any vertical boards are full height and are not the perimeter boards
+        let vCounter = 0;
+        for (let i = 0; i < this.verticalBoards.length; i++) {
+            let currBoard = this.verticalBoards[i];
+            if (currBoard.getLength() == this.caseHeight) {
+                vCounter++;
+            }
+        }
+        if (vCounter > 2) {
+            buildIssue = true;
+            return;
+        }
+
+        // discard if any horizontal boards are full width and are not the perimeter boards
+        let hCounter = 0;
+        for (let i = 0; i < this.horizontalBoards.length; i++) {
+            let currBoard = this.horizontalBoards[i];
+            if (currBoard.getLength() == this.caseWidth) {
+                hCounter++;
+            }
+        }
+        if (hCounter > 2) {
+            buildIssue = true;
+            return;
+        }
+
     }
 
     mergeBoards(_boards, _axis) {
@@ -458,13 +485,13 @@ class Case {
         // sort horizontal boards by y value and then label them
         this.horizontalBoards.sort((a, b) => a.startCoords[0] - b.startCoords[0]);
         this.horizontalBoards.forEach((board, index) => {
-            board.boardLabel =  String.fromCharCode(65 + index);
+            board.boardLabel = String.fromCharCode(65 + index);
         })
 
         // sort vertical boards by x value and then label them
         this.verticalBoards.sort((a, b) => a.startCoords[1] - b.startCoords[1]);
         this.verticalBoards.forEach((board, index) => {
-            board.boardLabel =  index + 1;
+            board.boardLabel = index + 1;
         })
     }
 
