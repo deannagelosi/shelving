@@ -17,9 +17,23 @@ class Case {
 
         this.horizontalBoards = [];
         this.verticalBoards = [];
+
+        // Create Regenerate button which calls loop()
+        this.regenButton = createButton('REGENERATE');
+        this.regenButton.position((width / 2) - 90, height + 25);
+        this.regenButton.mousePressed(() => {
+            // build a new case
+            this.sortShapes("random");
+            buildAttempts = 0;
+            loop();
+        });
     }
 
     sortShapes(_method) {
+        // reset and re-sort the shapes
+        this.middleShapes = [];
+        this.sideShapes = [];
+
         if (_method == "height") {
             // sort by height
             shapes.sort(function (a, b) {
@@ -62,6 +76,8 @@ class Case {
     }
 
     shuffleCaseLayout() {
+        this.positions = [];
+
         // randomize middleShapes and sideShapes to reposition objects
         shuffle(this.middleShapes, true);
         shuffle(this.sideShapes, true);
@@ -350,7 +366,7 @@ class Case {
         }
     }
 
-    mergeAllBoards() {
+    mergeBoards() {
         // merge all horizontal and vertical boards
         this.horizontalBoards = this.mergeBoards(this.horizontalBoards, 0);
         this.verticalBoards = this.mergeBoards(this.verticalBoards, 1);

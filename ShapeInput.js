@@ -8,6 +8,11 @@ class ShapeInput {
         this.tbPadding = 50; // left right
         this.lrPadding = 50; // left right
 
+        // Initialize the stack for cell selection history
+        this.selectionHistory = [];
+        // Track shape titles displaying to hide later
+        this.shapeTitleElements = [];
+
         // Create the title input field
         this.titleLabel = createP('Title:');
         this.titleLabel.position(this.lrPadding, height + 5);
@@ -22,19 +27,26 @@ class ShapeInput {
         this.depthInput.position(this.lrPadding + 50, height + 65);
         this.depthInput.attribute('size', '8');
 
+        // Create the UNDO button
+        this.undoButton = createButton('UNDO');
+        this.undoButton.position(
+            this.titleInput.x + this.titleInput.width + 10, height + 20
+        );
+        this.undoButton.mousePressed(() => this.undoLastSelection());
+
         // Create the SAVE button
         this.saveButton = createButton('SAVE');
         this.saveButton.position(
-            this.titleInput.x + this.titleInput.width + 10, height + 20
+            this.undoButton.x + this.saveButton.width + 10, height + 20
         );
         this.saveButton.mousePressed(() => this.saveShape());
 
         // Create the NEXT button
         this.nextButton = createButton('NEXT');
         this.nextButton.position(
-            this.saveButton.x + this.saveButton.width + 10, height + 20
+            this.saveButton.x + this.nextButton.width + 10, height + 20
         );
-        this.nextButton.mousePressed(() => this.displayAllShapes());
+        this.nextButton.mousePressed(() => this.moveToNextView());
 
         this.inputRows = 10;
         this.inputCols = 10;
@@ -50,6 +62,25 @@ class ShapeInput {
                 this.inputGrid[i][j] = false;
             }
         }
+    }
+
+    moveToNextView() {
+        // Set inputView to false
+        inputView = false;
+
+        // Hide all UI elements
+        this.titleLabel.hide();
+        this.titleInput.hide();
+        this.depthLabel.hide();
+        this.depthInput.hide();
+        this.undoButton.hide();
+        this.saveButton.hide();
+        this.nextButton.hide();
+        // hide titles of shapes on screen
+        this.clearShapeTitles();
+
+        // loop to load the new screen
+        loop();
     }
 
     drawInputGrid() {
@@ -79,9 +110,22 @@ class ShapeInput {
             let gridY = Math.floor((this.gridHeight + this.tbPadding - mouseY) / this.inputCellSize); // Row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX]; // Toggle the state
-                this.drawInputGrid(); // Redraw to update clicked state
+                if (!this.inputGrid[gridY][gridX]) {
+                    this.inputGrid[gridY][gridX] = true;
+                    this.drawInputGrid();
+
+                    // Save the selection to history stack
+                    this.selectionHistory.push({ x: gridX, y: gridY });
+                }
             }
+        }
+    }
+
+    undoLastSelection() {
+        if (this.selectionHistory.length > 0) {
+            const lastSelection = this.selectionHistory.pop();
+            this.inputGrid[lastSelection.y][lastSelection.x] = false;
+            this.drawInputGrid();
         }
     }
 
@@ -124,12 +168,20 @@ class ShapeInput {
     }
 
     displayShapeTitles() {
-        // Start below the title input box
+        this.clearShapeTitles();
+
         let startY = this.titleInput.y + 75;
-        // Display each shape's title
         for (let i = 0; i < shapes.length; i++) {
             let shapeTitle = createP(`${shapes[i].title}`);
             shapeTitle.position(50, startY + (i * 25));
+            this.shapeTitleElements.push(shapeTitle); // Store the element
         }
+    }
+
+    clearShapeTitles() {
+        for (let element of this.shapeTitleElements) {
+            element.remove(); // Remove the element from the screen
+        }
+        this.shapeTitleElements = []; // Clear the array
     }
 }
