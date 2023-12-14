@@ -287,7 +287,7 @@ class Case {
 
     buildPerimeterBoards() {
         // discard if case is to tall or wide
-        if (this.caseHeight > 35 || this.caseWidth > 35) {
+        if (this.caseHeight > 30 || this.caseWidth > 30) {
             buildIssue = true;
             return;
         }

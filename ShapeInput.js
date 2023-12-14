@@ -1,10 +1,13 @@
 class ShapeInput {
     constructor() {
         // User input grid size
-        this.inputRows;
-        this.inputCols;
-        this.inputGrid = [];
+        this.inputRows = 10;
+        this.inputCols = 10;
         this.inputCellSize = 50;
+        this.gridHeight = (this.inputRows * this.inputCellSize);
+        this.gridWidth = (this.inputCols * this.inputCellSize);
+        this.inputGrid = [];
+        
         this.tbPadding = 50; // top bottom
         this.lrPadding = 25; // left right
 
@@ -49,10 +52,6 @@ class ShapeInput {
         );
         this.nextButton.mousePressed(() => this.moveToNextView());
 
-        this.inputRows = 10;
-        this.inputCols = 10;
-        this.gridHeight = (this.inputRows * this.inputCellSize);
-        this.gridWidth = (this.inputCols * this.inputCellSize);
         this.resetInputGrid();
     }
 
