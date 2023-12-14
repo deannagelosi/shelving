@@ -4,9 +4,9 @@ class ShapeInput {
         this.inputRows;
         this.inputCols;
         this.inputGrid = [];
-        this.inputCellSize = 55;
-        this.tbPadding = 50; // left right
-        this.lrPadding = 50; // left right
+        this.inputCellSize = 50;
+        this.tbPadding = 50; // top bottom
+        this.lrPadding = 25; // left right
 
         // Initialize the stack for cell selection history
         this.selectionHistory = [];
@@ -22,9 +22,9 @@ class ShapeInput {
 
         // Create the depth input field
         this.depthLabel = createP('Depth:');
-        this.depthLabel.position(this.lrPadding, height + 50);
+        this.depthLabel.position(this.lrPadding, height + 45);
         this.depthInput = createInput('');
-        this.depthInput.position(this.lrPadding + 50, height + 65);
+        this.depthInput.position(this.lrPadding + 50, height + 60);
         this.depthInput.attribute('size', '8');
 
         // Create the UNDO button
@@ -43,6 +43,7 @@ class ShapeInput {
 
         // Create the NEXT button
         this.nextButton = createButton('NEXT');
+        this.nextButton.attribute('disabled', ''); // until 10 shapes are saved
         this.nextButton.position(
             this.saveButton.x + this.nextButton.width + 10, height + 20
         );
@@ -153,6 +154,11 @@ class ShapeInput {
 
             // Reset active shape and UI
             this.resetCanvas();
+
+            // Enable the NEXT button if 10 shapes have been saved
+            if (shapes.length >= 10) {
+                this.nextButton.removeAttribute('disabled');
+            }
         } else {
             alert('Shape must have a cell selected on the bottom row.');
         }
@@ -172,7 +178,8 @@ class ShapeInput {
 
         let startY = this.titleInput.y + 75;
         for (let i = 0; i < shapes.length; i++) {
-            let shapeTitle = createP(`${shapes[i].title}`);
+            let titleIndex = shapes.length - i - 1; // list shapes most recent first
+            let shapeTitle = createP(`${shapes[titleIndex].title}`);
             shapeTitle.position(50, startY + (i * 25));
             this.shapeTitleElements.push(shapeTitle); // Store the element
         }

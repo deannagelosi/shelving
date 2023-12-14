@@ -1,5 +1,5 @@
-let canvasWidth = 700;
-let canvasHeight = 650;
+let canvasWidth = 600;
+let canvasHeight = 600;
 
 let shapes = [];
 let shapeInput;
@@ -44,9 +44,9 @@ function draw() {
     buildIssue = false;
     // if first time, setup case
     if (shapeCase == undefined) {
-      // clear any user input and load pre-created shapes instead
-      shapes = [];
-      loadShapeData();
+      // // clears any user input and load pre-created shapes instead
+      // shapes = [];
+      // loadShapeData();
 
       shapeCase = new Case();
       shapeCase.sortShapes('random'); // 'height' or 'random'

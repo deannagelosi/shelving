@@ -3,7 +3,7 @@ class Case {
         this.caseWidth;
         this.caseHeight;
         this.caseGrid = [];
-        this.caseCellSize = 20;
+        this.caseCellSize = 17;
         this.tbPadding = 25; // left right
         this.lrPadding = 45; // left right
 
@@ -286,6 +286,12 @@ class Case {
     }
 
     buildPerimeterBoards() {
+        // discard if case is to tall or wide
+        if (this.caseHeight > 35 || this.caseWidth > 35) {
+            buildIssue = true;
+            return;
+        }
+        // build the perimeter boards
         this.horizontalBoards = [];
         this.verticalBoards = [];
 
@@ -894,7 +900,7 @@ class Case {
         }
 
         // display grid numbers
-        textSize(14);
+        textSize(12);
         textAlign(CENTER, CENTER);
         // y axis
         let numX = (this.lrPadding / 1.5);
