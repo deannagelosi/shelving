@@ -5,7 +5,7 @@ class CaseExport {
         // in inches
         this.bedWidth = 40; // 40
         this.bedHeight = 28; // 28
-        this.pixelRes = 300; // pixels per inch
+        this.pixelRes = 100; // pixels per inch
         this.graphic = createGraphics(45 * this.pixelRes, 60 * this.pixelRes, SVG);
         this.maxDepth = 0;
         this.boardThickness = 0.25;
@@ -45,7 +45,7 @@ class CaseExport {
 
     printAlignment() {
         // == Print Alignment Indicators == //
-        let align = 60;
+        let align = this.printGap * (3 / 4);
         this.graphic.strokeWeight(0.5);
         this.graphic.noFill();
         this.graphic.rect(0, 0, align, align);
@@ -88,15 +88,9 @@ class CaseExport {
             this.beds[bed][row] += rectWidth + (this.printGap / this.pixelRes);
 
             // == Points of Interest == //
-            // print end joint type label
-            this.graphic.textSize(14);
-            this.graphic.textAlign(RIGHT, CENTER);
-            this.graphic.fill(0);
-
+            // print end joints and t-joints
             let startType = currBoard.poi.endJoints[0];
             let endType = currBoard.poi.endJoints[1];
-            // this.graphic.text(startType, endJointX, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
-            // this.graphic.text(endType, endJointX + (rectWidth * this.pixelRes) + 30, rectTopLeftY + (rectHeight * this.pixelRes) / 2);
 
             // joinery on the start side of the board
             this.buildJoinery(startType, rectTopLeftX, rectTopLeftY);
@@ -118,7 +112,7 @@ class CaseExport {
             });
 
             // print board label name
-            this.graphic.textSize(50);
+            this.graphic.textSize((1 / 6) * this.pixelRes);
             this.graphic.textAlign(LEFT, CENTER);
             this.graphic.fill(0);
             let boardLabel = currBoard.boardLabel;
