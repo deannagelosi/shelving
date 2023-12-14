@@ -57,7 +57,7 @@ function draw() {
     shapeCase.buildPerimeterBoards();
     shapeCase.buildHorizontalBoards();
     shapeCase.buildVerticalBoards();
-    shapeCase.mergeBoards();
+    shapeCase.mergeHVBoards();
     shapeCase.labelBoards();
 
     if (buildIssue == false) {

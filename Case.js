@@ -366,7 +366,7 @@ class Case {
         }
     }
 
-    mergeBoards() {
+    mergeHVBoards() {
         // merge all horizontal and vertical boards
         this.horizontalBoards = this.mergeBoards(this.horizontalBoards, 0);
         this.verticalBoards = this.mergeBoards(this.verticalBoards, 1);
