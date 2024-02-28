@@ -5,7 +5,7 @@ let shapes = [];
 let shapeInput;
 let shapeCase;
 
-let inputView = true;
+let inputView = false;
 
 let buildIssue = false;
 let buildAttempts = 0;
@@ -45,8 +45,8 @@ function draw() {
     // if first time, setup case
     if (shapeCase == undefined) {
       // // clears any user input and load pre-created shapes instead
-      // shapes = [];
-      // loadShapeData();
+      shapes = [];
+      loadShapeData();
 
       shapeCase = new Case();
       shapeCase.sortShapes('random'); // 'height' or 'random'
