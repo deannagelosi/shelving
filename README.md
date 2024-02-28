@@ -1,8 +1,5 @@
 # ToDo
 
-## Initial Solution
+## Objective Function
 
-## Visualize
-
-1. Shows map with overlaps
-2. Score (see objective function)
+1. Score (see objective function)

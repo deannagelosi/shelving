@@ -71,4 +71,33 @@ class Solution {
         }
     }
 
+    showLayout() {
+        let cellSizeHeight = canvasHeight / this.designSpace.length;
+        let cellSizeWidth = canvasWidth / this.designSpace[0].length;
+        let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
+
+        // display the design space grid
+        stroke(0);
+        strokeWeight(0.5);
+        let designHeight = this.designSpace.length;
+        let designWidth = this.designSpace[0].length;
+        for (let x = 0; x < designWidth; x++) {
+            for (let y = 0; y < designHeight; y++) {
+                // draw cell
+                if (this.designSpace[y][x] == 1) {
+                    fill(0); // black (shape)
+                } else if (this.designSpace[y][x] >= 2) {
+                    fill("red");  // collision
+                }
+                else if (this.designSpace[y][x] == 0) {
+                    fill(255); // white (empty)
+                }
+
+                let rectX = x * cellSize;
+                let rectY = (canvasHeight - cellSize) - (y * cellSize); // draw from bottom up
+                rect(rectX, rectY, cellSize, cellSize);
+                console.log(rectX, rectY, cellSize);
+            }
+        }
+    }
 }

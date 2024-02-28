@@ -1,6 +1,5 @@
 let canvasWidth = 600;
 let canvasHeight = 600;
-
 let shapes = [];
 
 function preload() {
@@ -12,16 +11,20 @@ function setup() {
   textSize(16);
   fill(0);
   loadShapeData();
-  let solution = new Solution(shapes);
-  solution.setInitialSolution();
-  solution.placeShapes();
   console.log(shapes);
-  console.log(solution.designSpace);
 }
 
 function draw() {
   clear();
   background(255);
+
+  let solution = new Solution(shapes);
+  solution.setInitialSolution();
+  solution.placeShapes();
+  solution.showLayout();
+  
+  console.log(solution.designSpace);
+
   noLoop();
 }
 
