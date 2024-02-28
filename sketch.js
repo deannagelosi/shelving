@@ -21,9 +21,10 @@ function draw() {
   let solution = new Solution(shapes);
   solution.setInitialSolution();
   solution.placeShapes();
+  solution.calcScore();
   solution.showLayout();
   
-  console.log(solution.designSpace);
+  // console.log(solution.designSpace);
 
   noLoop();
 }

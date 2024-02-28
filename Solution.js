@@ -3,6 +3,7 @@ class Solution {
         this.shapes = _shapes;
         this.designSpace = [];
         this.numOutBounds = 0;
+        this.overlappingModifier = 10;
     }
 
     setInitialSolution() {
@@ -57,16 +58,50 @@ class Solution {
             // place shape boundary
             for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
                 for (let x = 0; x < shape.boundaryWidth; x++) {
+                    // update designHeight and designWidth in case dimensions have changed
+                    designHeight = this.designSpace.length;
+                    designWidth = this.designSpace[0].length;
+
+                    // placing shapes, and growing the designSpace if shapes are placed outside of initial bounds
                     if (shape.boundaryShape[y][x]) {
                         let yInBounds = shape.posY + y >= 0 && shape.posY + y < designHeight;
                         let xInBounds = shape.posX + x >= 0 && shape.posX + x < designWidth;
-                        if (yInBounds && xInBounds) {
-                            this.designSpace[shape.posY + y][shape.posX + x] += 1;
-                        } else {
-                            this.numOutBounds++;
+
+                        // grow if out of bounds for x or y
+                        if (!yInBounds) {
+                            this.designSpace.push(new Array(designWidth).fill(0));
+                        } else if (!xInBounds) {
+                            for (let i = 0; i < this.designSpace.length; i++) {
+                                this.designSpace[i].push(0);
+                            }
                         }
+                        // update occupancy of a cell in the designSpace
+                        this.designSpace[shape.posY + y][shape.posX + x] += 1;
                     }
                 }
+            }
+        }
+
+        // trim designSpace and remove empty rows
+        // trim the last row if it's empty
+        while (this.designSpace.length > 0 && this.designSpace[this.designSpace.length - 1].every(cell => cell === 0)) {
+            this.designSpace.pop();
+        }
+        // trim the first row if it's empty
+        while (this.designSpace.length > 0 && this.designSpace[0].every(cell => cell === 0)) {
+            this.designSpace.shift();
+        }
+        // Remove all-zero columns from the right
+        while (this.designSpace[0].length > 0 && this.designSpace.every(row => row[row.length - 1] === 0)) {
+            for (let i = 0; i < this.designSpace.length; i++) {
+                this.designSpace[i].pop();
+            }
+        }
+
+        // Remove all-zero columns from the left
+        while (this.designSpace[0].length > 0 && this.designSpace.every(row => row[0] === 0)) {
+            for (let i = 0; i < this.designSpace.length; i++) {
+                this.designSpace[i].shift();
             }
         }
     }
@@ -96,8 +131,39 @@ class Solution {
                 let rectX = x * cellSize;
                 let rectY = (canvasHeight - cellSize) - (y * cellSize); // draw from bottom up
                 rect(rectX, rectY, cellSize, cellSize);
-                console.log(rectX, rectY, cellSize);
             }
         }
+    }
+
+    calcScore() {
+        // the objective function in simulated annealing
+        // objectives:
+        // - minimize the number of empty cells
+        // - minimize the number of overlapping cells
+        // - TODO: minimize top-heavy designs
+        
+        // count all the zeros in the designSpace
+        let emptyCells = 0;
+        for (let i = 0; i < this.designSpace.length; i++) {
+            for (let j = 0; j < this.designSpace[i].length; j++) {
+                if (this.designSpace[i][j] == 0) {
+                    emptyCells++;
+                }
+            }
+        }
+
+        // find cells where the value is greater than 1
+        // add to a running total the value of the cell minus 1
+        let overlappingCells = 0;
+        for (let i = 0; i < this.designSpace.length; i++) {
+            for (let j = 0; j < this.designSpace[i].length; j++) {
+                if (this.designSpace[i][j] > 1) {
+                    overlappingCells += this.designSpace[i][j] - 1;
+                }
+            }
+        }
+
+        let totalScore = emptyCells + (overlappingCells * this.overlappingModifier);
+        console.log("totalScore: ", totalScore);
     }
 }
