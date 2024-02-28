@@ -13,6 +13,7 @@ class Shape {
     this.boundaryHeight;
     this.boundaryWidth;
     this.rectArea; // boundaryHeight * boundaryWidth
+    this.weight;
   }
 
   saveUserInput(_inputGrid, _depthValue) {

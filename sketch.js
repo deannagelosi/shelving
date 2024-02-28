@@ -14,8 +14,9 @@ function setup() {
   loadShapeData();
   let solution = new Solution(shapes);
   solution.setInitialSolution();
-  
+  solution.placeShapes();
   console.log(shapes);
+  console.log(solution.designSpace);
 }
 
 function draw() {
@@ -34,5 +35,5 @@ function loadShapeData() {
       newShape.saveUserInput(inputShape.inputGrid, parseInt(inputShape.shapeDepth));
       shapes.push(newShape);
     }
-  }  
+  }
 }
