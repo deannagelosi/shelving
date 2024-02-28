@@ -20,9 +20,14 @@ function draw() {
 
   let solution = new Solution(shapes);
   solution.setInitialSolution();
-  solution.placeShapes();
+  solution.makeDesignSpace();
   solution.calcScore();
   solution.showLayout();
+
+  // let newSolution = solution.makeNeighbor();
+  // newSolution.makeDesignSpace();
+  // newSolution.calcScore();
+  // newSolution.showLayout();
   
   // console.log(solution.designSpace);
 
