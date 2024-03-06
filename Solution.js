@@ -35,9 +35,6 @@ class Solution {
 
 
     makeDesignSpace() {
-        // initialize grid cell values as all empty (0 is empty)
-        this.zeroDesignSpace();
-
         // place shape boundaries in the grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
@@ -191,12 +188,5 @@ class Solution {
     }
 
     // == Helper Functions == //
-    zeroDesignSpace() {
-        // make the designSpace all zeros
-        for (let i = 0; i < this.designSpace.length; i++) {
-            for (let j = 0; j < this.designSpace[i].length; j++) {
-                this.designSpace[i][j] = 0;
-            }
-        }
-    }
+    
 }
