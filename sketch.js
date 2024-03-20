@@ -1,6 +1,7 @@
 let canvasWidth = 600;
 let canvasHeight = 600;
 let shapes = [];
+let solutions = [];
 
 function preload() {
   shapeData = loadJSON('data/sunny-shapes.json');
@@ -11,25 +12,28 @@ function setup() {
   textSize(16);
   fill(0);
   loadShapeData();
-  console.log(shapes);
 }
 
 function draw() {
   clear();
   background(255);
+  solutions = [];
 
   let solution = new Solution(shapes);
   solution.setInitialSolution();
-  solution.makeDesignSpace();
+  solution.makeLayout();
   solution.calcScore();
-  solution.showLayout();
+  solutions.push(solution);
 
-  // let newSolution = solution.makeNeighbor();
-  // newSolution.makeDesignSpace();
-  // newSolution.calcScore();
-  // newSolution.showLayout();
-  
-  // console.log(solution.designSpace);
+  for (let i = 0; i < 10; i++) {
+    let nextSolution = solutions[i].makeNeighbor();
+    nextSolution.makeLayout();
+    nextSolution.calcScore();
+    solutions.push(nextSolution);
+  }
+  let lastSolution = solutions[solutions.length - 1];  
+  lastSolution.showLayout();
+  console.log(solutions);
 
   noLoop();
 }
