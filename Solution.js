@@ -1,7 +1,7 @@
 class Solution {
     constructor(_shapes) {
         this.shapes = _shapes;
-        this.designSpace = [[]];
+        this.layout = [[]]; // 2D array to represent the shapes in position 
         this.overlappingModifier = 10;
         this.score;
     }
@@ -24,7 +24,7 @@ class Solution {
         let height = Math.floor(designArea / width);
 
         //== Randomly choose initial shape locations in designArea ==//
-        // loop shapes and randomly place in the designSpace
+        // loop shapes and randomly place in the layout
         for (let i = 0; i < this.shapes.length; i++) {
             let currShape = this.shapes[i];
             currShape.posX = Math.floor(Math.random() * width);
@@ -32,9 +32,7 @@ class Solution {
         }
     }
 
-
-
-    makeDesignSpace() {
+    makeLayout() {
         // place shape boundaries in the grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
@@ -42,76 +40,74 @@ class Solution {
             for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
                 for (let x = 0; x < shape.boundaryWidth; x++) {
 
-                    // placing shapes, and growing the designSpace if shapes are placed outside of initial bounds
+                    // placing shapes, and growing the layout if shapes are placed outside of initial bounds
                     if (shape.boundaryShape[y][x]) {
-                        let xInBounds = shape.posX + x < this.designSpace[0].length;
-                        let yInBounds = shape.posY + y < this.designSpace.length;
+                        let xInBounds = shape.posX + x < this.layout[0].length;
+                        let yInBounds = shape.posY + y < this.layout.length;
 
                         while (!xInBounds) {
                             // grow the x+ direction
-                            for (let i = 0; i < this.designSpace.length; i++) {
-                                this.designSpace[i].push(0);
+                            for (let i = 0; i < this.layout.length; i++) {
+                                this.layout[i].push(0);
                             }
-                            xInBounds = shape.posX + x < this.designSpace[0].length;
+                            xInBounds = shape.posX + x < this.layout[0].length;
                         }
                         while (!yInBounds) {
                             // grow the y+ direction
-                            this.designSpace.push(new Array(this.designSpace[0].length).fill(0));
+                            this.layout.push(new Array(this.layout[0].length).fill(0));
 
-                            yInBounds = shape.posY + y < this.designSpace.length;
+                            yInBounds = shape.posY + y < this.layout.length;
                         }
-
-                        // update occupancy of a cell in the designSpace
-                        this.designSpace[shape.posY + y][shape.posX + x] += 1;
+                        // update occupancy of a cell in the layout
+                        this.layout[shape.posY + y][shape.posX + x] += 1;
                     }
                 }
             }
         }
 
-        // trim designSpace and remove empty rows
+        // trim layout and remove empty rows
         // trim the last row if it's empty
-        while (this.designSpace.length > 0 && this.designSpace[this.designSpace.length - 1].every(cell => cell === 0)) {
-            this.designSpace.pop();
+        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(cell => cell === 0)) {
+            this.layout.pop();
         }
         // trim the first row if it's empty
-        while (this.designSpace.length > 0 && this.designSpace[0].every(cell => cell === 0)) {
-            this.designSpace.shift();
+        while (this.layout.length > 0 && this.layout[0].every(cell => cell === 0)) {
+            this.layout.shift();
         }
         // Remove all-zero columns from the right
-        while (this.designSpace[0].length > 0 && this.designSpace.every(row => row[row.length - 1] === 0)) {
-            for (let i = 0; i < this.designSpace.length; i++) {
-                this.designSpace[i].pop();
+        while (this.layout[0].length > 0 && this.layout.every(row => row[row.length - 1] === 0)) {
+            for (let i = 0; i < this.layout.length; i++) {
+                this.layout[i].pop();
             }
         }
         // Remove all-zero columns from the left
-        while (this.designSpace[0].length > 0 && this.designSpace.every(row => row[0] === 0)) {
-            for (let i = 0; i < this.designSpace.length; i++) {
-                this.designSpace[i].shift();
+        while (this.layout[0].length > 0 && this.layout.every(row => row[0] === 0)) {
+            for (let i = 0; i < this.layout.length; i++) {
+                this.layout[i].shift();
             }
         }
 
-        console.log("designSpace: ", this.designSpace);
     }
 
     showLayout() {
-        let cellSizeHeight = canvasHeight / this.designSpace.length;
-        let cellSizeWidth = canvasWidth / this.designSpace[0].length;
+        let cellSizeHeight = canvasHeight / this.layout.length;
+        let cellSizeWidth = canvasWidth / this.layout[0].length;
         let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
 
         // display the design space grid
         stroke(0);
         strokeWeight(0.5);
-        let designHeight = this.designSpace.length;
-        let designWidth = this.designSpace[0].length;
+        let designHeight = this.layout.length;
+        let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
             for (let y = 0; y < designHeight; y++) {
                 // draw cell
-                if (this.designSpace[y][x] == 1) {
+                if (this.layout[y][x] == 1) {
                     fill(0); // black (shape)
-                } else if (this.designSpace[y][x] >= 2) {
+                } else if (this.layout[y][x] >= 2) {
                     fill("red");  // collision
                 }
-                else if (this.designSpace[y][x] == 0) {
+                else if (this.layout[y][x] == 0) {
                     fill(255); // white (empty)
                 }
 
@@ -124,16 +120,13 @@ class Solution {
 
     calcScore() {
         // the objective function in simulated annealing
-        // objectives:
-        // - minimize the number of empty cells
-        // - minimize the number of overlapping cells
-        // - TODO: minimize top-heavy designs
+        // TODO: minimize top-heavy designs
 
         // count all the zeros in the designSpace
         let emptyCells = 0;
-        for (let i = 0; i < this.designSpace.length; i++) {
-            for (let j = 0; j < this.designSpace[i].length; j++) {
-                if (this.designSpace[i][j] == 0) {
+        for (let i = 0; i < this.layout.length; i++) {
+            for (let j = 0; j < this.layout[i].length; j++) {
+                if (this.layout[i][j] == 0) {
                     emptyCells++;
                 }
             }
@@ -142,16 +135,15 @@ class Solution {
         // find cells where the value is greater than 1
         // add to a running total the value of the cell minus 1
         let overlappingCells = 0;
-        for (let i = 0; i < this.designSpace.length; i++) {
-            for (let j = 0; j < this.designSpace[i].length; j++) {
-                if (this.designSpace[i][j] > 1) {
-                    overlappingCells += this.designSpace[i][j] - 1;
+        for (let i = 0; i < this.layout.length; i++) {
+            for (let j = 0; j < this.layout[i].length; j++) {
+                if (this.layout[i][j] > 1) {
+                    overlappingCells += this.layout[i][j] - 1;
                 }
             }
         }
 
         this.score = emptyCells + (overlappingCells * this.overlappingModifier);
-        console.log("score: ", this.score);
     }
 
     makeNeighbor() {
