@@ -183,6 +183,13 @@ class Solution {
             newSolution.shapes[randShape2].posX = tempX;
             newSolution.shapes[randShape2].posY = tempY;
         }
+        // check if the new position is within bounds (not negative)
+        if (newSolution.shapes[randShape].posX < 0) {
+            newSolution.shapes[randShape].posX = 0;
+        }
+        if (newSolution.shapes[randShape].posY < 0) {
+            newSolution.shapes[randShape].posY = 0;
+        }
 
         return newSolution;
     }
