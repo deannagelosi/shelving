@@ -15,7 +15,18 @@ function setup() {
   fill(0);
   loadShapeData();
 
-  let initialSolution = new Solution(shapes);
+  let shapesPos = []; // shape data plus positions
+  for (let i = 0; i < shapes.length; i++) {
+    let shapeData = {
+      data: shapes[i],
+      // pos is bottom left corner of the shape, including overhangs
+      posX: 0,
+      posY: 0
+    };
+    shapesPos.push(shapeData);
+  }
+
+  let initialSolution = new Solution(shapesPos);
   initialSolution.setInitialSolution();
   initialSolution.makeLayout();
   initialSolution.calcScore();
