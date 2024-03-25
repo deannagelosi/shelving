@@ -33,6 +33,10 @@ class Solution {
     }
 
     makeLayout() {
+        // create a 2D array to represent the design space
+
+        this.layout = [[]]; // clear the layout
+
         // place shape boundaries in the grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
@@ -120,6 +124,9 @@ class Solution {
 
     calcScore() {
         // the objective function in simulated annealing
+
+        this.score = 0; // reset the score
+
         // TODO: minimize top-heavy designs
 
         // count all the zeros in the designSpace
@@ -184,8 +191,5 @@ class Solution {
         }
 
         return newSolution;
-    }
-
-    // == Helper Functions == //
-    
+    }    
 }
