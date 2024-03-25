@@ -2,6 +2,8 @@ let canvasWidth = 600;
 let canvasHeight = 600;
 let shapes = [];
 let solutions = [];
+let sa; // simulated annealing
+let initialScore;
 
 function preload() {
   shapeData = loadJSON('data/sunny-shapes.json');
@@ -12,30 +14,38 @@ function setup() {
   textSize(16);
   fill(0);
   loadShapeData();
+
+  let initialSolution = new Solution(shapes);
+  initialSolution.setInitialSolution();
+  initialSolution.makeLayout();
+  initialSolution.calcScore();
+  initialScore = initialSolution.score;
+  console.log('Initial solution: ', initialScore);
+
+  let tempMax = 1000;
+  let tempMin = 1;
+
+  sa = new SimulatedAnnealing(
+    tempMax,
+    tempMin,
+    initialSolution
+  );
 }
 
 function draw() {
   clear();
   background(255);
-  solutions = [];
 
-  let solution = new Solution(shapes);
-  solution.setInitialSolution();
-  solution.makeLayout();
-  solution.calcScore();
-  solutions.push(solution);
-
-  for (let i = 0; i < 10; i++) {
-    let nextSolution = solutions[i].makeNeighbor();
-    nextSolution.makeLayout();
-    nextSolution.calcScore();
-    solutions.push(nextSolution);
+  if (sa.epoch()) {
+    // continue optimization
+    // console.log(sa.currSolution.score);
+    sa.tempCurr = sa.coolingSchedule();
+  } else {
+    // optimization complete
+    sa.currSolution.showLayout();
+    console.log('Initial solution: ', initialScore, ', Final solution: ', sa.currSolution.score);
+    noLoop(); // stop draw loop
   }
-  let lastSolution = solutions[solutions.length - 1];  
-  lastSolution.showLayout();
-  console.log(solutions);
-
-  noLoop();
 }
 
 function loadShapeData() {
