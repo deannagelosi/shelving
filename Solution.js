@@ -1,6 +1,6 @@
 class Solution {
     constructor(_shapes) {
-        this.shapes = _shapes;
+        this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array to represent the shapes in position 
         this.overlappingModifier = 10;
         this.score;
@@ -15,7 +15,7 @@ class Solution {
         // return the sum
         let totalArea = 0;
         for (let i = 0; i < this.shapes.length; i++) {
-            totalArea += this.shapes[i].rectArea;
+            totalArea += this.shapes[i].data.rectArea;
         }
         // add multiplier to give extra space to work with
         let designArea = totalArea * 4;
@@ -41,11 +41,11 @@ class Solution {
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
             // place shape boundary
-            for (let y = 0; y < shape.boundaryHeight; y++) { // loop the boundary shape height and width
-                for (let x = 0; x < shape.boundaryWidth; x++) {
+            for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
+                for (let x = 0; x < shape.data.boundaryWidth; x++) {
 
                     // placing shapes, and growing the layout if shapes are placed outside of initial bounds
-                    if (shape.boundaryShape[y][x]) {
+                    if (shape.data.boundaryShape[y][x]) {
                         let xInBounds = shape.posX + x < this.layout[0].length;
                         let yInBounds = shape.posY + y < this.layout.length;
 
@@ -160,7 +160,10 @@ class Solution {
         // option 3: shift a shape by 1 cell in +y
         // option 4: shift a shape by 1 cell in -y
         // option 5: pick two shapes and swap their positions
-        let newSolution = new Solution(this.shapes);
+
+        // make a shallow copy of shapes; ie new posX and posY, but same shape data
+        let shapesCopy = this.shapes.map(shape => ({...shape}));
+        let newSolution = new Solution(shapesCopy);
         // pick random number between 1 and 5
         let randOption = Math.floor(Math.random() * 5) + 1;
         // pick random shape
@@ -191,5 +194,5 @@ class Solution {
         }
 
         return newSolution;
-    }    
+    }
 }
