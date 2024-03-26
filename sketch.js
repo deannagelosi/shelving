@@ -33,7 +33,7 @@ function setup() {
     initialScore = initialSolution.score;
     console.log('Initial solution: ', initialScore);
 
-    let tempMax = 1000;
+    let tempMax = 5000;
     let tempMin = 1;
 
     sa = new SimulatedAnnealing(

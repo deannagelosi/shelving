@@ -2,7 +2,7 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array to represent the shapes in position 
-        this.overlappingModifier = 10;
+        this.overlapPenalty = 10;
         this.score;
     }
 
@@ -90,7 +90,6 @@ class Solution {
                 this.layout[i].shift();
             }
         }
-
     }
 
     showLayout() {
@@ -150,7 +149,7 @@ class Solution {
             }
         }
 
-        this.score = emptyCells + (overlappingCells * this.overlappingModifier);
+        this.score = emptyCells + (overlappingCells * this.overlapPenalty);
     }
 
     makeNeighbor() {
