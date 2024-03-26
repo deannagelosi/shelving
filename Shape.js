@@ -1,8 +1,8 @@
 class Shape {
     constructor(_title) {
-        this.shape = [];
-        this.boundaryShape = [];
-        this.inputGrid = [];
+        this.shape = [[]];
+        this.boundaryShape = [[]];
+        this.inputGrid = [[]];
         this.title = _title;
 
         this.shapeHeight;
