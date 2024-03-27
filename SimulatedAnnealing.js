@@ -23,10 +23,20 @@ class SimulatedAnnealing {
         let delta = currScore - nextScore; // difference between scores
 
         // accept the new solution if it's better
-        if (delta > 0 || exp(delta / this.tempCurr) > Math.random(0, 1)) {
-            // todo: test the exp part works
+        if (delta > 0) {
+            // if there's overlap between shapes, then increase the temperature of the system
+            if (this.nextSolution.overlappingCells > 0) {
+                this.reheatSystem();
+            }
+            this.currSolution = this.nextSolution;
+        } else if (exp(delta / this.tempCurr) > Math.random(0, 1)) {
+            if (this.nextSolution.overlappingCells > 0) {
+                this.reheatSystem();
+            }
             this.currSolution = this.nextSolution;
         }
+
+        console.log('temp: ', this.tempCurr);
 
         if (this.tempCurr <= this.tempMin) {
             return false; // end condition met
@@ -38,5 +48,15 @@ class SimulatedAnnealing {
     coolingSchedule() {
         let coolingRate = 0.95;
         return this.tempCurr * coolingRate;
+    }
+
+    // -- Helper Methods -- //
+    reheatSystem() {
+        // increase the temperature of the system
+        this.tempCurr = this.tempCurr * 1.2;
+        if (this.tempCurr > this.tempMax) {
+            this.tempCurr = this.tempMax;
+        }
+        // todo: if it gets stuck overlapping, the loop will never end (never cool)
     }
 }
