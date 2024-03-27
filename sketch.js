@@ -30,6 +30,7 @@ function setup() {
     let initialSolution = new Solution(shapesPos);
     initialSolution.setInitialSolution();
     initialSolution.makeLayout();
+    initialSolution.showLayout();
     initialSolution.calcScore();
     initialScore = initialSolution.score;
     console.log('Initial solution: ', initialScore);
@@ -45,14 +46,14 @@ function setup() {
 }
 
 function draw() {
-    clear();
-    background(255);
 
     if (sa.epoch()) {
         // continue optimization
         sa.tempCurr = sa.coolingSchedule();
     } else {
         // optimization complete
+        clear();
+        background(255);
         sa.currSolution.showLayout();
         console.log('Initial solution: ', initialScore, ', Final solution: ', sa.currSolution.score);
         noLoop(); // stop draw loop
