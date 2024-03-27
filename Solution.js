@@ -152,13 +152,8 @@ class Solution {
         this.score = emptyCells + (overlappingCells * this.overlapPenalty);
     }
 
-    makeNeighbor() {
+    makeNeighbor(_tempCurr, _tempMax, _tempMin) {
         // create a new solution that's a neighbor to the current solution
-        // option 1: shift a shape by 1 cell in +x
-        // option 2: shift a shape by 1 cell in -x
-        // option 3: shift a shape by 1 cell in +y
-        // option 4: shift a shape by 1 cell in -y
-        // option 5: pick two shapes and swap their positions
 
         // make a shallow copy of shapes; ie new posX and posY, but same shape data
         let shapesCopy = this.shapes.map(shape => ({...shape}));
@@ -167,15 +162,24 @@ class Solution {
         let randOption = Math.floor(Math.random() * 5) + 1;
         // pick random shape
         let randShape = Math.floor(Math.random() * this.shapes.length);
-        if (randOption == 1) {
-            newSolution.shapes[randShape].posX += 1;
-        } else if (randOption == 2) {
-            newSolution.shapes[randShape].posX -= 1;
-        } else if (randOption == 3) {
-            newSolution.shapes[randShape].posY += 1;
-        } else if (randOption == 4) {
-            newSolution.shapes[randShape].posY -= 1;
-        } else if (randOption == 5) {
+
+        let shiftMax = 10; // maximum shift distance
+        let shiftMin = 1; // minimum shift distance
+        let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
+
+        if (randOption == 1) { // shift a shape by shiftCurr in +x
+            newSolution.shapes[randShape].posX += shiftCurr; 
+
+        } else if (randOption == 2) { // shift a shape by shiftCurr in -x
+            newSolution.shapes[randShape].posX -= shiftCurr; 
+
+        } else if (randOption == 3) { // shift a shape by shiftCurr in +y
+            newSolution.shapes[randShape].posY += shiftCurr; 
+
+        } else if (randOption == 4) { // shift a shape by shiftCurr in -y
+            newSolution.shapes[randShape].posY -= shiftCurr;
+
+        } else if (randOption == 5) { // pick two shapes and swap their positions
             let randShape2 = Math.floor(Math.random() * this.shapes.length);
             let tempX = newSolution.shapes[randShape].posX;
             let tempY = newSolution.shapes[randShape].posY;
@@ -193,5 +197,10 @@ class Solution {
         }
 
         return newSolution;
+    }
+
+    mapValueThenRound(oldCurr, oldMin, oldMax, newMin, newMax) {
+        let newCurr = ((oldCurr - oldMin) / (oldMax - oldMin)) * (newMax - newMin) + newMin;
+        return Math.round(newCurr);
     }
 }

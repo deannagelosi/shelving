@@ -49,7 +49,6 @@ function draw() {
 
     if (sa.epoch()) {
         // continue optimization
-        // console.log(sa.currSolution.score);
         sa.tempCurr = sa.coolingSchedule();
     } else {
         // optimization complete

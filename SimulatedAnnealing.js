@@ -15,7 +15,7 @@ class SimulatedAnnealing {
         this.currSolution.calcScore(); // current score (energy) of the system
         let currScore = this.currSolution.score;
 
-        this.nextSolution = this.currSolution.makeNeighbor(); // generate the next (neighbor) solution
+        this.nextSolution = this.currSolution.makeNeighbor(this.tempCurr, this.tempMax, this.tempMin); // generate the next (neighbor) solution
         this.nextSolution.makeLayout(); // generate the layout of the next solution
         this.nextSolution.calcScore(); // next score (energy) of the system
         let nextScore = this.nextSolution.score; // next score
