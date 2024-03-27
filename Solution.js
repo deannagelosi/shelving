@@ -2,7 +2,8 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array to represent the shapes in position 
-        this.overlapPenalty = 10;
+        this.overlapPenalty = 1;
+        this.overlappingCells = 0;
         this.score;
     }
 
@@ -36,6 +37,9 @@ class Solution {
         // create a 2D array to represent the design space
 
         this.layout = [[]]; // clear the layout
+        for (let i = 0; i < this.shapes.length; i++) {
+            this.shapes[i].overlap = false;
+        }
 
         // place shape boundaries in the grid
         for (let i = 0; i < this.shapes.length; i++) {
@@ -64,6 +68,9 @@ class Solution {
                         }
                         // update occupancy of a cell in the layout
                         this.layout[shape.posY + y][shape.posX + x] += 1;
+                        if (this.layout[shape.posY + y][shape.posX + x] > 1) {
+                            shape.overlap = true;
+                        }
                     }
                 }
             }
@@ -140,28 +147,36 @@ class Solution {
 
         // find cells where the value is greater than 1
         // add to a running total the value of the cell minus 1
-        let overlappingCells = 0;
+        this.overlappingCells = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
                 if (this.layout[i][j] > 1) {
-                    overlappingCells += this.layout[i][j] - 1;
+                    this.overlappingCells += this.layout[i][j] - 1;
                 }
             }
         }
 
-        this.score = emptyCells + (overlappingCells * this.overlapPenalty);
+        this.score = emptyCells + (this.overlappingCells * this.overlapPenalty);
     }
 
     makeNeighbor(_tempCurr, _tempMax, _tempMin) {
         // create a new solution that's a neighbor to the current solution
 
         // make a shallow copy of shapes; ie new posX and posY, but same shape data
-        let shapesCopy = this.shapes.map(shape => ({...shape}));
+        let shapesCopy = this.shapes.map(shape => ({ ...shape }));
         let newSolution = new Solution(shapesCopy);
         // pick random number between 1 and 5
-        let randOption = Math.floor(Math.random() * 5) + 1;
         // pick random shape
-        let randShape = Math.floor(Math.random() * this.shapes.length);
+        
+        // pick a shape that is overlapping or a random shape
+        let overlappingShapes = newSolution.shapes.filter(shape => shape.overlap);
+        let selectedShape;
+        if (overlappingShapes.length > 0) {
+            selectedShape = overlappingShapes[0];
+        } else {
+            let shapeIndex = Math.floor(Math.random() * this.shapes.length);
+            selectedShape = newSolution.shapes[shapeIndex];
+        }
 
         let shiftMax = 10; // maximum shift distance
         let shiftMin = 1; // minimum shift distance
