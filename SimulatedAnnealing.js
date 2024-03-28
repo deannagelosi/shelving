@@ -24,10 +24,12 @@ class SimulatedAnnealing {
 
         // don't let solutions with overlap or to much empty space fully cool
         if ( this.tempCurr <= this.tempMin) {
-            if (this.nextSolution.overlappingCells > 0 || this.nextSolution.emptyCells > this.nextSolution.minEmptyCells) {
+            if (this.nextSolution.overlappingCells > 0 || this.nextSolution.whitespace > this.nextSolution.minWhitespace) {
                 this.tempCurr = this.tempMin * 1.2;
             }
         }
+
+        console.log('temp: ', this.tempCurr.toFixed(2), 'overlap: ', this.nextSolution.overlappingCells, 'whitespace: ', this.nextSolution.whitespace);
 
         // accept the new solution if it's better
         if (delta > 0) {

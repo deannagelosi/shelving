@@ -2,11 +2,12 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
-        this.overlapPenalty = 50;
-        this.emptyCellPenalty = 1;
-        this.emptyCells = 0;
         this.overlappingCells = 0;
-        this.minEmptyCells = 150;
+        this.overlapPenalty = 50;
+
+        // aggregate for empty cell clusterScores
+        this.whitespace = 0;
+        this.minWhitespace = 500;
         this.score;
     }
 
@@ -117,6 +118,7 @@ class Solution {
         // display the design space grid
         stroke(0);
         strokeWeight(0.5);
+        textSize(10);
         let designHeight = this.layout.length;
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
@@ -134,6 +136,12 @@ class Solution {
                 let rectX = x * cellSize;
                 let rectY = (canvasHeight - cellSize) - (y * cellSize); // draw from bottom up
                 rect(rectX, rectY, cellSize, cellSize);
+
+                // place the minesweeper score in the cell if its empty
+                if (this.layout[y][x].clusterScore > 0) {
+                    fill(0); // black (shape)
+                    text(this.layout[y][x].clusterScore, rectX + cellSize / 4, rectY + cellSize);
+                }
             }
         }
     }
@@ -146,11 +154,27 @@ class Solution {
         // todo: minimize top-heavy designs
 
         // count all the empty cells in the layout
-        this.emptyCells = 0;
+        this.whitespace = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
                 if (this.layout[i][j].shapes.length == 0) {
-                    this.emptyCells++;
+                    // cell is empty
+                    let cScore = 0;
+                    // check the 8 possible adjacent cells
+                    for (let x = Math.max(0, i - 1); x <= Math.min(i + 1, this.layout.length - 1); x++) {
+                        for (let y = Math.max(0, j - 1); y <= Math.min(j + 1, this.layout[0].length - 1); y++) {
+                            // don't count the cell itself
+                            if (x !== i || y !== j) {
+                                // count if the adjacent cell is empty
+                                if (this.layout[x][y].shapes.length == 0) {
+                                    cScore++;
+                                }
+                            }
+                        }
+                    }
+                    // assign the score to the cell
+                    this.layout[i][j].clusterScore = cScore;
+                    this.whitespace += cScore;
                 }
             }
         }
@@ -166,7 +190,7 @@ class Solution {
             }
         }
 
-        this.score = (this.emptyCells * this.emptyCellPenalty) + (this.overlappingCells * this.overlapPenalty);
+        this.score = (this.whitespace) + (this.overlappingCells * this.overlapPenalty);
     }
 
     makeNeighbor(_tempCurr, _tempMax, _tempMin) {
@@ -187,16 +211,16 @@ class Solution {
 
         // pick a randomly to shift the shape or swap with another shape
         let randOption = Math.floor(Math.random() * 9) + 1;
-        if (randOption == 1 || randOption == 2) { 
+        if (randOption == 1 || randOption == 2) {
             selectedShape.posX -= shiftCurr; // shift x-value smaller
 
-        } else if (randOption == 3 || randOption == 4) { 
+        } else if (randOption == 3 || randOption == 4) {
             selectedShape.posX += shiftCurr; // shift x-value bigger
 
-        } else if (randOption == 5 || randOption == 6) { 
+        } else if (randOption == 5 || randOption == 6) {
             selectedShape.posY -= shiftCurr; // shift y-value smaller
 
-        } else if (randOption == 7 || randOption == 8) { 
+        } else if (randOption == 7 || randOption == 8) {
             selectedShape.posY += shiftCurr; // shift y-value bigger
 
         }

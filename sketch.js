@@ -31,8 +31,8 @@ function setup() {
     let initialSolution = new Solution(shapesPos);
     initialSolution.setInitialSolution();
     initialSolution.makeLayout();
-    initialSolution.showLayout();
     initialSolution.calcScore();
+    initialSolution.showLayout();
     initialScore = initialSolution.score;
     console.log('Initial solution: ', initialScore);
 
@@ -49,13 +49,11 @@ function setup() {
 }
 
 function draw() {
-
-
     if (sa.epoch()) {
         // continue optimization
         sa.tempCurr = sa.coolingSchedule();
         loopCount++;
-        if (loopCount % 25 == 0) {
+        if (loopCount % 10 == 0) {
             clear();
             background(255);
             sa.currSolution.showLayout()
