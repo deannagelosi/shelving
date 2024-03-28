@@ -4,6 +4,7 @@ let shapes = [];
 let solutions = [];
 let sa; // simulated annealing
 let initialScore;
+let loopCount;
 
 function preload() {
     shapeData = loadJSON('data/sunny-shapes.json');
@@ -43,13 +44,22 @@ function setup() {
         tempMin,
         initialSolution
     );
+
+    loopCount = 0;
 }
 
 function draw() {
 
+
     if (sa.epoch()) {
         // continue optimization
         sa.tempCurr = sa.coolingSchedule();
+        loopCount++;
+        if (loopCount % 25 == 0) {
+            clear();
+            background(255);
+            sa.currSolution.showLayout()
+        }
     } else {
         // optimization complete
         clear();
