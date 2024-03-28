@@ -2,8 +2,11 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
-        this.overlapPenalty = 2;
+        this.overlapPenalty = 50;
+        this.emptyCellPenalty = 1;
+        this.emptyCells = 0;
         this.overlappingCells = 0;
+        this.minEmptyCells = 150;
         this.score;
     }
 
@@ -143,11 +146,11 @@ class Solution {
         // todo: minimize top-heavy designs
 
         // count all the empty cells in the layout
-        let emptyCells = 0;
+        this.emptyCells = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
                 if (this.layout[i][j].shapes.length == 0) {
-                    emptyCells++;
+                    this.emptyCells++;
                 }
             }
         }
@@ -163,7 +166,7 @@ class Solution {
             }
         }
 
-        this.score = emptyCells + (this.overlappingCells * this.overlapPenalty);
+        this.score = (this.emptyCells * this.emptyCellPenalty) + (this.overlappingCells * this.overlapPenalty);
     }
 
     makeNeighbor(_tempCurr, _tempMax, _tempMin) {
@@ -172,53 +175,44 @@ class Solution {
         // make a shallow copy of shapes; ie new posX and posY, but same shape data
         let shapesCopy = this.shapes.map(shape => ({ ...shape }));
         let newSolution = new Solution(shapesCopy);
-        // pick random number between 1 and 5
-        // pick random shape
 
-        // pick a shape that is overlapping or a random shape
-        let overlappingShapes = newSolution.shapes.filter(shape => shape.overlap);
-        let selectedShape;
-        if (overlappingShapes.length > 0) {
-            selectedShape = overlappingShapes[0];
-        } else {
-            let shapeIndex = Math.floor(Math.random() * this.shapes.length);
-            selectedShape = newSolution.shapes[shapeIndex];
-        }
-
+        // pick shift amount based on temperature
         let shiftMax = 10; // maximum shift distance
         let shiftMin = 1; // minimum shift distance
         let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
 
-        let randOption = Math.floor(Math.random() * 2) + 1;
-        if (randOption == 1) { // shift x-value
-            if (Math.random() < 0.6) { // more likely to decrease x
-                selectedShape.posX -= shiftCurr;
-            } else {
-                selectedShape.posX += shiftCurr;
-            }
-        } else if (randOption == 2) { // shift y-value
-            if (Math.random() < 0.6) { // more likely to decrease y
-                selectedShape.posY -= shiftCurr;
-            } else {
-                selectedShape.posY += shiftCurr;
-            }
+        // pick a random shape to act on
+        let shapeIndex = Math.floor(Math.random() * this.shapes.length);
+        let selectedShape = newSolution.shapes[shapeIndex];
+
+        // pick a randomly to shift the shape or swap with another shape
+        let randOption = Math.floor(Math.random() * 9) + 1;
+        if (randOption == 1 || randOption == 2) { 
+            selectedShape.posX -= shiftCurr; // shift x-value smaller
+
+        } else if (randOption == 3 || randOption == 4) { 
+            selectedShape.posX += shiftCurr; // shift x-value bigger
+
+        } else if (randOption == 5 || randOption == 6) { 
+            selectedShape.posY -= shiftCurr; // shift y-value smaller
+
+        } else if (randOption == 7 || randOption == 8) { 
+            selectedShape.posY += shiftCurr; // shift y-value bigger
+
         }
-        // else if (randOption == 3) { // shift a shape by shiftCurr in +y
-        //     newSolution.shapes[randShape].posY += shiftCurr;
+        else if (randOption == 9) { // pick two shapes and swap their positions
+            // choose second shape for swap
+            let shapeIndex2 = Math.floor(Math.random() * this.shapes.length);
+            let selectedShape2 = newSolution.shapes[shapeIndex2];
 
-        // } else if (randOption == 4) { // shift a shape by shiftCurr in -y
-        //     newSolution.shapes[randShape].posY -= shiftCurr;
+            let tempX = selectedShape.posX;
+            let tempY = selectedShape.posY;
+            selectedShape.posX = selectedShape2.posX;
+            selectedShape.posY = selectedShape2.posY;
+            selectedShape2.posX = tempX;
+            selectedShape2.posY = tempY;
+        }
 
-        // } 
-        // else if (randOption == 5) { // pick two shapes and swap their positions
-        //     let randShape2 = Math.floor(Math.random() * this.shapes.length);
-        //     let tempX = newSolution.shapes[randShape].posX;
-        //     let tempY = newSolution.shapes[randShape].posY;
-        //     newSolution.shapes[randShape].posX = newSolution.shapes[randShape2].posX;
-        //     newSolution.shapes[randShape].posY = newSolution.shapes[randShape2].posY;
-        //     newSolution.shapes[randShape2].posX = tempX;
-        //     newSolution.shapes[randShape2].posY = tempY;
-        // }
         // check if the new position is within bounds (not negative)
         if (selectedShape.posX < 0) {
             selectedShape.posX = 0;
