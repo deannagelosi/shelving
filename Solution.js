@@ -1,8 +1,8 @@
 class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
-        this.layout = [[]]; // 2D array to represent the shapes in position 
-        this.overlapPenalty = 1;
+        this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
+        this.overlapPenalty = 2;
         this.overlappingCells = 0;
         this.score;
     }
@@ -19,7 +19,7 @@ class Solution {
             totalArea += this.shapes[i].data.rectArea;
         }
         // add multiplier to give extra space to work with
-        let designArea = totalArea * 2;
+        let designArea = totalArea * 4;
         // find the closest rectangle to the designArea
         let width = Math.floor(Math.sqrt(designArea));
         let height = Math.floor(designArea / width);
@@ -56,20 +56,27 @@ class Solution {
                         while (!xInBounds) {
                             // grow the x+ direction
                             for (let i = 0; i < this.layout.length; i++) {
-                                this.layout[i].push(0);
+                                // grow every row with a new layoutData object
+                                this.layout[i].push({ shapes: [] });
                             }
                             xInBounds = shape.posX + x < this.layout[0].length;
                         }
                         while (!yInBounds) {
                             // grow the y+ direction
-                            this.layout.push(new Array(this.layout[0].length).fill(0));
+                            // add a new row filled with unique objects
+                            let newRow = new Array(this.layout[0].length).fill(null).map(() => ({ shapes: [] }));
+                            this.layout.push(newRow);
 
                             yInBounds = shape.posY + y < this.layout.length;
                         }
                         // update occupancy of a cell in the layout
-                        this.layout[shape.posY + y][shape.posX + x] += 1;
-                        if (this.layout[shape.posY + y][shape.posX + x] > 1) {
-                            shape.overlap = true;
+                        this.layout[shape.posY + y][shape.posX + x].shapes.push(shape);
+                        // mark overlapping shapes
+                        if (this.layout[shape.posY + y][shape.posX + x].shapes.length > 1) {
+                            for (let j = 0; j < this.layout[shape.posY + y][shape.posX + x].shapes.length; j++) {
+                                // change each shape at position (x,y) to overlap is True
+                                this.layout[shape.posY + y][shape.posX + x].shapes[j].overlap = true;
+                            }
                         }
                     }
                 }
@@ -78,21 +85,21 @@ class Solution {
 
         // trim layout and remove empty rows
         // trim the last row if it's empty
-        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(cell => cell === 0)) {
+        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(cell => cell.shapes.length == 0)) {
             this.layout.pop();
         }
         // trim the first row if it's empty
-        while (this.layout.length > 0 && this.layout[0].every(cell => cell === 0)) {
+        while (this.layout.length > 0 && this.layout[0].every(cell => cell.shapes.length == 0)) {
             this.layout.shift();
         }
         // Remove all-zero columns from the right
-        while (this.layout[0].length > 0 && this.layout.every(row => row[row.length - 1] === 0)) {
+        while (this.layout[0].length > 0 && this.layout.every(row => row[row.length - 1].shapes.length == 0)) {
             for (let i = 0; i < this.layout.length; i++) {
                 this.layout[i].pop();
             }
         }
         // Remove all-zero columns from the left
-        while (this.layout[0].length > 0 && this.layout.every(row => row[0] === 0)) {
+        while (this.layout[0].length > 0 && this.layout.every(row => row[0].shapes.length == 0)) {
             for (let i = 0; i < this.layout.length; i++) {
                 this.layout[i].shift();
             }
@@ -112,12 +119,12 @@ class Solution {
         for (let x = 0; x < designWidth; x++) {
             for (let y = 0; y < designHeight; y++) {
                 // draw cell
-                if (this.layout[y][x] == 1) {
+                if (this.layout[y][x].shapes.length == 1) {
                     fill(0); // black (shape)
-                } else if (this.layout[y][x] >= 2) {
+                } else if (this.layout[y][x].shapes.length > 1) {
                     fill("red");  // collision
                 }
-                else if (this.layout[y][x] == 0) {
+                else if (this.layout[y][x].shapes.length == 0) {
                     fill(255); // white (empty)
                 }
 
@@ -133,25 +140,25 @@ class Solution {
 
         this.score = 0; // reset the score
 
-        // TODO: minimize top-heavy designs
+        // todo: minimize top-heavy designs
 
-        // count all the zeros in the designSpace
+        // count all the empty cells in the layout
         let emptyCells = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
-                if (this.layout[i][j] == 0) {
+                if (this.layout[i][j].shapes.length == 0) {
                     emptyCells++;
                 }
             }
         }
 
-        // find cells where the value is greater than 1
-        // add to a running total the value of the cell minus 1
+        // find cells that contain more than one shape
+        // add to a running total of overlapping cells
         this.overlappingCells = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
-                if (this.layout[i][j] > 1) {
-                    this.overlappingCells += this.layout[i][j] - 1;
+                if (this.layout[i][j].shapes.length > 1) {
+                    this.overlappingCells += this.layout[i][j].shapes.length - 1;
                 }
             }
         }
@@ -167,7 +174,7 @@ class Solution {
         let newSolution = new Solution(shapesCopy);
         // pick random number between 1 and 5
         // pick random shape
-        
+
         // pick a shape that is overlapping or a random shape
         let overlappingShapes = newSolution.shapes.filter(shape => shape.overlap);
         let selectedShape;
@@ -177,25 +184,25 @@ class Solution {
             let shapeIndex = Math.floor(Math.random() * this.shapes.length);
             selectedShape = newSolution.shapes[shapeIndex];
         }
-        
+
         let shiftMax = 10; // maximum shift distance
         let shiftMin = 1; // minimum shift distance
         let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
-        
+
         let randOption = Math.floor(Math.random() * 2) + 1;
         if (randOption == 1) { // shift x-value
             if (Math.random() < 0.6) { // more likely to decrease x
-                selectedShape.posX -= shiftCurr; 
+                selectedShape.posX -= shiftCurr;
             } else {
                 selectedShape.posX += shiftCurr;
             }
         } else if (randOption == 2) { // shift y-value
             if (Math.random() < 0.6) { // more likely to decrease y
-                selectedShape.posY -= shiftCurr; 
+                selectedShape.posY -= shiftCurr;
             } else {
                 selectedShape.posY += shiftCurr;
             }
-        } 
+        }
         // else if (randOption == 3) { // shift a shape by shiftCurr in +y
         //     newSolution.shapes[randShape].posY += shiftCurr;
 
