@@ -48,6 +48,7 @@ function setup() {
 }
 
 function draw() {
+    // noLoop();
     if (sa.epoch()) {
         // continue optimization
         sa.tempCurr = sa.coolingSchedule();

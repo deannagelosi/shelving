@@ -42,37 +42,50 @@ class Solution {
 
         this.layout = [[]]; // clear the layout
 
-        // place shape boundaries in the grid
+        // place cell data about shapes into the layout grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
             // place shape boundary
+
+            let cellData = {
+                shapes: [],
+                isShape: false
+            };
+
             for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
                 for (let x = 0; x < shape.data.boundaryWidth; x++) {
 
                     // placing shapes, and growing the layout if shapes are placed outside of initial bounds
                     if (shape.data.boundaryShape[y][x]) {
-                        let xInBounds = shape.posX + x < this.layout[0].length;
+
+                        // grow the layout to fit the shape
+                        let xInBounds = shape.posX + x + 1 < this.layout[0].length;
                         let yInBounds = shape.posY + y < this.layout.length;
 
                         while (!xInBounds) {
-                            // grow the x+ direction
+                            // grow the x+ direction by two
                             for (let i = 0; i < this.layout.length; i++) {
-                                // grow every row with a new layoutData object
-                                this.layout[i].push({ shapes: [] });
+                                // grow every row with a new cellData object
+                                this.layout[i].push(JSON.parse(JSON.stringify(cellData)));
+                                this.layout[i].push(JSON.parse(JSON.stringify(cellData)));
                             }
-                            xInBounds = shape.posX + x < this.layout[0].length;
+                            xInBounds = shape.posX + x + 1 < this.layout[0].length;
                         }
                         while (!yInBounds) {
                             // grow the y+ direction
                             // add a new row filled with unique objects
-                            let newRow = new Array(this.layout[0].length).fill(null).map(() => ({ shapes: [] }));
+                            let newRow = new Array(this.layout[0].length).fill(null).map(() => (JSON.parse(JSON.stringify(cellData))));
                             this.layout.push(newRow);
 
                             yInBounds = shape.posY + y < this.layout.length;
                         }
+
                         // update occupancy of a cell in the layout
                         this.layout[shape.posY + y][shape.posX + x].shapes.push(shape);
 
+                        // mark if the cell is occupied by a shape or the shape's boundary
+                        let shapeInBounds = y < shape.data.shape.length && x < shape.data.shape[0].length;
+                        this.layout[shape.posY + y][shape.posX + x + 1].isShape = shapeInBounds && shape.data.shape[y][x];
                     }
                 }
             }
@@ -115,13 +128,17 @@ class Solution {
         for (let x = 0; x < designWidth; x++) {
             for (let y = 0; y < designHeight; y++) {
                 // draw cell
-                if (this.layout[y][x].shapes.length == 1) {
-                    fill(0); // black (shape)
+                if (this.layout[y][x].shapes.length == 0) {
+                    fill(255); // white (empty)
+                } else if (this.layout[y][x].shapes.length == 1) {
+                    // fill the cell pink if it's occupied by the boundary shape
+                    fill(255, 192, 203); // pink (boundary)
+                    if (this.layout[y][x].isShape) {
+                        // fill the cell black if it's occupied by the shape
+                        fill(0); // black (shape)
+                    }
                 } else if (this.layout[y][x].shapes.length > 1) {
                     fill("red");  // collision
-                }
-                else if (this.layout[y][x].shapes.length == 0) {
-                    fill(255); // white (empty)
                 }
 
                 let rectX = x * cellSize;
