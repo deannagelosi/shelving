@@ -7,8 +7,31 @@ class Solution {
 
         // aggregate for empty cell clusterScores
         this.whitespace = 0;
-        this.minWhitespace = 500;
+        this.minWhitespace = 1000;
         this.score;
+    }
+
+    exampleSolution() {
+        this.shapes[0].posX = 8;
+        this.shapes[0].posY = 9;
+        this.shapes[1].posX = 17
+        this.shapes[1].posY = 9;
+        this.shapes[2].posX = 7;
+        this.shapes[2].posY = 39;
+        this.shapes[3].posX = 8;
+        this.shapes[3].posY = 19;
+        this.shapes[4].posX = 17;
+        this.shapes[4].posY = 36;
+        this.shapes[5].posX = 8;
+        this.shapes[5].posY = 28;
+        this.shapes[6].posX = 18;
+        this.shapes[6].posY = 28;
+        this.shapes[7].posX = 15;
+        this.shapes[7].posY = 39;
+        this.shapes[8].posX = 8;
+        this.shapes[8].posY = 34;
+        this.shapes[9].posX = 18;
+        this.shapes[9].posY = 20;
     }
 
     setInitialSolution() {
