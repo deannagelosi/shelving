@@ -23,7 +23,6 @@ function setup() {
             // pos is bottom left corner of the shape, including overhangs
             posX: 0,
             posY: 0,
-            overlap: false
         };
         shapesPos.push(shapeData);
     }

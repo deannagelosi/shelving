@@ -41,9 +41,6 @@ class Solution {
         // create a 2D array to represent the design space
 
         this.layout = [[]]; // clear the layout
-        for (let i = 0; i < this.shapes.length; i++) {
-            this.shapes[i].overlap = false;
-        }
 
         // place shape boundaries in the grid
         for (let i = 0; i < this.shapes.length; i++) {
@@ -75,13 +72,7 @@ class Solution {
                         }
                         // update occupancy of a cell in the layout
                         this.layout[shape.posY + y][shape.posX + x].shapes.push(shape);
-                        // mark overlapping shapes
-                        if (this.layout[shape.posY + y][shape.posX + x].shapes.length > 1) {
-                            for (let j = 0; j < this.layout[shape.posY + y][shape.posX + x].shapes.length; j++) {
-                                // change each shape at position (x,y) to overlap is True
-                                this.layout[shape.posY + y][shape.posX + x].shapes[j].overlap = true;
-                            }
-                        }
+
                     }
                 }
             }
