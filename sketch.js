@@ -51,7 +51,10 @@ function setup() {
 function draw() {
     let automata = new Automata(sa.currSolution);
     automata.plantSeed();
-    automata.showResult;
+    for (let i = 0; i < 10; i++) {
+        automata.grow();
+    }
+    automata.showResult();
     noLoop();
     // if (sa.epoch()) {
     //     // continue optimization
