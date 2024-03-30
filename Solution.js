@@ -5,7 +5,7 @@ class Solution {
         this.overlappingCells = 0;
         this.overlapPenalty = 50;
 
-        // aggregate for empty cell clusterScores
+        // aggregate for empty cell cellScores
         this.whitespace = 0;
         this.minWhitespace = 1000;
         this.score;
@@ -72,7 +72,8 @@ class Solution {
 
             let cellData = {
                 shapes: [],
-                isShape: false
+                isShape: false,
+                cellScore: 0
             };
 
             for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
@@ -169,9 +170,9 @@ class Solution {
                 rect(rectX, rectY, cellSize, cellSize);
 
                 // place the minesweeper score in the cell if its empty
-                if (this.layout[y][x].clusterScore > 0) {
+                if (this.layout[y][x].cellScore > 0) {
                     fill(0); // black (shape)
-                    text(this.layout[y][x].clusterScore, rectX + cellSize / 4, rectY + cellSize);
+                    text(this.layout[y][x].cellScore, rectX + cellSize / 4, rectY + cellSize);
                 }
             }
         }
@@ -204,7 +205,7 @@ class Solution {
                         }
                     }
                     // assign the score to the cell
-                    this.layout[i][j].clusterScore = cScore;
+                    this.layout[i][j].cellScore = cScore;
                     this.whitespace += cScore;
                 }
             }
