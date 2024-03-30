@@ -123,6 +123,10 @@ class Solution {
         // trim the first row if it's empty
         while (this.layout.length > 0 && this.layout[0].every(cell => cell.shapes.length == 0)) {
             this.layout.shift();
+            // update shape.posY with new position for every shape
+            for (let i = 0; i < this.shapes.length; i++) {
+                this.shapes[i].posY--;
+            }
         }
         // Remove all-zero columns from the right
         while (this.layout[0].length > 0 && this.layout.every(row => row[row.length - 1].shapes.length == 0)) {
@@ -134,6 +138,10 @@ class Solution {
         while (this.layout[0].length > 0 && this.layout.every(row => row[0].shapes.length == 0)) {
             for (let i = 0; i < this.layout.length; i++) {
                 this.layout[i].shift();
+            }
+            // update shape.posX with new position for every shape
+            for (let i = 0; i < this.shapes.length; i++) {
+                this.shapes[i].posX--;
             }
         }
     }
@@ -171,7 +179,7 @@ class Solution {
 
                 // place the minesweeper score in the cell if its empty
                 if (this.layout[y][x].cellScore > 0) {
-                    fill(0); // black (shape)
+                    fill(0);
                     text(this.layout[y][x].cellScore, rectX + cellSize / 4, rectY + cellSize);
                 }
             }
