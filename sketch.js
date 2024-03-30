@@ -49,6 +49,9 @@ function setup() {
 }
 
 function draw() {
+    let automata = new Automata(sa.currSolution);
+    automata.plantSeed();
+    automata.showResult;
     noLoop();
     // if (sa.epoch()) {
     //     // continue optimization
