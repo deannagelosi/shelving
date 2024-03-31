@@ -15,14 +15,15 @@ class Case {
     growAutomata() {
         for (let i = 0; i < this.automata.length; i++) {
             let automaton = this.automata[i];
-            while (automaton.grow() != false) {}
+            while (automaton.grow() != false) { }
         }
     }
 
     showResult() {
         for (let i = 0; i < this.automata.length; i++) {
+            let chooseColor = color(random(255), random(255), random(255));
             let automaton = this.automata[i];
-            automaton.showResult();
+            automaton.showResult(chooseColor);
         }
     }
 }

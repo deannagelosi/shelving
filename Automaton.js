@@ -12,7 +12,7 @@ class Automaton {
 
     plantSeed() {
         // drop seed in the bottom left corner of a shape within a solution
-        this.seedX.push(this.shape.posX);
+        this.seedX.push(this.startX(this.shape.posX));
         this.seedY.push(this.shape.posY);
     }
 
@@ -149,12 +149,12 @@ class Automaton {
         return true;
     }
 
-    showResult() {
+    showResult(color) {
         let cellSizeHeight = canvasHeight / this.layout.length;
         let cellSizeWidth = canvasWidth / this.layout[0].length;
         let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
         // show the seed placement
-        fill("green"); // Black color for the dots
+        fill(color); // Black color for the dots
         noStroke(); // No border for the dots
         for (let i = 0; i < this.seedX.length; i++) {
             circle(this.seedX[i] * cellSize, canvasHeight - (this.seedY[i] * cellSize), 10);
@@ -178,17 +178,25 @@ class Automaton {
             if (this.inBounds(coordX, coordY)) {
                 cellScoreB = this.layout[coordY][coordX].cellScore;
             }
-            if (cellScoreA !== null && cellScoreB !== null) {
-                if (cellScoreA == 0 && cellScoreB == 0) {
-                    return 1000; // arbitrary large number
-                } else {
-                    return Math.abs(cellScoreA - cellScoreB);
-                }
-            } else {
+
+            if (cellScoreA == null && cellScoreB == null) {
                 console.log("Error: Both null");
                 return -1;
+            } else if (cellScoreA == null || cellScoreB == null) {
+                if (cellScoreA == null) {
+                    cellScoreA = 0;
+                } else {
+                    cellScoreB = 0;
+                }
+            }
+
+            if (cellScoreA == 0 && cellScoreB == 0) {
+                return 1000; // arbitrary large number
+            } else {
+                return Math.abs(cellScoreA - cellScoreB);
             }
         }
+
     }
 
     inBounds(coordX, coordY) {
@@ -198,5 +206,15 @@ class Automaton {
         } else {
             return false;
         }
+    }
+
+    startX(posX) {
+        // for shapes with overhang, find the bottom corner of the shape
+        // is the currX 
+        let currX = 0;
+        while (this.shape.data.boundaryShape[0][currX] != true) {
+            currX += 1
+        }
+        return posX + currX;
     }
 }
