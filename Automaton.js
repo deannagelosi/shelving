@@ -1,5 +1,5 @@
 // Builds shelves using cellular automata rules to grow from a seed
-class Automata {
+class Automaton {
     constructor(_solution) {
         this.solution = _solution;
         this.seedX = [];
