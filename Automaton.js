@@ -43,11 +43,16 @@ class Automaton {
                 // if posA is less than or equal to posB, stay in current position and set case = 2
                 let diffScoreA = this.calcDiff(currX, currY, "up");
                 let diffScoreB = this.calcDiff(currX + 1, currY, "up");
+
+                // check for completely out of bounds
+                if (diffScoreA == -2 || diffScoreB == -2) {
+                    return false;
+                }
+
                 if (diffScoreB < diffScoreA) {
                     this.seedX.push(currX + 1);
                     this.seedY.push(currY);
                 } else {
-                    console.log("mode 2")
                     this.growMode = 2;
                 }
                 break;
@@ -61,6 +66,10 @@ class Automaton {
                     this.seedX.push(currX);
                     this.seedY.push(currY + 1);
                 } else if (diffScoreC == -1) {
+                    return false;
+                } else if (diffScoreC == -2) {
+                    this.seedX.push(currX);
+                    this.seedY.push(currY + 1);
                     return false;
                 } else {
                     // still go up, but pick the best of the 3 options
@@ -174,6 +183,10 @@ class Automaton {
             }
             if (this.inBounds(coordX, coordY)) {
                 cellScoreB = this.layout[coordY][coordX].cellScore;
+            }
+
+            if (cellScoreA == null && cellScoreB == null) {
+                return -2;
             }
 
             if (cellScoreA == null || cellScoreB == null) {
