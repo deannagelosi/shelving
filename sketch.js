@@ -49,13 +49,10 @@ function setup() {
 }
 
 function draw() {
-    let automata = new Automata(sa.currSolution);
-    automata.plantSeed();
-
-    // while grow is true, keep growing the shelve
-    while (automata.grow() != false) {}
-
-    automata.showResult();
+    let newCase = new Case(sa.currSolution);
+    newCase.createAutomata();
+    newCase.growAutomata();
+    newCase.showResult();
     noLoop();
     // if (sa.epoch()) {
     //     // continue optimization

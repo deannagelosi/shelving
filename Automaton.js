@@ -1,7 +1,8 @@
 // Builds shelves using cellular automata rules to grow from a seed
 class Automaton {
-    constructor(_solution) {
-        this.solution = _solution;
+    constructor(_layout, _shape) {
+        this.layout = _layout;
+        this.shape = _shape;
         this.seedX = [];
         this.seedY = [];
         this.growMode = 0;
@@ -11,8 +12,8 @@ class Automaton {
 
     plantSeed() {
         // drop seed in the bottom left corner of a shape within a solution
-        this.seedX.push(this.solution.shapes[0].posX);
-        this.seedY.push(this.solution.shapes[0].posY);
+        this.seedX.push(this.shape.posX);
+        this.seedY.push(this.shape.posY);
     }
 
     grow() {
@@ -21,11 +22,17 @@ class Automaton {
         switch (this.growMode) {
             case 0:
                 // draw along bottom of shape
-                if (this.solution.layout[currY][currX].cellScore == 0) {
-                    this.seedX.push(currX + 1);
-                    this.seedY.push(currY);
+                // if we go out of bounds to the right, then stop growing
+                if (currX < this.layout[currY].length) {
+                    // in bounds
+                    if (this.layout[currY][currX].cellScore == 0) {
+                        this.seedX.push(currX + 1);
+                        this.seedY.push(currY);
+                    } else {
+                        this.growMode = 1;
+                    }
                 } else {
-                    this.growMode = 1;
+                    return false;
                 }
                 break;
             case 1:
@@ -143,8 +150,8 @@ class Automaton {
     }
 
     showResult() {
-        let cellSizeHeight = canvasHeight / this.solution.layout.length;
-        let cellSizeWidth = canvasWidth / this.solution.layout[0].length;
+        let cellSizeHeight = canvasHeight / this.layout.length;
+        let cellSizeWidth = canvasWidth / this.layout[0].length;
         let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
         // show the seed placement
         fill("green"); // Black color for the dots
@@ -166,10 +173,10 @@ class Automaton {
             let cellScoreB = null;
             // check if point is in bounds
             if (this.inBounds(coordX - 1, coordY)) {
-                cellScoreA = this.solution.layout[coordY][coordX - 1].cellScore;
+                cellScoreA = this.layout[coordY][coordX - 1].cellScore;
             }
             if (this.inBounds(coordX, coordY)) {
-                cellScoreB = this.solution.layout[coordY][coordX].cellScore;
+                cellScoreB = this.layout[coordY][coordX].cellScore;
             }
             if (cellScoreA !== null && cellScoreB !== null) {
                 if (cellScoreA == 0 && cellScoreB == 0) {
@@ -185,8 +192,8 @@ class Automaton {
     }
 
     inBounds(coordX, coordY) {
-        let gridHeight = this.solution.layout.length;
-        if (coordY < gridHeight && coordY >= 0 && coordX >= 0 && coordX < this.solution.layout[coordY].length) {
+        let gridHeight = this.layout.length;
+        if (coordY < gridHeight && coordY >= 0 && coordX >= 0 && coordX < this.layout[coordY].length) {
             return true;
         } else {
             return false;
