@@ -5,7 +5,6 @@ class Automata {
         this.seedX = [];
         this.seedY = [];
         this.growMode = 0;
-        this.firstShape = true;
         this.moveUp = true;
         this.moveRight = true;
     }
@@ -26,7 +25,6 @@ class Automata {
                     this.seedX.push(currX + 1);
                     this.seedY.push(currY);
                 } else {
-                    this.firstShape = false;
                     this.growMode = 1;
                 }
                 break;
@@ -64,30 +62,76 @@ class Automata {
                     // if two scores are tied for lowest, keep looking at options directly above those two till you find one lower, pick that option
                     // note: make a function that returns a dot/intersections score for u,d,l, or r
                     let scores = [
-                        {score: this.calcDiff(currX - 1, currY + 1, "up"), x: currX - 1, y: currY + 1, dir: "left"},
-                        {score: this.calcDiff(currX, currY + 1, "up"), x: currX, y: currY + 1, dir: "center"},
-                        {score: this.calcDiff(currX + 1, currY + 1, "up"), x: currX + 1, y: currY + 1, dir: "right"}
+                        { score: this.calcDiff(currX - 1, currY + 1, "up"), x: currX - 1, y: currY + 1, dir: "left" },
+                        { score: this.calcDiff(currX, currY + 1, "up"), x: currX, y: currY + 1, dir: "center" },
+                        { score: this.calcDiff(currX + 1, currY + 1, "up"), x: currX + 1, y: currY + 1, dir: "right" }
                     ];
 
                     scores.sort((a, b) => a.score - b.score);
 
-                    if (scores[0].score === scores[1].score) {
-                        console.log("The first two scores are the same.");
-                    }
-                    
                     if (scores[0].score === scores[1].score && scores[1].score === scores[2].score) {
                         console.log("All three scores are the same.");
+
+                        if (scores[0].score == 1000) {
+                            // if all three above are occupied, then stop growing
+                            return false;
+                        }
+                    } else if (scores[0].score === scores[1].score) {
+                        console.log("The first two scores are the same.");
+                        // // if we have a tie, look up above the two tied intersections and compare the diffs of these intersections
+                        // // choose the intersection with the lowest diff, 
+                        // // and move to that intersection, resulting in dropping a dot at the winning tie location
+                        // // as well as a dot at the intersection with the lowest diff that broke the tie
+                        let tieScores = [
+                            { score: this.calcDiff(scores[0].x, scores[0].y + 1, "up"), x: scores[0].x, y: scores[0].y + 1, dir: scores[0].dir },
+                            { score: this.calcDiff(scores[1].x, scores[1].y + 1, "up"), x: scores[1].x, y: scores[1].y + 1, dir: scores[1].dir }
+                        ];
+                        tieScores.sort((a, b) => a.score - b.score);
+
+                        let winner;
+                        if (tieScores[0].score < tieScores[1].score) {
+                            winner = tieScores[0];
+                            console.log("Tie breaker 1.");
+                            console.log("Winner: ", winner);
+                        } else {
+                            winner = tieScores[1];
+                            console.log("Tie breaker 2.");
+                        }
+
+                        if (winner.dir == "left") {
+                            // push the left turn dot
+                            this.seedX.push(currX - 1);
+                            this.seedY.push(currY);
+
+                        } else if (winner.dir == "right") {
+                            // push the right turn dot
+                            this.seedX.push(currX + 1);
+                            this.seedY.push(currY);
+                        }
+                        // push the winner of the tied dots
+                        this.seedX.push(winner.x);
+                        this.seedY.push(winner.y - 1);
+                        // push the tie break dot (aka the dot above the tie winner)
+                        this.seedX.push(winner.x);
+                        this.seedY.push(winner.y);
+
+                    } else {
+                        // no ties
+                        if (scores[0].dir == "left") {
+                            // pus the left turn dot
+                            this.seedX.push(currX - 1);
+                            this.seedY.push(currY);
+
+                        } else if (scores[0].dir == "right") {
+                            // push the right turn dot
+                            this.seedX.push(currX + 1);
+                            this.seedY.push(currY);
+                        }
+                        // push the winner dot
+                        this.seedX.push(scores[0].x);
+                        this.seedY.push(scores[0].y);
                     }
 
-                    if (scores[0].dir == "left") {
-                        this.seedX.push(currX - 1);
-                        this.seedY.push(currY);
-                    } else if (scores[0].dir == "right") {
-                        this.seedX.push(currX + 1);
-                        this.seedY.push(currY + 1);
-                    }
-                    this.seedX.push(scores[0].x);
-                    this.seedY.push(scores[0].y);
                 }
                 break;
             // case 3:
@@ -126,7 +170,7 @@ class Automata {
             }
             if (this.inBounds(coordX, coordY)) {
                 cellScoreB = this.solution.layout[coordY][coordX].cellScore;
-            }       
+            }
             if (cellScoreA !== null && cellScoreB !== null) {
                 if (cellScoreA == 0 && cellScoreB == 0) {
                     return 1000; // arbitrary large number
