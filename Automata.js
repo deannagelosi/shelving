@@ -16,11 +16,6 @@ class Automata {
         this.seedY.push(this.solution.shapes[0].posY);
     }
 
-    // UR = [currX, currY]
-    // UL = [currX - 1, currY]
-    // DR = [currX, currY - 1]
-    // DL = [currX - 1, currY - 1]
-
     grow() {
         let currX = this.seedX[this.seedX.length - 1];
         let currY = this.seedY[this.seedY.length - 1];
@@ -41,12 +36,13 @@ class Automata {
                 // pos B is the absolute value of the difference between the next position and the position after that
                 // if posA is greater than posB, then move forward one
                 // if posA is less than or equal to posB, stay in current position and set case = 2
-                let posA = Math.abs(this.solution.layout[currY][currX].cellScore - this.solution.layout[currY][currX - 1].cellScore);
-                let posB = Math.abs(this.solution.layout[currY][currX + 1].cellScore - this.solution.layout[currY][currX].cellScore);
-                if (posA > posB) {
+                let diffScoreA = this.calcDiff(currX, currY, "up");
+                let diffScoreB = this.calcDiff(currX + 1, currY, "up");
+                if (diffScoreB < diffScoreA) {
                     this.seedX.push(currX + 1);
                     this.seedY.push(currY);
                 } else {
+                    console.log("mode 2")
                     this.growMode = 2;
                 }
                 break;
@@ -55,22 +51,51 @@ class Automata {
                 // calc the absolute value of the difference between (my current position y+1) and (my current position x - 1, y + 1)
                 // if this value is zero, increase y by 1
                 // if this value is not zero, set case = 3
-                let posC = Math.abs(this.solution.layout[currY + 1][currX].cellScore - this.solution.layout[currY + 1][currX - 1].cellScore);
-                if (posC == 0) {
+                let diffScoreC = this.calcDiff(currX, currY + 1, "up");
+                if (diffScoreC == 0) {
                     this.seedX.push(currX);
                     this.seedY.push(currY + 1);
+                } else if (diffScoreC == -1) {
+                    return false;
                 } else {
                     // still go up, but pick the best of the 3 options
                     // get the score for all 3 options, disqualifying an option if they are both 0 inside
                     // pick the lowest score, "up and over" method to get to it
                     // if two scores are tied for lowest, keep looking at options directly above those two till you find one lower, pick that option
                     // note: make a function that returns a dot/intersections score for u,d,l, or r
+                    let scores = [
+                        {score: this.calcDiff(currX - 1, currY + 1, "up"), x: currX - 1, y: currY + 1, dir: "left"},
+                        {score: this.calcDiff(currX, currY + 1, "up"), x: currX, y: currY + 1, dir: "center"},
+                        {score: this.calcDiff(currX + 1, currY + 1, "up"), x: currX + 1, y: currY + 1, dir: "right"}
+                    ];
+
+                    scores.sort((a, b) => a.score - b.score);
+
+                    if (scores[0].score === scores[1].score) {
+                        console.log("The first two scores are the same.");
+                    }
+                    
+                    if (scores[0].score === scores[1].score && scores[1].score === scores[2].score) {
+                        console.log("All three scores are the same.");
+                    }
+
+                    if (scores[0].dir == "left") {
+                        this.seedX.push(currX - 1);
+                        this.seedY.push(currY);
+                    } else if (scores[0].dir == "right") {
+                        this.seedX.push(currX + 1);
+                        this.seedY.push(currY + 1);
+                    }
+                    this.seedX.push(scores[0].x);
+                    this.seedY.push(scores[0].y);
                 }
                 break;
             // case 3:
             //     // cell with a seed
             //     break;
         }
+
+        return true;
     }
 
     showResult() {
@@ -86,4 +111,41 @@ class Automata {
         // circle(this.seedX * cellSize, canvasHeight - (this.seedY * cellSize), 10);
     }
 
+    //-- Helper methods --//
+    calcDiff(coordX, coordY, dir) {
+        // UR = [currX, currY]
+        // UL = [currX - 1, currY]
+        // DR = [currX, currY - 1]
+        // DL = [currX - 1, currY - 1]
+        if (dir == "up") {
+            let cellScoreA = null;
+            let cellScoreB = null;
+            // check if point is in bounds
+            if (this.inBounds(coordX - 1, coordY)) {
+                cellScoreA = this.solution.layout[coordY][coordX - 1].cellScore;
+            }
+            if (this.inBounds(coordX, coordY)) {
+                cellScoreB = this.solution.layout[coordY][coordX].cellScore;
+            }       
+            if (cellScoreA !== null && cellScoreB !== null) {
+                if (cellScoreA == 0 && cellScoreB == 0) {
+                    return 1000; // arbitrary large number
+                } else {
+                    return Math.abs(cellScoreA - cellScoreB);
+                }
+            } else {
+                console.log("Error: Both null");
+                return -1;
+            }
+        }
+    }
+
+    inBounds(coordX, coordY) {
+        let gridHeight = this.solution.layout.length;
+        if (coordY < gridHeight && coordY >= 0 && coordX >= 0 && coordX < this.solution.layout[coordY].length) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

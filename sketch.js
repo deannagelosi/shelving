@@ -51,9 +51,10 @@ function setup() {
 function draw() {
     let automata = new Automata(sa.currSolution);
     automata.plantSeed();
-    for (let i = 0; i < 10; i++) {
-        automata.grow();
-    }
+
+    // while grow is true, keep growing the shelve
+    while (automata.grow() != false) {}
+
     automata.showResult();
     noLoop();
     // if (sa.epoch()) {

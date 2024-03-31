@@ -2,8 +2,6 @@
 
 ## Known Bugs
 
-- adjust shape coordinates when trimming
-
 ## Object Placement
 
 - gravity - bottom "row" shapes drop to ground
@@ -16,7 +14,7 @@
 
 ## Build Shelves
 
-- 
+- adding grow rules
 
 ## UI
 
