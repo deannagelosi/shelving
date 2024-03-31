@@ -141,9 +141,6 @@ class Automaton {
 
                 }
                 break;
-            // case 3:
-            //     // cell with a seed
-            //     break;
         }
 
         return true;
@@ -179,15 +176,8 @@ class Automaton {
                 cellScoreB = this.layout[coordY][coordX].cellScore;
             }
 
-            if (cellScoreA == null && cellScoreB == null) {
-                console.log("Error: Both null");
+            if (cellScoreA == null || cellScoreB == null) {
                 return -1;
-            } else if (cellScoreA == null || cellScoreB == null) {
-                if (cellScoreA == null) {
-                    cellScoreA = 0;
-                } else {
-                    cellScoreB = 0;
-                }
             }
 
             if (cellScoreA == 0 && cellScoreB == 0) {
