@@ -25,7 +25,7 @@ class Automaton {
                 // if we go out of bounds to the right, then stop growing
                 if (currX < this.layout[currY].length) {
                     // in bounds
-                    if (this.layout[currY][currX].cellScore == 0) {
+                    if (this.layout[currY][currX].cellScore == 0 && this.shape === this.layout[currY][currX].shapes[0]) {
                         this.seedX.push(currX + 1);
                         this.seedY.push(currY);
                     } else {
@@ -66,17 +66,20 @@ class Automaton {
                     this.seedX.push(currX);
                     this.seedY.push(currY + 1);
                 } else if (diffScoreC == -1) {
+                    // one of the two cells is out of bounds (null)
                     return false;
                 } else if (diffScoreC == -2) {
+                    // both cells are out of bounds (null)
                     this.seedX.push(currX);
                     this.seedY.push(currY + 1);
                     return false;
+                } else if (diffScoreC == 1000) {
+                    // both cells are occupied (0)
+                    this.seedX.push(currX);
+                    this.seedY.push(currY + 1);
+                    // return false;
                 } else {
-                    // still go up, but pick the best of the 3 options
-                    // get the score for all 3 options, disqualifying an option if they are both 0 inside
-                    // pick the lowest score, "up and over" method to get to it
-                    // if two scores are tied for lowest, keep looking at options directly above those two till you find one lower, pick that option
-                    // note: make a function that returns a dot/intersections score for u,d,l, or r
+                    // still move upwards, but pick the best of the 3 options
                     let scores = [
                         { score: this.calcDiff(currX - 1, currY + 1, "up"), x: currX - 1, y: currY + 1, dir: "left" },
                         { score: this.calcDiff(currX, currY + 1, "up"), x: currX, y: currY + 1, dir: "center" },
@@ -85,69 +88,62 @@ class Automaton {
 
                     scores.sort((a, b) => a.score - b.score);
 
+                    let winner;
+                    // pick the winner
                     if (scores[0].score === scores[1].score && scores[1].score === scores[2].score) {
-                        console.log("All three scores are the same.");
-
+                        // all three intersection scores are equal
                         if (scores[0].score == 1000) {
                             // if all three above are occupied, then stop growing
                             return false;
+                        } else {
+                            // todo: if all three are equal, pick a winner
                         }
                     } else if (scores[0].score === scores[1].score) {
-                        console.log("The first two scores are the same.");
-                        // // if we have a tie, look up above the two tied intersections and compare the diffs of these intersections
-                        // // choose the intersection with the lowest diff, 
-                        // // and move to that intersection, resulting in dropping a dot at the winning tie location
-                        // // as well as a dot at the intersection with the lowest diff that broke the tie
+                        // there is a tie, pick the winner
                         let tieScores = [
                             { score: this.calcDiff(scores[0].x, scores[0].y + 1, "up"), x: scores[0].x, y: scores[0].y + 1, dir: scores[0].dir },
                             { score: this.calcDiff(scores[1].x, scores[1].y + 1, "up"), x: scores[1].x, y: scores[1].y + 1, dir: scores[1].dir }
                         ];
                         tieScores.sort((a, b) => a.score - b.score);
 
-                        let winner;
-                        if (tieScores[0].score < tieScores[1].score) {
-                            winner = tieScores[0];
-                            console.log("Tie breaker 1.");
-                            console.log("Winner: ", winner);
-                        } else {
-                            winner = tieScores[1];
-                            console.log("Tie breaker 2.");
-                        }
-
-                        if (winner.dir == "left") {
-                            // push the left turn dot
-                            this.seedX.push(currX - 1);
-                            this.seedY.push(currY);
-
-                        } else if (winner.dir == "right") {
-                            // push the right turn dot
-                            this.seedX.push(currX + 1);
-                            this.seedY.push(currY);
-                        }
-                        // push the winner of the tied dots
-                        this.seedX.push(winner.x);
-                        this.seedY.push(winner.y - 1);
-                        // push the tie break dot (aka the dot above the tie winner)
-                        this.seedX.push(winner.x);
-                        this.seedY.push(winner.y);
-
+                        // tie breaker picks the winner
+                        winner = {
+                            x: tieScores[0].x,
+                            y: tieScores[0].y - 1,
+                            dir: tieScores[0].dir
+                        };
                     } else {
                         // no ties
-                        if (scores[0].dir == "left") {
-                            // pus the left turn dot
+                        winner = scores[0];
+                    }
+
+                    // push the winner dot, as well as any corner turns
+                    if (winner.dir == "left") {
+                        // push the left turn dot
+                        let overLeft = this.calcDiff(currX - 1, currY, "up");
+                        let up = this.calcDiff(currX, currY + 1, "up");
+                        if (up < overLeft) {
+                            this.seedX.push(currX);
+                            this.seedY.push(currY + 1);
+                        } else {
                             this.seedX.push(currX - 1);
                             this.seedY.push(currY);
-
-                        } else if (scores[0].dir == "right") {
-                            // push the right turn dot
+                        }
+                    } else if (winner.dir == "right") {
+                        // push the right turn dot
+                        let overRight = this.calcDiff(currX + 1, currY, "up");
+                        let up = this.calcDiff(currX, currY + 1, "up");
+                        if (up < overRight) {
+                            this.seedX.push(currX);
+                            this.seedY.push(currY + 1);
+                        } else {
                             this.seedX.push(currX + 1);
                             this.seedY.push(currY);
                         }
-                        // push the winner dot
-                        this.seedX.push(scores[0].x);
-                        this.seedY.push(scores[0].y);
                     }
-
+                    // push the winner dot
+                    this.seedX.push(winner.x);
+                    this.seedY.push(winner.y);
                 }
                 break;
         }
