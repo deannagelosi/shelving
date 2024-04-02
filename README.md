@@ -1,6 +1,13 @@
 # todo
 
-## Known Bugs
+## Next Steps
+
+- build perimeter for case
+- merge dots into lines
+- detect joints
+- export to svgs
+- anneal -> automaton -> export
+- bring back input method
 
 ## Object Placement
 

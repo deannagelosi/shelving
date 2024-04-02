@@ -3,8 +3,7 @@ class Automaton {
     constructor(_layout, _shape) {
         this.layout = _layout;
         this.shape = _shape;
-        this.seedX = [];
-        this.seedY = [];
+        this.dots = []; // an array of objects with x and y coordinates
         this.growMode = 0;
         this.moveUp = true;
         this.moveRight = true;
@@ -12,13 +11,12 @@ class Automaton {
 
     plantSeed() {
         // drop seed in the bottom left corner of a shape within a solution
-        this.seedX.push(this.startX(this.shape.posX));
-        this.seedY.push(this.shape.posY);
+        this.dots.push({ x: this.startX(this.shape.posX), y: this.shape.posY });
     }
 
     grow() {
-        let currX = this.seedX[this.seedX.length - 1];
-        let currY = this.seedY[this.seedY.length - 1];
+        let currX = this.dots[this.dots.length - 1].x;
+        let currY = this.dots[this.dots.length - 1].y;
         switch (this.growMode) {
             case 0:
                 // draw along bottom of shape
@@ -26,8 +24,7 @@ class Automaton {
                 if (currX < this.layout[currY].length) {
                     // in bounds
                     if (this.layout[currY][currX].cellScore == 0 && this.shape === this.layout[currY][currX].shapes[0]) {
-                        this.seedX.push(currX + 1);
-                        this.seedY.push(currY);
+                        this.dots.push({ x: currX + 1, y: currY });
                     } else {
                         this.growMode = 1;
                     }
@@ -50,8 +47,7 @@ class Automaton {
                 }
 
                 if (diffScoreB < diffScoreA) {
-                    this.seedX.push(currX + 1);
-                    this.seedY.push(currY);
+                    this.dots.push({ x: currX + 1, y: currY });
                 } else {
                     this.growMode = 2;
                 }
@@ -63,21 +59,23 @@ class Automaton {
                 // if this value is not zero, set case = 3
                 let diffScoreC = this.calcDiff(currX, currY + 1, "up");
                 if (diffScoreC == 0) {
-                    this.seedX.push(currX);
-                    this.seedY.push(currY + 1);
+                    this.dots.push({ x: currX, y: currY + 1 });
                 } else if (diffScoreC == -1) {
                     // one of the two cells is out of bounds (null)
                     return false;
                 } else if (diffScoreC == -2) {
                     // both cells are out of bounds (null)
-                    this.seedX.push(currX);
-                    this.seedY.push(currY + 1);
+                    this.dots.push({ x: currX, y: currY + 1 });
                     return false;
                 } else if (diffScoreC == 1000) {
                     // both cells are occupied (0)
-                    this.seedX.push(currX);
-                    this.seedY.push(currY + 1);
-                    // return false;
+                    this.dots.push({ x: currX, y: currY + 1 });
+
+                    // check if there's a collision with another shape
+                    let upLeftShape = this.layout[currY][currX - 1].shapes[0];
+                    if (this.shape !== upLeftShape) {
+                        return false;
+                    }
                 } else {
                     // still move upwards, but pick the best of the 3 options
                     let scores = [
@@ -123,27 +121,22 @@ class Automaton {
                         let overLeft = this.calcDiff(currX - 1, currY, "up");
                         let up = this.calcDiff(currX, currY + 1, "up");
                         if (up < overLeft) {
-                            this.seedX.push(currX);
-                            this.seedY.push(currY + 1);
+                            this.dots.push({ x: currX, y: currY + 1 });
                         } else {
-                            this.seedX.push(currX - 1);
-                            this.seedY.push(currY);
+                            this.dots.push({ x: currX - 1, y: currY });
                         }
                     } else if (winner.dir == "right") {
                         // push the right turn dot
                         let overRight = this.calcDiff(currX + 1, currY, "up");
                         let up = this.calcDiff(currX, currY + 1, "up");
                         if (up < overRight) {
-                            this.seedX.push(currX);
-                            this.seedY.push(currY + 1);
+                            this.dots.push({ x: currX, y: currY + 1 });
                         } else {
-                            this.seedX.push(currX + 1);
-                            this.seedY.push(currY);
+                            this.dots.push({ x: currX + 1, y: currY });
                         }
                     }
                     // push the winner dot
-                    this.seedX.push(winner.x);
-                    this.seedY.push(winner.y);
+                    this.dots.push({ x: winner.x, y: winner.y });
                 }
                 break;
         }
@@ -158,10 +151,9 @@ class Automaton {
         // show the seed placement
         fill(color); // Black color for the dots
         noStroke(); // No border for the dots
-        for (let i = 0; i < this.seedX.length; i++) {
-            circle(this.seedX[i] * cellSize, canvasHeight - (this.seedY[i] * cellSize), 10);
+        for (let i = 0; i < this.dots.length; i++) {
+            circle(this.dots[i].x * cellSize, canvasHeight - (this.dots[i].y * cellSize), 10);
         }
-        // circle(this.seedX * cellSize, canvasHeight - (this.seedY * cellSize), 10);
     }
 
     //-- Helper methods --//
