@@ -49,29 +49,29 @@ function setup() {
 }
 
 function draw() {
-    let newCase = new Case(sa.currSolution);
-    newCase.createAutomata();
-    newCase.growAutomata();
-    newCase.showResult();
-    noLoop();
-    // if (sa.epoch()) {
-    //     // continue optimization
-    //     sa.tempCurr = sa.coolingSchedule();
-    //     loopCount++;
-    //     if (loopCount % 10 == 0) {
-    //         clear();
-    //         background(255);
-    //         sa.currSolution.showLayout()
-    //     }
-    // } else {
-    //     // optimization complete
-    //     clear();
-    //     background(255);
-    //     sa.currSolution.showLayout();
-    //     console.log('Initial solution: ', initialScore, ', Final solution: ', sa.currSolution.score);
-    //     console.log(sa.currSolution.shapes);
-    //     noLoop(); // stop draw loop
-    // }
+    // let newCase = new Case(sa.currSolution);
+    // newCase.createAutomata();
+    // newCase.growAutomata();
+    // newCase.showResult();
+    // noLoop();
+    if (sa.epoch()) {
+        // continue optimization
+        sa.tempCurr = sa.coolingSchedule();
+        loopCount++;
+        if (loopCount % 10 == 0) {
+            clear();
+            background(255);
+            sa.currSolution.showLayout()
+        }
+    } else {
+        // optimization complete
+        clear();
+        background(255);
+        sa.currSolution.showLayout();
+        console.log('Initial solution: ', initialScore, ', Final solution: ', sa.currSolution.score);
+        console.log(sa.currSolution.shapes);
+        noLoop(); // stop draw loop
+    }
 }
 
 function loadShapeData() {

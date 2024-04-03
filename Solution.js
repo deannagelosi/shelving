@@ -241,7 +241,7 @@ class Solution {
         let newSolution = new Solution(shapesCopy);
 
         // pick shift amount based on temperature
-        let shiftMax = 10; // maximum shift distance
+        let shiftMax = 5; // maximum shift distance
         let shiftMin = 1; // minimum shift distance
         let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
 

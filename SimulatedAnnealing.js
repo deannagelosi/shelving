@@ -3,7 +3,8 @@ class SimulatedAnnealing {
         this.tempMax = tempMax;  // maximum system temperature
         this.tempMin = tempMin; // minimum system temperature
 
-        this.tempCurr = tempMax; // current system temperature
+        this.tempCurr = tempMax; // current system temperature     
+        this.lastTemp = tempMax; // last system temperature   
         this.currSolution = initSolution; // initial solution
         this.nextSolution = null; // next solution
     }
@@ -19,18 +20,10 @@ class SimulatedAnnealing {
         this.nextSolution.makeLayout(); // generate the layout of the next solution
         this.nextSolution.calcScore(); // next score (energy) of the system
         let nextScore = this.nextSolution.score; // next score
-
-        let delta = currScore - nextScore; // difference between scores
-
-        // don't let solutions with overlap or to much empty space fully cool
-        if ( this.tempCurr <= this.tempMin) {
-            if (this.nextSolution.overlappingCells > 0 || this.nextSolution.whitespace > this.nextSolution.minWhitespace) {
-                this.tempCurr = this.tempMin * 1.2;
-            }
-        }
-
+        
         console.log('temp: ', this.tempCurr.toFixed(2), 'overlap: ', this.nextSolution.overlappingCells, 'whitespace: ', this.nextSolution.whitespace);
-
+        
+        let delta = currScore - nextScore; // difference between scores
         // accept the new solution if it's better
         if (delta > 0) {
             // if there's overlap between shapes, then increase the temperature of the system
@@ -40,10 +33,15 @@ class SimulatedAnnealing {
             this.currSolution = this.nextSolution;
         }
 
-        // console.log('temp: ', this.tempCurr);
-
         if (this.tempCurr <= this.tempMin) {
-            return false; // end condition met
+            // re-anneal when final solution is greater than initial solution
+            if (this.nextSolution.overlappingCells > 0 || this.nextSolution.whitespace > this.nextSolution.minWhitespace) {
+                this.tempCurr = this.lastTemp * 0.75;
+                this.lastTemp = this.tempCurr;
+                return true; // continue optimization
+            } else {
+                return false; // end condition met
+            }
         }
         return true; // continue optimization
     }
