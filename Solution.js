@@ -4,10 +4,7 @@ class Solution {
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
         this.overlappingCells = 0;
         this.overlapPenalty = 50;
-
-        // aggregate for empty cell cellScores
-        this.whitespace = 0;
-        this.minWhitespace = 1000;
+        this.numCells8 = 0;
         this.score;
     }
 
@@ -190,11 +187,9 @@ class Solution {
         // the objective function in simulated annealing
 
         this.score = 0; // reset the score
-
-        // todo: minimize top-heavy designs
+        this.numCells8 = 0; // reset the number of cells with a cScore of 8
 
         // count all the empty cells in the layout
-        this.whitespace = 0;
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
                 if (this.layout[i][j].shapes.length == 0) {
@@ -214,7 +209,10 @@ class Solution {
                     }
                     // assign the score to the cell
                     this.layout[i][j].cellScore = cScore;
-                    this.whitespace += cScore;
+                    // calculate the number of cells with a cScore of 8
+                    if (cScore == 8) {
+                        this.numCells8++;
+                    }
                 }
             }
         }
@@ -230,7 +228,7 @@ class Solution {
             }
         }
 
-        this.score = (this.whitespace) + (this.overlappingCells * this.overlapPenalty);
+        this.score = (this.overlappingCells * this.overlapPenalty) + this.numCells8;
     }
 
     makeNeighbor(_tempCurr, _tempMax, _tempMin) {

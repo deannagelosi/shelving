@@ -4,6 +4,7 @@
 
 - anneal -> automata
   - multiple anneal passes instead of changing the temperature
+  - change the number for scoring (no overlaps, no 8s) -> 0
   - merge dots into lines
 - gravity: flat bottom
 - build perimeter for case
