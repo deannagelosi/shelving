@@ -2,9 +2,6 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
-        this.overlappingCells = 0;
-        this.overlapPenalty = 50;
-        this.numCells8 = 0;
         this.score;
     }
 
@@ -43,7 +40,7 @@ class Solution {
             totalArea += this.shapes[i].data.rectArea;
         }
         // add multiplier to give extra space to work with
-        let designArea = totalArea * 4;
+        let designArea = totalArea * 10;
         // find the closest rectangle to the designArea
         let width = Math.floor(Math.sqrt(designArea));
         let height = Math.floor(designArea / width);
@@ -187,11 +184,21 @@ class Solution {
         // the objective function in simulated annealing
 
         this.score = 0; // reset the score
-        this.numCells8 = 0; // reset the number of cells with a cScore of 8
+        let numCells8 = 0; // reset the number of cells with a cScore of 8
+        let totalNumCells = 0; // total number of cells in the layout
+        let overlappingCells = 0; // number of overlapping cells
 
         // count all the empty cells in the layout
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
+                totalNumCells++; // the total number of cells
+
+                // the number of overlapping cells
+                if (this.layout[i][j].shapes.length > 1) {
+                    overlappingCells += this.layout[i][j].shapes.length - 1;
+                }
+
+                // the number of cells with a score of 8 (no adjacent empty cells) and calc ratio)
                 if (this.layout[i][j].shapes.length == 0) {
                     // cell is empty
                     let cScore = 0;
@@ -211,24 +218,57 @@ class Solution {
                     this.layout[i][j].cellScore = cScore;
                     // calculate the number of cells with a cScore of 8
                     if (cScore == 8) {
-                        this.numCells8++;
+                        numCells8++;
                     }
                 }
             }
         }
 
-        // find cells that contain more than one shape
-        // add to a running total of overlapping cells
-        this.overlappingCells = 0;
-        for (let i = 0; i < this.layout.length; i++) {
-            for (let j = 0; j < this.layout[i].length; j++) {
-                if (this.layout[i][j].shapes.length > 1) {
-                    this.overlappingCells += this.layout[i][j].shapes.length - 1;
+        let rawBottomShapes = [];
+
+        // loop through each column to find the first shape from the bottom up
+        for (let col = 0; col < this.layout[0].length; col++) {
+            for (let row = 0; row < this.layout.length; row++) {
+                let cellData = this.layout[row][col];
+                if (cellData.shapes.length > 0) {
+                    // there is a shape(s) occupying this cell
+                    let shape = cellData.shapes[0];
+                    // check if looking at the bottom row of the shape
+                    if (row == shape.posY) {
+                        // check if the shape already exists in bottomShapes
+                        let existingData = rawBottomShapes.find(data => data.shape === shape);
+
+                        if (existingData) {
+                            // increment numSeen if the shape already exists
+                            existingData.numSeen++;
+                        } else {
+                            // create a new data object if the shape doesn't exist
+                            let data = {
+                                shape: shape,
+                                numSeen: 1,
+                                bottomWidth: shape.data.boundaryShape[0].filter(Boolean).length
+                            };
+                            rawBottomShapes.push(data);
+                        }
+                        break; // move to the next column after finding the first shape
+                    }
                 }
             }
         }
+        let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
 
-        this.score = (this.overlappingCells * this.overlapPenalty) + this.numCells8;
+        // calculate the height off the ground of each bottom shape
+        let totalYValues = 0;
+        for (let i = 0; i < bottomShapes.length; i++) {
+            let yValue = bottomShapes[i].shape.posY;
+            totalYValues += yValue;
+        }
+
+        if (overlappingCells == 0 && numCells8 / totalNumCells < 0.05 && totalYValues == 0) {
+            this.score = 0;
+        } else {
+            this.score = (this.layout.length * overlappingCells) + numCells8 + totalYValues;
+        }
     }
 
     makeNeighbor(_tempCurr, _tempMax, _tempMin) {

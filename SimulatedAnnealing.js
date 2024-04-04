@@ -21,7 +21,7 @@ class SimulatedAnnealing {
         this.nextSolution.calcScore(); // next score (energy) of the system
         let nextScore = this.nextSolution.score; // next score
 
-        console.log('temp: ', this.tempCurr.toFixed(2), 'overlap: ', this.nextSolution.overlappingCells, 'num cells w/ score 8: ', this.nextSolution.numCells8);
+        console.log('temp: ', this.tempCurr.toFixed(2));
 
         let delta = currScore - nextScore; // difference between scores
         // accept the new solution if it's better
@@ -32,27 +32,22 @@ class SimulatedAnnealing {
             this.currSolution = this.nextSolution;
         }
 
-        // calculate the number of cells in the solution
-        let numCells = 0;
-        for (let i = 0; i < this.currSolution.layout.length; i++) {
-            for (let j = 0; j < this.currSolution.layout[i].length; j++) {
-                numCells++;
-            }
-        }
-        // calculate a ratio of acceptable cells with a score of 8 to the total number of cells
-        let numCells8Ratio = this.currSolution.numCells8 / numCells;
-
         if (this.tempCurr <= this.tempMin) {
             // re-anneal when final solution is greater than initial solution
-            if (this.nextSolution.overlappingCells > 0 || numCells8Ratio > 0.05) {
-                this.tempCurr = this.lastTemp * 0.75;
+            if (this.currSolution.score > 0) {
+                // re-anneal at a lower maximum temperature
+                this.tempCurr = this.lastTemp * 0.5;
+                if (this.tempCurr < this.tempMin) {
+                    this.tempCurr = this.tempMin * 1.2;
+                }
                 this.lastTemp = this.tempCurr;
                 return true; // continue optimization
             } else {
                 return false; // end condition met
             }
+        } else {
+            return true; // continue optimization
         }
-        return true; // continue optimization
     }
 
     // Function defining the cooling schedule

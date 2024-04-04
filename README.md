@@ -2,27 +2,19 @@
 
 ## Demo (Next Wednesday)
 
-- anneal -> automata
-  - multiple anneal passes instead of changing the temperature
-  - change the number for scoring (no overlaps, no 8s) -> 0
-  - merge dots into lines
-- gravity: flat bottom
+- merge dots into lines
 - build perimeter for case
-- end when there are no more 8s (or no two rows/columns of 8s touching)
 - detect joints
+- anneal -> automata
+- better failure catching, regenerate from scratch
 
 ## Stretch
 
+- is counting 8's encouraging narrow solutions? less cells added when growing narrow
 - input new shapes
-- input -> anneal -> automaton -> export
-
-- export to svgs
-
-- hard code -> more flexible
-  - change min white space minesweeper number to ratio
-  - change overlap penalty to ratio (greater than adding enough white space to fix it)
-
+- input -> anneal -> automaton
 - center of mass: another scoring mechanism
+- export to svgs
 
 ## Unusual Cases
 
