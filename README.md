@@ -15,6 +15,7 @@
 - input -> anneal -> automaton
 - center of mass: another scoring mechanism
 - export to svgs
+- check solution.txt for bugs
 
 ## Unusual Cases
 
