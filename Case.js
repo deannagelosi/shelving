@@ -15,52 +15,78 @@ class Case {
     }
 
     growAutomata() {
-        // grow shelves in the right and up directions
+        // 1. grow shelves in the right directions
         for (let i = 0; i < this.automata.length; i++) {
             let automaton = this.automata[i];
             while (automaton.grow() != false) { }
         }
 
-        for (let i = 0; i < this.automata.length; i++) {
-            // loop through every automaton, grabbing its dots array
-            // combine all dots arrays into one array
-            let automaton = this.automata[i];
-            let dots = automaton.dots;
-            this.allDots.push(...dots);
-        }
 
-        // grow shelves in the left direction
+        // 2. grow shelves in the left direction
         for (let i = 0; i < this.automata.length; i++) {
-            // loop through all automaton, check the first dot and grow in the left direction
-            // stop when the next dot would be out of bounds
-            // also when a dot is already present in the next position
+            this.allDots.push(...this.automata[i].dots);
+        }
+        // loop through all automaton
+        for (let i = 0; i < this.automata.length; i++) {
             let automaton = this.automata[i];
 
             let growing = true;
             while (growing) {
-                let currX = automaton.dots[0].x;
-                let currY = automaton.dots[0].y;
+                let currDot = {
+                    x: automaton.dots[0].x,
+                    y: automaton.dots[0].y
+                };
                 let newDot = {
-                    x: currX - 1,
-                    y: currY
+                    x: currDot.x - 1,
+                    y: currDot.y
                 };
 
-                // don't grow if the dot will be out of bounds
-                if (currX <= 0) {
+                // check currDot
+                let cellData = this.solution.layout[currDot.y][currDot.x - 1];
+                // check out of bounds
+                if (currDot.x == 0) {
                     growing = false;
-                    continue; // stop here
+                    continue;
                 }
-
-                // check if the dot will be added to an already occupied spot (intersection)
-                let isOccupied = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot));
-
-                // add dot to automaton and allDots array
-                automaton.dots.unshift(newDot);
-                this.allDots.push(newDot);
-
-                if (isOccupied) {
+                // check if the next cell is occupied by a shape
+                else if (cellData && cellData.shapes.length > 0) {
+                    // grow vertically
+                    automaton.growMode = 2;
+                    while (automaton.grow() != false) { }
+                    this.allDots.push(...automaton.dots);
                     growing = false;
-                    continue; // stop here
+                }
+                
+                // check newDot
+                cellData = this.solution.layout[newDot.y][newDot.x - 1];
+                // check out of bounds
+                if (newDot.x < 0) {
+                    growing = false;
+                }
+                // check occupied by an exiting dot
+                else if (this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
+                    // save the occupied spot to connect the boards together, then stop growing
+                    // add the dot to the beginning of the automaton path
+                    automaton.dots.unshift(newDot);
+                    this.allDots.push(newDot);
+                    growing = false;
+                }
+                // check if the next cell is occupied by a shape
+                else if (cellData && cellData.shapes.length > 0) {
+                    // add dot
+                    automaton.dots.unshift(newDot);
+
+                    // grow vertically
+                    automaton.growMode = 2;
+                    while (automaton.grow() != false) { }
+                    this.allDots.push(...automaton.dots);
+                    growing = false;
+                }
+                // no issues, keep growing left
+                else {
+                    // add the dot to the beginning of the automaton path, keep growing
+                    automaton.dots.unshift(newDot);
+                    this.allDots.push(newDot);
                 }
             }
         }
@@ -141,33 +167,33 @@ class Case {
 
     showResult() {
         // see dots
-        // for (let i = 0; i < this.automata.length; i++) {
-        //     let automaton = this.automata[i];
+        for (let i = 0; i < this.automata.length; i++) {
+            let automaton = this.automata[i];
 
-        //     fill(color(random(255), random(255), random(255)));
-        //     noStroke(); // No border for the dots
-        //     for (let i = 0; i < automaton.dots.length; i++) {
-        //         circle(
-        //             automaton.dots[i].x * this.solution.cellSize,
-        //             canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
-        //             10
-        //         );
-        //     }
-        // }
-
-        // see boards
-        for (let i = 0; i < this.boards.length; i++) {
-            let board = this.boards[i];
-
-            stroke(color(random(255), random(255), random(255)));
-            strokeWeight(5);
-            line(
-                board.startCoords.x * this.solution.cellSize,
-                canvasHeight - (board.startCoords.y * this.solution.cellSize),
-                board.endCoords.x * this.solution.cellSize,
-                canvasHeight - (board.endCoords.y * this.solution.cellSize)
-            );
+            fill(color(random(255), random(255), random(255)));
+            noStroke(); // No border for the dots
+            for (let i = 0; i < automaton.dots.length; i++) {
+                circle(
+                    automaton.dots[i].x * this.solution.cellSize,
+                    canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
+                    10
+                );
+            }
         }
+
+        // // see boards
+        // for (let i = 0; i < this.boards.length; i++) {
+        //     let board = this.boards[i];
+
+        //     stroke(color(random(255), random(255), random(255)));
+        //     strokeWeight(5);
+        //     line(
+        //         board.startCoords.x * this.solution.cellSize,
+        //         canvasHeight - (board.startCoords.y * this.solution.cellSize),
+        //         board.endCoords.x * this.solution.cellSize,
+        //         canvasHeight - (board.endCoords.y * this.solution.cellSize)
+        //     );
+        // }
     }
 
 

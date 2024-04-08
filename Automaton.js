@@ -15,6 +15,8 @@ class Automaton {
     }
 
     grow() {
+        // rules for growing the automaton path
+        
         let currX = this.dots[this.dots.length - 1].x;
         let currY = this.dots[this.dots.length - 1].y;
         switch (this.growMode) {
@@ -94,7 +96,8 @@ class Automaton {
                             // if all three above are occupied, then stop growing
                             return false;
                         } else {
-                            // todo: if all three are equal, pick a winner
+                            // if all 3 scores are equal, pick the center
+                            winner = scores.find(score => score.dir === "center");
                         }
                     } else if (scores[0].score === scores[1].score) {
                         // there is a tie, pick the winner
