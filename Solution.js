@@ -3,6 +3,7 @@ class Solution {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
         this.score;
+        this.cellSize;
     }
 
     exampleSolution() {
@@ -138,6 +139,11 @@ class Solution {
                 this.shapes[i].posX--;
             }
         }
+
+        // update cellSize for this layout
+        let cellSizeHeight = canvasHeight / this.layout.length;
+        let cellSizeWidth = canvasWidth / this.layout[0].length;
+        this.cellSize = Math.min(cellSizeHeight, cellSizeWidth);
     }
 
     showLayout() {

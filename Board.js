@@ -1,10 +1,11 @@
 class Board {
-    constructor() {
-        this.startCoords = { x: null, y: null};
-        this.endCoords = { x: null, y: null};
+    constructor(_cellSize) {
+        this.startCoords = { x: null, y: null };
+        this.endCoords = { x: null, y: null };
         this.orientation;
         this.width; // width of the board
         this.thickness; // thickness of the board
+        this.cellSize = _cellSize;
 
         this.poi = { // points of interest
             lJoints: ["", ""], // [start edge, end edge]
@@ -37,4 +38,10 @@ class Board {
         return [this.startCoords, this.endCoords];
     }
 
+    showResult(color) {
+        stroke(color); // Black color for the dots
+        strokeWeight(5);
+        // circle(this.dots[i].x * cellSize, canvasHeight - (this.dots[i].y * cellSize), 10);
+        line(this.startCoords.x * this.cellSize, canvasHeight - (this.startCoords.y * this.cellSize), this.endCoords.x * this.cellSize, canvasHeight - (this.endCoords.y * this.cellSize));
+    }
 }
