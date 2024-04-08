@@ -64,7 +64,6 @@ class Case {
                 }
             }
         }
-        // console.log(this.automata);
     }
 
     makeBoards() {
@@ -73,54 +72,51 @@ class Case {
         for (let automaton of this.automata) {
             let dots = automaton.dots;
 
-            let startDot = dots[0];
-            let endDot = dots[0];
-            let orientation = this.determineOrientation(startDot, dots[1]);
+            let startBoard = dots[0];
+            let endBoard = dots[1];
+            let orientation = this.determineOrientation(startBoard, endBoard);
 
             for (let i = 1; i < dots.length; i++) {
                 let currentDot = dots[i];
-                let nextDot = dots[i + 1];
 
-                if (nextDot && this.determineOrientation(currentDot, nextDot) === orientation) {
-                    endDot = nextDot;
+                if (this.determineOrientation(startBoard, currentDot) === orientation) {
+                    // grow the board while orientation is the same
+                    endBoard = currentDot;
                 } else {
-                    // let board = this.mergeBoard({ x: startDot.x, y: startDot.y }, { x: endDot.x, y: endDot.y }, boards);
-                    // if (!board) {
+                    // save a new board once the orientation changes
                     let board = new Board(this.solution.cellSize);
-                    board.startCoords = { x: startDot.x, y: startDot.y };
-                    board.endCoords = { x: endDot.x, y: endDot.y };
+                    board.startCoords = { x: startBoard.x, y: startBoard.y };
+                    board.endCoords = { x: endBoard.x, y: endBoard.y };
                     board.orientation = orientation;
                     this.boards.push(board);
-                    // }
-                    startDot = currentDot;
-                    endDot = currentDot;
-                    if (nextDot) {
-                        // set orientation of the next board
-                        orientation = this.determineOrientation(currentDot, nextDot);
-                    }
+
+                    startBoard = endBoard;
+                    endBoard = currentDot;
+                    // set orientation of the next board
+                    orientation = this.determineOrientation(startBoard, endBoard);
                 }
             }
 
-            // save the last board in automata
-            // let board = this.mergeBoard({ x: startDot.x, y: startDot.y }, { x: endDot.x, y: endDot.y }, boards);
-            // if (!board) {
+            // save the last board
             let board = new Board(this.solution.cellSize);
-            board.startCoords = { x: startDot.x, y: startDot.y };
-            board.endCoords = { x: endDot.x, y: endDot.y };
+            board.startCoords = { x: startBoard.x, y: startBoard.y };
+            board.endCoords = { x: endBoard.x, y: endBoard.y };
             board.orientation = orientation;
             this.boards.push(board);
-            // }
         }
 
         console.log(this.boards);
     }
 
     showResult() {
+        // see dots
         // for (let i = 0; i < this.automata.length; i++) {
         //     let chooseColor = color(random(255), random(255), random(255));
         //     let automaton = this.automata[i];
         //     automaton.showResult(chooseColor);
         // }
+
+        // see boards
         for (let i = 0; i < this.boards.length; i++) {
             let chooseColor = color(random(255), random(255), random(255));
             let board = this.boards[i];
@@ -186,7 +182,8 @@ class Case {
         } else if (startCoords.x === endCoords.x) {
             return "vertical";
         } else {
-            throw new Error("Invalid board coordinates. Start and end coordinates must share either the same x-value or y-value.");
+            // diagonal board, return false
+            return false;
         }
     }
 }
