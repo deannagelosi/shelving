@@ -3,6 +3,7 @@ class Case {
         this.solution = _solution;
         this.automata = [];
         this.allDots = [];
+        this.boards = [];
     }
 
     createAutomata() {
@@ -63,6 +64,55 @@ class Case {
                 }
             }
         }
+        console.log(this.automata);
+    }
+
+    makeBoards() {
+        let boards = [];
+    
+        for (let automaton of this.automata) {
+            let dots = automaton.dots;
+    
+            let startDot = dots[0];
+            let endDot = dots[0];
+            let orientation = this.determineOrientation(startDot, dots[1]);
+    
+            for (let i = 1; i < dots.length; i++) {
+                let currentDot = dots[i];
+                let nextDot = dots[i + 1];
+    
+                if (nextDot && this.determineOrientation(currentDot, nextDot) === orientation) {
+                    endDot = nextDot;
+                } else {
+                    let board = this.mergeBoard({ x: startDot.x, y: startDot.y }, { x: endDot.x, y: endDot.y }, boards);
+                    if (!board) {
+                        board = new Board();
+                        board.startCoords = { x: startDot.x, y: startDot.y };
+                        board.endCoords = { x: endDot.x, y: endDot.y };
+                        board.orientation = orientation;
+                        boards.push(board);
+                    }
+                    startDot = currentDot;
+                    endDot = currentDot;
+                    if (nextDot) {
+                        // set orientation of the next board
+                        orientation = this.determineOrientation(currentDot, nextDot);
+                    }
+                }
+            }
+            
+            // save the last board in automata
+            let board = this.mergeBoard({ x: startDot.x, y: startDot.y }, { x: endDot.x, y: endDot.y }, boards);
+            if (!board) {
+                board = new Board();
+                board.startCoords = { x: startDot.x, y: startDot.y };
+                board.endCoords = { x: endDot.x, y: endDot.y };
+                board.orientation = orientation;
+                boards.push(board);
+            }
+        }
+    
+        console.log(boards);
     }
 
     showResult() {
@@ -70,6 +120,68 @@ class Case {
             let chooseColor = color(random(255), random(255), random(255));
             let automaton = this.automata[i];
             automaton.showResult(chooseColor);
+        }
+    }
+
+    //-- Helper Methods --//
+    mergeBoard(startCoords, endCoords, boards) {
+        for (let board of boards) {
+            if (board.orientation === this.determineOrientation(startCoords, endCoords)) {
+                if (board.orientation === 'horizontal') {
+                    if (board.endCoords.y === startCoords.y) {
+                        if (board.endCoords.x === startCoords.x || board.endCoords.x + 1 === startCoords.x) {
+                            board.endCoords.x = endCoords.x;
+                            return board;
+                        } else if (board.endCoords.x >= startCoords.x && board.startCoords.x >= board.startCoords.x) {
+                            board.startCoords.x = Math.min(board.startCoords.x, startCoords.x);
+                            board.endCoords.x = Math.max(board.endCoords.x, endCoords.x);
+                            return board;
+                        }
+                    }
+                    if (board.startCoords.y === endCoords.y) {
+                        if (board.startCoords.x === endCoords.x || board.startCoords.x - 1 === endCoords.x) {
+                            board.startCoords.x = startCoords.x;
+                            return board;
+                        } else if (board.startCoords.x <= endCoords.x && board.endCoords.x >= endCoords.x) {
+                            board.startCoords.x = Math.min(board.startCoords.x, startCoords.x);
+                            board.endCoords.x = Math.max(board.endCoords.x, endCoords.x);
+                            return board;
+                        }
+                    }
+                } else if (board.orientation === 'vertical') {
+                    if (board.endCoords.x === startCoords.x) {
+                        if (board.endCoords.y === startCoords.y || board.endCoords.y + 1 === startCoords.y) {
+                            board.endCoords.y = endCoords.y;
+                            return board;
+                        } else if (board.endCoords.y >= startCoords.y && board.startCoords.y >= board.startCoords.y) {
+                            board.startCoords.y = Math.min(board.startCoords.y, startCoords.y);
+                            board.endCoords.y = Math.max(board.endCoords.y, endCoords.y);
+                            return board;
+                        }
+                    }
+                    if (board.startCoords.x === endCoords.x) {
+                        if (board.startCoords.y === endCoords.y || board.startCoords.y - 1 === endCoords.y) {
+                            board.startCoords.y = startCoords.y;
+                            return board;
+                        } else if (board.startCoords.y <= endCoords.y && board.endCoords.y >= endCoords.y) {
+                            board.startCoords.y = Math.min(board.startCoords.y, startCoords.y);
+                            board.endCoords.y = Math.max(board.endCoords.y, endCoords.y);
+                            return board;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    determineOrientation(startCoords, endCoords) {
+        if (startCoords.y === endCoords.y) {
+            return "horizontal";
+        } else if (startCoords.x === endCoords.x) {
+            return "vertical";
+        } else {
+            throw new Error("Invalid board coordinates. Start and end coordinates must share either the same x-value or y-value.");
         }
     }
 }
