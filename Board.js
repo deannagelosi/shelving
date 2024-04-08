@@ -1,5 +1,5 @@
 class Board {
-    constructor(_startCoords, _endCoords, _orientation, _cellSize) {
+    constructor(_startCoords, _endCoords, _orientation) {
         // Make sure boards start and end are always left-right or bottom-top
         // fix left-right orientation
         this.orientation = _orientation; // horizontal or vertical
@@ -24,7 +24,6 @@ class Board {
             }
         }
 
-        this.cellSize = _cellSize;
         this.width; // width of the board
         this.thickness; // thickness of the board
 
@@ -57,12 +56,5 @@ class Board {
     getCoords() {
         // return the start and end coordinates
         return [this.startCoords, this.endCoords];
-    }
-
-    showResult(color) {
-        stroke(color); // Black color for the dots
-        strokeWeight(5);
-        // circle(this.dots[i].x * cellSize, canvasHeight - (this.dots[i].y * cellSize), 10);
-        line(this.startCoords.x * this.cellSize, canvasHeight - (this.startCoords.y * this.cellSize), this.endCoords.x * this.cellSize, canvasHeight - (this.endCoords.y * this.cellSize));
     }
 }

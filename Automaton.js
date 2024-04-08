@@ -1,13 +1,12 @@
 // Builds shelves using cellular automata rules to grow from a seed
 class Automaton {
-    constructor(_layout, _shape, _cellSize) {
+    constructor(_layout, _shape) {
         this.layout = _layout;
         this.shape = _shape;
         this.dots = []; // an array of objects with x and y coordinates
         this.growMode = 0;
         this.moveUp = true;
         this.moveRight = true;
-        this.cellSize = _cellSize;
     }
 
     plantSeed() {
@@ -143,15 +142,6 @@ class Automaton {
         }
 
         return true;
-    }
-
-    showResult(color) {
-        // show the seed placement
-        fill(color); // Black color for the dots
-        noStroke(); // No border for the dots
-        for (let i = 0; i < this.dots.length; i++) {
-            circle(this.dots[i].x * this.cellSize, canvasHeight - (this.dots[i].y * this.cellSize), 10);
-        }
     }
 
     //-- Helper methods --//

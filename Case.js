@@ -8,7 +8,7 @@ class Case {
 
     createAutomata() {
         for (let i = 0; i < this.solution.shapes.length; i++) {
-            let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.solution.cellSize);
+            let automaton = new Automaton(this.solution.layout, this.solution.shapes[i]);
             automaton.plantSeed();
             this.automata.push(automaton);
         }
@@ -87,8 +87,7 @@ class Case {
                     this.boards.push(new Board(
                         { x: startBoard.x, y: startBoard.y },
                         { x: endBoard.x, y: endBoard.y },
-                        orientation,
-                        this.solution.cellSize
+                        orientation
                     ));
 
                     startBoard = endBoard;
@@ -102,45 +101,75 @@ class Case {
             this.boards.push(new Board(
                 { x: startBoard.x, y: startBoard.y },
                 { x: endBoard.x, y: endBoard.y },
-                orientation,
-                this.solution.cellSize
+                orientation
             ));
         }
 
-        // merge boards
-        for (let i = 0; i < this.boards.length; i++) {
-            for (let j = 0; j < this.boards.length; j++) {
-                if (i != j) {
-                    let board1 = this.boards[i];
-                    let board2 = this.boards[j];
-                    let mergedBoard = this.mergeBoards(board1, board2);
-                    if (mergedBoard) {
-                        // remove the two boards and add the merged board
-                        this.boards.splice(j, 1);
-                        this.boards.splice(i, 1);
-                        this.boards.push(mergedBoard);
+        // make perimeter boards
+        let height = this.solution.layout.length;
+        let width = this.solution.layout[0].length;
+        this.boards.push(new Board({ x: 0, y: 0 }, { x: width, y: 0 }, "x"));
+        this.boards.push(new Board({ x: width, y: 0 }, { x: width, y: height }, "y"));
+        this.boards.push(new Board({ x: width, y: height }, { x: 0, y: height }, "x"));
+        this.boards.push(new Board({ x: 0, y: height }, { x: 0, y: 0 }, "y"));
+
+        // merge boards - keep merging until no more merges can be made
+        let merging = true;
+        while (merging == true) {
+            merging = false;
+
+            for (let i = 0; i < this.boards.length; i++) {
+                for (let j = 0; j < this.boards.length; j++) {
+                    if (i != j) {
+                        let board1 = this.boards[i];
+                        let board2 = this.boards[j];
+                        let mergedBoard = this.mergeBoards(board1, board2);
+                        if (mergedBoard) {
+                            merging = true;
+                            // remove the two boards and add the merged board
+                            this.boards.splice(j, 1);
+                            this.boards.splice(i, 1);
+                            this.boards.push(mergedBoard);
+                        }
                     }
                 }
             }
         }
+
         console.log(this.boards);
     }
 
     showResult() {
         // see dots
         // for (let i = 0; i < this.automata.length; i++) {
-        //     let chooseColor = color(random(255), random(255), random(255));
         //     let automaton = this.automata[i];
-        //     automaton.showResult(chooseColor);
+
+        //     fill(color(random(255), random(255), random(255)));
+        //     noStroke(); // No border for the dots
+        //     for (let i = 0; i < automaton.dots.length; i++) {
+        //         circle(
+        //             automaton.dots[i].x * this.solution.cellSize,
+        //             canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
+        //             10
+        //         );
+        //     }
         // }
 
         // see boards
         for (let i = 0; i < this.boards.length; i++) {
-            let chooseColor = color(random(255), random(255), random(255));
             let board = this.boards[i];
-            board.showResult(chooseColor);
+
+            stroke(color(random(255), random(255), random(255)));
+            strokeWeight(5);
+            line(
+                board.startCoords.x * this.solution.cellSize,
+                canvasHeight - (board.startCoords.y * this.solution.cellSize),
+                board.endCoords.x * this.solution.cellSize,
+                canvasHeight - (board.endCoords.y * this.solution.cellSize)
+            );
         }
     }
+
 
     //-- Helper Methods --//
     mergeBoards(board1, board2) {
@@ -152,15 +181,15 @@ class Case {
 
             // check for touching or overlapping on axis
             if (aligned) {
-                let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] < board2.startCoords[orientation]
-                let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] < board1.startCoords[orientation]
+                let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] <= board2.startCoords[orientation]
+                let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] <= board1.startCoords[orientation]
 
                 if (board1Overlapped) {
                     // merge the boards
-                    return new Board(board1.startCoords, board2.endCoords, board1.orientation, this.solution.cellSize);
+                    return new Board(board1.startCoords, board2.endCoords, board1.orientation);
                 } else if (board2Overlapped) {
                     // merge the boards
-                    return new Board(board2.startCoords, board1.endCoords, board1.orientation, this.solution.cellSize);
+                    return new Board(board2.startCoords, board1.endCoords, board1.orientation);
                 }
             }
             return false;
