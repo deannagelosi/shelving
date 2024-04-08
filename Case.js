@@ -84,11 +84,12 @@ class Case {
                     endBoard = currentDot;
                 } else {
                     // save a new board once the orientation changes
-                    let board = new Board(this.solution.cellSize);
-                    board.startCoords = { x: startBoard.x, y: startBoard.y };
-                    board.endCoords = { x: endBoard.x, y: endBoard.y };
-                    board.orientation = orientation;
-                    this.boards.push(board);
+                    this.boards.push(new Board(
+                        { x: startBoard.x, y: startBoard.y },
+                        { x: endBoard.x, y: endBoard.y },
+                        orientation,
+                        this.solution.cellSize
+                    ));
 
                     startBoard = endBoard;
                     endBoard = currentDot;
@@ -98,13 +99,30 @@ class Case {
             }
 
             // save the last board
-            let board = new Board(this.solution.cellSize);
-            board.startCoords = { x: startBoard.x, y: startBoard.y };
-            board.endCoords = { x: endBoard.x, y: endBoard.y };
-            board.orientation = orientation;
-            this.boards.push(board);
+            this.boards.push(new Board(
+                { x: startBoard.x, y: startBoard.y },
+                { x: endBoard.x, y: endBoard.y },
+                orientation,
+                this.solution.cellSize
+            ));
         }
 
+        // merge boards
+        for (let i = 0; i < this.boards.length; i++) {
+            for (let j = 0; j < this.boards.length; j++) {
+                if (i != j) {
+                    let board1 = this.boards[i];
+                    let board2 = this.boards[j];
+                    let mergedBoard = this.mergeBoards(board1, board2);
+                    if (mergedBoard) {
+                        // remove the two boards and add the merged board
+                        this.boards.splice(j, 1);
+                        this.boards.splice(i, 1);
+                        this.boards.push(mergedBoard);
+                    }
+                }
+            }
+        }
         console.log(this.boards);
     }
 
@@ -125,62 +143,35 @@ class Case {
     }
 
     //-- Helper Methods --//
-    // mergeBoard(startCoords, endCoords, boards) {
-    //     for (let board of boards) {
-    //         if (board.orientation === this.determineOrientation(startCoords, endCoords)) {
-    //             if (board.orientation === 'horizontal') {
-    //                 if (board.endCoords.y === startCoords.y) {
-    //                     if (board.endCoords.x === startCoords.x || board.endCoords.x + 1 === startCoords.x) {
-    //                         board.endCoords.x = endCoords.x;
-    //                         return board;
-    //                     } else if (board.endCoords.x >= startCoords.x && board.startCoords.x >= board.startCoords.x) {
-    //                         board.startCoords.x = Math.min(board.startCoords.x, startCoords.x);
-    //                         board.endCoords.x = Math.max(board.endCoords.x, endCoords.x);
-    //                         return board;
-    //                     }
-    //                 }
-    //                 if (board.startCoords.y === endCoords.y) {
-    //                     if (board.startCoords.x === endCoords.x || board.startCoords.x - 1 === endCoords.x) {
-    //                         board.startCoords.x = startCoords.x;
-    //                         return board;
-    //                     } else if (board.startCoords.x <= endCoords.x && board.endCoords.x >= endCoords.x) {
-    //                         board.startCoords.x = Math.min(board.startCoords.x, startCoords.x);
-    //                         board.endCoords.x = Math.max(board.endCoords.x, endCoords.x);
-    //                         return board;
-    //                     }
-    //                 }
-    //             } else if (board.orientation === 'vertical') {
-    //                 if (board.endCoords.x === startCoords.x) {
-    //                     if (board.endCoords.y === startCoords.y || board.endCoords.y + 1 === startCoords.y) {
-    //                         board.endCoords.y = endCoords.y;
-    //                         return board;
-    //                     } else if (board.endCoords.y >= startCoords.y && board.startCoords.y >= board.startCoords.y) {
-    //                         board.startCoords.y = Math.min(board.startCoords.y, startCoords.y);
-    //                         board.endCoords.y = Math.max(board.endCoords.y, endCoords.y);
-    //                         return board;
-    //                     }
-    //                 }
-    //                 if (board.startCoords.x === endCoords.x) {
-    //                     if (board.startCoords.y === endCoords.y || board.startCoords.y - 1 === endCoords.y) {
-    //                         board.startCoords.y = startCoords.y;
-    //                         return board;
-    //                     } else if (board.startCoords.y <= endCoords.y && board.endCoords.y >= endCoords.y) {
-    //                         board.startCoords.y = Math.min(board.startCoords.y, startCoords.y);
-    //                         board.endCoords.y = Math.max(board.endCoords.y, endCoords.y);
-    //                         return board;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     return null;
-    // }
+    mergeBoards(board1, board2) {
+        // if two boards are touching or overlapping and they face the same orientation, merge them
+        if (board1.orientation === board2.orientation) {
+            let orientation = board1.orientation;
+            let oppositeOrientation = orientation == "x" ? "y" : "x";
+            let aligned = board1.startCoords[oppositeOrientation] == board2.startCoords[oppositeOrientation];
+
+            // check for touching or overlapping on axis
+            if (aligned) {
+                let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] < board2.startCoords[orientation]
+                let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] < board1.startCoords[orientation]
+
+                if (board1Overlapped) {
+                    // merge the boards
+                    return new Board(board1.startCoords, board2.endCoords, board1.orientation, this.solution.cellSize);
+                } else if (board2Overlapped) {
+                    // merge the boards
+                    return new Board(board2.startCoords, board1.endCoords, board1.orientation, this.solution.cellSize);
+                }
+            }
+            return false;
+        }
+    }
 
     determineOrientation(startCoords, endCoords) {
         if (startCoords.y === endCoords.y) {
-            return "horizontal";
+            return "x";
         } else if (startCoords.x === endCoords.x) {
-            return "vertical";
+            return "y";
         } else {
             // diagonal board, return false
             return false;

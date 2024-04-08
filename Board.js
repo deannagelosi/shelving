@@ -1,11 +1,32 @@
 class Board {
-    constructor(_cellSize) {
-        this.startCoords = { x: null, y: null };
-        this.endCoords = { x: null, y: null };
-        this.orientation;
+    constructor(_startCoords, _endCoords, _orientation, _cellSize) {
+        // Make sure boards start and end are always left-right or bottom-top
+        // fix left-right orientation
+        this.orientation = _orientation; // horizontal or vertical
+
+        if (this.orientation == "x") {
+            if (_startCoords.x < _endCoords.x) {
+                this.startCoords = _startCoords;
+                this.endCoords = _endCoords;
+            } else {
+                this.startCoords = _endCoords;
+                this.endCoords = _startCoords;
+            }
+
+        } else if (this.orientation == "y") {
+            // fix bottom-top orientation
+            if (_startCoords.y < _endCoords.y) {
+                this.startCoords = _startCoords;
+                this.endCoords = _endCoords;
+            } else {
+                this.startCoords = _endCoords;
+                this.endCoords = _startCoords;
+            }
+        }
+
+        this.cellSize = _cellSize;
         this.width; // width of the board
         this.thickness; // thickness of the board
-        this.cellSize = _cellSize;
 
         this.poi = { // points of interest
             lJoints: ["", ""], // [start edge, end edge]
