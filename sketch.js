@@ -6,6 +6,8 @@ let sa; // simulated annealing
 let initialScore;
 let loopCount;
 
+let useExample = false;
+
 function preload() {
     shapeData = loadJSON('data/sunny-shapes.json');
 }
@@ -28,13 +30,15 @@ function setup() {
     }
 
     let initialSolution = new Solution(shapesPos);
-    // initialSolution.setInitialSolution();
-    initialSolution.exampleSolution();
+    if (useExample) {
+        initialSolution.exampleSolution();
+    } else {
+        initialSolution.setInitialSolution();
+    }
     initialSolution.makeLayout();
     initialSolution.calcScore();
     initialSolution.showLayout();
     initialScore = initialSolution.score;
-    // console.log('Initial solution: ', initialScore);
 
     let tempMax = 5000;
     let tempMin = 1;
@@ -49,30 +53,26 @@ function setup() {
 }
 
 function draw() {
-    if (sa.epoch()) {
-        // continue optimization
-        sa.tempCurr = sa.coolingSchedule();
-        loopCount++;
-        if (loopCount % 10 == 0) {
-            clear();
-            background(255);
-            sa.currSolution.showLayout()
-        }
-    } else {
-        // optimization complete
-        clear();
-        background(255);
-
-        // build case
-        let newCase = new Case(sa.currSolution);
-        newCase.createAutomata();
-        newCase.growAutomata();
-        newCase.makeBoards();
-
-        // show result
-        sa.currSolution.showLayout();
-        newCase.showResult();
+    if (useExample) {
+        createCase();
         noLoop(); // stop draw loop
+
+    } else {
+        // run simulated annealing
+        if (sa.epoch()) {
+            // continue optimization
+            sa.tempCurr = sa.coolingSchedule();
+            loopCount++;
+            if (loopCount % 10 == 0) {
+                clear();
+                background(255);
+                sa.currSolution.showLayout()
+            }
+        } else {
+            // optimization complete
+            createCase();
+            noLoop(); // stop draw loop
+        }
     }
 }
 
@@ -87,4 +87,18 @@ function loadShapeData() {
             shapes.push(newShape);
         }
     }
+}
+
+function createCase() {
+    clear();
+    background(255);
+    // build case
+    let newCase = new Case(sa.currSolution);
+    newCase.createAutomata();
+    newCase.growAutomata();
+    newCase.makeBoards();
+
+    // show result
+    sa.currSolution.showLayout();
+    newCase.showResult();
 }

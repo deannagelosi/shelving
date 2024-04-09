@@ -4,6 +4,8 @@ class Case {
         this.automata = [];
         this.allDots = [];
         this.boards = [];
+
+        this.showBoard = true;
     }
 
     createAutomata() {
@@ -21,11 +23,11 @@ class Case {
             while (automaton.grow() != false) { }
         }
 
-
         // 2. grow shelves in the left direction
         for (let i = 0; i < this.automata.length; i++) {
             this.allDots.push(...this.automata[i].dots);
         }
+        let newAutomata = [];
         // loop through all automaton
         for (let i = 0; i < this.automata.length; i++) {
             let automaton = this.automata[i];
@@ -43,53 +45,42 @@ class Case {
 
                 // check currDot
                 let cellData = this.solution.layout[currDot.y][currDot.x - 1];
-                // check out of bounds
-                if (currDot.x == 0) {
+
+                // check if the next cell is occupied by a shape
+                if (cellData && cellData.shapes.length > 0) {
+                    // grow a new automata vertically
+                    let automaton = new Automaton(this.solution.layout, cellData.shapes[0], currDot.x, currDot.y);
+                    automaton.growMode = 2; // grow vertically
+                    automaton.plantSeed();
+
+                    while (automaton.grow(true) != false) { }
+
+                    newAutomata.push(automaton);
+                    this.allDots.push(...automaton.dots);
+
                     growing = false;
                     continue;
                 }
-                // check if the next cell is occupied by a shape
-                else if (cellData && cellData.shapes.length > 0) {
-                    // grow vertically
-                    automaton.growMode = 2;
-                    while (automaton.grow() != false) { }
-                    this.allDots.push(...automaton.dots);
-                    growing = false;
-                }
-                
-                // check newDot
-                cellData = this.solution.layout[newDot.y][newDot.x - 1];
                 // check out of bounds
-                if (newDot.x < 0) {
+                else if (currDot.x <= 0) {
                     growing = false;
+                    continue;
                 }
-                // check occupied by an exiting dot
+                // check if next dot intersects with a board
                 else if (this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
                     // save the occupied spot to connect the boards together, then stop growing
-                    // add the dot to the beginning of the automaton path
-                    automaton.dots.unshift(newDot);
+                    automaton.dots.unshift(newDot); // add to beginning
                     this.allDots.push(newDot);
                     growing = false;
                 }
-                // check if the next cell is occupied by a shape
-                else if (cellData && cellData.shapes.length > 0) {
-                    // add dot
-                    automaton.dots.unshift(newDot);
-
-                    // grow vertically
-                    automaton.growMode = 2;
-                    while (automaton.grow() != false) { }
-                    this.allDots.push(...automaton.dots);
-                    growing = false;
-                }
-                // no issues, keep growing left
                 else {
-                    // add the dot to the beginning of the automaton path, keep growing
+                    // clear to the left, keep growing
                     automaton.dots.unshift(newDot);
                     this.allDots.push(newDot);
                 }
             }
         }
+        this.automata.push(...newAutomata); // add any new automate created
     }
 
     makeBoards() {
@@ -166,36 +157,39 @@ class Case {
     }
 
     showResult() {
-        // see dots
-        for (let i = 0; i < this.automata.length; i++) {
-            let automaton = this.automata[i];
+        if (this.showBoard) {
+            // show boards
+            for (let i = 0; i < this.boards.length; i++) {
+                let board = this.boards[i];
 
-            fill(color(random(255), random(255), random(255)));
-            noStroke(); // No border for the dots
-            for (let i = 0; i < automaton.dots.length; i++) {
-                circle(
-                    automaton.dots[i].x * this.solution.cellSize,
-                    canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
-                    10
+                stroke(color(random(255), random(255), random(255)));
+                strokeWeight(5);
+                line(
+                    board.startCoords.x * this.solution.cellSize,
+                    canvasHeight - (board.startCoords.y * this.solution.cellSize),
+                    board.endCoords.x * this.solution.cellSize,
+                    canvasHeight - (board.endCoords.y * this.solution.cellSize)
                 );
+            }
+        } else {
+            // show dots
+            for (let i = 0; i < this.automata.length; i++) {
+                let automaton = this.automata[i];
+
+                fill(color(random(255), random(255), random(255)));
+                noStroke(); // No border for the dots
+                for (let i = 0; i < automaton.dots.length; i++) {
+                    circle(
+                        automaton.dots[i].x * this.solution.cellSize,
+                        canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
+                        10
+                    );
+                }
             }
         }
 
-        // // see boards
-        // for (let i = 0; i < this.boards.length; i++) {
-        //     let board = this.boards[i];
 
-        //     stroke(color(random(255), random(255), random(255)));
-        //     strokeWeight(5);
-        //     line(
-        //         board.startCoords.x * this.solution.cellSize,
-        //         canvasHeight - (board.startCoords.y * this.solution.cellSize),
-        //         board.endCoords.x * this.solution.cellSize,
-        //         canvasHeight - (board.endCoords.y * this.solution.cellSize)
-        //     );
-        // }
     }
-
 
     //-- Helper Methods --//
     mergeBoards(board1, board2) {

@@ -7,26 +7,26 @@ class Solution {
     }
 
     exampleSolution() {
-        this.shapes[0].posX = 8;
-        this.shapes[0].posY = 9;
-        this.shapes[1].posX = 17
-        this.shapes[1].posY = 9;
-        this.shapes[2].posX = 7;
-        this.shapes[2].posY = 39;
-        this.shapes[3].posX = 8;
-        this.shapes[3].posY = 19;
-        this.shapes[4].posX = 17;
-        this.shapes[4].posY = 36;
-        this.shapes[5].posX = 8;
-        this.shapes[5].posY = 28;
-        this.shapes[6].posX = 18;
-        this.shapes[6].posY = 28;
-        this.shapes[7].posX = 15;
-        this.shapes[7].posY = 39;
-        this.shapes[8].posX = 8;
-        this.shapes[8].posY = 34;
-        this.shapes[9].posX = 18;
-        this.shapes[9].posY = 20;
+        this.shapes[0].posX = 1;
+        this.shapes[0].posY = 0;
+        this.shapes[1].posX = 10;
+        this.shapes[1].posY = 0;
+        this.shapes[2].posX = 0;
+        this.shapes[2].posY = 30;
+        this.shapes[3].posX = 1;
+        this.shapes[3].posY = 10;
+        this.shapes[4].posX = 10;
+        this.shapes[4].posY = 27;
+        this.shapes[5].posX = 1;
+        this.shapes[5].posY = 18;
+        this.shapes[6].posX = 11;
+        this.shapes[6].posY = 19;
+        this.shapes[7].posX = 8;
+        this.shapes[7].posY = 30;
+        this.shapes[8].posX = 1;
+        this.shapes[8].posY = 25;
+        this.shapes[9].posX = 11;
+        this.shapes[9].posY = 11;
     }
 
     setInitialSolution() {
@@ -41,7 +41,7 @@ class Solution {
             totalArea += this.shapes[i].data.rectArea;
         }
         // add multiplier to give extra space to work with
-        let designArea = totalArea * 10;
+        let designArea = totalArea * 4;
         // find the closest rectangle to the designArea
         let width = Math.floor(Math.sqrt(designArea));
         let height = Math.floor(designArea / width);
@@ -285,7 +285,7 @@ class Solution {
         let newSolution = new Solution(shapesCopy);
 
         // pick shift amount based on temperature
-        let shiftMax = 5; // maximum shift distance
+        let shiftMax = 10; // maximum shift distance
         let shiftMin = 1; // minimum shift distance
         let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
 

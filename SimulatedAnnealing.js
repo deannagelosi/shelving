@@ -21,7 +21,7 @@ class SimulatedAnnealing {
         this.nextSolution.calcScore(); // next score (energy) of the system
         let nextScore = this.nextSolution.score; // next score
 
-        console.log('temp: ', this.tempCurr.toFixed(2));
+        // console.log('temp: ', this.tempCurr.toFixed(2));
 
         let delta = currScore - nextScore; // difference between scores
         // accept the new solution if it's better
