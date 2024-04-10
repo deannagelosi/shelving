@@ -5,7 +5,7 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoard = true;
+        this.showBoard = false;
     }
 
     createAutomata() {

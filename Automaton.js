@@ -42,15 +42,15 @@ class Automaton {
                 // pos B is the absolute value of the difference between the next position and the position after that
                 // if posA is greater than posB, then move forward one
                 // if posA is less than or equal to posB, stay in current position and set case = 2
-                let diffScoreA = this.calcDiff(currX, currY, "up");
-                let diffScoreB = this.calcDiff(currX + 1, currY, "up");
+                let diffScore1A = this.calcDiff(currY, currX, "up");
+                let diffScore1B = this.calcDiff(currY, currX + 1, "up");
 
                 // check for completely out of bounds
-                if (diffScoreA == -2 || diffScoreB == -2) {
+                if (diffScore1A == -2 || diffScore1B == -2) {
                     return false;
                 }
 
-                if (diffScoreB < diffScoreA) {
+                if (diffScore1B < diffScore1A) {
                     this.dots.push({ x: currX + 1, y: currY });
                 } else {
                     this.growMode = 2;
@@ -58,25 +58,40 @@ class Automaton {
                 break;
             case 2:
                 // move vertically straight up
-                let diffScoreC = this.calcDiff(currX, currY + 1, "up");
+                let diffScore2A = this.calcDiff(currY + 1, currX, "up");
 
-                if (diffScoreC == 0) {
+                if (diffScore2A == 0) {
                     this.dots.push({ x: currX, y: currY + 1 });
-                } else if (diffScoreC == -1) {
+                } else if (diffScore2A == -1) {
                     // one of the two cells is out of bounds (null)
                     return false;
-                } else if (diffScoreC == -2) {
+                } else if (diffScore2A == -2) {
                     // both cells are out of bounds (null)
                     this.dots.push({ x: currX, y: currY + 1 });
                     return false;
-                } else if (diffScoreC == 1000) {
+                } else if (diffScore2A == 1000) {
                     // both cells are occupied (0)
-                    this.dots.push({ x: currX, y: currY + 1 });
                     // check if there's a collision with another shape
                     let upLeftShape = this.layout[currY][currX - 1].shapes[0];
-                    if (this.shape != null && this.shape !== upLeftShape) {
-                        return false;
-                    }
+                    let upRightShape = this.layout[currY][currX].shapes[0];
+
+                    if (upLeftShape !== upRightShape) {
+                        this.dots.push({ x: currX, y: currY + 1 });
+                    } else {
+                        // both cells are occupied by the same shape
+                        // turn left or right
+                        let diffScoreLeft = this.calcDiff(currY, currX, "left");
+                        let diffScoreRight = this.calcDiff(currY, currX, "right");
+                        if (diffScoreLeft == -2 && diffScoreRight != -2) {
+                            // turn right 
+                            this.dots.push({ x: currX + 1, y: currY });
+                        } else if (diffScoreLeft != -2 && diffScoreRight == -2) {
+                            // turn left
+                            this.dots.push({ x: currX - 1, y: currY });
+                        } else {
+                            return false;
+                        }
+                    };
                 } else {
                     this.growMode = 3;
                 }
@@ -85,8 +100,8 @@ class Automaton {
                 // move vertically choosing between left, center, or right
 
                 // end if 2 up is occupied. grow to it and stop
-                let diffScoreD = this.calcDiff(currX, currY + 2, "up");
-                if (diffScoreD == 1000) {
+                let diffScore3 = this.calcDiff(currY + 2, currX, "up");
+                if (diffScore3 == 1000) {
                     this.dots.push({ x: currX, y: currY + 1 });
                     this.dots.push({ x: currX, y: currY + 2 });
                     return false;
@@ -94,9 +109,9 @@ class Automaton {
 
                 // else move upwards +1, picking best of the 3 options
                 let scores = [
-                    { score: this.calcDiff(currX - 1, currY + 1, "up"), x: currX - 1, y: currY + 1, dir: "left" },
-                    { score: this.calcDiff(currX, currY + 1, "up"), x: currX, y: currY + 1, dir: "center" },
-                    { score: this.calcDiff(currX + 1, currY + 1, "up"), x: currX + 1, y: currY + 1, dir: "right" }
+                    { score: this.calcDiff(currY + 1, currX - 1, "up"), x: currX - 1, y: currY + 1, dir: "left" },
+                    { score: this.calcDiff(currY + 1, currX, "up"), x: currX, y: currY + 1, dir: "center" },
+                    { score: this.calcDiff(currY + 1, currX + 1, "up"), x: currX + 1, y: currY + 1, dir: "right" }
                 ];
 
                 scores.sort((a, b) => a.score - b.score);
@@ -115,8 +130,8 @@ class Automaton {
                 } else if (scores[0].score === scores[1].score) {
                     // there is a tie, pick the winner
                     let tieScores = [
-                        { score: this.calcDiff(scores[0].x, scores[0].y + 1, "up"), x: scores[0].x, y: scores[0].y + 1, dir: scores[0].dir },
-                        { score: this.calcDiff(scores[1].x, scores[1].y + 1, "up"), x: scores[1].x, y: scores[1].y + 1, dir: scores[1].dir }
+                        { score: this.calcDiff(scores[0].y + 1, scores[0].x, "up"), x: scores[0].x, y: scores[0].y + 1, dir: scores[0].dir },
+                        { score: this.calcDiff(scores[1].y + 1, scores[1].x, "up"), x: scores[1].x, y: scores[1].y + 1, dir: scores[1].dir }
                     ];
                     tieScores.sort((a, b) => a.score - b.score);
 
@@ -134,8 +149,8 @@ class Automaton {
                 // push the winner dot, as well as any corner turns
                 if (winner.dir == "left") {
                     // push the left turn dot. go up-left or left-up
-                    let left = this.calcDiff(currX - 1, currY, "up");
-                    let up = this.calcDiff(currX, currY + 1, "up");
+                    let left = this.calcDiff(currY, currX - 1, "up");
+                    let up = this.calcDiff(currY + 1, currX, "up");
                     // avoid "c" notch shapes. if going left loops y+1 above current path, then go up
                     // find dots that share an x value with the winner dot
                     let dots = this.dots.filter(dot => dot.x == winner.x);
@@ -149,8 +164,8 @@ class Automaton {
                     }
                 } else if (winner.dir == "right") {
                     // push the right turn dot. go up-right or right-up
-                    let right = this.calcDiff(currX + 1, currY, "up");
-                    let up = this.calcDiff(currX, currY + 1, "up");
+                    let right = this.calcDiff(currY, currX + 1, "up");
+                    let up = this.calcDiff(currY + 1, currX, "up");
                     if (up < right) {
                         this.dots.push({ x: currX, y: currY + 1 });
                     } else {
@@ -170,37 +185,59 @@ class Automaton {
     }
 
     //-- Helper methods --//
-    calcDiff(coordX, coordY, dir) {
-        // UR = [currX, currY]
-        // UL = [currX - 1, currY]
-        // DR = [currX, currY - 1]
-        // DL = [currX - 1, currY - 1]
-        if (dir == "up") {
-            let cellScoreA = null;
-            let cellScoreB = null;
-            // check if point is in bounds
-            if (this.inBounds(coordY, coordX - 1)) {
-                cellScoreA = this.layout[coordY][coordX - 1].cellScore;
-            }
-            if (this.inBounds(coordY, coordX)) {
-                cellScoreB = this.layout[coordY][coordX].cellScore;
-            }
+    calcDiff(coordY, coordX, dir) {
+        // UR = [currY, currX]
+        // UL = [currY, currX - 1]
+        // DR = [currY - 1, currX]
+        // DL = [currY - 1, currX - 1]
+        let cellUL = { score: null, shape: null };
+        let cellUR = { score: null, shape: null };
+        let cellDL = { score: null, shape: null };
+        let cellDR = { score: null, shape: null };
 
-            if (cellScoreA == null && cellScoreB == null) {
-                return -2;
-            }
-
-            if (cellScoreA == null || cellScoreB == null) {
-                return -1;
-            }
-
-            if (cellScoreA == 0 && cellScoreB == 0) {
-                return 1000; // arbitrary large number
-            } else {
-                return Math.abs(cellScoreA - cellScoreB);
-            }
+        // check if point is in bounds
+        if (this.inBounds(coordY, coordX - 1)) {
+            cellUL.score = this.layout[coordY][coordX - 1].cellScore;
+            cellUL.shape = this.layout[coordY][coordX - 1].shapes[0];
+        }
+        if (this.inBounds(coordY, coordX)) {
+            cellUR.score = this.layout[coordY][coordX].cellScore;
+            cellUR.shape = this.layout[coordY][coordX].shapes[0];
+        }
+        if (this.inBounds(coordY - 1, coordX - 1)) {
+            cellDL.score = this.layout[coordY - 1][coordX - 1].cellScore;
+            cellDL.shape = this.layout[coordY - 1][coordX - 1].shapes[0];
+        }
+        if (this.inBounds(coordY - 1, coordX)) {
+            cellDR.score = this.layout[coordY - 1][coordX].cellScore;
+            cellDR.shape = this.layout[coordY - 1][coordX].shapes[0];
         }
 
+        if (dir == "up") {
+            if (cellUL.score == null && cellUR.score == null) {
+                return -2;
+            }
+            if (cellUL.score == null || cellUR.score == null) {
+                return -1;
+            }
+            if (cellUL.score == 0 && cellUR.score == 0) {
+                return 1000; // arbitrary large number
+            } else {
+                return Math.abs(cellUL.score - cellUR.score);
+            }
+        } else if (dir == "left") {
+            // if UL and DL are different shapes, the return the score
+            // if UL and DL are the same shape, return -2
+            if (cellUL.shape !== cellDL.shape) {
+                return Math.abs(cellUL.score - cellDL.score);
+            } else {
+                return -2;
+            }
+        } else if (dir == "right") {
+            // if UR and DR are different shapes, the return the score
+            // if UR and DR are the same shape, return -2
+
+        }
     }
 
     inBounds(coordY, coordX) {
