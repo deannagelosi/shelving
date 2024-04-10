@@ -21,13 +21,6 @@ class Automaton {
     grow(allDots) {
         // rules for growing the automaton path
 
-        // - grow fixes:
-        // - (done) 1. automaton know about all dots, not just their own
-        // - (done) 2. all automaton grow their full bottom support
-        // - (done) 3. then switch to growing one at a time (L and R) together
-        // - 4. die on line hits
-        // - 5. if about to travel parallel to another automaton for 2 moves, instead intersect with it on that second move
-
         let currX;
         let currY;
         if (this.moveRight) {
@@ -39,8 +32,8 @@ class Automaton {
         }
 
         switch (this.growMode) {
-            case 0:
-                // grow along bottom of the shape. stop at end or out of bounds
+            case 0: // grow along bottom of the shape
+                // stop at end of shape or out of bounds
                 if (this.inBounds(currY, currX)) {
                     // if (currX < this.layout[currY].length) {
                     // in bounds
@@ -53,8 +46,7 @@ class Automaton {
                     return false;
                 }
                 break;
-            case 1:
-                // move horizontally
+            case 1: // move horizontally rightward away from bottom
                 // posA is the absolute value of the difference between my current position and the next position
                 // pos B is the absolute value of the difference between the next position and the position after that
                 // if posA is greater than posB, then move forward one
@@ -73,8 +65,7 @@ class Automaton {
                     this.growMode = 2;
                 }
                 break;
-            case 2:
-                // move vertically straight up
+            case 2: // move vertically straight up
                 let diffScore2A = this.calcDiff(currY + 1, currX, "up");
 
                 if (diffScore2A == 0) {
@@ -116,8 +107,7 @@ class Automaton {
                     this.growMode = 3;
                 }
                 break;
-            case 3:
-                // move vertically choosing between left, center, or right
+            case 3: // move vertically choosing between left, center, or right
 
                 // end if 2 up is occupied. grow to it and stop
                 let diffScore3 = this.calcDiff(currY + 2, currX, "up");
@@ -199,8 +189,15 @@ class Automaton {
                 this.growMode = 2;
 
                 break;
-            case 4:
-                // move leftward
+            case 4: // move leftward
+
+                // - grow fixes:
+                // - (done) 1. automaton know about all dots, not just their own
+                // - (done) 2. all automaton grow their full bottom support
+                // - (done) 3. then switch to growing one at a time (L and R) together
+                // - 4. die on line hits
+                // - 5. if about to travel parallel to another automaton for 2 moves, instead intersect with it on that second move
+
 
                 let currDot = {
                     x: this.dots[0].x,
