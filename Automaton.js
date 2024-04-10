@@ -3,34 +3,44 @@ class Automaton {
     constructor(_layout, _shape, _startX, _startY) {
         this.layout = _layout;
         this.shape = _shape;
-        this.dots = []; // an array of objects with x and y coordinates
+        this.dots = []; // arrays have objects with x and y keys
         this.growMode = 0;
-        this.moveUp = true;
-        this.moveRight = true;
         this.startX = _startX ? _startX : this.overhangShift(this.shape.posX);
         this.startY = _startY ? _startY : this.shape.posY;
+
+        this.moveRight = true;
+        this.isGrowing = true;
     }
 
     plantSeed() {
-        // drop seed in the bottom left corner of a shape within a solution
+        // plant seed in the bottom left corner of the shape
+        // seed will grow right (push) and left (unshift)
         this.dots.push({ x: this.startX, y: this.startY });
     }
 
-    grow(check) {
+    grow(allDots) {
         // rules for growing the automaton path
+
+        // - grow fixes:
+        // - (done) 1. automaton know about all dots, not just their own
+        // - (done) 2. all automaton grow their full bottom support
+        // - (done) 3. then switch to growing one at a time (L and R) together
+        // - 4. die on line hits
+        // - 5. if about to travel parallel to another automaton for 2 moves, instead intersect with it on that second move
 
         let currX = this.dots[this.dots.length - 1].x;
         let currY = this.dots[this.dots.length - 1].y;
+
         switch (this.growMode) {
             case 0:
-                // draw along bottom of shape
-                // if we go out of bounds to the right, then stop growing
-                if (currX < this.layout[currY].length) {
+                // grow along bottom of the shape. stop at end or out of bounds
+                if (this.inBounds(currY, currX)) {
+                    // if (currX < this.layout[currY].length) {
                     // in bounds
-                    if (this.layout[currY][currX].cellScore == 0 && this.shape === this.layout[currY][currX].shapes[0]) {
+                    if (this.layout[currY][currX].shapes[0] === this.shape) {
                         this.dots.push({ x: currX + 1, y: currY });
                     } else {
-                        this.growMode = 1;
+                        return false;
                     }
                 } else {
                     return false;
@@ -61,13 +71,13 @@ class Automaton {
                 let diffScore2A = this.calcDiff(currY + 1, currX, "up");
 
                 if (diffScore2A == 0) {
-                    this.dots.push({ x: currX, y: currY + 1 });
+                    this.addDot(currY + 1, currX);
                 } else if (diffScore2A == -1) {
                     // one of the two cells is out of bounds (null)
                     return false;
                 } else if (diffScore2A == -2) {
                     // both cells are out of bounds (null)
-                    this.dots.push({ x: currX, y: currY + 1 });
+                    this.addDot(currY + 1, currX);
                     return false;
                 } else if (diffScore2A == 1000) {
                     // both cells are occupied (0)
@@ -76,7 +86,7 @@ class Automaton {
                     let upRightShape = this.layout[currY][currX].shapes[0];
 
                     if (upLeftShape !== upRightShape) {
-                        this.dots.push({ x: currX, y: currY + 1 });
+                        this.addDot(currY + 1, currX);
                     } else {
                         // both cells are occupied by the same shape
                         // turn left or right
@@ -84,10 +94,10 @@ class Automaton {
                         let diffScoreRight = this.calcDiff(currY, currX, "right");
                         if (diffScoreLeft == -2 && diffScoreRight != -2) {
                             // turn right 
-                            this.dots.push({ x: currX + 1, y: currY });
+                            this.addDot(currY, currX + 1);
                         } else if (diffScoreLeft != -2 && diffScoreRight == -2) {
                             // turn left
-                            this.dots.push({ x: currX - 1, y: currY });
+                            this.addDot(currY, currX - 1);
                         } else {
                             return false;
                         }
@@ -102,8 +112,8 @@ class Automaton {
                 // end if 2 up is occupied. grow to it and stop
                 let diffScore3 = this.calcDiff(currY + 2, currX, "up");
                 if (diffScore3 == 1000) {
-                    this.dots.push({ x: currX, y: currY + 1 });
-                    this.dots.push({ x: currX, y: currY + 2 });
+                    this.addDot(currY + 1, currX);
+                    this.addDot(currY + 2, currX);
                     return false;
                 }
 
@@ -157,26 +167,69 @@ class Automaton {
 
                     if (up < left || dots.some(dot => dot.y == winner.y - 2)) {
                         // up-left wins
-                        this.dots.push({ x: currX, y: currY + 1 });
+                        this.addDot(currY + 1, currX);
                     } else {
                         // left-up wins
-                        this.dots.push({ x: currX - 1, y: currY });
+                        this.addDot(currY, currX - 1);
                     }
                 } else if (winner.dir == "right") {
                     // push the right turn dot. go up-right or right-up
                     let right = this.calcDiff(currY, currX + 1, "up");
                     let up = this.calcDiff(currY + 1, currX, "up");
                     if (up < right) {
-                        this.dots.push({ x: currX, y: currY + 1 });
+                        this.addDot(currY + 1, currX);
                     } else {
-                        this.dots.push({ x: currX + 1, y: currY });
+                        this.addDot(currY, currX + 1);
                     }
                 }
                 // push the winner dot
-                this.dots.push({ x: winner.x, y: winner.y });
+                this.addDot(winner.y, winner.x);
 
                 // resume simple vertical movement
                 this.growMode = 2;
+
+                break;
+            case 4:
+                // move leftward
+
+                let currDot = {
+                    x: this.dots[0].x,
+                    y: this.dots[0].y
+                };
+                let newDot = {
+                    x: currDot.x - 1,
+                    y: currDot.y
+                };
+
+                // check currDot
+                let cellUL = { score: null, shape: null };
+                if (this.inBounds(currDot.y, currDot.x - 1)) {
+                    cellUL.score = this.layout[currDot.y][currDot.x - 1].cellScore;
+                    cellUL.shape = this.layout[currDot.y][currDot.x - 1].shapes[0];
+                }
+
+                // check if the next cell is occupied by a shape
+                if (cellUL.shape) {
+                     // grow vertically
+                    this.growMode = 2;
+
+                    return true;
+                }
+                // check out of bounds
+                else if (currDot.x <= 0) {
+                    return false;
+                }
+                // check if next dot intersects with a board
+                else if (allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
+                    // save the occupied spot to connect the boards together, then stop growing
+                    this.dots.unshift(newDot); // add to beginning
+                    return false;
+                }
+                else {
+                    // clear to the left, keep growing
+                    this.dots.unshift(newDot);
+                    return true;
+                }
 
                 break;
         }
@@ -185,6 +238,17 @@ class Automaton {
     }
 
     //-- Helper methods --//
+    addDot(_y, _x) {
+        if (this.moveRight == true) {
+            this.dots.push({ x: _x, y: _y });
+        } else {
+            this.dots.unshift({ x: _x, y: _y });
+
+            // reset to leftward rule
+            this.growMode = 4;
+        }
+    }
+
     calcDiff(coordY, coordX, dir) {
         // UR = [currY, currX]
         // UL = [currY, currX - 1]

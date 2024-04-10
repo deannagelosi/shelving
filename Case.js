@@ -17,70 +17,52 @@ class Case {
     }
 
     growAutomata() {
-        // 1. grow shelves in the right directions
+        // 0. grow shelves along all the bottoms
         for (let i = 0; i < this.automata.length; i++) {
             let automaton = this.automata[i];
+            automaton.growMode = 0; // grow bottoms first
             while (automaton.grow() != false) { }
+
+            automaton.growMode = 1; // prep for growing rightward
         }
 
-        // 2. grow shelves in the left direction
-        for (let i = 0; i < this.automata.length; i++) {
-            this.allDots.push(...this.automata[i].dots);
-        }
-        let newAutomata = [];
-        // loop through all automaton
-        for (let i = 0; i < this.automata.length; i++) {
-            let automaton = this.automata[i];
+        this.saveAllDots();
 
-            let growing = true;
-            while (growing) {
-                let currDot = {
-                    x: automaton.dots[0].x,
-                    y: automaton.dots[0].y
-                };
-                let newDot = {
-                    x: currDot.x - 1,
-                    y: currDot.y
-                };
 
-                // check currDot
-                let cellData = this.solution.layout[currDot.y][currDot.x - 1];
+        // 1. grow rightward
+        // each moves one step at a time until all are done
+        while (this.automata.some(automaton => automaton.isGrowing)) {
+            for (let i = 0; i < this.automata.length; i++) {
+                let automaton = this.automata[i];
+                if (automaton.isGrowing) {
+                    automaton.isGrowing = automaton.grow(this.allDots);
 
-                // check if the next cell is occupied by a shape
-                if (cellData && cellData.shapes.length > 0) {
-                    // grow a new automata vertically
-                    let automaton = new Automaton(this.solution.layout, cellData.shapes[0], currDot.x, currDot.y);
-                    automaton.growMode = 2; // grow vertically
-                    automaton.plantSeed();
-
-                    while (automaton.grow(true) != false) { }
-
-                    newAutomata.push(automaton);
-                    this.allDots.push(...automaton.dots);
-
-                    growing = false;
-                    continue;
-                }
-                // check out of bounds
-                else if (currDot.x <= 0) {
-                    growing = false;
-                    continue;
-                }
-                // check if next dot intersects with a board
-                else if (this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
-                    // save the occupied spot to connect the boards together, then stop growing
-                    automaton.dots.unshift(newDot); // add to beginning
-                    this.allDots.push(newDot);
-                    growing = false;
-                }
-                else {
-                    // clear to the left, keep growing
-                    automaton.dots.unshift(newDot);
-                    this.allDots.push(newDot);
+                    this.saveAllDots();
                 }
             }
         }
-        this.automata.push(...newAutomata); // add any new automate created
+
+        // reset for next grow mode
+        for (let i = 0; i < this.automata.length; i++) {
+            let automaton = this.automata[i];
+            automaton.growMode = 4; // grow leftward
+            automaton.moveRight = false;
+            automaton.isGrowing = true;
+        }
+
+        // 2. grow leftward
+        // each moves one step at a time until all are done, prepending to the dots array
+        while (this.automata.some(automaton => automaton.isGrowing)) {
+            for (let i = 0; i < this.automata.length; i++) {
+                let automaton = this.automata[i];
+                if (automaton.isGrowing) {
+
+                    automaton.isGrowing = automaton.grow(this.allDots);
+
+                    this.saveAllDots();
+                }
+            }
+        }
     }
 
     makeBoards() {
@@ -192,6 +174,14 @@ class Case {
     }
 
     //-- Helper Methods --//
+    saveAllDots() {
+        // Save all dots into one array
+        this.allDots = [];
+        for (let i = 0; i < this.automata.length; i++) {
+            this.allDots.push(...this.automata[i].dots);
+        }
+    }
+
     mergeBoards(board1, board2) {
         // if two boards are touching or overlapping and they face the same orientation, merge them
         if (board1.orientation === board2.orientation) {

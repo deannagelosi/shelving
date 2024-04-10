@@ -2,19 +2,24 @@
 
 ## Demo (Wednesday, 4/10): Full Slice
 
-- example boolean (sketch.js)
-- show boards boolean (Case.js)
-- example coords (Solution.js)
-
 - improving dots, grow algorithm
 - console.log solution
 - steadily raise temperature if can't solve
 
+## Demo Notes
+
+- example boolean (sketch.js)
+- show boards boolean (Case.js)
+- example coords (Solution.js)
+
 ## Software Test (Thursday, 4/18): Advanced UI Features
 
+- seed at each shape, one left and one right
 - object input
 - re-anneal button
 - export button to JSON
+- terminate when hitting an existing line (save to allDots each automaton's dots)
+
 - outcast objects, but important!
 - thought process of collecting objects, exploring combinations
 - make 30 cases digital designs
