@@ -5,7 +5,7 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoard = false;
+        this.showBoard = true;
     }
 
     createAutomata() {
@@ -112,30 +112,30 @@ class Case {
         this.boards.push(new Board({ x: width, y: height }, { x: 0, y: height }, "x"));
         this.boards.push(new Board({ x: 0, y: height }, { x: 0, y: 0 }, "y"));
 
-        // merge boards - keep merging until no more merges can be made
-        let merging = true;
-        while (merging == true) {
-            merging = false;
+        // // merge boards - keep merging until no more merges can be made
+        // let merging = true;
+        // while (merging == true) {
+        //     merging = false;
 
-            for (let i = 0; i < this.boards.length; i++) {
-                for (let j = 0; j < this.boards.length; j++) {
-                    if (i != j) {
-                        let board1 = this.boards[i];
-                        let board2 = this.boards[j];
-                        let mergedBoard = this.mergeBoards(board1, board2);
-                        if (mergedBoard) {
-                            merging = true;
-                            // remove the two boards and add the merged board
-                            this.boards.splice(j, 1);
-                            this.boards.splice(i, 1);
-                            this.boards.push(mergedBoard);
-                        }
-                    }
-                }
-            }
-        }
+        //     for (let i = 0; i < this.boards.length; i++) {
+        //         for (let j = 0; j < this.boards.length; j++) {
+        //             if (i != j) {
+        //                 let board1 = this.boards[i];
+        //                 let board2 = this.boards[j];
+        //                 let mergedBoard = this.mergeBoards(board1, board2);
+        //                 if (mergedBoard) {
+        //                     merging = true;
+        //                     // remove the two boards and add the merged board
+        //                     this.boards.splice(j, 1);
+        //                     this.boards.splice(i, 1);
+        //                     this.boards.push(mergedBoard);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
-        console.log(this.boards);
+        // console.log(this.boards);
     }
 
     showResult() {

@@ -28,8 +28,15 @@ class Automaton {
         // - 4. die on line hits
         // - 5. if about to travel parallel to another automaton for 2 moves, instead intersect with it on that second move
 
-        let currX = this.dots[this.dots.length - 1].x;
-        let currY = this.dots[this.dots.length - 1].y;
+        let currX;
+        let currY;
+        if (this.moveRight) {
+            currX = this.dots[this.dots.length - 1].x;
+            currY = this.dots[this.dots.length - 1].y;
+        } else {
+            currX = this.dots[0].x;
+            currY = this.dots[0].y;
+        }
 
         switch (this.growMode) {
             case 0:
@@ -90,16 +97,19 @@ class Automaton {
                     } else {
                         // both cells are occupied by the same shape
                         // turn left or right
-                        let diffScoreLeft = this.calcDiff(currY, currX, "left");
-                        let diffScoreRight = this.calcDiff(currY, currX, "right");
+                        let diffScoreLeft = this.calcDiff(currY + 1, currX, "left");
+                        let diffScoreRight = this.calcDiff(currY + 1, currX, "right");
                         if (diffScoreLeft == -2 && diffScoreRight != -2) {
                             // turn right 
                             this.addDot(currY, currX + 1);
                         } else if (diffScoreLeft != -2 && diffScoreRight == -2) {
                             // turn left
                             this.addDot(currY, currX - 1);
-                        } else {
+                        } else if (diffScoreLeft == -2 && diffScoreRight == -2) {
                             return false;
+                        } else {
+                            this.addDot(currY + 1, currX);
+                            return true;
                         }
                     };
                 } else {
@@ -210,7 +220,7 @@ class Automaton {
 
                 // check if the next cell is occupied by a shape
                 if (cellUL.shape) {
-                     // grow vertically
+                    // grow vertically
                     this.growMode = 2;
 
                     return true;
