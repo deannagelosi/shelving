@@ -5,34 +5,48 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoard = true;
+        this.showBoard = false;
     }
 
     createAutomata() {
+        this.automata = [];
+
+        // create perimeter automaton
+        let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], 0, 0);
+        perimeter.plantSeed();
+        this.automata.push(perimeter);
+        
+        // create automata for each shape
         for (let i = 0; i < this.solution.shapes.length; i++) {
             let automaton = new Automaton(this.solution.layout, this.solution.shapes[i]);
             automaton.plantSeed();
             this.automata.push(automaton);
         }
     }
-
+    
     growAutomata() {
-        // 0. grow shelves along all the bottoms
-        for (let i = 0; i < this.automata.length; i++) {
+        // 0. grow the perimeter dots around the edge of the layout
+        let perimeter = this.automata[0];
+        perimeter.growMode = -1; // grow perimeters
+        while (perimeter.grow() != false) { }
+        perimeter.isGrowing = false;
+        
+        // 1. grow shelves along all the bottoms
+        // note: skip the first automaton (perimeter) for all growing steps
+        for (let i = 1; i < this.automata.length; i++) {
             let automaton = this.automata[i];
-            automaton.growMode = 0; // grow bottoms first
-            while (automaton.grow() != false) { }
-
-            automaton.growMode = 1; // prep for growing rightward
+            if (automaton.isGrowing) {
+                automaton.growMode = 0; // grow bottoms first
+                while (automaton.grow() != false) { }
+                automaton.growMode = 1; // prep for growing rightward
+            }
         }
-
+        
         this.saveAllDots();
-
-
-        // 1. grow rightward
-        // each moves one step at a time until all are done
+        
+        // 2. grow rightward (every automaton grows once per loop)
         while (this.automata.some(automaton => automaton.isGrowing)) {
-            for (let i = 0; i < this.automata.length; i++) {
+            for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
                 if (automaton.isGrowing) {
                     automaton.isGrowing = automaton.grow(this.allDots);
@@ -42,18 +56,17 @@ class Case {
             }
         }
 
+        // 3. grow leftward (every automaton grows once per loop)
         // reset for next grow mode
-        for (let i = 0; i < this.automata.length; i++) {
+        for (let i = 1; i < this.automata.length; i++) {
             let automaton = this.automata[i];
             automaton.growMode = 4; // grow leftward
             automaton.moveRight = false;
             automaton.isGrowing = true;
         }
 
-        // 2. grow leftward
-        // each moves one step at a time until all are done, prepending to the dots array
         while (this.automata.some(automaton => automaton.isGrowing)) {
-            for (let i = 0; i < this.automata.length; i++) {
+            for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
                 if (automaton.isGrowing) {
 
@@ -103,14 +116,6 @@ class Case {
                 orientation
             ));
         }
-
-        // make perimeter boards
-        let height = this.solution.layout.length;
-        let width = this.solution.layout[0].length;
-        this.boards.push(new Board({ x: 0, y: 0 }, { x: width, y: 0 }, "x"));
-        this.boards.push(new Board({ x: width, y: 0 }, { x: width, y: height }, "y"));
-        this.boards.push(new Board({ x: width, y: height }, { x: 0, y: height }, "x"));
-        this.boards.push(new Board({ x: 0, y: height }, { x: 0, y: 0 }, "y"));
 
         // // merge boards - keep merging until no more merges can be made
         // let merging = true;

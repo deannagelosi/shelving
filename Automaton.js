@@ -5,8 +5,8 @@ class Automaton {
         this.shape = _shape;
         this.dots = []; // arrays have objects with x and y keys
         this.growMode = 0;
-        this.startX = _startX ? _startX : this.overhangShift(this.shape.posX);
-        this.startY = _startY ? _startY : this.shape.posY;
+        this.startX = _startX || (_startX == 0) ? _startX : this.overhangShift(this.shape.posX);
+        this.startY = _startY || (_startY == 0) ? _startY : this.shape.posY;
 
         this.moveRight = true;
         this.isGrowing = true;
@@ -15,7 +15,7 @@ class Automaton {
     plantSeed() {
         // plant seed in the bottom left corner of the shape
         // seed will grow right (push) and left (unshift)
-        this.dots.push({ x: this.startX, y: this.startY });
+        this.addDot(this.startY, this.startX);
     }
 
     grow(allDots) {
@@ -24,21 +24,43 @@ class Automaton {
         let currX;
         let currY;
         if (this.moveRight) {
+            // pushing to the array, start with the last dot in the array
             currX = this.dots[this.dots.length - 1].x;
             currY = this.dots[this.dots.length - 1].y;
         } else {
+            // prepending to the array, start with the first dot in the array
             currX = this.dots[0].x;
             currY = this.dots[0].y;
         }
 
         switch (this.growMode) {
+            case -1: // grow perimeter
+                if (currY == 0 && this.dotInBounds(currY, currX + 1)) {
+                    // grow right along bottom
+                    this.addDot(currY, currX + 1);
+                } else if (currX == this.layout[0].length && this.dotInBounds(currY + 1, currX)) { 
+                    // grow up on right side
+                    this.addDot(currY + 1, currX);
+                } else if (this.dotInBounds(currY, currX - 1)) {
+                    // grow left along the top
+                    this.addDot(currY, currX - 1);
+                } else if (currX == 0 && this.dotInBounds(currY - 1, currX)) {
+                    // grow down the left side
+                    this.addDot(currY - 1, currX);
+                    if (currY - 1 == 0) {
+                        // looking for the bottom left corner, stop growing
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+                break;
             case 0: // grow along bottom of the shape
                 // stop at end of shape or out of bounds
-                if (this.inBounds(currY, currX)) {
-                    // if (currX < this.layout[currY].length) {
+                if (this.cellInBounds(currY, currX)) {
                     // in bounds
                     if (this.layout[currY][currX].shapes[0] === this.shape) {
-                        this.dots.push({ x: currX + 1, y: currY });
+                        this.addDot(currY, currX + 1);
                     } else {
                         return false;
                     }
@@ -60,7 +82,7 @@ class Automaton {
                 }
 
                 if (diffScore1B < diffScore1A) {
-                    this.dots.push({ x: currX + 1, y: currY });
+                    this.addDot(currY, currX + 1);
                 } else {
                     this.growMode = 2;
                 }
@@ -210,7 +232,7 @@ class Automaton {
 
                 // check currDot
                 let cellUL = { score: null, shape: null };
-                if (this.inBounds(currDot.y, currDot.x - 1)) {
+                if (this.cellInBounds(currDot.y, currDot.x - 1)) {
                     cellUL.score = this.layout[currDot.y][currDot.x - 1].cellScore;
                     cellUL.shape = this.layout[currDot.y][currDot.x - 1].shapes[0];
                 }
@@ -267,19 +289,19 @@ class Automaton {
         let cellDR = { score: null, shape: null };
 
         // check if point is in bounds
-        if (this.inBounds(coordY, coordX - 1)) {
+        if (this.cellInBounds(coordY, coordX - 1)) {
             cellUL.score = this.layout[coordY][coordX - 1].cellScore;
             cellUL.shape = this.layout[coordY][coordX - 1].shapes[0];
         }
-        if (this.inBounds(coordY, coordX)) {
+        if (this.cellInBounds(coordY, coordX)) {
             cellUR.score = this.layout[coordY][coordX].cellScore;
             cellUR.shape = this.layout[coordY][coordX].shapes[0];
         }
-        if (this.inBounds(coordY - 1, coordX - 1)) {
+        if (this.cellInBounds(coordY - 1, coordX - 1)) {
             cellDL.score = this.layout[coordY - 1][coordX - 1].cellScore;
             cellDL.shape = this.layout[coordY - 1][coordX - 1].shapes[0];
         }
-        if (this.inBounds(coordY - 1, coordX)) {
+        if (this.cellInBounds(coordY - 1, coordX)) {
             cellDR.score = this.layout[coordY - 1][coordX].cellScore;
             cellDR.shape = this.layout[coordY - 1][coordX].shapes[0];
         }
@@ -311,9 +333,22 @@ class Automaton {
         }
     }
 
-    inBounds(coordY, coordX) {
-        let gridHeight = this.layout.length;
-        if (coordY < gridHeight && coordY >= 0 && coordX >= 0 && coordX < this.layout[coordY].length) {
+    dotInBounds(coordY, coordX) {
+        // check in bounds for dots (can == length)
+        let yInBounds = coordY >= 0 && coordY <= this.layout.length;
+        let xInBounds = coordX >= 0 && coordX <= this.layout[0].length;
+        if (yInBounds && xInBounds ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    cellInBounds(coordY, coordX) {
+        // check in bounds for layout cells (up to < length)
+        let yInBounds = coordY >= 0 && coordY < this.layout.length;
+        let xInBounds = coordX >= 0 && coordX < this.layout[0].length;
+        if (yInBounds && xInBounds ) {
             return true;
         } else {
             return false;

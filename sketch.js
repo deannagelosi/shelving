@@ -6,7 +6,7 @@ let sa; // simulated annealing
 let initialScore;
 let loopCount;
 
-let useExample = false;
+let useExample = true;
 
 function preload() {
     shapeData = loadJSON('data/sunny-shapes.json');
