@@ -61,14 +61,8 @@ class Automaton {
                 }
                 break;
             case 0: // grow along bottom of the shape
-                // stop at end of shape or out of bounds
-                if (this.cellInBounds(currY, currX)) {
-                    // in bounds
-                    if (this.layout[currY][currX].shapes[0] === this.shape) {
-                        return this.addDot(currY, currX + 1);
-                    } else {
-                        return false;
-                    }
+                if (cellUR.shape == this.shape) {
+                    return this.addDot(currY, currX + 1);
                 } else {
                     return false;
                 }

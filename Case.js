@@ -23,7 +23,7 @@ class Case {
         for (let i = 0; i < this.solution.shapes.length; i++) {
             let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
             automaton.plantSeed();
-            automaton.plantSeed();
+            // automaton.plantSeed();
             this.automata.push(automaton);
         }
     }
@@ -35,38 +35,38 @@ class Case {
             let automaton = this.automata[i];
             if (automaton.isGrowing) {
                 automaton.growMode = 0; // grow bottoms first
-                while (automaton.grow([]) != false) { }
+                while (automaton.grow() != false) { }
                 automaton.growMode = 1; // prep for growing rightward
             }
         }
                 
-        // 2. grow rightward (every automaton grows once per loop)
-        while (this.automata.some(automaton => automaton.isGrowing)) {
-            for (let i = 1; i < this.automata.length; i++) {
-                let automaton = this.automata[i];
-                if (automaton.isGrowing) {
-                    automaton.isGrowing = automaton.grow(this.allDots);
-                }
-            }
-        }
+        // // 2. grow rightward (every automaton grows once per loop)
+        // while (this.automata.some(automaton => automaton.isGrowing)) {
+        //     for (let i = 1; i < this.automata.length; i++) {
+        //         let automaton = this.automata[i];
+        //         if (automaton.isGrowing) {
+        //             automaton.isGrowing = automaton.grow(this.allDots);
+        //         }
+        //     }
+        // }
 
-        // 3. grow leftward (every automaton grows once per loop)
-        // reset for next grow mode
-        for (let i = 1; i < this.automata.length; i++) {
-            let automaton = this.automata[i];
-            automaton.growMode = 4; // grow leftward
-            automaton.moveRight = false;
-            automaton.isGrowing = true;
-        }
+        // // 3. grow leftward (every automaton grows once per loop)
+        // // reset for next grow mode
+        // for (let i = 1; i < this.automata.length; i++) {
+        //     let automaton = this.automata[i];
+        //     automaton.growMode = 4; // grow leftward
+        //     automaton.moveRight = false;
+        //     automaton.isGrowing = true;
+        // }
         
-        while (this.automata.some(automaton => automaton.isGrowing)) {
-            for (let i = 1; i < this.automata.length; i++) {
-                let automaton = this.automata[i];
-                if (automaton.isGrowing) {
-                    automaton.isGrowing = automaton.grow(this.allDots);
-                }
-            }
-        }
+        // while (this.automata.some(automaton => automaton.isGrowing)) {
+        //     for (let i = 1; i < this.automata.length; i++) {
+        //         let automaton = this.automata[i];
+        //         if (automaton.isGrowing) {
+        //             automaton.isGrowing = automaton.grow(this.allDots);
+        //         }
+        //     }
+        // }
     }
 
     makeBoards() {
