@@ -39,6 +39,10 @@ class Automaton {
         let cellDL = this.retrieveCell(currY - 1, currX - 1);
         let cellDR = this.retrieveCell(currY - 1, currX);
 
+        let currScoreUp = this.calcDiff(currY, currX, "up");
+        let currScoreRightUp = this.calcDiff(currY, currX + 1, "up");
+        let currScoreLeftUp = this.calcDiff(currY, currX - 1, "up");
+
         switch (this.growMode) {
             case -1: // grow perimeter
                 // step 1. grow right along the bottom
@@ -68,20 +72,16 @@ class Automaton {
                 }
                 break;
             case 1: // move horizontally, keep moving right or move up
-                let diffScore1A = this.calcDiff(currY, currX, "up");
-                let diffScore1B = this.calcDiff(currY, currX + 1, "up");
-
-                if (diffScore1B < diffScore1A) {
+                if (currScoreRightUp < currScoreUp) {
                     return this.addDot(currY, currX + 1);
                 } else {
                     this.growMode = 2; // move vertically
                     return true;
                 }
                 break;
-            case 2: // move vertically through or around shapes
-                let diffScore2A = this.calcDiff(currY, currX, "up");
+            case 2: // move vertically along limited path
                 // both cells are occupied by a shape
-                if (diffScore2A == 1000) {
+                if (currScoreUp == 1000) {
                     // are they the same shape or different shapes
                     if (cellUL.shape === cellUR.shape) {
                         // turn left or right
@@ -105,97 +105,37 @@ class Automaton {
                     return true;
                 }
                 break;
-            case 3: // move vertically choosing between left, center, or right
-
-                //  // if at least one of the cells is empty, grow upward
-
-                //  if (diffScore2A == 0) {
-                //     // both sides same number, split between them
-                //     return this.addDot(currY + 1, currX);
-                // } 
-
-                // end if 2 up is occupied. grow to it and stop
-                let diffScore3 = this.calcDiff(currY + 2, currX, "up");
-                if (diffScore3 == 1000) {
-                    // todo: look at later
-                    this.addDot(currY + 1, currX);
-                    this.addDot(currY + 2, currX);
-                    return false;
+            case 3: // move vertically with multiple options
+                if (currScoreUp == 0 || currScoreUp == 1) {
+                    // both sides same number, split between them
+                    return this.addDot(currY + 1, currX);
                 }
 
-                // else move upwards +1, picking best of the 3 options
                 let scores = [
-                    { score: this.calcDiff(currY + 1, currX - 1, "up"), x: currX - 1, y: currY + 1, dir: "left" },
-                    { score: this.calcDiff(currY + 1, currX, "up"), x: currX, y: currY + 1, dir: "center" },
-                    { score: this.calcDiff(currY + 1, currX + 1, "up"), x: currX + 1, y: currY + 1, dir: "right" }
+                    { score: currScoreLeftUp, x: currX - 1, y: currY, dir: "left" },
+                    { score: currScoreUp, x: currX, y: currY + 1, dir: "center" },
+                    { score: currScoreRightUp, x: currX + 1, y: currY, dir: "right" }
                 ];
 
                 scores.sort((a, b) => a.score - b.score);
 
-                let winner;
-                // pick the winner
-                if (scores[0].score === scores[1].score && scores[1].score === scores[2].score) {
-                    // all three intersection scores are equal
-                    if (scores[0].score == 1000) {
-                        // if all three above are occupied, then stop growing
-                        return false;
+                // pick center if it's one of the low scores, otherwise default pick left
+                if (scores[0].score != scores[1].score) {
+                    // pick lowest score as winner
+                    return this.addDot(scores[0].y, scores[0].x);
+                } else if (scores[0].score == scores[1].score && scores[0].score != scores[2].score) {
+                    // two-way tie breaker
+                    if (scores[0].dir == "center" || scores[1].dir == "center") {
+                        return this.addDot(currY + 1, currX);
                     } else {
-                        // if all 3 scores are equal, pick the center
-                        winner = scores.find(score => score.dir === "center");
+                        // turn left by default
+                        return this.addDot(currY, currX - 1);
                     }
-                } else if (scores[0].score === scores[1].score) {
-                    // there is a tie, pick the winner
-                    let tieScores = [
-                        { score: this.calcDiff(scores[0].y + 1, scores[0].x, "up"), x: scores[0].x, y: scores[0].y + 1, dir: scores[0].dir },
-                        { score: this.calcDiff(scores[1].y + 1, scores[1].x, "up"), x: scores[1].x, y: scores[1].y + 1, dir: scores[1].dir }
-                    ];
-                    tieScores.sort((a, b) => a.score - b.score);
-
-                    // tie breaker picks the winner
-                    winner = {
-                        x: tieScores[0].x,
-                        y: tieScores[0].y - 1,
-                        dir: tieScores[0].dir
-                    };
                 } else {
-                    // no ties
-                    winner = scores[0];
+                    // three-way tie breaker
+                    return this.addDot(currY + 1, currX);
                 }
-
-                let result;
-                // push the winner dot, as well as any corner turns
-                if (winner.dir == "left") {
-                    // push the left turn dot. go up-left or left-up
-                    let left = this.calcDiff(currY, currX - 1, "up");
-                    let up = this.calcDiff(currY + 1, currX, "up");
-                    // avoid "c" notch shapes. if going left loops y+1 above current path, then go up
-                    // find dots that share an x value with the winner dot
-                    let dots = this.dots.filter(dot => dot.x == winner.x);
-                    if (up < left || dots.some(dot => dot.y == winner.y - 2)) {
-                        // up-left wins
-                        result = this.addDot(currY + 1, currX);
-                    } else {
-                        // left-up wins
-                        result = this.addDot(currY, currX - 1);
-                    }
-                } else if (winner.dir == "right") {
-                    // push the right turn dot. go up-right or right-up
-                    let right = this.calcDiff(currY, currX + 1, "up");
-                    let up = this.calcDiff(currY + 1, currX, "up");
-                    if (up < right) {
-                        result = this.addDot(currY + 1, currX);
-                    } else {
-                        result = this.addDot(currY, currX + 1);
-                    }
-                }
-                if (result == false) { return false };
                 
-                // resume simple vertical movement
-                this.growMode = 2;
-
-                // push the winner dot
-                return this.addDot(winner.y, winner.x);
-
                 break;
             case 4: // move leftward
 
