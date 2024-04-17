@@ -67,56 +67,52 @@ class Automaton {
                     return false;
                 }
                 break;
-            case 1: // move horizontally rightward away from bottom
-                // posA is the absolute value of the difference between my current position and the next position
-                // pos B is the absolute value of the difference between the next position and the position after that
-                // if posA is greater than posB, then move forward one
-                // if posA is less than or equal to posB, stay in current position and set case = 2
+            case 1: // move horizontally, keep moving right or move up
                 let diffScore1A = this.calcDiff(currY, currX, "up");
                 let diffScore1B = this.calcDiff(currY, currX + 1, "up");
 
                 if (diffScore1B < diffScore1A) {
                     return this.addDot(currY, currX + 1);
                 } else {
-                    this.growMode = 2;
-                    // return false;
+                    this.growMode = 2; // move vertically
+                    return true;
                 }
                 break;
-            case 2: // move vertically straight up
-                let diffScore2A = this.calcDiff(currY + 1, currX, "up");
-
-                if (diffScore2A == 0) {
-                    return this.addDot(currY + 1, currX);
-                } else if (diffScore2A == 1000) {
-                    // both cells are occupied (0)
-                    // check if there's a collision with another shape
-                    let upLeftShape = this.layout[currY][currX - 1].shapes[0];
-                    let upRightShape = this.layout[currY][currX].shapes[0];
-
-                    if (upLeftShape !== upRightShape) {
-                        return this.addDot(currY + 1, currX);
-                    } else {
-                        // both cells are occupied by the same shape
+            case 2: // move vertically through or around shapes
+                let diffScore2A = this.calcDiff(currY, currX, "up");
+                // both cells are occupied by a shape
+                if (diffScore2A == 1000) {
+                    // are they the same shape or different shapes
+                    if (cellUL.shape === cellUR.shape) {
                         // turn left or right
-                        let diffScoreLeft = this.calcDiff(currY + 1, currX, "left");
-                        let diffScoreRight = this.calcDiff(currY + 1, currX, "right");
-                        if (diffScoreLeft == -2 && diffScoreRight != -2) {
-                            // turn right 
-                            return this.addDot(currY, currX + 1);
-                        } else if (diffScoreLeft != -2 && diffScoreRight == -2) {
+                        if (cellUL.shape !== cellDL.shape) {
                             // turn left
                             return this.addDot(currY, currX - 1);
-                        } else if (diffScoreLeft == -2 && diffScoreRight == -2) {
-                            return false;
+                        } else if (cellUR.shape !== cellDR.shape) {
+                            // turn right
+                            return this.addDot(currY, currX + 1);
                         } else {
-                            return this.addDot(currY + 1, currX);
+                            console.log("No path forward, got stuck. currY: ", currY, " currX: ", currX);
+                            return false;
                         }
-                    };
+                    } else {
+                        // different shapes, grow upward between them
+                        return this.addDot(currY + 1, currX);
+                    }
                 } else {
+                    // at least one of the cells is empty
                     this.growMode = 3;
+                    return true;
                 }
                 break;
             case 3: // move vertically choosing between left, center, or right
+
+                //  // if at least one of the cells is empty, grow upward
+
+                //  if (diffScore2A == 0) {
+                //     // both sides same number, split between them
+                //     return this.addDot(currY + 1, currX);
+                // } 
 
                 // end if 2 up is occupied. grow to it and stop
                 let diffScore3 = this.calcDiff(currY + 2, currX, "up");
@@ -307,7 +303,8 @@ class Automaton {
         let cellDR = this.retrieveCell(coordY - 1, coordX);
 
         if (dir == "up") {
-            if (cellUL.score == 0 && cellUR.score == 0) {
+            // check for shape collision
+            if (cellUL.shape != null && cellUR.shape != null) {
                 return 1000; // arbitrary large number
             } else {
                 return Math.abs(cellUL.score - cellUR.score);
