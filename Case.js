@@ -11,27 +11,24 @@ class Case {
     createAutomata() {
         this.automata = [];
 
-        // create perimeter automaton
-        let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], 0, 0);
+        // create and grow the perimeter dots around the edge of the layout
+        let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], this.allDots, 0, 0);
         perimeter.plantSeed();
+        perimeter.growMode = -1; // grow perimeters
+        while (perimeter.grow([]) != false) { }
+        perimeter.isGrowing = false;
         this.automata.push(perimeter);
         
         // create automata for each shape
         for (let i = 0; i < this.solution.shapes.length; i++) {
-            let automaton = new Automaton(this.solution.layout, this.solution.shapes[i]);
+            let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
             automaton.plantSeed();
-            // automaton.plantSeed();
+            automaton.plantSeed();
             this.automata.push(automaton);
         }
     }
     
     growAutomata() {
-        // 0. grow the perimeter dots around the edge of the layout
-        let perimeter = this.automata[0];
-        perimeter.growMode = -1; // grow perimeters
-        while (perimeter.grow([]) != false) { }
-        perimeter.isGrowing = false;
-        
         // 1. grow shelves along all the bottoms
         // note: skip the first automaton (perimeter) for all growing steps
         for (let i = 1; i < this.automata.length; i++) {
@@ -42,17 +39,13 @@ class Case {
                 automaton.growMode = 1; // prep for growing rightward
             }
         }
-        
-        this.saveAllDots();
-        
+                
         // 2. grow rightward (every automaton grows once per loop)
         while (this.automata.some(automaton => automaton.isGrowing)) {
             for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
                 if (automaton.isGrowing) {
                     automaton.isGrowing = automaton.grow(this.allDots);
-
-                    this.saveAllDots();
                 }
             }
         }
@@ -71,8 +64,6 @@ class Case {
                 let automaton = this.automata[i];
                 if (automaton.isGrowing) {
                     automaton.isGrowing = automaton.grow(this.allDots);
-
-                    this.saveAllDots();
                 }
             }
         }
@@ -179,14 +170,6 @@ class Case {
     }
 
     //-- Helper Methods --//
-    saveAllDots() {
-        // Save all dots into one array
-        this.allDots = [];
-        for (let i = 0; i < this.automata.length; i++) {
-            this.allDots.push(...this.automata[i].dots);
-        }
-    }
-
     mergeBoards(board1, board2) {
         // if two boards are touching or overlapping and they face the same orientation, merge them
         if (board1.orientation === board2.orientation) {

@@ -1,6 +1,6 @@
 // Builds shelves using cellular automata rules to grow from a seed
 class Automaton {
-    constructor(_layout, _shape, _startX, _startY) {
+    constructor(_layout, _shape,  _allDots, _startX, _startY,) {
         this.layout = _layout;
         this.shape = _shape;
         this.startX = _startX || (_startX == 0) ? _startX : this.overhangShift(this.shape.posX);
@@ -11,7 +11,7 @@ class Automaton {
         this.moveRight = true;
         this.isGrowing = true;
 
-        this.allDots = [];
+        this.allDots = _allDots;
     }
 
     plantSeed() {
@@ -20,10 +20,8 @@ class Automaton {
         this.addDot(this.startY, this.startX);
     }
 
-    grow(allDots) {
+    grow() {
         // rules for growing the automaton path\
-        this.allDots = allDots;
-
         let currX;
         let currY;
         if (this.moveRight) {
@@ -36,25 +34,29 @@ class Automaton {
             currY = this.dots[0].y;
         }
 
+        let cellUR = this.retrieveCell(currY, currX);
+        let cellUL = this.retrieveCell(currY, currX - 1);
+        let cellDL = this.retrieveCell(currY - 1, currX - 1);
+        let cellDR = this.retrieveCell(currY - 1, currX);
+
         switch (this.growMode) {
             case -1: // grow perimeter
-                if (currY == 0 && this.dotInBounds(currY, currX + 1)) {
-                    // grow right along bottom
+                // step 1. grow right along the bottom
+                // check if the next cell to the right exists
+                if (cellUR.score != null && cellDR.score == null) {
+                    // grow right
                     return this.addDot(currY, currX + 1);
-                } else if (currX == this.layout[0].length && this.dotInBounds(currY + 1, currX)) {
-                    // grow up on right side
+                } else if (cellUL.score != null && cellUR.score == null) {
+                    // grow upward
                     return this.addDot(currY + 1, currX);
-                } else if (this.dotInBounds(currY, currX - 1)) {
-                    // grow left along the top
+                } else if (cellDL.score != null && cellUL.score == null) {
+                    // grow left
                     return this.addDot(currY, currX - 1);
-                } else if (currX == 0 && this.dotInBounds(currY - 1, currX)) {
-                    // grow down the left side
-                    this.addDot(currY - 1, currX);
-                    if (currY - 1 == 0) {
-                        // looking for the bottom left corner, stop growing
-                        return false;
-                    }
-                } else {
+                } else if (cellDR.score != null && cellDL.score == null) {
+                    // grow downward
+                    return this.addDot(currY - 1, currX);
+                }
+                else {
                     return false;
                 }
                 break;
@@ -225,11 +227,11 @@ class Automaton {
                 };
 
                 // check currDot
-                let cellUL = { score: null, shape: null };
-                if (this.cellInBounds(currDot.y, currDot.x - 1)) {
-                    cellUL.score = this.layout[currDot.y][currDot.x - 1].cellScore;
-                    cellUL.shape = this.layout[currDot.y][currDot.x - 1].shapes[0];
-                }
+                // let cellUL = { score: null, shape: null };
+                // if (this.cellInBounds(currDot.y, currDot.x - 1)) {
+                //     cellUL.score = this.layout[currDot.y][currDot.x - 1].cellScore;
+                //     cellUL.shape = this.layout[currDot.y][currDot.x - 1].shapes[0];
+                // }
 
                 // check if the next cell is occupied by a shape
                 if (cellUL.shape) {
@@ -243,14 +245,17 @@ class Automaton {
                     return false;
                 }
                 // check if next dot intersects with a board
-                else if (allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
+                else if (this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
+                    // todo: move into addDot()
                     // save the occupied spot to connect the boards together, then stop growing
                     this.dots.unshift(newDot); // add to beginning
+                    // todo: switch to addDots
                     return false;
                 }
                 else {
                     // clear to the left, keep growing
                     this.dots.unshift(newDot);
+                    // todo: switch to addDotes
                     return true;
                 }
 
@@ -279,6 +284,10 @@ class Automaton {
         // end if this dot is in allDots (collision)
         let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify({ x: _x, y: _y }));
         let bottom = (_y == 0 && _x <= this.layout[0].length);
+
+        // add dot to allDots
+        this.allDots.push({ x: _x, y: _y});
+
         if (!bottom && collision) {
             return false;
         } else {
@@ -286,33 +295,22 @@ class Automaton {
         }
     }
 
-    calcDiff(coordY, coordX, dir) {
-        // UR = [currY, currX]
-        // UL = [currY, currX - 1]
-        // DR = [currY - 1, currX]
-        // DL = [currY - 1, currX - 1]
-        let cellUL = { score: null, shape: null };
-        let cellUR = { score: null, shape: null };
-        let cellDL = { score: null, shape: null };
-        let cellDR = { score: null, shape: null };
+    retrieveCell(_y, _x) {
+        // retrieve the cell score and shape at the given coordinates
+        // if the cell is out-of-bounds, return {score: null, shape: null}
+        let cell = { score: null, shape: null };
+        if (this.cellInBounds(_y, _x)) {
+            cell.score = this.layout[_y][_x].cellScore;
+            cell.shape = this.layout[_y][_x].shapes[0];
+        }
+        return cell;
+    }
 
-        // check if point is in bounds
-        if (this.cellInBounds(coordY, coordX - 1)) {
-            cellUL.score = this.layout[coordY][coordX - 1].cellScore;
-            cellUL.shape = this.layout[coordY][coordX - 1].shapes[0];
-        }
-        if (this.cellInBounds(coordY, coordX)) {
-            cellUR.score = this.layout[coordY][coordX].cellScore;
-            cellUR.shape = this.layout[coordY][coordX].shapes[0];
-        }
-        if (this.cellInBounds(coordY - 1, coordX - 1)) {
-            cellDL.score = this.layout[coordY - 1][coordX - 1].cellScore;
-            cellDL.shape = this.layout[coordY - 1][coordX - 1].shapes[0];
-        }
-        if (this.cellInBounds(coordY - 1, coordX)) {
-            cellDR.score = this.layout[coordY - 1][coordX].cellScore;
-            cellDR.shape = this.layout[coordY - 1][coordX].shapes[0];
-        }
+    calcDiff(coordY, coordX, dir) {
+        let cellUL = this.retrieveCell(coordY, coordX - 1);
+        let cellUR = this.retrieveCell(coordY, coordX);
+        let cellDL = this.retrieveCell(coordY - 1, coordX - 1);
+        let cellDR = this.retrieveCell(coordY - 1, coordX);
 
         if (dir == "up") {
             if (cellUL.score == 0 && cellUR.score == 0) {
