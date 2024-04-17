@@ -3,37 +3,18 @@ class Board {
         // Make sure boards start and end are always left-right or bottom-top
         // fix left-right orientation
         this.orientation = _orientation; // horizontal or vertical
+        [this.startCoords, this.endCoords] = this.setBoardDirection(_startCoords, _endCoords, this.orientation);
 
-        if (this.orientation == "x") {
-            if (_startCoords.x < _endCoords.x) {
-                this.startCoords = _startCoords;
-                this.endCoords = _endCoords;
-            } else {
-                this.startCoords = _endCoords;
-                this.endCoords = _startCoords;
-            }
+        // this.width; // width of the board
+        // this.thickness; // thickness of the board
 
-        } else if (this.orientation == "y") {
-            // fix bottom-top orientation
-            if (_startCoords.y < _endCoords.y) {
-                this.startCoords = _startCoords;
-                this.endCoords = _endCoords;
-            } else {
-                this.startCoords = _endCoords;
-                this.endCoords = _startCoords;
-            }
-        }
-
-        this.width; // width of the board
-        this.thickness; // thickness of the board
-
-        this.poi = { // points of interest
-            lJoints: ["", ""], // [start edge, end edge]
-            tJoints: [], // array of x-values for T-joint holes 
-            xJoints: [],
-            shapes: [{}], // array of objs with shape name and x-value position
-        }
-        this.boardLabel;
+        // this.poi = { // points of interest
+        //     lJoints: ["", ""], // [start edge, end edge]
+        //     tJoints: [], // array of x-values for T-joint holes 
+        //     xJoints: [],
+        //     shapes: [{}], // array of objs with shape name and x-value position
+        // }
+        // this.boardLabel;
     }
 
     getLength() {
@@ -56,5 +37,37 @@ class Board {
     getCoords() {
         // return the start and end coordinates
         return [this.startCoords, this.endCoords];
+    }
+
+    setBoardDirection(_startCoords, _endCoords, _orientation){
+        // always build boards with the start side as the smaller x or y value
+
+        let startCoords;
+        let endCoords;
+
+        if (this.orientation == "x") {
+            // fix left-right orientation
+            if (_startCoords.x < _endCoords.x) {
+                startCoords = _startCoords;
+                endCoords = _endCoords;
+            } else {
+                startCoords = _endCoords;
+                endCoords = _startCoords;
+            }
+
+        } else if (this.orientation == "y") {
+            // fix bottom-top orientation
+            if (_startCoords.y < _endCoords.y) {
+                startCoords = _startCoords;
+                endCoords = _endCoords;
+            } else {
+                startCoords = _endCoords;
+                endCoords = _startCoords;
+            }
+        } else {
+            throw new Error("Board missing orientation, unable to create board");
+        }
+
+        return [startCoords, endCoords];
     }
 }

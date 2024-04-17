@@ -5,7 +5,7 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoard = false;
+        this.showBoards = false;
     }
 
     createAutomata() {
@@ -20,6 +20,7 @@ class Case {
         for (let i = 0; i < this.solution.shapes.length; i++) {
             let automaton = new Automaton(this.solution.layout, this.solution.shapes[i]);
             automaton.plantSeed();
+            // automaton.plantSeed();
             this.automata.push(automaton);
         }
     }
@@ -28,7 +29,7 @@ class Case {
         // 0. grow the perimeter dots around the edge of the layout
         let perimeter = this.automata[0];
         perimeter.growMode = -1; // grow perimeters
-        while (perimeter.grow() != false) { }
+        while (perimeter.grow([]) != false) { }
         perimeter.isGrowing = false;
         
         // 1. grow shelves along all the bottoms
@@ -37,7 +38,7 @@ class Case {
             let automaton = this.automata[i];
             if (automaton.isGrowing) {
                 automaton.growMode = 0; // grow bottoms first
-                while (automaton.grow() != false) { }
+                while (automaton.grow([]) != false) { }
                 automaton.growMode = 1; // prep for growing rightward
             }
         }
@@ -64,12 +65,11 @@ class Case {
             automaton.moveRight = false;
             automaton.isGrowing = true;
         }
-
+        
         while (this.automata.some(automaton => automaton.isGrowing)) {
             for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
                 if (automaton.isGrowing) {
-
                     automaton.isGrowing = automaton.grow(this.allDots);
 
                     this.saveAllDots();
@@ -144,7 +144,7 @@ class Case {
     }
 
     showResult() {
-        if (this.showBoard) {
+        if (this.showBoards) {
             // show boards
             for (let i = 0; i < this.boards.length; i++) {
                 let board = this.boards[i];
