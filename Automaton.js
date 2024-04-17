@@ -43,6 +43,9 @@ class Automaton {
         let currScoreRightUp = this.calcDiff(currY, currX + 1, "up");
         let currScoreLeftUp = this.calcDiff(currY, currX - 1, "up");
 
+        let currScoreSideUp = this.moveRight ? currScoreRightUp : currScoreLeftUp;
+        let offsetX = this.moveRight ? 1 : -1;
+
         switch (this.growMode) {
             case -1: // grow perimeter
                 // step 1. grow right along the bottom
@@ -71,9 +74,9 @@ class Automaton {
                     return false;
                 }
                 break;
-            case 1: // move horizontally, keep moving right or move up
-                if (currScoreRightUp < currScoreUp) {
-                    return this.addDot(currY, currX + 1);
+            case 1: // move horizontally, away from bottom
+                if (currScoreSideUp < currScoreUp) {
+                    return this.addDot(currY, currX + offsetX);
                 } else {
                     this.growMode = 2; // move vertically
                     return true;
@@ -135,60 +138,6 @@ class Automaton {
                     // three-way tie breaker
                     return this.addDot(currY + 1, currX);
                 }
-
-                break;
-            case 4: // move leftward
-
-                // - grow fixes:
-                // - (done) 1. automaton know about all dots, not just their own
-                // - (done) 2. all automaton grow their full bottom support
-                // - (done) 3. then switch to growing one at a time (L and R) together
-                // - 4. die on line hits
-                // - 5. if about to travel parallel to another automaton for 2 moves, instead intersect with it on that second move
-
-
-                let currDot = {
-                    x: this.dots[0].x,
-                    y: this.dots[0].y
-                };
-                let newDot = {
-                    x: currDot.x - 1,
-                    y: currDot.y
-                };
-
-                // check currDot
-                // let cellUL = { score: null, shape: null };
-                // if (this.cellInBounds(currDot.y, currDot.x - 1)) {
-                //     cellUL.score = this.layout[currDot.y][currDot.x - 1].cellScore;
-                //     cellUL.shape = this.layout[currDot.y][currDot.x - 1].shapes[0];
-                // }
-
-                // check if the next cell is occupied by a shape
-                if (cellUL.shape) {
-                    // grow vertically
-                    this.growMode = 2;
-
-                    return true;
-                }
-                // check out of bounds
-                else if (currDot.x <= 0) {
-                    return false;
-                }
-                // check if next dot intersects with a board
-                else if (this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot))) {
-                    // todo: move into addDot()
-                    // save the occupied spot to connect the boards together, then stop growing
-                    this.dots.unshift(newDot); // add to beginning
-                    // todo: switch to addDots
-                    return false;
-                }
-                else {
-                    // clear to the left, keep growing
-                    this.dots.unshift(newDot);
-                    // todo: switch to addDotes
-                    return true;
-                }
-
                 break;
         }
 
@@ -209,11 +158,9 @@ class Automaton {
         } else {
             this.dots.unshift({ x: _x, y: _y });
             // reset to leftward rule
-            this.growMode = 4;
         }
 
         // END CASES
-
         // 1. end if this dot is in allDots (collision)
         let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify({ x: _x, y: _y }));
         let bottom = (_y == 0 && _x <= this.layout[0].length);
@@ -229,9 +176,9 @@ class Automaton {
             // search allDots for a dot that is one dot to the right of secondLastDot
             let secondRightDot = { x: secondLastDot.x + 1, y: secondLastDot.y };
             let secondRightDotCollision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(secondRightDot));
-            
+
             let checkY = lastDot.y != secondLastDot.y;
-            
+
             if (rightDotCollision && secondRightDotCollision && checkY) {
                 // remove lastDot
                 this.dots.pop();
