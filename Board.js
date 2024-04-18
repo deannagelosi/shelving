@@ -65,7 +65,7 @@ class Board {
                 endCoords = _startCoords;
             }
         } else {
-            throw new Error("Board missing orientation, unable to create board");
+            throw new Error("Board missing orientation. start: ", _startCoords, "end: ", _endCoords, "orientation: ", _orientation);
         }
 
         return [startCoords, endCoords];
