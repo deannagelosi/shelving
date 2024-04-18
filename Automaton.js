@@ -10,6 +10,7 @@ class Automaton {
 
         this.moveRight = true;
         this.isGrowing = true;
+        this.zeroCounter = 0;
 
         this.allDots = _allDots;
     }
@@ -39,11 +40,11 @@ class Automaton {
         let cellDL = this.retrieveCell(currY - 1, currX - 1);
         let cellDR = this.retrieveCell(currY - 1, currX);
 
-        let currScoreUp = this.calcDiff(currY, currX, "up");
-        let currScoreRightUp = this.calcDiff(currY, currX + 1, "up");
-        let currScoreLeftUp = this.calcDiff(currY, currX - 1, "up");
+        let currScore = this.calcDiff(currY, currX);
+        let currScoreRight = this.calcDiff(currY, currX + 1);
+        let currScoreLeft = this.calcDiff(currY, currX - 1);
 
-        let currScoreSideUp = this.moveRight ? currScoreRightUp : currScoreLeftUp;
+        let nextScore = this.moveRight ? currScoreRight : currScoreLeft;
         let offsetX = this.moveRight ? 1 : -1;
 
         switch (this.growMode) {
@@ -75,16 +76,38 @@ class Automaton {
                 }
                 break;
             case 1: // move horizontally, away from bottom
-                if (currScoreSideUp < currScoreUp) {
+                if (nextScore < currScore) {
+                    // next spot lower score, move over to it
                     return this.addDot(currY, currX + offsetX);
-                } else {
+                } else if (currScore == 0 && nextScore == 0) {
+                    // when find a zero score, locate the middle of the 0 scores
+                    // add the dot, but also count it
+                    this.zeroCounter += 1;
+                    return this.addDot(currY, currX + offsetX);
+                }
+                else if (nextScore > currScore && this.zeroCounter > 0) {
+                    // next spot is higher and just left a zero section
+                    // remove half the dots, to return to the middle of the 0 section
+                    let pops = Math.floor(this.zeroCounter / 2);
+                    if (this.moveRight) {
+                        this.dots.splice(-pops, pops);
+                    } else {
+                        this.dots.splice(0, pops);
+                    }
+
+                    // reset and switch to vertical growth
+                    this.zeroCounter = 0;
+                    this.growMode = 2;
+                    return true;
+                }
+                else {
                     this.growMode = 2; // move vertically
                     return true;
                 }
                 break;
             case 2: // move vertically along limited path
                 // both cells are occupied by a shape
-                if (currScoreUp == 1000) {
+                if (currScore == 1000) {
                     // are they the same shape or different shapes
                     if (cellUL.shape === cellUR.shape) {
                         // turn left or right
@@ -109,15 +132,15 @@ class Automaton {
                 }
                 break;
             case 3: // move vertically with multiple options
-                if (currScoreUp == 0 || currScoreUp == 1) {
+                if (currScore == 0 || currScore == 1) {
                     // both sides same number, split between them
                     return this.addDot(currY + 1, currX);
                 }
 
                 let scores = [
-                    { score: currScoreLeftUp, x: currX - 1, y: currY, dir: "left" },
-                    { score: currScoreUp, x: currX, y: currY + 1, dir: "center" },
-                    { score: currScoreRightUp, x: currX + 1, y: currY, dir: "right" }
+                    { score: currScoreLeft, x: currX - 1, y: currY, dir: "left" },
+                    { score: currScore, x: currX, y: currY + 1, dir: "center" },
+                    { score: currScoreRight, x: currX + 1, y: currY, dir: "right" }
                 ];
 
                 scores.sort((a, b) => a.score - b.score);
@@ -200,13 +223,13 @@ class Automaton {
         }
     }
 
-    checkParallel(newDot, lastDot, growing, yOffset, xOffset) {       
+    checkParallel(newDot, lastDot, growing, yOffset, xOffset) {
         if (growing == true) {
             let parallelDot1 = { x: newDot.x + xOffset, y: newDot.y + yOffset };
             let parallelDot2 = { x: lastDot.x + xOffset, y: lastDot.y + yOffset };
             let parallelDotCollision1 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot1));
             let parallelDotCollision2 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot2));
-    
+            
             if (parallelDotCollision1 && parallelDotCollision2) {
                 // use the intersecting dot instead and stop growth
                 newDot = parallelDot2;
@@ -228,32 +251,18 @@ class Automaton {
         return cell;
     }
 
-    calcDiff(coordY, coordX, dir) {
+    calcDiff(coordY, coordX) {
+        // calculate the difference in score between cells UL and UR
         let cellUL = this.retrieveCell(coordY, coordX - 1);
         let cellUR = this.retrieveCell(coordY, coordX);
-        let cellDL = this.retrieveCell(coordY - 1, coordX - 1);
-        let cellDR = this.retrieveCell(coordY - 1, coordX);
 
-        if (dir == "up") {
-            // check for shape collision
-            if (cellUL.shape != null && cellUR.shape != null) {
-                return 1000; // arbitrary large number
-            } else {
-                return Math.abs(cellUL.score - cellUR.score);
-            }
-        } else if (dir == "left") {
-            // if UL and DL are different shapes, the return the score
-            // if UL and DL are the same shape, return -2
-            if (cellUL.shape !== cellDL.shape) {
-                return Math.abs(cellUL.score - cellDL.score);
-            } else {
-                return -2;
-            }
-        } else if (dir == "right") {
-            // if UR and DR are different shapes, the return the score
-            // if UR and DR are the same shape, return -2
-
+        // check for shape collision
+        if (cellUL.shape != null && cellUR.shape != null) {
+            return 1000; // arbitrary large number
+        } else {
+            return Math.abs(cellUL.score - cellUR.score);
         }
+
     }
 
     dotInBounds(coordY, coordX) {
