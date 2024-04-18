@@ -95,7 +95,7 @@ class Automaton {
                             // turn right
                             return this.addDot(currY, currX + 1);
                         } else {
-                            console.log("No path forward, got stuck. currY: ", currY, " currX: ", currX);
+                            console.log("No path forward. currY: ", currY, " currX: ", currX);
                             return false;
                         }
                     } else {
@@ -147,59 +147,74 @@ class Automaton {
     //-- Helper methods --//
     addDot(_y, _x) {
         let growing = true;
-        // check if the dot is in bounds
+        let newDot = { x: _x, y: _y };
+
+        // end growth cases:
+        // 1. dot out of bounds
         if (!this.dotInBounds(_y, _x)) {
             return false;
         }
-
-        // add dot
-        if (this.moveRight == true) {
-            this.dots.push({ x: _x, y: _y });
-        } else {
-            this.dots.unshift({ x: _x, y: _y });
-            // reset to leftward rule
-        }
-
-        // END CASES
-        // 1. end if this dot is in allDots (collision)
+        // 2. dot collision with existing dots (intersection)
         let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify({ x: _x, y: _y }));
         let bottom = (_y == 0 && _x <= this.layout[0].length);
-
-        // 2. end if the dot is parallel to another automaton for 2 moves
-        // get the last two dots in dots[]
-        if (this.dots.length >= 2) {
-            let lastDot = this.dots[this.dots.length - 1];
-            let secondLastDot = this.dots[this.dots.length - 2];
-            // search allDots for a dot that is one dot to the right of lastDot
-            let rightDot = { x: lastDot.x + 1, y: lastDot.y };
-            let rightDotCollision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(rightDot));
-            // search allDots for a dot that is one dot to the right of secondLastDot
-            let secondRightDot = { x: secondLastDot.x + 1, y: secondLastDot.y };
-            let secondRightDotCollision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(secondRightDot));
-
-            let checkY = lastDot.y != secondLastDot.y;
-
-            if (rightDotCollision && secondRightDotCollision && checkY) {
-                // remove lastDot
-                this.dots.pop();
-                // add the intersecting dot to the right
-                this.dots.push(secondRightDot);
-                this.allDots.push({ x: _x, y: _y });
-                growing = false;
-            }
-        }
-
-        this.allDots.push({ x: _x, y: _y });
-
         if (!bottom && collision) {
             growing = false;
         }
+        // 3. last two new dots are parallel to existing dots
+        if (this.dots.length > 0) {
+            let lastDot;
+            if (this.moveRight == true) {
+                lastDot = this.dots[this.dots.length - 1];
+            } else {
+                lastDot = this.dots[0];
+            }
 
+            // determine the direction of growth
+            if (newDot.x == lastDot.x) {
+                // vertical growth. look for parallels on left and right
+                // yOffset = 0, xOffset = 1;
+                [newDot, growing] = this.checkParallel(newDot, lastDot, growing, 0, 1);
+                [newDot, growing] = this.checkParallel(newDot, lastDot, growing, 0, -1);
+            } else if (newDot.y == lastDot.y) {
+                // horizontal growth. look for parallels on top and bottom
+                // yOffset = 1, xOffset = 0;
+                [newDot, growing] = this.checkParallel(newDot, lastDot, growing, 1, 0);
+                [newDot, growing] = this.checkParallel(newDot, lastDot, growing, -1, 0);
+            }
+        }
+
+        // add dot to the end or beginning of the array
+        if (this.moveRight == true) {
+            this.dots.push(newDot);
+        } else {
+            this.dots.unshift(newDot);
+            // reset to leftward rule
+        }
+        this.allDots.push(newDot);
+
+        // return continue or end growth
         if (growing == false) {
             return false;
         } else {
             return true;
         }
+    }
+
+    checkParallel(newDot, lastDot, growing, yOffset, xOffset) {       
+        if (growing == true) {
+            let parallelDot1 = { x: newDot.x + xOffset, y: newDot.y + yOffset };
+            let parallelDot2 = { x: lastDot.x + xOffset, y: lastDot.y + yOffset };
+            let parallelDotCollision1 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot1));
+            let parallelDotCollision2 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot2));
+    
+            if (parallelDotCollision1 && parallelDotCollision2) {
+                // use the intersecting dot instead and stop growth
+                newDot = parallelDot2;
+                growing = false;
+            }
+        }
+
+        return [newDot, growing];
     }
 
     retrieveCell(_y, _x) {
