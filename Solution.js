@@ -213,18 +213,18 @@ class Solution {
                     overlappingCells += this.layout[i][j].shapes.length - 1;
                 }
 
-                // the number of cells with a score of 8 (no adjacent empty cells) and calc ratio)
+                // the number of cells with a score of 8 (no adjacent empty cells) and calc ratio
                 if (this.layout[i][j].shapes.length == 0) {
                     // cell is empty
-                    let cScore = 0;
+                    let cScore = 8;
                     // check the 8 possible adjacent cells
                     for (let x = Math.max(0, i - 1); x <= Math.min(i + 1, this.layout.length - 1); x++) {
                         for (let y = Math.max(0, j - 1); y <= Math.min(j + 1, this.layout[0].length - 1); y++) {
                             // don't count the cell itself
                             if (x !== i || y !== j) {
                                 // count if the adjacent cell is empty
-                                if (this.layout[x][y].shapes.length == 0) {
-                                    cScore++;
+                                if (this.layout[x][y].shapes.length > 0) {
+                                    cScore--;
                                 }
                             }
                         }
