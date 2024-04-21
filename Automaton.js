@@ -179,10 +179,11 @@ class Automaton {
             return false;
         }
         // 2. dot collision with existing dots (intersection)
-        let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify({ x: _x, y: _y }));
-        let bottom = (_y == 0);
+        let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot));
+        let bottom = (_y == 0 && this.growMode != -1);
         if (!bottom && collision) {
             growing = false;
+
         }
         // 3. last two new dots are parallel to existing dots
         if (this.dots.length > 0) {
@@ -235,7 +236,7 @@ class Automaton {
             startSlice = this.dots.length - num;
             startSplice = -num;
         }
-        
+
         // remove dots from allDots
         let toRemove = this.dots.slice(startSlice, startSlice + num);
         for (let i = 0; i < this.allDots.length; i++) {

@@ -5,6 +5,8 @@ class Board {
         this.orientation = _orientation; // horizontal or vertical
         [this.startCoords, this.endCoords] = this.setBoardDirection(_startCoords, _endCoords, this.orientation);
 
+        this.merged = false; // if the board is merged with another board later
+
         // this.width; // width of the board
         // this.thickness; // thickness of the board
 

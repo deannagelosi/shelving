@@ -5,7 +5,7 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoards = false;
+        this.showBoards = true;
     }
 
     createAutomata() {
@@ -18,16 +18,15 @@ class Case {
         while (perimeter.grow([]) != false) { }
         perimeter.isGrowing = false;
         this.automata.push(perimeter);
-        
+
         // create automata for each shape
         for (let i = 0; i < this.solution.shapes.length; i++) {
             let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
             automaton.plantSeed();
-            // automaton.plantSeed();
             this.automata.push(automaton);
         }
     }
-    
+
     growAutomata() {
         // bottom: grow shelves along all the bottoms
         // note: skip the first automaton (perimeter) for all growing steps
@@ -39,7 +38,7 @@ class Case {
                 automaton.growMode = 1; // prep for growing rightward
             }
         }
-                
+
         // right: grow rightward (every automaton grows once per loop)
         while (this.automata.some(automaton => automaton.isGrowing)) {
             for (let i = 1; i < this.automata.length; i++) {
@@ -58,7 +57,7 @@ class Case {
             automaton.moveRight = false;
             automaton.growMode = 1; // grow horizontally, left
         }
-        
+
         while (this.automata.some(automaton => automaton.isGrowing)) {
             for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
@@ -108,30 +107,50 @@ class Case {
             ));
         }
 
-        // // merge boards - keep merging until no more merges can be made
-        // let merging = true;
-        // while (merging == true) {
-        //     merging = false;
+        // merge boards - keep merging until no more merges can be made
+        let merging = true;
+        while (merging == true) {
+            merging = false;
 
-        //     for (let i = 0; i < this.boards.length; i++) {
-        //         for (let j = 0; j < this.boards.length; j++) {
-        //             if (i != j) {
-        //                 let board1 = this.boards[i];
-        //                 let board2 = this.boards[j];
-        //                 let mergedBoard = this.mergeBoards(board1, board2);
-        //                 if (mergedBoard) {
-        //                     merging = true;
-        //                     // remove the two boards and add the merged board
-        //                     this.boards.splice(j, 1);
-        //                     this.boards.splice(i, 1);
-        //                     this.boards.push(mergedBoard);
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+            // make a new list of boards that are merged and unmerged
+            let newBoards = [];
 
-        // console.log(this.boards);
+            // find boards that can be merged
+            for (let i = 0; i < this.boards.length; i++) {
+                let board1 = this.boards[i];
+
+                for (let j = 0; j < this.boards.length; j++) {
+                    let board2 = this.boards[j];
+
+                    if (i != j && !board1.merged && !board2.merged) {
+                        let mergedBoard = this.mergeBoards(board1, board2);
+
+                        if (mergedBoard) {
+                            // add the merged board to the new boards list
+                            board1.merged = true;
+                            board2.merged = true;
+                            newBoards.push(mergedBoard);
+
+                            merging = true;
+                        }
+                    }
+                }
+            }
+
+            // add unmerged boards to the new boards list
+            for (let i = 0; i < this.boards.length; i++) {
+                if (!this.boards[i].merged) {
+                    newBoards.push(this.boards[i]);
+                }
+            }
+
+            // update with merged and unmerged boards
+            this.boards = newBoards;
+
+            for (let board of this.boards) {
+                board.merged = false;
+            }
+        }
     }
 
     showResult() {
@@ -174,24 +193,29 @@ class Case {
         // if two boards are touching or overlapping and they face the same orientation, merge them
         if (board1.orientation === board2.orientation) {
             let orientation = board1.orientation;
-            let oppositeOrientation = orientation == "x" ? "y" : "x";
-            let aligned = board1.startCoords[oppositeOrientation] == board2.startCoords[oppositeOrientation];
+            let axis = orientation == "x" ? "y" : "x";
+            let aligned = board1.startCoords[axis] == board2.startCoords[axis];
 
             // check for touching or overlapping on axis
             if (aligned) {
                 let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] <= board2.startCoords[orientation]
                 let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] <= board1.startCoords[orientation]
+                
+                if (board1Overlapped || board2Overlapped) {
+                    // merge the boards
+                    // find the smallest start and biggest end, make new board
+                    let bothStarts = [board1.startCoords, board2.startCoords];
+                    let bothEnds = [board1.endCoords, board2.endCoords];
 
-                if (board1Overlapped) {
-                    // merge the boards
-                    return new Board(board1.startCoords, board2.endCoords, board1.orientation);
-                } else if (board2Overlapped) {
-                    // merge the boards
-                    return new Board(board2.startCoords, board1.endCoords, board1.orientation);
-                }
+                    bothStarts.sort((a, b) => a[orientation] - b[orientation]);
+                    bothEnds.sort((a, b) => a[orientation] - b[orientation]);
+
+                    return new Board(bothStarts[0], bothEnds[1], board1.orientation);
+                } 
             }
-            return false;
         }
+
+        return false;
     }
 
     determineOrientation(startCoords, endCoords) {
