@@ -89,10 +89,11 @@ class Automaton {
                     // next spot is higher and just left a zero section
                     // remove half the dots, to return to the middle of the 0 section
                     let pops = Math.floor(this.zeroCounter / 2);
+
                     if (this.moveRight) {
-                        this.dots.splice(-pops, pops);
+                        this.removeDot("end", pops);
                     } else {
-                        this.dots.splice(0, pops);
+                        this.removeDot("start", pops);
                     }
 
                     // reset and switch to vertical growth
@@ -179,7 +180,7 @@ class Automaton {
         }
         // 2. dot collision with existing dots (intersection)
         let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify({ x: _x, y: _y }));
-        let bottom = (_y == 0 && _x <= this.layout[0].length);
+        let bottom = (_y == 0);
         if (!bottom && collision) {
             growing = false;
         }
@@ -223,13 +224,39 @@ class Automaton {
         }
     }
 
+    removeDot(dir, num) {
+        // remove dots from the end or beginning of the array, and how many dots to remove
+        let startSlice;
+        let startSplice;
+        if (dir == "start") {
+            startSlice = 0;
+            startSplice = 0;
+        } else if (dir == "end") {
+            startSlice = this.dots.length - num;
+            startSplice = -num;
+        }
+        
+        // remove dots from allDots
+        let toRemove = this.dots.slice(startSlice, startSlice + num);
+        for (let i = 0; i < this.allDots.length; i++) {
+            let dot = this.allDots[i];
+            let remove = toRemove.some(removeDot => JSON.stringify(removeDot) === JSON.stringify(dot));
+            if (remove) {
+                this.allDots.splice(i, 1);
+            }
+        }
+
+        // remove dots from the automaton
+        this.dots.splice(startSplice, num);
+    }
+
     checkParallel(newDot, lastDot, growing, yOffset, xOffset) {
         if (growing == true) {
             let parallelDot1 = { x: newDot.x + xOffset, y: newDot.y + yOffset };
             let parallelDot2 = { x: lastDot.x + xOffset, y: lastDot.y + yOffset };
             let parallelDotCollision1 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot1));
             let parallelDotCollision2 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot2));
-            
+
             if (parallelDotCollision1 && parallelDotCollision2) {
                 // use the intersecting dot instead and stop growth
                 newDot = parallelDot2;
