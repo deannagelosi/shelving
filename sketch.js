@@ -5,8 +5,9 @@ let solutions = [];
 let sa; // simulated annealing
 let initialScore;
 let loopCount;
+let newCase;
 
-let useExample = true;
+let useExample = false;
 
 function preload() {
     shapeData = loadJSON('data/sunny-shapes.json');
@@ -93,13 +94,21 @@ function createCase() {
     clear();
     background(255);
     // build case
-    let newCase = new Case(sa.currSolution);
+    newCase = new Case(sa.currSolution);
     newCase.createAutomata();
     newCase.growAutomata();
     newCase.makeBoards();
 
     // show result
-    console.log(sa.currSolution);
     sa.currSolution.showLayout();
     newCase.showResult();
+    
+    console.log(sa.currSolution);
 }
+
+function keyPressed() {
+    if (key === 's' || key === 'S') {
+        // save current case as SVG
+        newCase.renderBoards();
+    }
+  }

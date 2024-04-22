@@ -6,6 +6,8 @@ class Case {
         this.boards = [];
 
         this.showBoards = true;
+
+        this.graphic = createGraphics(canvasWidth + this.solution.cellSize, canvasHeight, SVG);
     }
 
     createAutomata() {
@@ -190,10 +192,10 @@ class Case {
 
     renderBoards() {
         // use board objects and translating them into rectangles
-        rectMode(CORNERS);
-        noFill();
-        stroke(0);
-        strokeWeight(1);
+        this.graphic.rectMode(CORNERS);
+        this.graphic.noFill();
+        this.graphic.stroke(0);
+        this.graphic.strokeWeight(1);
 
         for (let i = 0; i < this.boards.length; i++) {
             let board = this.boards[i];
@@ -203,18 +205,16 @@ class Case {
             let endRectY;
             let boardWidth = this.solution.cellSize / 2;
             if (board.orientation === "x") {
-                stroke("red");
                 endRectX = board.endCoords.x * this.solution.cellSize + boardWidth;
                 endRectY = startRectY - boardWidth;
             } else if (board.orientation === "y") {
-                stroke("blue");
                 endRectX = startRectX + boardWidth;
                 endRectY = canvasHeight - (board.endCoords.y * this.solution.cellSize) - boardWidth;
             }
 
-            rect(startRectX, startRectY, endRectX, endRectY);
+            this.graphic.rect(startRectX, startRectY, endRectX, endRectY);
         }
-    
+        this.graphic.save("boards.svg")
     }
 
     //-- Helper Methods --//
