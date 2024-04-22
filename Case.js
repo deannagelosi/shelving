@@ -188,6 +188,35 @@ class Case {
 
     }
 
+    renderBoards() {
+        // use board objects and translating them into rectangles
+        rectMode(CORNERS);
+        noFill();
+        stroke(0);
+        strokeWeight(1);
+
+        for (let i = 0; i < this.boards.length; i++) {
+            let board = this.boards[i];
+            let startRectX = board.startCoords.x * this.solution.cellSize;
+            let startRectY = canvasHeight - (board.startCoords.y * this.solution.cellSize);
+            let endRectX;
+            let endRectY;
+            let boardWidth = this.solution.cellSize / 2;
+            if (board.orientation === "x") {
+                stroke("red");
+                endRectX = board.endCoords.x * this.solution.cellSize + boardWidth;
+                endRectY = startRectY - boardWidth;
+            } else if (board.orientation === "y") {
+                stroke("blue");
+                endRectX = startRectX + boardWidth;
+                endRectY = canvasHeight - (board.endCoords.y * this.solution.cellSize) - boardWidth;
+            }
+
+            rect(startRectX, startRectY, endRectX, endRectY);
+        }
+    
+    }
+
     //-- Helper Methods --//
     mergeBoards(board1, board2) {
         // if two boards are touching or overlapping and they face the same orientation, merge them
@@ -200,7 +229,7 @@ class Case {
             if (aligned) {
                 let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] <= board2.startCoords[orientation]
                 let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] <= board1.startCoords[orientation]
-                
+
                 if (board1Overlapped || board2Overlapped) {
                     // merge the boards
                     // find the smallest start and biggest end, make new board
@@ -211,7 +240,7 @@ class Case {
                     bothEnds.sort((a, b) => a[orientation] - b[orientation]);
 
                     return new Board(bothStarts[0], bothEnds[1], board1.orientation);
-                } 
+                }
             }
         }
 
