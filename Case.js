@@ -5,7 +5,8 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoards = true;
+        this.showBoards = false;
+        this.showAllDots = false;
 
         this.graphic = createGraphics(canvasWidth + this.solution.cellSize, canvasHeight, SVG);
     }
@@ -184,6 +185,19 @@ class Case {
                         10
                     );
                 }
+            }
+        }
+
+        if (this.showAllDots) {
+            // show allDots
+            for (let i = 0; i < this.allDots.length; i++) {
+                fill(color(random(255), random(255), random(255)));
+                noStroke(); // No border for the dots
+                circle(
+                    this.allDots[i].x * this.solution.cellSize,
+                    canvasHeight - (this.allDots[i].y * this.solution.cellSize),
+                    10
+                );
             }
         }
 
