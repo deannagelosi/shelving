@@ -1,43 +1,51 @@
 # todo
 
-## Software Test (Thursday, 4/18): Advanced UI Features
+## This Week's Deliverables
+
+- Wednesday: final Mike meeting
+  - algorithms (annealing and automata)
+  - center of mass
+  - full workflow (input -> generation -> JSON -> SVG)
+- Thursday
+  - Digital Sculpture
+    - SVGs into Rhino, extrude, render in a scene (Wednesday)
+  - Critical Technical Practice
+    - full flow
+    - design details for asking
+    - Monday: final presentation
 
 ### Import and Export
 
 - **turn on input objects**
 - **export and import solution**
+- click a cell a second time to deselect it
 - save objects for future use
 
 ### Generation
 
 #### Automata
 
-- **dots along border first**
-- **terminate when hitting an existing line (save to allDots each automaton's dots)**
-- **merge parallel lines**
-  - when using this.addDot, ask "is this new dot that was just added 1 away from an existing dot?"
-  - Solution Method 1: if it is, add that neighboring dot to the automaton dots array as well, return false
-  - Solution Method 2: if that is to simple and doesn't work, we can look for "running parallel", ie next to a dot 2 in a row, etc"
-- sometimes objects bisected
-- unnecessary turns
-- shelf merge
+- when growing rightward, find the center of zero-scores like in case 1
 
 #### Annealing
 
-- steadily raise temperature if can't solve
-- center of mass: another scoring mechanism
+- **center of mass: another scoring mechanism**
+  - add weight to Shape class
 - score for clusters of numbers, not just 8s
+- steadily raise temperature if can't solve
 - random 1/6th option is move a shape to a new random position?
-- score on "spread out-ness" so it tends to move towards each other rather than away?
-  - weight heavier when temp is high
+- score on "spread out-ness" so it tends to move towards each other rather than away, weight heavier when temp is high
 - grid-based, non-rectangular perimeters
   - doesn't change in size (v1)
 
 ### UI Design
 
 - **expand canvas for entire UI**
-- **turn off numbers**
-- **grid paper colors**
+- toggles
+  - **turn off numbers**
+  - turn off boarders
+  - all black boards, merged / segmented boards
+- grid paper colors
 - select from list of objects
 - overall design
 - buttons
@@ -60,6 +68,7 @@
 
 ## Early Summer Stretch Features
 
+- unnecessary turns
 - organic shaped perimeters
   - how to create? in p5? or in a library?
 - perimeters that scale
