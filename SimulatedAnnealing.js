@@ -4,19 +4,29 @@ class SimulatedAnnealing {
         this.tempMin = tempMin; // minimum system temperature
 
         this.tempCurr = tempMax; // current system temperature     
-        this.lastTemp = tempMax; // last system temperature   
+        this.lastTemp = tempMax; // last system temperature
         this.currSolution = initSolution; // initial solution
         this.nextSolution = null; // next solution
+
+        this.annealCounter = 0;
+        this.scoreThresholdMod = 0;
     }
 
     epoch() {
         // returns next solution or stops the optimization
+        if (this.annealCounter > 150) {
+            this.tempCurr = this.tempMax;
+            this.scoreThresholdMod += 0.01;
+            this.annealCounter = 0;
+        }
 
+        this.currSolution.eightThreshold += this.scoreThresholdMod;
         this.currSolution.makeLayout(); // generate the layout of the current solution
         this.currSolution.calcScore(); // current score (energy) of the system
         let currScore = this.currSolution.score;
-
+        
         this.nextSolution = this.currSolution.makeNeighbor(this.tempCurr, this.tempMax, this.tempMin); // generate the next (neighbor) solution
+        this.nextSolution.eightThreshold += this.scoreThresholdMod;
         this.nextSolution.makeLayout(); // generate the layout of the next solution
         this.nextSolution.calcScore(); // next score (energy) of the system
         let nextScore = this.nextSolution.score; // next score
@@ -36,6 +46,7 @@ class SimulatedAnnealing {
             // re-anneal when final solution is greater than initial solution
             if (this.currSolution.score > 0) {
                 // re-anneal at a lower maximum temperature
+                this.annealCounter++;
                 this.tempCurr = this.lastTemp * 0.5;
                 if (this.tempCurr < this.tempMin) {
                     this.tempCurr = this.tempMin * 1.2;

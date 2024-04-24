@@ -4,33 +4,34 @@ class Solution {
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
         this.score;
         this.cellSize;
+        this.eightThreshold = 0.05; // ratio of cells with a cScore of 8
     }
 
     exampleSolution() {
         // test shapes
-        this.shapes[0].posX = 8;
-        this.shapes[0].posY = 0;
+        this.shapes[0].posX = 17;
+        this.shapes[0].posY = 12;
 
-        this.shapes[1].posX = 7;
-        this.shapes[1].posY = 20;
+        this.shapes[1].posX = 0;
+        this.shapes[1].posY = 0;
 
-        this.shapes[2].posX = 4;
-        this.shapes[2].posY = 0;
+        this.shapes[2].posX = 9;
+        this.shapes[2].posY = 7;
 
-        this.shapes[3].posX = 0;  
-        this.shapes[3].posY = 0;
+        this.shapes[3].posX = 14;  
+        this.shapes[3].posY = 7;
 
-        this.shapes[4].posX = 9;
-        this.shapes[4].posY = 16;
+        this.shapes[4].posX = 8;
+        this.shapes[4].posY = 0;
 
-        this.shapes[5].posX = 11;
-        this.shapes[5].posY = 6;
+        this.shapes[5].posX = 0;
+        this.shapes[5].posY = 8;
 
-        this.shapes[6].posX = 0;
-        this.shapes[6].posY = 6;
+        this.shapes[6].posX = 18;
+        this.shapes[6].posY = 0;
 
-        this.shapes[7].posX = 1;
-        this.shapes[7].posY = 17;
+        this.shapes[7].posX = 9;
+        this.shapes[7].posY = 12;
 
         // sunny's shapes
         // this.shapes[0].posX = 9; // Squash
@@ -76,7 +77,7 @@ class Solution {
             totalArea += this.shapes[i].data.rectArea;
         }
         // add multiplier to give extra space to work with
-        let designArea = totalArea * 2;
+        let designArea = totalArea * 1.5;
         // find the closest rectangle to the designArea
         let width = Math.floor(Math.sqrt(designArea));
         let height = Math.floor(designArea / width);
@@ -305,7 +306,7 @@ class Solution {
             totalYValues += yValue;
         }
 
-        if (overlappingCells == 0 && numCells8 / totalNumCells < 0.05 && totalYValues == 0) {
+        if (overlappingCells == 0 && numCells8 / totalNumCells < this.eightThreshold && totalYValues == 0) {
             this.score = 0;
         } else {
             this.score = (this.layout.length * overlappingCells) + numCells8 + totalYValues;

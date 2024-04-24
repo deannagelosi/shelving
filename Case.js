@@ -17,9 +17,10 @@ class Case {
         // create and grow the perimeter dots around the edge of the layout
         let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], this.allDots, 0, 0);
         perimeter.plantSeed();
-        perimeter.growMode = -1; // grow perimeters
+        perimeter.growModeEnd = -1; // grow perimeters
         while (perimeter.grow([]) != false) { }
-        perimeter.isGrowing = false;
+        perimeter.isGrowingEnd = false; // stop growth on both ends of the automaton
+        perimeter.isGrowingStart = false;
         this.automata.push(perimeter);
 
         // create automata for each shape
@@ -32,40 +33,35 @@ class Case {
 
     growAutomata() {
         // bottom: grow shelves along all the bottoms
-        // note: skip the first automaton (perimeter) for all growing steps
         for (let i = 1; i < this.automata.length; i++) {
             let automaton = this.automata[i];
-            if (automaton.isGrowing) {
-                automaton.growMode = 0; // grow bottoms first
+            if (automaton.isGrowingEnd) {
+                automaton.growModeEnd = 0; // grow bottoms first
                 while (automaton.grow() != false) { }
-                automaton.growMode = 1; // prep for growing rightward
+
+                automaton.growModeStart = 1;
+                automaton.growModeEnd = 1;
+
+                // grow from the end once to get it started
+                automaton.isGrowingEnd = automaton.grow(this.allDots);
             }
         }
 
-        // right: grow rightward (every automaton grows once per loop)
-        while (this.automata.some(automaton => automaton.isGrowing)) {
+        // grow in both directions, one step at a time
+        while (this.automata.some(automaton => automaton.isGrowingEnd || automaton.isGrowingStart)) {
             for (let i = 1; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
-                if (automaton.isGrowing) {
-                    automaton.isGrowing = automaton.grow(this.allDots);
+
+                // grow rightward (from the end of the automaton) once per loop
+                if (automaton.isGrowingEnd) {
+                    automaton.growEnd = true;
+                    automaton.isGrowingEnd = automaton.grow(this.allDots);
                 }
-            }
-        }
 
-        // left: grow leftward (every automaton grows once per loop)
-        // reset for next grow mode
-        for (let i = 1; i < this.automata.length; i++) {
-            let automaton = this.automata[i];
-            automaton.isGrowing = true;
-            automaton.moveRight = false;
-            automaton.growMode = 1; // grow horizontally, left
-        }
-
-        while (this.automata.some(automaton => automaton.isGrowing)) {
-            for (let i = 1; i < this.automata.length; i++) {
-                let automaton = this.automata[i];
-                if (automaton.isGrowing) {
-                    automaton.isGrowing = automaton.grow(this.allDots);
+                // automaton.isGrowingStart = false
+                if (automaton.isGrowingStart) {
+                    automaton.growEnd = false;
+                    automaton.isGrowingStart = automaton.grow(this.allDots);
                 }
             }
         }

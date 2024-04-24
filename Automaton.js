@@ -6,13 +6,14 @@ class Automaton {
         this.startX = _startX || (_startX == 0) ? _startX : this.overhangShift(this.shape.posX);
         this.startY = _startY || (_startY == 0) ? _startY : this.shape.posY;
         this.dots = []; // arrays have objects with x and y keys
-        this.growMode = 0;
-
-        this.moveRight = true;
-        this.isGrowing = true;
+        this.allDots = _allDots; // reference to allDots array shared by all automata
         this.zeroCounter = 0;
 
-        this.allDots = _allDots;
+        this.growModeStart = 0;
+        this.growModeEnd = 0;
+        this.isGrowingStart = true;
+        this.isGrowingEnd = true;
+        this.growEnd = true; // grow from the end of if true, else from the start of the path
     }
 
     plantSeed() {
@@ -22,11 +23,11 @@ class Automaton {
     }
 
     grow() {
-        // rules for growing the automaton path\
+        // rules for growing the automaton path
         let currX;
         let currY;
         let prevX;
-        if (this.moveRight) {
+        if (this.growEnd) {
             // pushing to the array, start with the last dot in the array
             currX = this.dots[this.dots.length - 1].x;
             currY = this.dots[this.dots.length - 1].y;
@@ -51,10 +52,10 @@ class Automaton {
         let currScoreRight = this.calcDiff(currY, currX + 1);
         let currScoreLeft = this.calcDiff(currY, currX - 1);
 
-        let nextScore = this.moveRight ? currScoreRight : currScoreLeft;
-        let offsetX = this.moveRight ? 1 : -1;
+        let nextScore = this.growEnd ? currScoreRight : currScoreLeft;
+        let offsetX = this.growEnd ? 1 : -1;
 
-        switch (this.growMode) {
+        switch (this.getGrowMode()) {
             case -1: // grow perimeter
                 // step 1. grow right along the bottom
                 // check if the next cell to the right exists
@@ -97,7 +98,7 @@ class Automaton {
                     // remove half the dots, to return to the middle of the 0 section
                     let pops = Math.floor(this.zeroCounter / 2);
 
-                    if (this.moveRight) {
+                    if (this.growEnd) {
                         this.removeDot("end", pops);
                     } else {
                         this.removeDot("start", pops);
@@ -105,11 +106,11 @@ class Automaton {
 
                     // reset and switch to vertical growth
                     this.zeroCounter = 0;
-                    this.growMode = 2;
+                    this.setGrowMode(2);
                     return true;
                 }
                 else {
-                    this.growMode = 2; // move vertically
+                    this.setGrowMode(2);
                     return true;
                 }
                 break;
@@ -147,7 +148,7 @@ class Automaton {
                     }
                 } else {
                     // at least one of the cells is empty
-                    this.growMode = 3;
+                    this.setGrowMode(3);
                     return true;
                 }
                 break;
@@ -156,15 +157,25 @@ class Automaton {
                     // both sides same number, split between them
                     return this.addDot(currY + 1, currX);
                 } else if (currScore == 1000) {
-                    this.growMode = 2;
+                    this.setGrowMode(2);
                     return true;
                 }
+
 
                 let scores = [
                     { score: currScoreLeft, x: currX - 1, y: currY, dir: "left" },
                     { score: currScore, x: currX, y: currY + 1, dir: "center" },
                     { score: currScoreRight, x: currX + 1, y: currY, dir: "right" }
                 ];
+
+                // check if one of the options is a place the path has already been
+                if (prevX == currX - 1) {
+                    // path has been to the left
+                    scores[0].score = 2000; // make left option a bad choice
+                } else if (prevX == currX + 1) {
+                    // path has been to the right
+                    scores[2].score = 2000; // make right option a bad choice
+                }
 
                 scores.sort((a, b) => a.score - b.score);
 
@@ -194,7 +205,10 @@ class Automaton {
     addDot(_y, _x) {
         let growing = true;
         let newDot = { x: _x, y: _y };
-
+        
+        if (this.dots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot)) && this.growModeEnd != -1) {
+            console.log("adding a dot that is already in the automaton: ", newDot);
+        }
         // end growth cases:
         // 1. dot out of bounds
         if (!this.dotInBounds(_y, _x)) {
@@ -202,7 +216,7 @@ class Automaton {
         }
         // 2. dot collision with existing dots (intersection)
         let collision = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot));
-        let bottom = (_y == 0 && this.growMode != -1);
+        let bottom = (_y == 0 && this.growModeEnd != -1);
         if (!bottom && collision) {
             growing = false;
 
@@ -210,7 +224,7 @@ class Automaton {
         // 3. last two new dots are parallel to existing dots
         if (this.dots.length > 0) {
             let lastDot;
-            if (this.moveRight == true) {
+            if (this.growEnd == true) {
                 lastDot = this.dots[this.dots.length - 1];
             } else {
                 lastDot = this.dots[0];
@@ -231,7 +245,7 @@ class Automaton {
         }
 
         // add dot to the end or beginning of the array
-        if (this.moveRight == true) {
+        if (this.growEnd == true) {
             this.dots.push(newDot);
         } else {
             this.dots.unshift(newDot);
@@ -277,13 +291,27 @@ class Automaton {
         if (growing == true) {
             let parallelDot1 = { x: newDot.x + xOffset, y: newDot.y + yOffset };
             let parallelDot2 = { x: lastDot.x + xOffset, y: lastDot.y + yOffset };
-            let parallelDotCollision1 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot1));
-            let parallelDotCollision2 = this.allDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot2));
+
+            // exclude any dots from this automaton from allDots when checking for parallels
+            let checkDots = this.allDots.filter(dot => !this.dots.some(d => JSON.stringify(d) === JSON.stringify(dot)));
+
+            let parallelDotCollision1 = checkDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot1));
+            let parallelDotCollision2 = checkDots.some(dot => JSON.stringify(dot) === JSON.stringify(parallelDot2));
 
             if (parallelDotCollision1 && parallelDotCollision2) {
                 // use the intersecting dot instead and stop growth
                 newDot = parallelDot2;
                 growing = false;
+
+                // if the newDot is a dot already along the path, reorient path diagonally
+                // todo: use this to detect and fix "c" paths
+                // if (this.dots.length > 1) {
+                //     let previous = this.dots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot));
+                //     if (previous) {
+                //         this.removeDot(this.growEnd ? "end" : "start", 1);
+                //         newDot = parallelDot1;
+                //     }
+                // }
             }
         }
 
@@ -345,5 +373,21 @@ class Automaton {
             currX += 1
         }
         return posX + currX;
+    }
+
+    getGrowMode() {
+        if (this.growEnd) {
+            return this.growModeEnd;
+        } else {
+            return this.growModeStart;
+        }
+    }
+
+    setGrowMode(_mode) {
+        if (this.growEnd) {
+            this.growModeEnd = _mode;
+        } else {
+            this.growModeStart = _mode;
+        }
     }
 }
