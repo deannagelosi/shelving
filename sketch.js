@@ -9,7 +9,7 @@ let newCase;
 let shapesPos;
 
 let inputMode = true;
-let useExample = true;
+let useExample = false;
 
 function preload() {
     shapeData = loadJSON('data/test.json');

@@ -25,14 +25,21 @@ class Automaton {
         // rules for growing the automaton path\
         let currX;
         let currY;
+        let prevX;
         if (this.moveRight) {
             // pushing to the array, start with the last dot in the array
             currX = this.dots[this.dots.length - 1].x;
             currY = this.dots[this.dots.length - 1].y;
+            if (this.dots.length > 1) {
+                prevX = this.dots[this.dots.length - 2].x;
+            }
         } else {
             // prepending to the array, start with the first dot in the array
             currX = this.dots[0].x;
             currY = this.dots[0].y;
+            if (this.dots.length > 1) {
+                prevX = this.dots[1].x;
+            }
         }
 
         let cellUR = this.retrieveCell(currY, currX);
@@ -111,11 +118,23 @@ class Automaton {
                 if (currScore == 1000) {
                     // are they the same shape or different shapes
                     if (cellUL.shape === cellUR.shape) {
-                        // turn left or right
-                        if (cellUL.shape !== cellDL.shape) {
+                        let leftCheck = (cellUL.shape !== cellDL.shape);
+                        let rightCheck = (cellUR.shape !== cellDR.shape);
+
+                        if (leftCheck && rightCheck) {
+                            // choose between left and right
+                            // don't double back, go in the same direction
+                            if (prevX = currX - 1) {
+                                // go right
+                                return this.addDot(currY, currX + 1);
+                            } else if (prevX = currX + 1) {
+                                // go left
+                                return this.addDot(currY, currX - 1);
+                            }
+                        } else if (leftCheck) {
                             // turn left
                             return this.addDot(currY, currX - 1);
-                        } else if (cellUR.shape !== cellDR.shape) {
+                        } else if (rightCheck) {
                             // turn right
                             return this.addDot(currY, currX + 1);
                         } else {
@@ -136,6 +155,9 @@ class Automaton {
                 if (currScore == 0 || currScore == 1) {
                     // both sides same number, split between them
                     return this.addDot(currY + 1, currX);
+                } else if (currScore == 1000) {
+                    this.growMode = 2;
+                    return true;
                 }
 
                 let scores = [

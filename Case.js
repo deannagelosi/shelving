@@ -5,7 +5,7 @@ class Case {
         this.allDots = [];
         this.boards = [];
 
-        this.showBoards = false;
+        this.showBoards = true;
         this.showAllDots = false;
 
         this.graphic = createGraphics(canvasWidth + this.solution.cellSize, canvasHeight, SVG);

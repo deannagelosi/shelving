@@ -8,26 +8,29 @@ class Solution {
 
     exampleSolution() {
         // test shapes
-        this.shapes[0].posX = 0; // ok
-        this.shapes[0].posY = 8;
+        this.shapes[0].posX = 8;
+        this.shapes[0].posY = 0;
 
-        this.shapes[1].posX = 0; // ok
-        this.shapes[1].posY = 0;
+        this.shapes[1].posX = 7;
+        this.shapes[1].posY = 20;
 
-        this.shapes[2].posX = 5; // ok
-        this.shapes[2].posY = 6;
+        this.shapes[2].posX = 4;
+        this.shapes[2].posY = 0;
 
-        this.shapes[3].posX = 5;  
+        this.shapes[3].posX = 0;  
         this.shapes[3].posY = 0;
 
-        this.shapes[4].posX = 13; // ok
-        this.shapes[4].posY = 0;
+        this.shapes[4].posX = 9;
+        this.shapes[4].posY = 16;
 
-        this.shapes[5].posX = 12; //
+        this.shapes[5].posX = 11;
         this.shapes[5].posY = 6;
 
-        this.shapes[6].posX = 10; // ok
-        this.shapes[6].posY = 11;
+        this.shapes[6].posX = 0;
+        this.shapes[6].posY = 6;
+
+        this.shapes[7].posX = 1;
+        this.shapes[7].posY = 17;
 
         // sunny's shapes
         // this.shapes[0].posX = 9; // Squash

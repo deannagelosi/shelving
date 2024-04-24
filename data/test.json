@@ -4,7 +4,11 @@
             [
                 false,
                 false,
+                false,
                 true,
+                true,
+                true,
+                false,
                 false,
                 false
             ],
@@ -12,43 +16,45 @@
                 false,
                 false,
                 true,
+                true,
+                false,
+                true,
+                true,
                 false,
                 false
             ],
             [
                 false,
-                false,
+                true,
                 true,
                 false,
+                false,
+                false,
+                true,
+                true,
                 false
             ],
             [
+                true,
+                true,
                 false,
                 false,
-                true,
                 false,
-                false
-            ],
-            [
-                true,
-                true,
-                true,
+                false,
+                false,
                 true,
                 true
             ],
             [
                 true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
                 false,
-                true,
-                true,
-                true,
-                false
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true
             ]
         ],
         "boundaryShape": [
@@ -58,12 +64,7 @@
                 true,
                 true,
                 true,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
+                true,
                 true,
                 true,
                 true,
@@ -72,14 +73,22 @@
             ],
             [
                 false,
-                false,
                 true,
                 true,
                 true,
-                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false
             ],
             [
+                true,
+                true,
+                true,
+                true,
                 true,
                 true,
                 true,
@@ -95,11 +104,6 @@
                 true,
                 true,
                 true,
-                true
-            ],
-            [
-                true,
-                true,
                 true,
                 true,
                 true,
@@ -113,16 +117,24 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
                 true
             ],
             [
-                false,
                 true,
                 true,
                 true,
                 true,
                 true,
-                false
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
             ]
         ],
         "inputGrid": [
@@ -130,8 +142,68 @@
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
                 false,
                 true,
+                true,
+                false,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -143,68 +215,8 @@
                 false,
                 false,
                 false,
-                true,
                 false,
                 false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                true,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                true,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                true,
-                true,
-                true,
-                true,
-                true,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                true,
-                true,
-                true,
-                true,
-                true,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
-                true,
-                true,
                 false,
                 false,
                 false,
@@ -248,42 +260,80 @@
             ]
         ],
         "title": "shape-1",
-        "boundaryHeight": 8,
-        "boundaryWidth": 7,
-        "shapeHeight": 7,
-        "shapeWidth": 5,
+        "boundaryHeight": 6,
+        "boundaryWidth": 11,
+        "shapeHeight": 5,
+        "shapeWidth": 9,
         "shapeDepth": "",
-        "rectArea": 56
+        "rectArea": 66
     },
     {
         "shape": [
             [
                 true,
-                true
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
             ],
             [
                 true,
-                true
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
             ],
             [
                 true,
-                true
-            ],
-            [
                 true,
-                true
-            ],
-            [
                 true,
-                true
-            ],
-            [
                 true,
-                true
+                true,
+                true,
+                false,
+                false,
+                false
             ],
             [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
                 true,
                 false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
             ]
         ],
         "boundaryShape": [
@@ -291,60 +341,127 @@
                 true,
                 true,
                 true,
-                true
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
             ],
             [
                 true,
                 true,
                 true,
-                true
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
             ],
             [
                 true,
                 true,
                 true,
-                true
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
             ],
             [
                 true,
                 true,
                 true,
-                true
-            ],
-            [
                 true,
                 true,
                 true,
-                true
-            ],
-            [
                 true,
-                true,
-                true,
-                true
-            ],
-            [
-                true,
-                true,
-                true,
-                true
-            ],
-            [
                 true,
                 true,
                 true,
                 false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
             ]
         ],
         "inputGrid": [
             [
                 false,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false,
+                false,
+                false,
+                false
+            ],
+            [
                 false,
                 true,
                 true,
+                true,
+                true,
+                true,
                 false,
                 false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false,
                 false,
                 false
@@ -353,10 +470,10 @@
                 false,
                 false,
                 false,
+                false,
                 true,
                 true,
-                false,
-                false,
+                true,
                 false,
                 false,
                 false
@@ -365,55 +482,31 @@
                 false,
                 false,
                 false,
+                false,
                 true,
                 true,
-                false,
-                false,
-                false,
-                false,
+                true,
+                true,
+                true,
                 false
             ],
             [
                 false,
                 false,
                 false,
+                false,
+                false,
+                false,
                 true,
                 true,
-                false,
-                false,
-                false,
-                false,
-                false
+                true,
+                true
             ],
             [
                 false,
                 false,
                 false,
-                true,
-                true,
                 false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
-                true,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
                 false,
                 false,
                 false,
@@ -459,42 +552,22 @@
             ]
         ],
         "title": "shape-2",
-        "boundaryHeight": 8,
-        "boundaryWidth": 4,
-        "shapeHeight": 7,
-        "shapeWidth": 2,
+        "boundaryHeight": 7,
+        "boundaryWidth": 11,
+        "shapeHeight": 6,
+        "shapeWidth": 9,
         "shapeDepth": "",
-        "rectArea": 32
+        "rectArea": 77
     },
     {
         "shape": [
             [
-                false,
-                false,
-                true,
                 true,
                 true
             ],
             [
                 true,
-                true,
-                true,
-                true,
                 true
-            ],
-            [
-                true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
-                true,
-                false,
-                false,
-                false,
-                false
             ]
         ],
         "boundaryShape": [
@@ -502,6 +575,9 @@
                 true,
                 true,
                 true,
+                true
+            ],
+            [
                 true,
                 true,
                 true,
@@ -511,49 +587,31 @@
                 true,
                 true,
                 true,
-                true,
-                true,
-                true,
                 true
-            ],
-            [
-                true,
-                true,
-                true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
-                true,
-                true,
-                true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
-                true,
-                true,
-                true,
-                false,
-                false,
-                false,
-                false
             ]
         ],
         "inputGrid": [
             [
-                false,
-                false,
-                false,
-                false,
-                false,
                 true,
                 true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
                 true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false
             ],
@@ -561,11 +619,11 @@
                 false,
                 false,
                 false,
-                true,
-                true,
-                true,
-                true,
-                true,
+                false,
+                false,
+                false,
+                false,
+                false,
                 false,
                 false
             ],
@@ -573,19 +631,7 @@
                 false,
                 false,
                 false,
-                true,
-                true,
-                true,
-                true,
-                true,
                 false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
                 false,
                 false,
                 false,
@@ -667,38 +713,30 @@
             ]
         ],
         "title": "shape-3",
-        "boundaryHeight": 5,
-        "boundaryWidth": 7,
-        "shapeHeight": 4,
-        "shapeWidth": 5,
+        "boundaryHeight": 3,
+        "boundaryWidth": 4,
+        "shapeHeight": 2,
+        "shapeWidth": 2,
         "shapeDepth": "",
-        "rectArea": 35
+        "rectArea": 12
     },
     {
         "shape": [
             [
                 true,
-                true,
+                true
+            ],
+            [
                 true,
                 true
             ],
             [
-                false,
-                true,
                 true,
                 true
             ],
             [
-                false,
-                false,
                 true,
-                true
-            ],
-            [
-                false,
-                false,
-                false,
-                true
+                false
             ]
         ],
         "boundaryShape": [
@@ -706,6 +744,10 @@
                 true,
                 true,
                 true,
+                true
+            ],
+            [
+                true,
                 true,
                 true,
                 true
@@ -714,43 +756,29 @@
                 true,
                 true,
                 true,
-                true,
-                true,
                 true
             ],
             [
-                false,
-                true,
                 true,
                 true,
                 true,
                 true
             ],
             [
-                false,
-                false,
                 true,
                 true,
                 true,
-                true
-            ],
-            [
-                false,
-                false,
-                false,
-                true,
-                true,
-                true
+                false
             ]
         ],
         "inputGrid": [
             [
                 false,
                 false,
+                false,
                 true,
                 true,
-                true,
-                true,
+                false,
                 false,
                 false,
                 false,
@@ -762,7 +790,7 @@
                 false,
                 true,
                 true,
-                true,
+                false,
                 false,
                 false,
                 false,
@@ -772,9 +800,9 @@
                 false,
                 false,
                 false,
+                true,
+                true,
                 false,
-                true,
-                true,
                 false,
                 false,
                 false,
@@ -784,9 +812,9 @@
                 false,
                 false,
                 false,
-                false,
-                false,
                 true,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -867,26 +895,61 @@
         ],
         "title": "shape-4",
         "boundaryHeight": 5,
-        "boundaryWidth": 6,
+        "boundaryWidth": 4,
         "shapeHeight": 4,
-        "shapeWidth": 4,
+        "shapeWidth": 2,
         "shapeDepth": "",
-        "rectArea": 30
+        "rectArea": 20
     },
     {
         "shape": [
             [
                 true,
                 true,
+                false,
+                true,
+                true,
+                false,
+                true,
                 true
             ],
             [
                 true,
                 true,
+                false,
+                true,
+                true,
+                false,
+                true,
                 true
             ],
             [
+                false,
+                false,
+                false,
                 true,
+                true,
+                false,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 true,
                 true
             ]
@@ -897,9 +960,7 @@
                 true,
                 true,
                 true,
-                true
-            ],
-            [
+                true,
                 true,
                 true,
                 true,
@@ -911,10 +972,56 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 true
             ],
             [
                 true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
                 true,
                 true,
                 true,
@@ -923,14 +1030,26 @@
         ],
         "inputGrid": [
             [
-                false,
-                false,
-                false,
-                true,
                 true,
                 true,
                 false,
+                true,
+                true,
                 false,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                false,
+                true,
+                true,
+                false,
+                true,
+                true,
                 false,
                 false
             ],
@@ -940,33 +1059,9 @@
                 false,
                 true,
                 true,
-                true,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
                 false,
                 true,
                 true,
-                true,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
                 false,
                 false
             ],
@@ -977,8 +1072,20 @@
                 false,
                 false,
                 false,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
                 false,
                 false,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
                 false,
                 false
             ],
@@ -1044,16 +1151,34 @@
             ]
         ],
         "title": "shape-5",
-        "boundaryHeight": 4,
-        "boundaryWidth": 5,
-        "shapeHeight": 3,
-        "shapeWidth": 3,
+        "boundaryHeight": 6,
+        "boundaryWidth": 10,
+        "shapeHeight": 5,
+        "shapeWidth": 8,
         "shapeDepth": "",
-        "rectArea": 20
+        "rectArea": 60
     },
     {
         "shape": [
             [
+                false,
+                false,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
                 true,
                 true,
                 true,
@@ -1063,17 +1188,65 @@
                 true,
                 true,
                 true,
+                true,
+                true,
                 true
             ],
             [
                 true,
                 true,
                 true,
+                true,
+                true,
                 true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                false,
+                false
             ]
         ],
         "boundaryShape": [
             [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
                 true,
                 true,
                 true,
@@ -1087,12 +1260,6 @@
                 true,
                 true,
                 true,
-                true
-            ],
-            [
-                true,
-                true,
-                true,
                 true,
                 true,
                 true
@@ -1103,39 +1270,77 @@
                 true,
                 true,
                 true,
+                true,
+                true,
                 true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
             ]
         ],
         "inputGrid": [
             [
                 false,
                 false,
-                true,
-                true,
-                true,
-                true,
                 false,
                 false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                true,
-                true,
-                true,
-                true,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                true,
-                true,
                 true,
                 true,
                 false,
@@ -1147,9 +1352,81 @@
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
                 false,
                 false,
                 false,
@@ -1160,56 +1437,8 @@
                 false,
                 false,
                 false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
+                true,
+                true,
                 false,
                 false,
                 false,
@@ -1229,12 +1458,12 @@
             ]
         ],
         "title": "shape-6",
-        "boundaryHeight": 4,
-        "boundaryWidth": 6,
-        "shapeHeight": 3,
-        "shapeWidth": 4,
+        "boundaryHeight": 10,
+        "boundaryWidth": 8,
+        "shapeHeight": 9,
+        "shapeWidth": 6,
         "shapeDepth": "",
-        "rectArea": 24
+        "rectArea": 80
     },
     {
         "shape": [
@@ -1245,23 +1474,6 @@
                 true,
                 true,
                 true,
-                true
-            ],
-            [
-                false,
-                true,
-                true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
-                true,
-                true,
-                true,
-                true,
-                false,
                 false,
                 false
             ],
@@ -1270,33 +1482,75 @@
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
                 false,
                 false,
-                false
+                false,
+                false,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true
             ],
             [
                 false,
                 true,
                 true,
+                false,
+                false,
                 true,
-                false,
-                false,
+                true,
                 false
             ]
         ],
         "boundaryShape": [
             [
-                false,
                 true,
-                true,
-                true,
-                true,
-                true,
-                true,
-                true,
-                true
-            ],
-            [
                 true,
                 true,
                 true,
@@ -1316,6 +1570,7 @@
                 true,
                 true,
                 true,
+                true,
                 true
             ],
             [
@@ -1325,9 +1580,10 @@
                 true,
                 true,
                 true,
-                false,
-                false,
-                false
+                true,
+                true,
+                true,
+                true
             ],
             [
                 true,
@@ -1336,9 +1592,58 @@
                 true,
                 true,
                 true,
-                false,
-                false,
-                false
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
             ],
             [
                 false,
@@ -1347,8 +1652,9 @@
                 true,
                 true,
                 true,
-                false,
-                false,
+                true,
+                true,
+                true,
                 false
             ]
         ],
@@ -1357,7 +1663,19 @@
                 false,
                 false,
                 false,
+                true,
+                true,
+                true,
+                true,
                 false,
+                false,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                true,
                 true,
                 true,
                 true,
@@ -1367,8 +1685,8 @@
             ],
             [
                 false,
-                false,
-                false,
+                true,
+                true,
                 true,
                 true,
                 true,
@@ -1379,14 +1697,50 @@
             ],
             [
                 false,
-                false,
                 true,
                 true,
                 true,
                 true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
                 false,
                 false,
                 false,
+                false,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
+                false
+            ],
+            [
+                false,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                true,
                 false
             ],
             [
@@ -1394,58 +1748,10 @@
                 false,
                 true,
                 true,
-                true,
-                true,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
                 false,
                 false,
                 true,
                 true,
-                true,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false
-            ],
-            [
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
                 false,
                 false
             ],
@@ -1475,11 +1781,264 @@
             ]
         ],
         "title": "shape-7",
-        "boundaryHeight": 6,
-        "boundaryWidth": 9,
-        "shapeHeight": 5,
-        "shapeWidth": 7,
+        "boundaryHeight": 9,
+        "boundaryWidth": 10,
+        "shapeHeight": 8,
+        "shapeWidth": 8,
         "shapeDepth": "",
-        "rectArea": 54
+        "rectArea": 90
+    },
+    {
+        "shape": [
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ]
+        ],
+        "boundaryShape": [
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ]
+        ],
+        "inputGrid": [
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ]
+        ],
+        "title": "shape-8",
+        "boundaryHeight": 7,
+        "boundaryWidth": 8,
+        "shapeHeight": 6,
+        "shapeWidth": 6,
+        "shapeDepth": "",
+        "rectArea": 56
     }
 ]
