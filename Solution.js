@@ -43,20 +43,20 @@ class Solution {
         this.shapes[2].posX = 8;
         this.shapes[2].posY = 12;
 
-        this.shapes[3].posX = 16; // Bottle
+        this.shapes[3].posX = 17; // Bottle
         this.shapes[3].posY = 13;
 
         this.shapes[4].posX = 1; // blueberries
         this.shapes[4].posY = 7;
 
         this.shapes[5].posX = 8; // Milkweed Pod
-        this.shapes[5].posY = 19;
+        this.shapes[5].posY = 17;
 
         this.shapes[6].posX = 0;
         this.shapes[6].posY = 17;
 
-        this.shapes[7].posX = 0;
-        this.shapes[7].posY = 11;
+        this.shapes[7].posX = 1;
+        this.shapes[7].posY = 12;
 
         this.shapes[8].posX = 10;
         this.shapes[8].posY = 0;

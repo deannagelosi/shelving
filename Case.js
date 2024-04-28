@@ -293,6 +293,8 @@ class Case {
                 if (this.boards[j].orientation != "x" && this.boards[j].orientation != "y") {
                     console.log("Invalid board orientation")
                 }
+
+                // compare boards in different orientations
                 if (i != j && this.boards[i].orientation != this.boards[j].orientation) {
                     // check all three intersection types: L, X, T
                     // check L: check all start and end coords for match
@@ -308,7 +310,7 @@ class Case {
                         this.boards[j].poi.startJoint = jJointType;
                     } else if (endsMatch) {
                         this.boards[i].poi.endJoint = iJointType;
-                        this.boards[j].poi.endJoint = jJointType;                        
+                        this.boards[j].poi.endJoint = jJointType;
                     } else if (startIEndJ) {
                         this.boards[i].poi.startJoint = iJointType;
                         this.boards[j].poi.endJoint = jJointType;
@@ -316,14 +318,12 @@ class Case {
                         this.boards[i].poi.endJoint = iJointType;
                         this.boards[j].poi.startJoint = jJointType;
                     }
-                    
-                    // check X
-                    // check all interior coords (not start or end) for match
 
-                    // check T
-                    // check terminating coord (i) for match within coords (j) and the same orientation, i boards
+                    let checkXWithin = this.boards[i].startCoords.x > this.boards[j].startCoords.x && this.boards[i].startCoords.x < this.boards[j].endCoords.x;
+                    let checkYWithin = this.boards[i].startCoords.y < this.boards[j].startCoords.y && this.boards[i].endCoords.y > this.boards[j].startCoords.y;
+
+                    // check T: terminating coord (i) for match within coords (j) and the same orientation, i boards
                     if (this.boards[i].orientation == "y") {
-                        let checkXWithin = this.boards[i].startCoords.x > this.boards[j].startCoords.x && this.boards[i].startCoords.x < this.boards[j].endCoords.x;
                         let startCoordYMatch = this.boards[i].startCoords.y == this.boards[j].startCoords.y;
                         let endCoordYMatch = this.boards[i].endCoords.y == this.boards[j].startCoords.y;
 
@@ -349,6 +349,17 @@ class Case {
                             this.boards[i].poi.endJoint = "pin";
                             let tJointPos = this.boards[i].startCoords.y - this.boards[j].startCoords.y;
                             this.boards[j].poi.tJoints.push(tJointPos);
+                        }
+                    }
+
+                    // check X: all interior coords (not start or end) for match
+                    if (this.boards[i].orientation == "y") {
+                        // check only once since impacts both orientations equally
+                        if (checkXWithin && checkYWithin) {
+                            let xJointPosI = Math.abs(this.boards[i].startCoords.y - this.boards[j].startCoords.y);
+                            let xJointPosJ = Math.abs(this.boards[j].startCoords.x - this.boards[i].startCoords.x);
+                            this.boards[i].poi.xJoints.push(xJointPosI);
+                            this.boards[j].poi.xJoints.push(xJointPosJ);
                         }
                     }
                 }
