@@ -1,12 +1,12 @@
 let canvasWidth = 600;
 let canvasHeight = 600;
 let shapes = [];
+let shapesPos = [];
 let solutions = [];
 let sa; // simulated annealing
 let initialScore;
 let loopCount;
 let newCase;
-let shapesPos;
 let inputMode = true;
 
 // diagnostic toggles

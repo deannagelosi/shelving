@@ -4,11 +4,24 @@ class Case {
         this.automata = [];
         this.allDots = [];
         this.boards = [];
+        this.maxDepth = 0;
 
         this.showBoards = true;
         this.showAllDots = false;
 
-        this.graphic = createGraphics(canvasWidth + this.solution.cellSize, canvasHeight, SVG);
+        // laser cutting
+        this.materialWidth = 40;
+        this.materialHeight = 20;
+        this.materialThickness = 0.079;
+        this.cellToInch = 2; // input cells (0.5 inches) to inch conversion
+        this.lenMod = this.materialThickness;
+        this.ppi = 10; // pixel per inch
+        this.buffer = 0.25 * this.ppi; // gap between boards
+
+        this.sheetRows = [0, 0, 0, 0, 0]; // 5 rows
+        this.sheets = [[...this.sheetRows], [...this.sheetRows]];
+
+        this.svgOutput = createGraphics(this.materialWidth * this.ppi, this.materialHeight * this.ppi, SVG);
     }
 
     createAutomata() {
@@ -229,15 +242,30 @@ class Case {
 
     //-- Export Methods --//
     exportToLaserSVG() {
-        // add joinery (points of interest) to boards
-        // add board labels (points of interest)
-        this.detectJoints()
         console.log(this.boards);
 
+        // add board labels (points of interest) [todo]
+        this.detectJoints(); // add joinery (points of interest) to boards
+        this.calcDepth(); // max shape depth becomes case depth
 
-        // calc the max board depth
         // build SVG file
-        // - perimeter rectangle to match laser bed
+        this.svgOutput.color("black");
+        this.svgOutput.stroke("black");
+        this.svgOutput.noFill();
+        this.svgOutput.strokeWeight(1);
+        // draw rectangle for material size to laser cut
+        this.svgOutput.rect(0, 0, this.materialWidth * this.ppi, this.materialHeight * this.ppi);
+        // draw all the boards
+        this.drawBoards();
+
+
+
+        // draw joinery
+
+        this.displayExport(); // save as SVG, view in the browser
+
+
+
         // - populate with all boards
         // save SVG file
     }
@@ -365,6 +393,93 @@ class Case {
                 }
             }
         }
+    }
 
+    calcDepth() {
+        // access shapeCase to loop all horizontal and vertical boards
+        // shapeCase.horizontalBoards and shapeCase.verticalBoards
+        for (let i = 0; i < shapes.length; i++) {
+            if (this.maxDepth < shapes[i].shapeDepth) {
+                this.maxDepth = shapes[i].shapeDepth;
+            }
+        }
+        this.maxDepth += 1; // add buffer for depth
+    }
+
+    buildJoinery(_type, _rectX, _rectY) {
+        //     // print the joinery
+        //     if (_type == "slot") {
+        //         this.graphic.noFill();
+        //         let firstPin = [_rectX, _rectY + (1 * this.pixelRes)];
+        //         let secondPin = [_rectX, _rectY + (3 * this.pixelRes)];
+        //         let pins = [firstPin, secondPin];
+        //         let pinHeight = 1;
+        //         for (let i = 0; i < pins.length; i++) {
+        //             this.graphic.rect(pins[i][0], pins[i][1], this.cutWidth * this.pixelRes, pinHeight * this.pixelRes);
+        //         }
+        //     } else if (_type == "pin") {
+        //         this.graphic.noFill();
+        //         let firstSlot = [_rectX, _rectY];
+        //         let secondSlot = [_rectX, _rectY + (2 * this.pixelRes)];
+        //         let thirdSlot = [_rectX, _rectY + (4 * this.pixelRes)];
+        //         let slots = [firstSlot, secondSlot, thirdSlot];
+        //         let slotHeight = 1;
+        //         for (let i = 0; i < slots.length; i++) {
+        //             this.graphic.rect(slots[i][0], slots[i][1], this.cutWidth * this.pixelRes, slotHeight * this.pixelRes);
+        //         }
+        //     } else if (_type == "c") {
+        //         this.graphic.noFill();
+
+        //     }
+    }
+
+    displayExport() {
+        // display the graphics buffer in browser
+        background(255);
+        document.getElementById('svgContainer').appendChild(this.svgOutput.elt.svg);
+    }
+
+    drawBoards() {
+        let boardHeight = this.maxDepth;
+        // sort the boards by length
+        this.boards.sort((a, b) => b.getLength() - a.getLength());
+        for (let i = 0; i < this.boards.length; i++) {
+            let currBoard = this.boards[i];
+            // calculate the true board length
+            let boardWidth = (currBoard.getLength() / this.cellToInch) + this.lenMod;
+            // find placement on material
+            let boardPos = this.choosePlacement(boardWidth);
+            let sheet = boardPos[0]; // sheet number
+            let row = boardPos[1]; // row on sheet
+
+            // find the top-left corner location for each board on the sheet
+            let topLeftX = (this.sheets[sheet][row] * this.ppi) + this.buffer;
+            let sheetPosY = sheet * this.materialHeight * this.ppi;
+            let rowPosY = (row * ((boardHeight * this.ppi) + this.buffer)) + this.buffer;
+            let topLeftY = sheetPosY + rowPosY;
+
+            // draw rectangle
+            this.svgOutput.rect(topLeftX, topLeftY, boardWidth * this.ppi, boardHeight * this.ppi);
+            // mark location as filled
+            this.sheets[sheet][row] += boardWidth + (this.buffer / this.ppi);
+
+        }
+    }
+
+    choosePlacement(_boardWidth) {
+        // determine board placement on each material sheet, in inches
+        for (let sheet = 0; sheet < this.sheets.length; sheet++) {
+            for (let row = 0; row < this.sheets[sheet].length; row++) {
+
+                let rowOccupiedWidth = this.sheets[sheet][row];
+                let sheetWidth = this.materialWidth;
+                let rowRemainingWidth = sheetWidth - rowOccupiedWidth;
+                let spaceNeeded = _boardWidth + ((this.buffer / this.ppi) * 2);
+
+                if (rowRemainingWidth >= spaceNeeded) {
+                    return [sheet, row];
+                }
+            }
+        }
     }
 }
