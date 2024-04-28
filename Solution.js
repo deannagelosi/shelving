@@ -298,7 +298,7 @@ class Solution {
             }
         }
         let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
-
+ 
         // calculate the height off the ground of each bottom shape
         let totalYValues = 0;
         for (let i = 0; i < bottomShapes.length; i++) {

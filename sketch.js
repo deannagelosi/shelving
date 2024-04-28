@@ -12,7 +12,7 @@ let inputMode = true;
 let useExample = false;
 
 function preload() {
-    shapeData = loadJSON('data/test.json');
+    shapeData = loadJSON('data/sunny-shapes.json');
 }
 
 function setup() {

@@ -2,17 +2,17 @@
 
 ## This Week's Deliverables
 
-- Wednesday: final Mike meeting
-  - algorithms (annealing and automata)
-  - center of mass
-  - full workflow (input -> generation -> JSON -> SVG)
-- Thursday
-  - Digital Sculpture
-    - SVGs into Rhino, extrude, render in a scene (Wednesday)
-  - Critical Technical Practice
-    - full flow
-    - design details for asking
-    - Monday: final presentation
+- Sunday Morning
+  - laser cutting boards
+    - joint position
+    - joint types
+  - most basic UI improvements
+    - diagnostic off
+    - side bar: added shapes
+    - toggle to generate layouts
+    - export laser cut SVG button
+  - continue 3D printing shapes
+    - make a couple OOFs for laser cutting
 
 ### Import and Export
 
@@ -25,7 +25,8 @@
 
 #### Automata
 
-- when growing rightward, find the center of zero-scores like in case 1
+- when growing vertically, find the center of zero-scores like in case 1
+- detect and fix "C" paths, ie when 3 walls on a cell (at least partially parallel with yourself)
 
 #### Annealing
 
