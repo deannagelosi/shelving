@@ -6,9 +6,13 @@
   - laser cutting boards
     - joint position
     - joint types
+
+
   - most basic UI improvements
     - diagnostic off
     - side bar: added shapes
+      - change ShapeInput to class that manages all shapes
+      - create Shape data objects with shape positions
     - toggle to generate layouts
     - export laser cut SVG button
   - continue 3D printing shapes

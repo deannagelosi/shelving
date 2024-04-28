@@ -8,61 +8,61 @@ class Solution {
     }
 
     exampleSolution() {
-        // test shapes
-        this.shapes[0].posX = 17;
-        this.shapes[0].posY = 12;
+        // // test shapes
+        // this.shapes[0].posX = 17;
+        // this.shapes[0].posY = 12;
 
-        this.shapes[1].posX = 0;
-        this.shapes[1].posY = 0;
-
-        this.shapes[2].posX = 9;
-        this.shapes[2].posY = 7;
-
-        this.shapes[3].posX = 14;  
-        this.shapes[3].posY = 7;
-
-        this.shapes[4].posX = 8;
-        this.shapes[4].posY = 0;
-
-        this.shapes[5].posX = 0;
-        this.shapes[5].posY = 8;
-
-        this.shapes[6].posX = 18;
-        this.shapes[6].posY = 0;
-
-        this.shapes[7].posX = 9;
-        this.shapes[7].posY = 12;
-
-        // sunny's shapes
-        // this.shapes[0].posX = 9; // Squash
-        // this.shapes[0].posY = 6;
-
-        // this.shapes[1].posX = 17; // Mushroom
+        // this.shapes[1].posX = 0;
         // this.shapes[1].posY = 0;
 
-        // this.shapes[2].posX = 8;
-        // this.shapes[2].posY = 12;
+        // this.shapes[2].posX = 9;
+        // this.shapes[2].posY = 7;
 
-        // this.shapes[3].posX = 16; // Bottle
-        // this.shapes[3].posY = 13;
+        // this.shapes[3].posX = 14;  
+        // this.shapes[3].posY = 7;
 
-        // this.shapes[4].posX = 1; // blueberries
-        // this.shapes[4].posY = 7;
+        // this.shapes[4].posX = 8;
+        // this.shapes[4].posY = 0;
 
-        // this.shapes[5].posX = 8; // Milkweed Pod
-        // this.shapes[5].posY = 19;
+        // this.shapes[5].posX = 0;
+        // this.shapes[5].posY = 8;
 
-        // this.shapes[6].posX = 0;
-        // this.shapes[6].posY = 17;
+        // this.shapes[6].posX = 18;
+        // this.shapes[6].posY = 0;
 
-        // this.shapes[7].posX = 0;
-        // this.shapes[7].posY = 11;
+        // this.shapes[7].posX = 9;
+        // this.shapes[7].posY = 12;
 
-        // this.shapes[8].posX = 10;
-        // this.shapes[8].posY = 0;
+        // sunny's shapes
+        this.shapes[0].posX = 9; // Squash
+        this.shapes[0].posY = 6;
 
-        // this.shapes[9].posX = 0;
-        // this.shapes[9].posY = 0;
+        this.shapes[1].posX = 17; // Mushroom
+        this.shapes[1].posY = 0;
+
+        this.shapes[2].posX = 8;
+        this.shapes[2].posY = 12;
+
+        this.shapes[3].posX = 16; // Bottle
+        this.shapes[3].posY = 13;
+
+        this.shapes[4].posX = 1; // blueberries
+        this.shapes[4].posY = 7;
+
+        this.shapes[5].posX = 8; // Milkweed Pod
+        this.shapes[5].posY = 19;
+
+        this.shapes[6].posX = 0;
+        this.shapes[6].posY = 17;
+
+        this.shapes[7].posX = 0;
+        this.shapes[7].posY = 11;
+
+        this.shapes[8].posX = 10;
+        this.shapes[8].posY = 0;
+
+        this.shapes[9].posX = 0;
+        this.shapes[9].posY = 0;
     }
 
     setInitialSolution() {

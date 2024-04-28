@@ -227,6 +227,21 @@ class Case {
         this.graphic.save("boards.svg")
     }
 
+    //-- Export Methods --//
+    exportToLaserSVG() {
+        // add joinery (points of interest) to boards
+        // add board labels (points of interest)
+        this.detectJoints()
+        console.log(this.boards);
+
+
+        // calc the max board depth
+        // build SVG file
+        // - perimeter rectangle to match laser bed
+        // - populate with all boards
+        // save SVG file
+    }
+
     //-- Helper Methods --//
     mergeBoards(board1, board2) {
         // if two boards are touching or overlapping and they face the same orientation, merge them
@@ -266,5 +281,51 @@ class Case {
             // diagonal board, return false
             return false;
         }
+    }
+
+    detectJoints() {
+        // loop all boards against all other boards
+        for (let i = 0; i < this.boards.length; i++) {
+            for (let j = 0; j < this.boards.length; j++) {
+                if (this.boards[i].orientation != "x" && this.boards[i].orientation != "y") {
+                    console.log("Invalid board orientation")
+                }
+                if (this.boards[j].orientation != "x" && this.boards[j].orientation != "y") {
+                    console.log("Invalid board orientation")
+                }
+                if (i != j && this.boards[i].orientation != this.boards[j].orientation) {
+                    // check all three intersection types: L, X, T
+                    // check L: check all start and end coords for match
+                    let startsMatch = JSON.stringify(this.boards[i].startCoords) == JSON.stringify(this.boards[j].startCoords)
+                    let endsMatch = JSON.stringify(this.boards[i].endCoords) == JSON.stringify(this.boards[j].endCoords)
+                    let startIEndJ = JSON.stringify(this.boards[i].startCoords) == JSON.stringify(this.boards[j].endCoords)
+                    let endIStartJ = JSON.stringify(this.boards[i].endCoords) == JSON.stringify(this.boards[j].startCoords)
+                    let iJointType = this.boards[i].orientation == "x" ? "pin" : "slot";
+                    let jJointType = this.boards[j].orientation == "x" ? "pin" : "slot";
+
+                    if (startsMatch) {
+                        this.boards[i].poi.startJoint = iJointType;
+                        this.boards[j].poi.startJoint = jJointType;
+                    } else if (endsMatch) {
+                        this.boards[i].poi.endJoint = iJointType;
+                        this.boards[j].poi.endJoint = jJointType;                        
+                    } else if (startIEndJ) {
+                        this.boards[i].poi.startJoint = iJointType;
+                        this.boards[j].poi.endJoint = jJointType;
+                    } else if (endIStartJ) {
+                        this.boards[i].poi.endJoint = iJointType;
+                        this.boards[j].poi.startJoint = jJointType;
+                    }
+                    
+                    // check X
+                    // check all interior coords (not start or end) for match
+
+                    // check T
+                    // check terminating coord (i) for match within coords (j)
+                    // and the same orientation, i boards
+                }
+            }
+        }
+
     }
 }

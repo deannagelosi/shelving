@@ -7,16 +7,17 @@ class Board {
 
         this.merged = false; // if the board is merged with another board later
 
-        // this.width; // width of the board
+        // this.depth; // depth of the board
         // this.thickness; // thickness of the board
 
-        // this.poi = { // points of interest
-        //     lJoints: ["", ""], // [start edge, end edge]
-        //     tJoints: [], // array of x-values for T-joint holes 
-        //     xJoints: [],
-        //     shapes: [{}], // array of objs with shape name and x-value position
-        // }
-        // this.boardLabel;
+        this.poi = { // points of interest
+            startJoint: "", // "pin" or "slot"
+            endJoint: "", // "pin" or "slot"
+            tJoints: [], // array of x-values for T-joint holes 
+            xJoints: [],
+            shapes: [{}], // array of objs with shape name and x-value position
+        }
+        this.boardLabel;
     }
 
     getLength() {

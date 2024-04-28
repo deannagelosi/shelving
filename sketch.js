@@ -7,9 +7,10 @@ let initialScore;
 let loopCount;
 let newCase;
 let shapesPos;
-
 let inputMode = true;
-let useExample = false;
+
+// diagnostic toggles
+let useExample = true;
 
 function preload() {
     shapeData = loadJSON('data/sunny-shapes.json');
@@ -73,6 +74,7 @@ function createCase() {
     // show result
     sa.currSolution.showLayout();
     newCase.showResult();
+    newCase.exportToLaserSVG();
 
     console.log(sa.currSolution);
 }
