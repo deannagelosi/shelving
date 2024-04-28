@@ -321,8 +321,36 @@ class Case {
                     // check all interior coords (not start or end) for match
 
                     // check T
-                    // check terminating coord (i) for match within coords (j)
-                    // and the same orientation, i boards
+                    // check terminating coord (i) for match within coords (j) and the same orientation, i boards
+                    if (this.boards[i].orientation == "y") {
+                        let checkXWithin = this.boards[i].startCoords.x > this.boards[j].startCoords.x && this.boards[i].startCoords.x < this.boards[j].endCoords.x;
+                        let startCoordYMatch = this.boards[i].startCoords.y == this.boards[j].startCoords.y;
+                        let endCoordYMatch = this.boards[i].endCoords.y == this.boards[j].startCoords.y;
+
+                        if (startCoordYMatch && checkXWithin) {
+                            this.boards[i].poi.startJoint = "pin";
+                            let tJointPos = this.boards[i].startCoords.x - this.boards[j].startCoords.x;
+                            this.boards[j].poi.tJoints.push(tJointPos);
+                        } else if (endCoordYMatch && checkXWithin) {
+                            this.boards[i].poi.endJoint = "pin";
+                            let tJointPos = this.boards[i].startCoords.x - this.boards[j].startCoords.x;
+                            this.boards[j].poi.tJoints.push(tJointPos);
+                        }
+                    } else if (this.boards[i].orientation == "x") {
+                        let checkYWithin = this.boards[i].startCoords.y > this.boards[j].startCoords.y && this.boards[i].startCoords.y < this.boards[j].endCoords.y;
+                        let startCoordXMatch = this.boards[i].startCoords.x == this.boards[j].startCoords.x;
+                        let endCoordXMatch = this.boards[i].endCoords.x == this.boards[j].startCoords.x;
+
+                        if (startCoordXMatch && checkYWithin) {
+                            this.boards[i].poi.startJoint = "pin";
+                            let tJointPos = this.boards[i].startCoords.y - this.boards[j].startCoords.y;
+                            this.boards[j].poi.tJoints.push(tJointPos);
+                        } else if (endCoordXMatch && checkYWithin) {
+                            this.boards[i].poi.endJoint = "pin";
+                            let tJointPos = this.boards[i].startCoords.y - this.boards[j].startCoords.y;
+                            this.boards[j].poi.tJoints.push(tJointPos);
+                        }
+                    }
                 }
             }
         }
