@@ -27,12 +27,14 @@ class Automaton {
         let currX;
         let currY;
         let prevX;
+        let prevY;
         if (this.growEnd) {
             // pushing to the array, start with the last dot in the array
             currX = this.dots[this.dots.length - 1].x;
             currY = this.dots[this.dots.length - 1].y;
             if (this.dots.length > 1) {
                 prevX = this.dots[this.dots.length - 2].x;
+                prevY = this.dots[this.dots.length - 2].y;
             }
         } else {
             // prepending to the array, start with the first dot in the array
@@ -40,6 +42,7 @@ class Automaton {
             currY = this.dots[0].y;
             if (this.dots.length > 1) {
                 prevX = this.dots[1].x;
+                prevY = this.dots[1].y;
             }
         }
 
@@ -125,12 +128,26 @@ class Automaton {
                         if (leftCheck && rightCheck) {
                             // choose between left and right
                             // don't double back, go in the same direction
-                            if (prevX = currX - 1) {
+                            if (prevX == currX - 1) {
                                 // go right
                                 return this.addDot(currY, currX + 1);
-                            } else if (prevX = currX + 1) {
+                            } else if (prevX == currX + 1) {
                                 // go left
                                 return this.addDot(currY, currX - 1);
+                            } else {
+                                // pick the initial direction, left or right
+                                // pick the direction heading towards "more space", ie higher cScore
+                                if (cellDL.score > cellDR.score) {
+                                    // turn left
+                                    return this.addDot(currY, currX - 1);
+                                } else if (cellDL.score < cellDR.score) {
+                                    // turn right
+                                    return this.addDot(currY, currX + 1);
+                                } else {
+                                    // equal. what do?
+                                    console.log("need to turn: currX,Y:" , currX, currY);
+                                    return false;
+                                }
                             }
                         } else if (leftCheck) {
                             // turn left
@@ -153,14 +170,30 @@ class Automaton {
                 }
                 break;
             case 3: // move vertically with multiple options
-                if (currScore == 0 || currScore == 1) {
-                    // both sides same number, split between them
+                if (currScore == 0) {
+                    // both sides same number, 
                     return this.addDot(currY + 1, currX);
-                } else if (currScore == 1000) {
+                } 
+                else if (currScore == 1) {
+                    // not enough of a difference to change direction
+                    // keep going current direction
+                    if (prevX == currX - 1) {
+                        // moving right
+                        return this.addDot(currY, currX + 1); 
+                    } 
+                    // else if (prevX == currX + 1) {
+                    //     // moving left
+                    //     return this.addDot(currY, currX - 1);
+                    // } 
+                    else if (prevY == currY - 1) {
+                        // moving up
+                        return this.addDot(currY + 1, currX);
+                    }
+                }
+                else if (currScore == 1000) {
                     this.setGrowMode(2);
                     return true;
                 }
-
 
                 let scores = [
                     { score: currScoreLeft, x: currX - 1, y: currY, dir: "left" },

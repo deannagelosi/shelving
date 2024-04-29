@@ -4,25 +4,28 @@ class Solution {
         this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
         this.score;
         this.cellSize;
-        this.eightThreshold = 0.05; // ratio of cells with a cScore of 8
+        this.eightThreshold = 0.07; // ratio of cells with a cScore of 8
     }
 
     exampleSolution() {
         // cardboard
-        this.shapes[0].posX = 10;
-        this.shapes[0].posY = 4;
+        this.shapes[0].posX = 2;
+        this.shapes[0].posY = 5;
 
         this.shapes[1].posX = 0;
-        this.shapes[1].posY = 0;
+        this.shapes[1].posY = 13;
 
-        this.shapes[2].posX = 9;
+        this.shapes[2].posX = 1;
         this.shapes[2].posY = 0;  
         
-        this.shapes[3].posX = 1;
-        this.shapes[3].posY = 8;
+        this.shapes[3].posX = 9;
+        this.shapes[3].posY = 15;
 
-        this.shapes[4].posX = 19;
+        this.shapes[4].posX = 11;
         this.shapes[4].posY = 0;  
+
+        this.shapes[5].posX = 1;
+        this.shapes[5].posY = 4;  
 
         // // test shapes
         // this.shapes[0].posX = 17;
