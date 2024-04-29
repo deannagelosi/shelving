@@ -10,24 +10,28 @@ class Case {
         this.showAllDots = false;
 
         // laser cutting design
-        this.materialWidth = 40;
-        this.materialHeight = 40;
+        this.materialWidth = 16.5;
+        this.materialHeight = 11;
         this.materialThickness = 0.079;
         this.cellToInch = 2; // input cells (0.5 inches) to inch conversion
         this.lenMod = this.materialThickness;
-        this.ppi = 20; // pixel per inch
+        this.ppi = 40; // pixel per inch
         this.buffer = 0.25 * this.ppi; // gap between boards
+        this.labelPos = 0.2 * this.ppi;
 
         // laser cutting fabrication
         this.vertKerf = 0.02; // kerf for vertical cuts
         this.cutWidth = this.materialThickness - this.vertKerf;
-        this.pinHeight = 1;
-        this.slotHeight = 1;
+        this.pinHeight;
+        this.slotHeight;
 
-        this.sheetRows = [0, 0, 0, 0, 0]; // 5 rows
+        this.sheetRows = [0, 0, 0]; // 3 rows
         this.sheets = [[...this.sheetRows], [...this.sheetRows]];
 
-        this.svgOutput = createGraphics(this.materialWidth * this.ppi, this.materialHeight * this.ppi, SVG);
+        let svgWidth = this.materialWidth * this.ppi
+        let svgHeight = (this.materialHeight * this.sheets.length) * this.ppi + this.buffer;
+
+        this.svgOutput = createGraphics(svgWidth, svgHeight, SVG);
     }
 
     createAutomata() {
@@ -247,32 +251,15 @@ class Case {
     }
 
     //-- Export Methods --//
-    exportToLaserSVG() {
+    buildLaserSVG() {
         console.log(this.boards);
 
-        // add board labels (points of interest) [todo]
         this.detectJoints(); // add joinery (points of interest) to boards
         this.calcDepth(); // max shape depth becomes case depth
-
-        // build SVG file
-        this.svgOutput.color("black");
-        this.svgOutput.stroke("black");
-        this.svgOutput.noFill();
-        this.svgOutput.strokeWeight(1);
-        // draw rectangle for material size to laser cut
-        this.svgOutput.rect(0, 0, this.materialWidth * this.ppi, this.materialHeight * this.ppi);
-        // draw all the boards and POIs (joinery)
+        
+        // draw all the boards, labels, and POIs (joinery)
         this.drawBoards();
-
-
-
-
-        this.displayExport(); // save as SVG, view in the browser
-
-
-
-        // - populate with all boards
-        // save SVG file
+        this.drawSheets();
     }
 
     //-- Helper Methods --//
@@ -411,18 +398,48 @@ class Case {
         this.maxDepth += 1; // add buffer for depth
     }
 
-    displayExport() {
+    displaySVGExport() {
         // display the graphics buffer in browser
         background(255);
         document.getElementById('svgContainer').appendChild(this.svgOutput.elt.svg);
     }
 
+    saveSVGExport() {
+        this.svgOutput.save("boardLayout.svg")
+    }
+
     drawBoards() {
+        // setup draw settings
+        // build SVG file
+        this.svgOutput.color("black");
+        this.svgOutput.stroke("black");
+        this.svgOutput.noFill();
+        this.svgOutput.strokeWeight(1);
+        this.svgOutput.textSize((1 / 6) * this.ppi);
+        this.svgOutput.textAlign(LEFT, CENTER);
+
         let boardHeight = this.maxDepth;
+        this.pinHeight = 0.2 * boardHeight;
+        this.slotHeight = 0.2 * boardHeight;
+
+        // board index for applying labels
+        let xIndex = 0;
+        let yIndex = 1;
+
         // sort the boards by length
         this.boards.sort((a, b) => b.getLength() - a.getLength());
         for (let i = 0; i < this.boards.length; i++) {
             let currBoard = this.boards[i];
+
+            // label the board. Horizontal starts at A, vertical starts at 1
+            if (currBoard.orientation == "x") {
+                currBoard.boardLabel = String.fromCharCode(65 + xIndex);
+                xIndex++;
+            } else if (currBoard.orientation == "y") {
+                currBoard.boardLabel = yIndex;
+                yIndex++;
+            }
+
             // calculate the true board length
             let boardWidth = (currBoard.getLength() / this.cellToInch) + this.lenMod;
             // find placement on material
@@ -432,24 +449,30 @@ class Case {
 
             // find the top-left corner location for each board on the sheet
             let topLeftX = (this.sheets[sheet][row] * this.ppi) + this.buffer;
-            let sheetPosY = sheet * this.materialHeight * this.ppi;
+            let sheetPosY = (sheet * this.materialHeight * this.ppi) + (sheet * this.buffer);
             let rowPosY = (row * ((boardHeight * this.ppi) + this.buffer)) + this.buffer;
             let topLeftY = sheetPosY + rowPosY;
 
-            // draw rectangle
+            // draw board
             this.svgOutput.rect(topLeftX, topLeftY, boardWidth * this.ppi, boardHeight * this.ppi);
             // mark location as filled
             this.sheets[sheet][row] += boardWidth + (this.buffer / this.ppi);
 
+            // draw board label
+            let boardLabelX = topLeftX + (this.labelPos);
+            let boardLabelY = topLeftY + (this.labelPos);
+            this.svgOutput.fill(0); // text needs fill to render correctly for the laser
+            this.svgOutput.text(currBoard.boardLabel, boardLabelX, boardLabelY);
+            this.svgOutput.noFill();
+
             // draw L joints (slots or pins)
             let startType = currBoard.poi.startJoint;
             let endType = currBoard.poi.endJoint;
-            this.drawSlotsOrPins(startType, topLeftX, topLeftY);
-            this.drawSlotsOrPins(endType, topLeftX + (boardWidth * this.ppi) - (this.cutWidth * this.ppi), topLeftY);
+            this.drawSlotsOrPins(startType, topLeftX, topLeftY, boardHeight);
+            this.drawSlotsOrPins(endType, topLeftX + (boardWidth * this.ppi) - (this.cutWidth * this.ppi), topLeftY, boardHeight);
 
             // draw T joints (slots)
-            currBoard.poi.tJoints.forEach((tJoint) => {
-                this.svgOutput.noFill();
+            currBoard.poi.tJoints.forEach((tJoint) => {        
                 let tJointX = topLeftX + ((tJoint / this.cellToInch) * this.ppi);
                 // tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
                 let tJointY = topLeftY + (0.2 * boardHeight * this.ppi);
@@ -462,7 +485,6 @@ class Case {
             // draw X joints (c-shape)
             currBoard.poi.xJoints.forEach((xJoint) => {
                 console.log(currBoard);
-                this.svgOutput.noFill();
                 let xJointX = topLeftX + ((xJoint / this.cellToInch) * this.ppi);
                 let xJointY;
                 if (currBoard.orientation == "x") {
@@ -496,26 +518,36 @@ class Case {
         }
     }
 
-    drawSlotsOrPins(_type, _boardX, _boardY) {
+    drawSlotsOrPins(_type, _boardX, _boardY, _boardHeight) {
         // print the joinery
         if (_type == "slot") {
-            // this.svgOutput.noFill();
             // [startX, startY]
-            let firstPin = [_boardX, _boardY + (this.maxDepth * 0.2 * this.ppi)];
-            let secondPin = [_boardX, _boardY + (this.maxDepth * 0.6 * this.ppi)];
+            let firstPin = [_boardX, _boardY + (_boardHeight * 0.2 * this.ppi)];
+            let secondPin = [_boardX, _boardY + (_boardHeight * 0.6 * this.ppi)];
             let pins = [firstPin, secondPin];
             for (let i = 0; i < pins.length; i++) {
                 this.svgOutput.rect(pins[i][0], pins[i][1], this.cutWidth * this.ppi, this.pinHeight * this.ppi);
             }
         } else if (_type == "pin") {
-            // this.svgOutput.noFill();
+            // [startX, startY]
             let firstSlot = [_boardX, _boardY];
-            let secondSlot = [_boardX, _boardY + (this.maxDepth * 0.4 * this.ppi)];
-            let thirdSlot = [_boardX, _boardY + (this.maxDepth * 0.8 * this.ppi)];
+            let secondSlot = [_boardX, _boardY + (_boardHeight * 0.4 * this.ppi)];
+            let thirdSlot = [_boardX, _boardY + (_boardHeight * 0.8 * this.ppi)];
             let slots = [firstSlot, secondSlot, thirdSlot];
             for (let i = 0; i < slots.length; i++) {
                 this.svgOutput.rect(slots[i][0], slots[i][1], this.cutWidth * this.ppi, this.slotHeight * this.ppi);
             }
+        }
+    }
+
+    drawSheets() {
+        // draw rectangle for material size to laser cut
+        let topY = 0;
+        let topX = 0
+        for (let i = 0; i < this.sheets.length; i++) {
+            topY = i * ((this.materialHeight * this.ppi) + this.buffer);
+
+            this.svgOutput.rect(topX, topY, this.materialWidth * this.ppi, this.materialHeight * this.ppi);
         }
     }
 }

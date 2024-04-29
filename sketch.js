@@ -13,7 +13,7 @@ let inputMode = true;
 let useExample = true;
 
 function preload() {
-    shapeData = loadJSON('data/sunny-shapes.json');
+    shapeData = loadJSON('data/cardboard.json');
 }
 
 function setup() {
@@ -74,7 +74,6 @@ function createCase() {
     // show result
     sa.currSolution.showLayout();
     newCase.showResult();
-    newCase.exportToLaserSVG();
 
     console.log(sa.currSolution);
 }
@@ -83,7 +82,9 @@ function keyPressed() {
     if (!inputMode) {
         if (key === 's' || key === 'S') {
             // save current case as SVG
-            newCase.renderBoards();
+            newCase.buildLaserSVG();
+            newCase.displaySVGExport();
+            newCase.saveSVGExport();
         }
     }
 }

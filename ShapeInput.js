@@ -1,9 +1,9 @@
 class ShapeInput {
     constructor() {
         // User input grid size
-        this.inputRows = 10;
-        this.inputCols = 10;
-        this.inputCellSize = 50;
+        this.inputRows = 15;
+        this.inputCols = 15;
+        this.inputCellSize = 35;
         this.gridHeight = (this.inputRows * this.inputCellSize);
         this.gridWidth = (this.inputCols * this.inputCellSize);
         this.inputGrid = [];
