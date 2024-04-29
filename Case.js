@@ -458,6 +458,24 @@ class Case {
                     this.svgOutput.rect(tJoints[i][0], tJoints[i][1], this.cutWidth * this.ppi, this.slotHeight * this.ppi);
                 }
             });
+
+            // draw X joints (c-shape)
+            currBoard.poi.xJoints.forEach((xJoint) => {
+                console.log(currBoard);
+                this.svgOutput.noFill();
+                let xJointX = topLeftX + ((xJoint / this.cellToInch) * this.ppi);
+                let xJointY;
+                if (currBoard.orientation == "x") {
+                    // cut joint on board bottom
+                    xJointY = topLeftY + ((boardHeight * this.ppi) / 2);
+                } else if (currBoard.orientation == "y") {
+                    // cut joint on board top
+                    console.log("here");
+                    xJointY = topLeftY;
+                }
+                this.svgOutput.rect(xJointX, xJointY, this.cutWidth * this.ppi, (boardHeight * this.ppi) / 2);
+            });
+
         }
     }
 
