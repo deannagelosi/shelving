@@ -9,7 +9,7 @@ class Case {
         this.showBoards = true;
         this.showAllDots = false;
 
-        // laser cutting
+        // laser cutting design
         this.materialWidth = 40;
         this.materialHeight = 20;
         this.materialThickness = 0.079;
@@ -17,6 +17,10 @@ class Case {
         this.lenMod = this.materialThickness;
         this.ppi = 10; // pixel per inch
         this.buffer = 0.25 * this.ppi; // gap between boards
+
+        // laser cutting fabrication
+        this.vertKerf = 0.02; // kerf for vertical cuts
+        this.cutWidth = this.materialThickness - this.vertKerf;
 
         this.sheetRows = [0, 0, 0, 0, 0]; // 5 rows
         this.sheets = [[...this.sheetRows], [...this.sheetRows]];
@@ -255,12 +259,11 @@ class Case {
         this.svgOutput.strokeWeight(1);
         // draw rectangle for material size to laser cut
         this.svgOutput.rect(0, 0, this.materialWidth * this.ppi, this.materialHeight * this.ppi);
-        // draw all the boards
+        // draw all the boards and POIs (joinery)
         this.drawBoards();
 
 
 
-        // draw joinery
 
         this.displayExport(); // save as SVG, view in the browser
 
@@ -463,6 +466,12 @@ class Case {
             // mark location as filled
             this.sheets[sheet][row] += boardWidth + (this.buffer / this.ppi);
 
+            // draw points of interest (joinery)
+            // draw L joints (slots or pins)
+            let startType = currBoard.poi.startJoint;
+            let endType = currBoard.poi.endJoint;
+            this.drawSlotsOrPins(startType, topLeftX, topLeftY);
+            this.drawSlotsOrPins(endType, topLeftX + (boardWidth * this.ppi) - (this.cutWidth * this.ppi), topLeftY);
         }
     }
 
@@ -479,6 +488,32 @@ class Case {
                 if (rowRemainingWidth >= spaceNeeded) {
                     return [sheet, row];
                 }
+            }
+        }
+    }
+
+    drawSlotsOrPins(_type, _boardX, _boardY) {
+        // print the joinery
+        if (_type == "slot") {
+            // this.svgOutput.noFill();
+            // [startX, startY]
+            let firstPin = [_boardX, _boardY + (this.maxDepth * 0.2 * this.ppi)];
+            let secondPin = [_boardX, _boardY + (this.maxDepth * 0.6 * this.ppi)];
+            let pins = [firstPin, secondPin];
+            console.log("pins: ", pins);
+            let pinHeight = 1;
+            for (let i = 0; i < pins.length; i++) {
+                this.svgOutput.rect(pins[i][0], pins[i][1], this.cutWidth * this.ppi, pinHeight * this.ppi);
+            }
+        } else if (_type == "pin") {
+            // this.svgOutput.noFill();
+            let firstSlot = [_boardX, _boardY];
+            let secondSlot = [_boardX, _boardY + (this.maxDepth * 0.4 * this.ppi)];
+            let thirdSlot = [_boardX, _boardY + (this.maxDepth * 0.8 * this.ppi)];
+            let slots = [firstSlot, secondSlot, thirdSlot];
+            let slotHeight = 1;
+            for (let i = 0; i < slots.length; i++) {
+                this.svgOutput.rect(slots[i][0], slots[i][1], this.cutWidth * this.ppi, slotHeight * this.ppi);
             }
         }
     }
