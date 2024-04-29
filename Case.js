@@ -12,7 +12,7 @@ class Case {
         // laser cutting design
         this.materialWidth = 16.5;
         this.materialHeight = 11;
-        this.materialThickness = 0.079;
+        this.materialThickness = 0.11;
         this.cellToInch = 2; // input cells (0.5 inches) to inch conversion
         this.lenMod = this.materialThickness;
         this.ppi = 40; // pixel per inch
