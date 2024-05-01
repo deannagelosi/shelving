@@ -9,23 +9,23 @@ class Solution {
 
     exampleSolution() {
         // cardboard
-        this.shapes[0].posX = 2;
-        this.shapes[0].posY = 5;
+        this.shapes[0].posX = 0;
+        this.shapes[0].posY = 14;
 
         this.shapes[1].posX = 0;
-        this.shapes[1].posY = 13;
+        this.shapes[1].posY = 6;
 
-        this.shapes[2].posX = 1;
-        this.shapes[2].posY = 0;  
+        this.shapes[2].posX = 10;
+        this.shapes[2].posY = 14;  
         
-        this.shapes[3].posX = 9;
-        this.shapes[3].posY = 15;
+        this.shapes[3].posX = 8;
+        this.shapes[3].posY = 0;
 
         this.shapes[4].posX = 11;
-        this.shapes[4].posY = 0;  
+        this.shapes[4].posY = 7;  
 
-        this.shapes[5].posX = 1;
-        this.shapes[5].posY = 4;  
+        this.shapes[5].posX = 0;
+        this.shapes[5].posY = 0;  
 
         // // test shapes
         // this.shapes[0].posX = 17;
