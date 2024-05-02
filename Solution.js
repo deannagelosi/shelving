@@ -16,16 +16,16 @@ class Solution {
         this.shapes[1].posY = 6;
 
         this.shapes[2].posX = 10;
-        this.shapes[2].posY = 14;  
-        
+        this.shapes[2].posY = 14;
+
         this.shapes[3].posX = 8;
         this.shapes[3].posY = 0;
 
         this.shapes[4].posX = 11;
-        this.shapes[4].posY = 7;  
+        this.shapes[4].posY = 7;
 
         this.shapes[5].posX = 0;
-        this.shapes[5].posY = 0;  
+        this.shapes[5].posY = 0;
 
         // // test shapes
         // this.shapes[0].posX = 17;
@@ -202,12 +202,29 @@ class Solution {
     }
 
     showLayout() {
+        let lineColor;
+        let bkrdColor;
+        let boundaryColor;
+        let collisionColor;
+
+        if (devMode) {
+            lineColor = 0;
+            bkrdColor = 255;
+            boundaryColor = "rgb(255, 192, 203)";
+            collisionColor = "red";
+        } else if (!devMode) {
+            lineColor = "rgb(198, 198, 197)";
+            bkrdColor = "rgb(229, 229, 229)";
+            boundaryColor = "rgb(209, 209, 209)";
+            collisionColor = "rgb(135, 160, 103)"
+        }
+
         let cellSizeHeight = canvasHeight / this.layout.length;
         let cellSizeWidth = canvasWidth / this.layout[0].length;
         let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
 
         // display the design space grid
-        stroke(0);
+        stroke(lineColor);
         strokeWeight(0.5);
         textSize(10);
         let designHeight = this.layout.length;
@@ -216,16 +233,16 @@ class Solution {
             for (let y = 0; y < designHeight; y++) {
                 // draw cell
                 if (this.layout[y][x].shapes.length == 0) {
-                    fill(255); // white (empty)
+                    fill(bkrdColor); // white (empty)
                 } else if (this.layout[y][x].shapes.length == 1) {
                     // fill the cell pink if it's occupied by the boundary shape
-                    fill(255, 192, 203); // pink (boundary)
+                    fill(boundaryColor); // pink (boundary)
                     if (this.layout[y][x].isShape) {
                         // fill the cell black if it's occupied by the shape
                         fill(0); // black (shape)
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
-                    fill("red");  // collision
+                    fill(collisionColor);  // collision
                 }
 
                 let rectX = x * cellSize;
@@ -234,8 +251,12 @@ class Solution {
 
                 // place the minesweeper score in the cell if its empty
                 if (this.layout[y][x].cellScore > 0) {
-                    fill(0);
-                    text(this.layout[y][x].cellScore, rectX + cellSize / 4, rectY + cellSize);
+                    if (devMode) {
+                        fill(0);
+                        text(this.layout[y][x].cellScore, rectX + cellSize / 4, rectY + cellSize);
+                    } else if (!devMode) {
+                        console.log("no numbers")
+                    }
                 }
             }
         }
@@ -317,7 +338,7 @@ class Solution {
             }
         }
         let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
- 
+
         // calculate the height off the ground of each bottom shape
         let totalYValues = 0;
         for (let i = 0; i < bottomShapes.length; i++) {

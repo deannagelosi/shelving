@@ -6,8 +6,8 @@ class Case {
         this.boards = [];
         this.maxDepth = 0;
 
-        this.showBoards = true;
-        this.showAllDots = false;
+        this.showBoards = false;
+        this.allowMerge = false;
 
         // laser cutting design
         this.materialWidth = 16.5;
@@ -130,47 +130,49 @@ class Case {
         }
 
         // merge boards - keep merging until no more merges can be made
-        let merging = true;
-        while (merging == true) {
-            merging = false;
+        if (this.allowMerge) {
+            let merging = true;
+            while (merging == true) {
+                merging = false;
 
-            // make a new list of boards that are merged and unmerged
-            let newBoards = [];
+                // make a new list of boards that are merged and unmerged
+                let newBoards = [];
 
-            // find boards that can be merged
-            for (let i = 0; i < this.boards.length; i++) {
-                let board1 = this.boards[i];
+                // find boards that can be merged
+                for (let i = 0; i < this.boards.length; i++) {
+                    let board1 = this.boards[i];
 
-                for (let j = 0; j < this.boards.length; j++) {
-                    let board2 = this.boards[j];
+                    for (let j = 0; j < this.boards.length; j++) {
+                        let board2 = this.boards[j];
 
-                    if (i != j && !board1.merged && !board2.merged) {
-                        let mergedBoard = this.mergeBoards(board1, board2);
+                        if (i != j && !board1.merged && !board2.merged) {
+                            let mergedBoard = this.mergeBoards(board1, board2);
 
-                        if (mergedBoard) {
-                            // add the merged board to the new boards list
-                            board1.merged = true;
-                            board2.merged = true;
-                            newBoards.push(mergedBoard);
+                            if (mergedBoard) {
+                                // add the merged board to the new boards list
+                                board1.merged = true;
+                                board2.merged = true;
+                                newBoards.push(mergedBoard);
 
-                            merging = true;
+                                merging = true;
+                            }
                         }
                     }
                 }
-            }
 
-            // add unmerged boards to the new boards list
-            for (let i = 0; i < this.boards.length; i++) {
-                if (!this.boards[i].merged) {
-                    newBoards.push(this.boards[i]);
+                // add unmerged boards to the new boards list
+                for (let i = 0; i < this.boards.length; i++) {
+                    if (!this.boards[i].merged) {
+                        newBoards.push(this.boards[i]);
+                    }
                 }
-            }
 
-            // update with merged and unmerged boards
-            this.boards = newBoards;
+                // update with merged and unmerged boards
+                this.boards = newBoards;
 
-            for (let board of this.boards) {
-                board.merged = false;
+                for (let board of this.boards) {
+                    board.merged = false;
+                }
             }
         }
     }
@@ -178,49 +180,78 @@ class Case {
     showResult() {
         if (this.showBoards) {
             // show boards
+            let counter = 0;
             for (let i = 0; i < this.boards.length; i++) {
                 let board = this.boards[i];
-
-                stroke(color(random(255), random(255), random(255)));
-                strokeWeight(5);
-                line(
-                    board.startCoords.x * this.solution.cellSize,
-                    canvasHeight - (board.startCoords.y * this.solution.cellSize),
-                    board.endCoords.x * this.solution.cellSize,
-                    canvasHeight - (board.endCoords.y * this.solution.cellSize)
-                );
+                if (devMode) {
+                    stroke(color(random(255), random(255), random(255)));
+                    strokeWeight(5);
+                    line(
+                        board.startCoords.x * this.solution.cellSize,
+                        canvasHeight - (board.startCoords.y * this.solution.cellSize),
+                        board.endCoords.x * this.solution.cellSize,
+                        canvasHeight - (board.endCoords.y * this.solution.cellSize)
+                    );
+                } else if (!devMode) {
+                    setTimeout(() => {
+                        stroke("rgb(175, 141, 117)");
+                        strokeWeight(5);
+                        line(
+                            board.startCoords.x * this.solution.cellSize,
+                            canvasHeight - (board.startCoords.y * this.solution.cellSize),
+                            board.endCoords.x * this.solution.cellSize,
+                            canvasHeight - (board.endCoords.y * this.solution.cellSize)
+                        );
+                    }, counter);
+                    counter += 1000;
+                }
             }
         } else {
             // show dots
+            let counter = 0;
             for (let i = 0; i < this.automata.length; i++) {
                 let automaton = this.automata[i];
+                let prevPosX = automaton.dots[i].x;
+                let currPosX = prevPosX;
+                let prevPosY = automaton.dots[i].y;
+                let currPosY = prevPosY;
 
-                fill(color(random(255), random(255), random(255)));
-                noStroke(); // No border for the dots
-                for (let i = 0; i < automaton.dots.length; i++) {
-                    circle(
-                        automaton.dots[i].x * this.solution.cellSize,
-                        canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
-                        10
-                    );
+                // fill(color(random(255), random(255), random(255)));
+                // noStroke(); // No border for the dots
+                for (let j = 0; j < automaton.dots.length; j++) {
+                    setTimeout(() => {
+                        // update the current position to the new dot's position
+                        currPosX = automaton.dots[j].x;
+                        currPosY = automaton.dots[j].y;
+
+                        stroke("rgb(175, 141, 117)");
+                        // noStroke();
+                        strokeWeight(5);
+                        if (Math.abs(prevPosX - currPosX) == 1 && Math.abs(prevPosY - currPosY) == 0 || Math.abs(prevPosX - currPosX) == 0 && Math.abs(prevPosY - currPosY) == 1) {
+                            line(
+                                prevPosX * this.solution.cellSize,
+                                canvasHeight - (prevPosY * this.solution.cellSize),
+                                currPosX * this.solution.cellSize,
+                                canvasHeight - (currPosY * this.solution.cellSize)
+                            );
+                        } else {
+                            console.log("prevPosX,Y: ", prevPosX, prevPosY, "currPosX, Y: ", currPosX, currPosY);
+                        }
+
+                        // update previous position to current for the next iteration
+                        prevPosX = currPosX;
+                        prevPosY = currPosY;
+
+                        // circle(
+                        //     automaton.dots[i].x * this.solution.cellSize,
+                        //     canvasHeight - (automaton.dots[i].y * this.solution.cellSize),
+                        //     10
+                        // );
+                    }, counter);
+                    counter += 100;
                 }
             }
         }
-
-        if (this.showAllDots) {
-            // show allDots
-            for (let i = 0; i < this.allDots.length; i++) {
-                fill(color(random(255), random(255), random(255)));
-                noStroke(); // No border for the dots
-                circle(
-                    this.allDots[i].x * this.solution.cellSize,
-                    canvasHeight - (this.allDots[i].y * this.solution.cellSize),
-                    10
-                );
-            }
-        }
-
-
     }
 
     renderBoards() {
@@ -256,7 +287,7 @@ class Case {
 
         this.detectJoints(); // add joinery (points of interest) to boards
         this.calcDepth(); // max shape depth becomes case depth
-        
+
         // draw all the boards, labels, and POIs (joinery)
         this.drawBoards();
         this.drawSheets();
@@ -472,7 +503,7 @@ class Case {
             this.drawSlotsOrPins(endType, topLeftX + (boardWidth * this.ppi) - (this.cutWidth * this.ppi), topLeftY, boardHeight);
 
             // draw T joints (slots)
-            currBoard.poi.tJoints.forEach((tJoint) => {        
+            currBoard.poi.tJoints.forEach((tJoint) => {
                 let tJointX = topLeftX + ((tJoint / this.cellToInch) * this.ppi);
                 // tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
                 let tJointY = topLeftY + (0.2 * boardHeight * this.ppi);

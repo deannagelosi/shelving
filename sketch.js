@@ -10,7 +10,8 @@ let newCase;
 let inputMode = true;
 
 // diagnostic toggles
-let useExample = true;
+let useExample = false;
+let devMode = false;
 
 function preload() {
     shapeData = loadJSON('data/cardboard.json');
@@ -51,7 +52,7 @@ function draw() {
                 if (loopCount % 10 == 0) {
                     clear();
                     background(255);
-                    sa.currSolution.showLayout()
+                    sa.currSolution.showLayout(devMode)
                 }
             } else {
                 // optimization complete
