@@ -61,11 +61,11 @@ class Shape {
         // add a row on the top of the trim shape that's the same as the row below it
         boundaryShape.push([...boundaryShape[boundaryShape.length - 1]]);
 
-        // add additional boundary cells for under hangs
+        // add additional boundary units for under hangs
         for (let i = 0; i < boundaryShape.length; i++) {
             for (let j = 0; j < boundaryShape[i].length; j++) {
                 if (boundaryShape[i][j] == false) {
-                    // on rows that are not the top row, check if the cell above is true
+                    // on rows that are not the top row, check if the unit above is true
                     if (i < (boundaryShape.length - 1) && boundaryShape[i + 1][j] == true) {
                         boundaryShape[i][j] = true;
                     }
@@ -73,11 +73,11 @@ class Shape {
             }
         }
 
-        // add additional boundary cells for over hangs
+        // add additional boundary units for over hangs
         for (let i = boundaryShape.length - 1; i >= 0; i--) {
             for (let j = 0; j < boundaryShape[i].length; j++) {
                 if (boundaryShape[i][j] == false) {
-                    // on rows that are not the bottom row, check if the cell below is true
+                    // on rows that are not the bottom row, check if the unit below is true
                     if (i > 0 && boundaryShape[i - 1][j] == true) {
                         boundaryShape[i][j] = true;
                     }

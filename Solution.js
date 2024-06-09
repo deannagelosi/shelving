@@ -1,10 +1,10 @@
 class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
-        this.layout = [[]]; // 2D array of shapes that occupy cells in the layout
+        this.layout = [[]]; // 2D array of shapes that occupy the layout
         this.score;
-        this.cellSize;
-        this.eightThreshold = 0.07; // ratio of cells with a cScore of 8
+        this.unitSize;
+        this.eightThreshold = 0.07; // ratio limit for unit scores of 8
     }
 
     exampleSolution() {
@@ -115,15 +115,15 @@ class Solution {
 
         this.layout = [[]]; // clear the layout
 
-        // place cell data about shapes into the layout grid
+        // place data about shapes into the layout grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
             // place shape boundary
 
-            let cellData = {
+            let unitData = {
                 shapes: [],
                 isShape: false,
-                cellScore: 0
+                unitScore: 0
             };
 
             for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
@@ -139,25 +139,25 @@ class Solution {
                         while (!xInBounds) {
                             // grow the x+ direction by two
                             for (let i = 0; i < this.layout.length; i++) {
-                                // grow every row with a new cellData object
-                                this.layout[i].push(JSON.parse(JSON.stringify(cellData)));
-                                this.layout[i].push(JSON.parse(JSON.stringify(cellData)));
+                                // grow every row with a new unitData object
+                                this.layout[i].push(JSON.parse(JSON.stringify(unitData)));
+                                this.layout[i].push(JSON.parse(JSON.stringify(unitData)));
                             }
                             xInBounds = shape.posX + x + 1 < this.layout[0].length;
                         }
                         while (!yInBounds) {
                             // grow the y+ direction
                             // add a new row filled with unique objects
-                            let newRow = new Array(this.layout[0].length).fill(null).map(() => (JSON.parse(JSON.stringify(cellData))));
+                            let newRow = new Array(this.layout[0].length).fill(null).map(() => (JSON.parse(JSON.stringify(unitData))));
                             this.layout.push(newRow);
 
                             yInBounds = shape.posY + y < this.layout.length;
                         }
 
-                        // update occupancy of a cell in the layout
+                        // update occupancy in the layout
                         this.layout[shape.posY + y][shape.posX + x].shapes.push(shape);
 
-                        // mark if the cell is occupied by a shape or the shape's boundary
+                        // mark if occupied by a shape or the shape's boundary
                         let shapeInBounds = y < shape.data.shape.length && x < shape.data.shape[0].length;
                         this.layout[shape.posY + y][shape.posX + x + 1].isShape = shapeInBounds && shape.data.shape[y][x];
                     }
@@ -167,11 +167,11 @@ class Solution {
 
         // trim layout and remove empty rows
         // trim the last row if it's empty
-        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(cell => cell.shapes.length == 0)) {
+        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(unit => unit.shapes.length == 0)) {
             this.layout.pop();
         }
         // trim the first row if it's empty
-        while (this.layout.length > 0 && this.layout[0].every(cell => cell.shapes.length == 0)) {
+        while (this.layout.length > 0 && this.layout[0].every(unit => unit.shapes.length == 0)) {
             this.layout.shift();
             // update shape.posY with new position for every shape
             for (let i = 0; i < this.shapes.length; i++) {
@@ -195,10 +195,10 @@ class Solution {
             }
         }
 
-        // update cellSize for this layout
-        let cellSizeHeight = canvasHeight / this.layout.length;
-        let cellSizeWidth = canvasWidth / this.layout[0].length;
-        this.cellSize = Math.min(cellSizeHeight, cellSizeWidth);
+        // update unitSize for this layout
+        let unitHeight = canvasHeight / this.layout.length;
+        let unitWidth = canvasWidth / this.layout[0].length;
+        this.unitSize = Math.min(unitHeight, unitWidth);
     }
 
     showLayout() {
@@ -219,9 +219,9 @@ class Solution {
             collisionColor = "rgb(135, 160, 103)"
         }
 
-        let cellSizeHeight = canvasHeight / this.layout.length;
-        let cellSizeWidth = canvasWidth / this.layout[0].length;
-        let cellSize = Math.min(cellSizeHeight, cellSizeWidth);
+        let unitHeight = canvasHeight / this.layout.length;
+        let unitWidth = canvasWidth / this.layout[0].length;
+        let unitSize = Math.min(unitHeight, unitWidth);
 
         // display the design space grid
         stroke(lineColor);
@@ -231,38 +231,38 @@ class Solution {
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
             for (let y = 0; y < designHeight; y++) {
-                // draw cell
+                // draw unit square
                 if (this.layout[y][x].shapes.length == 0) {
                     fill(bkrdColor); // white (empty)
                 } else if (this.layout[y][x].shapes.length == 1) {
-                    // fill the cell pink if it's occupied by the boundary shape
+                    // fill square pink if it's occupied by the boundary shape
                     fill(boundaryColor); // pink (boundary)
                     if (this.layout[y][x].isShape) {
-                        // fill the cell black if it's occupied by the shape
+                        // fill square black if it's occupied by the shape
                         fill("grey"); // black (shape)
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
                     fill(collisionColor);  // collision
                 }
 
-                let rectX = x * cellSize;
-                let rectY = (canvasHeight - cellSize) - (y * cellSize); // draw from bottom up
-                rect(rectX, rectY, cellSize, cellSize);
+                let rectX = x * unitSize;
+                let rectY = (canvasHeight - unitSize) - (y * unitSize); // draw from bottom up
+                rect(rectX, rectY, unitSize, unitSize);
 
-                // place the minesweeper score in the cell if its empty
-                if (this.layout[y][x].cellScore > 0) {
+                // display the unit score if its empty of shapes
+                if (this.layout[y][x].unitScore > 0) {
                     if (devMode) {
                         fill(0);
-                        text(this.layout[y][x].cellScore, rectX + cellSize / 3, rectY + cellSize / 1.5);
-                    } 
-                } else if (this.layout[y][x].cellScore == 0) {
+                        text(this.layout[y][x].unitScore, rectX + unitSize / 3, rectY + unitSize / 1.5);
+                    }
+                } else if (this.layout[y][x].unitScore == 0) {
                     if (devMode) {
                         let shapeID;
                         if (this.layout[y][x].shapes.length > 0) {
                             shapeID = this.layout[y][x].shapes[0].data.title[0]
                         }
                         fill(0);
-                        text(shapeID, rectX + cellSize / 3, rectY + cellSize / 1.5);
+                        text(shapeID, rectX + unitSize / 3, rectY + unitSize / 1.5);
                     }
                 }
             }
@@ -273,41 +273,41 @@ class Solution {
         // the objective function in simulated annealing
 
         this.score = 0; // reset the score
-        let numCells8 = 0; // reset the number of cells with a cScore of 8
-        let totalNumCells = 0; // total number of cells in the layout
-        let overlappingCells = 0; // number of overlapping cells
+        let numUnits8 = 0; // reset the number of squares with a uScore of 8
+        let totalNumUnits = 0; // total number of squares in the layout
+        let overlappingUnits = 0; // number of squares containing overlapping shapes
 
-        // count all the empty cells in the layout
+        // count all the empty units in the layout
         for (let i = 0; i < this.layout.length; i++) {
             for (let j = 0; j < this.layout[i].length; j++) {
-                totalNumCells++; // the total number of cells
+                totalNumUnits++; // the total number of unit squares
 
-                // the number of overlapping cells
+                // the number of overlapping unit squares
                 if (this.layout[i][j].shapes.length > 1) {
-                    overlappingCells += this.layout[i][j].shapes.length - 1;
+                    overlappingUnits += this.layout[i][j].shapes.length - 1;
                 }
 
-                // the number of cells with a score of 8 (no adjacent empty cells) and calc ratio
+                // the number of units with a score of 8 (no adjacent empty spots) and calc ratio
                 if (this.layout[i][j].shapes.length == 0) {
-                    // cell is empty
-                    let cScore = 8;
-                    // check the 8 possible adjacent cells
+                    // unit is empty, calculate the unit score
+                    let uScore = 8;
+                    // check the 8 possible adjacent units
                     for (let x = Math.max(0, i - 1); x <= Math.min(i + 1, this.layout.length - 1); x++) {
                         for (let y = Math.max(0, j - 1); y <= Math.min(j + 1, this.layout[0].length - 1); y++) {
-                            // don't count the cell itself
+                            // don't count the unit square itself
                             if (x !== i || y !== j) {
-                                // count if the adjacent cell is empty
+                                // count if the adjacent unit is empty
                                 if (this.layout[x][y].shapes.length > 0) {
-                                    cScore--;
+                                    uScore--;
                                 }
                             }
                         }
                     }
-                    // assign the score to the cell
-                    this.layout[i][j].cellScore = cScore;
-                    // calculate the number of cells with a cScore of 8
-                    if (cScore == 8) {
-                        numCells8++;
+                    // assign the score to the unit
+                    this.layout[i][j].unitScore = uScore;
+                    // calculate the number of units with a score of 8
+                    if (uScore == 8) {
+                        numUnits8++;
                     }
                 }
             }
@@ -318,10 +318,10 @@ class Solution {
         // loop through each column to find the first shape from the bottom up
         for (let col = 0; col < this.layout[0].length; col++) {
             for (let row = 0; row < this.layout.length; row++) {
-                let cellData = this.layout[row][col];
-                if (cellData.shapes.length > 0) {
-                    // there is a shape(s) occupying this cell
-                    let shape = cellData.shapes[0];
+                let unitData = this.layout[row][col];
+                if (unitData.shapes.length > 0) {
+                    // there is a shape(s) occupying this unit square
+                    let shape = unitData.shapes[0];
                     // check if looking at the bottom row of the shape
                     if (row == shape.posY) {
                         // check if the shape already exists in bottomShapes
@@ -353,10 +353,10 @@ class Solution {
             totalYValues += yValue;
         }
 
-        if (overlappingCells == 0 && numCells8 / totalNumCells < this.eightThreshold && totalYValues == 0) {
+        if (overlappingUnits == 0 && numUnits8 / totalNumUnits < this.eightThreshold && totalYValues == 0) {
             this.score = 0;
         } else {
-            this.score = (this.layout.length * overlappingCells) + numCells8 + totalYValues;
+            this.score = (this.layout.length * overlappingUnits) + numUnits8 + totalYValues;
         }
     }
 

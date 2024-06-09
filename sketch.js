@@ -92,13 +92,13 @@ function keyPressed() {
 
 function mousePressed() {
     if (inputMode) {
-        shapeInput.selectInputCell(mouseX, mouseY);
+        shapeInput.selectInputUnit(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
     if (inputMode) {
-        shapeInput.selectInputCell(mouseX, mouseY);
+        shapeInput.selectInputUnit(mouseX, mouseY);
     }
 }
 

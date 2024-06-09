@@ -3,15 +3,15 @@ class ShapeInput {
         // User input grid size
         this.inputRows = 15;
         this.inputCols = 15;
-        this.inputCellSize = 35;
-        this.gridHeight = (this.inputRows * this.inputCellSize);
-        this.gridWidth = (this.inputCols * this.inputCellSize);
+        this.inputUnitSize = 35;
+        this.gridHeight = (this.inputRows * this.inputUnitSize);
+        this.gridWidth = (this.inputCols * this.inputUnitSize);
         this.inputGrid = [];
 
         this.tbPadding = 50; // top bottom
         this.lrPadding = 25; // left right
 
-        // Initialize the stack for cell selection history
+        // Initialize the stack for unit selection history
         this.selectionHistory = [];
         // Track shape titles displaying to hide later
         this.shapeTitleElements = [];
@@ -95,28 +95,28 @@ class ShapeInput {
     drawInputGrid() {
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
-                // draw cell
+                // draw input unit square
                 if (this.inputGrid[y][x]) {
                     fill(0); // Fill black if the rect is clicked
                 } else {
                     fill(255); // Fill white
                 }
 
-                let rectX = x * this.inputCellSize
-                let rectY = (this.gridHeight - this.inputCellSize) - (y * this.inputCellSize); // draw from bottom up
+                let rectX = x * this.inputUnitSize
+                let rectY = (this.gridHeight - this.inputUnitSize) - (y * this.inputUnitSize); // draw from bottom up
 
-                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputCellSize, this.inputCellSize);
+                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputUnitSize, this.inputUnitSize);
             }
         }
     }
 
-    selectInputCell(mouseX, mouseY) {
+    selectInputUnit(mouseX, mouseY) {
         let xValid = mouseX >= this.lrPadding && mouseX <= this.gridWidth + this.lrPadding;
         let yValid = mouseY >= this.tbPadding && mouseY <= this.gridHeight + this.tbPadding;
         if (xValid && yValid) {
 
-            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputCellSize); // Column
-            let gridY = Math.floor((this.gridHeight + this.tbPadding - mouseY) / this.inputCellSize); // Row
+            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputUnitSize); // Column
+            let gridY = Math.floor((this.gridHeight + this.tbPadding - mouseY) / this.inputUnitSize); // Row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 if (!this.inputGrid[gridY][gridX]) {
@@ -140,7 +140,7 @@ class ShapeInput {
 
     saveShape() {
         // check if the shape is valid before saving
-        // check if the bottom has at least 1 clicked cell
+        // check if the bottom has at least 1 clicked inout unit
         if (this.inputGrid[0].includes(true)) {
             // find the shape title
             let titleValue = this.titleInput.value();
@@ -168,7 +168,7 @@ class ShapeInput {
                 this.nextButton.removeAttribute('disabled');
             }
         } else {
-            alert('Shape must have a cell selected on the bottom row.');
+            alert('Shape must have an input square selected on the bottom row.');
         }
     }
 

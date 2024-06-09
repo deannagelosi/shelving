@@ -136,7 +136,7 @@ class Automaton {
                                 return this.addDot(currY, currX - 1);
                             } else {
                                 // pick the initial direction, left or right
-                                // pick the direction heading towards "more space", ie higher cScore
+                                // pick the direction heading towards "more space", ie higher uScore
                                 if (cellDL.score > cellDR.score) {
                                     // turn left
                                     return this.addDot(currY, currX - 1);
@@ -145,7 +145,7 @@ class Automaton {
                                     return this.addDot(currY, currX + 1);
                                 } else {
                                     // equal. what do?
-                                    console.log("need to turn: currX,Y:" , currX, currY);
+                                    console.log("need to turn: currX,Y:", currX, currY);
                                     return false;
                                 }
                             }
@@ -173,14 +173,14 @@ class Automaton {
                 if (currScore == 0) {
                     // both sides same number, 
                     return this.addDot(currY + 1, currX);
-                } 
+                }
                 else if (currScore == 1) {
                     // not enough of a difference to change direction
                     // keep going current direction
                     if (prevX == currX - 1) {
                         // moving right
-                        return this.addDot(currY, currX + 1); 
-                    } 
+                        return this.addDot(currY, currX + 1);
+                    }
                     // else if (prevX == currX + 1) {
                     //     // moving left
                     //     return this.addDot(currY, currX - 1);
@@ -238,7 +238,7 @@ class Automaton {
     addDot(_y, _x) {
         let growing = true;
         let newDot = { x: _x, y: _y };
-        
+
         if (this.dots.some(dot => JSON.stringify(dot) === JSON.stringify(newDot)) && this.growModeEnd != -1) {
             console.log("adding a dot that is already in the automaton: ", newDot);
         }
@@ -356,7 +356,7 @@ class Automaton {
         // if the cell is out-of-bounds, return {score: null, shape: null}
         let cell = { score: null, shape: null };
         if (this.cellInBounds(_y, _x)) {
-            cell.score = this.layout[_y][_x].cellScore;
+            cell.score = this.layout[_y][_x].unitScore;
             cell.shape = this.layout[_y][_x].shapes[0];
         }
         return cell;

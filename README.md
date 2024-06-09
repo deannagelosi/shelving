@@ -22,7 +22,7 @@
 
 - **turn on input objects**
 - **export and import solution**
-- click a cell a second time to deselect it
+- click a input slot a second time to deselect it
 - save objects for future use
 
 ### Generation
@@ -30,7 +30,7 @@
 #### Automata
 
 - when growing vertically, find the center of zero-scores like in case 1
-- detect and fix "C" paths, ie when 3 walls on a cell (at least partially parallel with yourself)
+- detect and fix "C" paths, ie when 3 walls on a unit (at least partially parallel with yourself)
 
 #### Annealing
 
