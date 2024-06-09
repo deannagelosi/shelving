@@ -3,41 +3,38 @@ class Cellular {
         this.grid = [[]]; // 2D array of cell objects
         this.layout = _layout; // array of shapes in their annealed position
         this.gridHeight = this.layout.length;
-        console.log(this.gridHeight);
         this.gridWidth = this.layout[0].length;
         this.shapes = _shapes; // array of shapes and their positions
     }
 
     initGrid() {
         // initialize grid with empty slots for cells in the correct dimensions
-        this.grid = [[]]; // clear the grid
+        this.grid = []; // clear the grid
         for (let i = 0; i < this.gridHeight; i++) {
-            this.grid.push(new Array(this.gridWidth).fill(null));
+            this.grid.push([]);
+            for (let j = 0; j < this.gridWidth; j++) {
+                this.grid[i].push([]);
+            }
         }
 
         // populate grid with perimeter cells
-        // top + bottom
-        for (let i = 0; i < this.gridWidth; i++) {
-            this.grid[0][i] = {
-                strain: 0,
-                alive: false
-            };
-            this.grid[this.gridHeight][i] = {
-                strain: 0,
-                alive: false
-            };
-        }
-
-        // left + right
+        // left + right walls
         for (let i = 0; i < this.gridHeight; i++) {
-            this.grid[i][0] = {
+            this.grid[i][0].push({
                 strain: 0,
                 alive: false
-            };
-            this.grid[i][this.gridWidth] = {
+            });
+            this.grid[i][this.gridWidth - 1].push({
                 strain: 0,
                 alive: false
-            };
+            });
+        }
+          // top wall
+          for (let i = 1; i < this.gridWidth - 1; i++) {
+            this.grid[this.gridHeight - 1][i].push({
+                strain: 0,
+                alive: false
+            });
         }
 
         // populate grid with cells at the bottom of each shape
@@ -48,19 +45,13 @@ class Cellular {
 
             for (let j = 0; j < bottomLength; j++) {
                 // add a cell 
-                this.grid[shape.posY][shapeEnds[0] + j] = {
+                this.grid[shape.posY][shapeEnds[0] + j].push({
                     strain: i + 1,
-                    dir: "",
+                    dir: j == 0 ? "left" : j == bottomLength - 1 ? "right" : "",
                     score: null,
-                    alive: false
-                };
+                    alive: j == 0 ? true : j == bottomLength - 1 ? true : false
+                });
             }
-
-            // set start and end cells to alive and direction
-            this.grid[shape.posY][shapeEnds[0]].alive = true;
-            this.grid[shape.posY][shapeEnds[0]].dir = "left";
-            this.grid[shape.posY][shapeEnds[1]].alive = true;
-            this.grid[shape.posY][shapeEnds[1]].dir = "right";
         }
 
         console.log(this.grid);
@@ -69,6 +60,27 @@ class Cellular {
     growCells() {
         // loop grid and grow alive cells
 
+        // if alive, grow once
+        for (let y = 0; y < this.grid.length; y++) {
+            for (let x = 0; x < this.grid[y].length; x++) {
+                // is there a cell here? and is it alive?
+                if (this.grid[y][x] && this.grid[y][x].alive) {
+                    // grow the cell
+                    let leftSlot;
+                    let upSlot;
+                    let rightSlot;
+                    if (this.slotInBounds(y, x - 1)) {
+                        leftSlot = this.grid[y][x - 1];
+                    }
+                    if (this.slotInBounds(y + 1, x)) {
+                        upSlot = this.grid[y + 1][x];
+                    }
+                    if (this.slotInBounds(y, x + 1)) {
+                        rightSlot = this.grid[y][x + 1];
+                    }
+                }
+            }
+        }
     }
 
     getScore() {
@@ -97,14 +109,14 @@ class Cellular {
         return [startX, endX];
     }
 
-    // unitInBounds(coordY, coordX) {
-    //     // check if the layout unit square is in bounds
-    //     let yInBounds = coordY >= 0 && coordY < this.layout.length;
-    //     let xInBounds = coordX >= 0 && coordX < this.layout[0].length;
-    //     if (yInBounds && xInBounds) {
-    //         return true;
-    //     } else {
-    //         return false;
-    //     }
-    // }
+    slotInBounds(coordY, coordX) {
+        // check if the grid slot is in bounds
+        let yInBounds = coordY >= 0 && coordY < this.grid.length;
+        let xInBounds = coordX >= 0 && coordX < this.grid[0].length;
+        if (yInBounds && xInBounds) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
