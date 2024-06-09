@@ -239,7 +239,7 @@ class Solution {
                     fill(boundaryColor); // pink (boundary)
                     if (this.layout[y][x].isShape) {
                         // fill the cell black if it's occupied by the shape
-                        fill(0); // black (shape)
+                        fill("grey"); // black (shape)
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
                     fill(collisionColor);  // collision
@@ -253,9 +253,12 @@ class Solution {
                 if (this.layout[y][x].cellScore > 0) {
                     if (devMode) {
                         fill(0);
-                        text(this.layout[y][x].cellScore, rectX + cellSize / 4, rectY + cellSize);
-                    } else if (!devMode) {
-                        console.log("no numbers")
+                        text(this.layout[y][x].cellScore, rectX + cellSize / 3, rectY + cellSize / 1.5);
+                    } 
+                } else if (this.layout[y][x].cellScore == 0) {
+                    if (devMode) {
+                        fill(0);
+                        text(this.layout[y][x].shapes[0].data.title[0], rectX + cellSize / 3, rectY + cellSize / 1.5);
                     }
                 }
             }

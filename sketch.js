@@ -10,8 +10,8 @@ let newCase;
 let inputMode = true;
 
 // diagnostic toggles
-let useExample = false;
-let devMode = false;
+let useExample = true;
+let devMode = true;
 
 function preload() {
     shapeData = loadJSON('data/cardboard.json');
@@ -42,7 +42,7 @@ function draw() {
             // use example solution on example shapes
             createCase();
             noLoop();
-        } 
+        }
         else {
             // optimization loop to anneal the solution
             if (sa.epoch()) {
