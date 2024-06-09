@@ -1,4 +1,4 @@
-class SimulatedAnnealing {
+class Anneal {
     constructor(tempMax, tempMin, initSolution) {
         this.tempMax = tempMax;  // maximum system temperature
         this.tempMin = tempMin; // minimum system temperature

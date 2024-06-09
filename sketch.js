@@ -3,7 +3,7 @@ let canvasHeight = 600;
 let shapes = [];
 let shapesPos = [];
 let solutions = [];
-let sa; // simulated annealing
+let annealing; // simulated annealing
 let initialScore;
 let loopCount;
 let newCase;
@@ -34,7 +34,7 @@ function draw() {
         noLoop(); // don't loop input screen
 
     } else {
-        if (!sa) {
+        if (!annealing) {
             initialSolution();
         }
 
@@ -44,15 +44,15 @@ function draw() {
             noLoop();
         }
         else {
-            // optimization loop to anneal the solution
-            if (sa.epoch()) {
+            // optimization loop for annealing the solution
+            if (annealing.epoch()) {
                 // continue optimization
-                sa.tempCurr = sa.coolingSchedule();
+                annealing.tempCurr = annealing.coolingSchedule();
                 loopCount++;
                 if (loopCount % 10 == 0) {
                     clear();
                     background(255);
-                    sa.currSolution.showLayout(devMode)
+                    annealing.currSolution.showLayout(devMode)
                 }
             } else {
                 // optimization complete
@@ -67,16 +67,16 @@ function createCase() {
     clear();
     background(255);
     // build case
-    newCase = new Case(sa.currSolution);
+    newCase = new Case(annealing.currSolution);
     newCase.createAutomata();
     newCase.growAutomata();
     newCase.makeBoards();
 
     // show result
-    sa.currSolution.showLayout();
+    annealing.currSolution.showLayout();
     newCase.showResult();
 
-    console.log(sa.currSolution);
+    console.log(annealing.currSolution);
 }
 
 function keyPressed() {
@@ -129,7 +129,7 @@ function initialSolution() {
     let tempMax = 5000;
     let tempMin = 1;
 
-    sa = new SimulatedAnnealing(
+    annealing = new Anneal(
         tempMax,
         tempMin,
         initialSolution
