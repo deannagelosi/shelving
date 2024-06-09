@@ -68,13 +68,14 @@ function createCase() {
     background(255);
     // build case
     newCase = new Case(annealing.currSolution);
-    newCase.createAutomata();
-    newCase.growAutomata();
-    newCase.makeBoards();
+    // newCase.createAutomata();
+    // newCase.growAutomata();
+    // newCase.makeBoards();
+    newCase.initCellular();
 
     // show result
     annealing.currSolution.showLayout();
-    newCase.showResult();
+    // newCase.showResult();
 
     console.log(annealing.currSolution);
 }

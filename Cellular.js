@@ -15,7 +15,14 @@ class Cellular {
         }
 
         // populate grid with cells at the bottom of each shape
-        // 
+        let shape = this.shapes[0];
+        let shapeEnds = this.overhangShift(shape);
+
+        this.grid[shape.posY][shapeEnds[0]] = "yo-start";
+        this.grid[shape.posY][shapeEnds[1]] = "yo-end";
+
+        console.log(this.grid);
+
 
 
 
@@ -32,17 +39,20 @@ class Cellular {
     }
 
     //-- Helper functions --//
-    overhangShift(posX) {
+    overhangShift(shape) {
         // for shapes with overhang, find the bottom corner of the shape
         // posX is the x-coordinate of the leftmost cell of the shape in the full layout
+        let posX = shape.posX;
+        let bottomRow = shape.data.boundaryShape[0];
+
         let leftShift = 0;
-        while (this.shapes.data.boundaryShape[0][leftShift] != true) {
+        while (bottomRow[leftShift] != true) {
             leftShift += 1
         }
         let startX = posX + leftShift;
 
-        let rightShift = this.shapes.data.boundaryShape[0].length - 1;
-        while (this.shapes.data.boundaryShape[0][rightShift] != true) {
+        let rightShift = bottomRow.length - 1;
+        while (bottomRow[rightShift] != true) {
             rightShift -= 1
         }
         let endX = posX + rightShift;

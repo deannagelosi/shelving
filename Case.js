@@ -1,7 +1,8 @@
 class Case {
     constructor(_solution) {
         this.solution = _solution;
-        this.automata = [];
+        // this.automata = [];
+        this.cellular;
         this.allDots = [];
         this.boards = [];
         this.maxDepth = 0;
@@ -34,25 +35,30 @@ class Case {
         this.svgOutput = createGraphics(svgWidth, svgHeight, SVG);
     }
 
-    createAutomata() {
-        this.automata = [];
-
-        // create and grow the perimeter dots around the edge of the layout
-        let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], this.allDots, 0, 0);
-        perimeter.plantSeed();
-        perimeter.growModeEnd = -1; // grow perimeters
-        while (perimeter.grow([]) != false) { }
-        perimeter.isGrowingEnd = false; // stop growth on both ends of the automaton
-        perimeter.isGrowingStart = false;
-        this.automata.push(perimeter);
-
-        // create automata for each shape
-        for (let i = 0; i < this.solution.shapes.length; i++) {
-            let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
-            automaton.plantSeed();
-            this.automata.push(automaton);
-        }
+    initCellular() {
+        this.cellular = new Cellular(this.solution.layout, this.solution.shapes);
+        this.cellular.initGrid();
     }
+
+    // createAutomata() {
+    //     this.automata = [];
+
+    //     // create and grow the perimeter dots around the edge of the layout
+    //     let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], this.allDots, 0, 0);
+    //     perimeter.plantSeed();
+    //     perimeter.growModeEnd = -1; // grow perimeters
+    //     while (perimeter.grow([]) != false) { }
+    //     perimeter.isGrowingEnd = false; // stop growth on both ends of the automaton
+    //     perimeter.isGrowingStart = false;
+    //     this.automata.push(perimeter);
+
+    //     // create automata for each shape
+    //     for (let i = 0; i < this.solution.shapes.length; i++) {
+    //         let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
+    //         automaton.plantSeed();
+    //         this.automata.push(automaton);
+    //     }
+    // }
 
     growAutomata() {
         // bottom: grow shelves along all the bottoms
