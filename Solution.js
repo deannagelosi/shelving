@@ -257,8 +257,12 @@ class Solution {
                     } 
                 } else if (this.layout[y][x].cellScore == 0) {
                     if (devMode) {
+                        let shapeID;
+                        if (this.layout[y][x].shapes.length > 0) {
+                            shapeID = this.layout[y][x].shapes[0].data.title[0]
+                        }
                         fill(0);
-                        text(this.layout[y][x].shapes[0].data.title[0], rectX + cellSize / 3, rectY + cellSize / 1.5);
+                        text(shapeID, rectX + cellSize / 3, rectY + cellSize / 1.5);
                     }
                 }
             }
