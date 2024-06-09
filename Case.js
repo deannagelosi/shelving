@@ -38,6 +38,7 @@ class Case {
     initCellular() {
         this.cellular = new Cellular(this.solution.layout, this.solution.shapes);
         this.cellular.initGrid();
+        this.cellular.growCells();
     }
 
     // createAutomata() {

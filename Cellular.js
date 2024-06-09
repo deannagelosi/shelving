@@ -2,8 +2,8 @@ class Cellular {
     constructor(_layout, _shapes) {
         this.grid = [[]]; // 2D array of cell objects
         this.layout = _layout; // array of shapes in their annealed position
-        this.gridHeight = this.layout.length;
-        this.gridWidth = this.layout[0].length;
+        this.gridHeight = this.layout.length + 1; // +1 for the top of the slot
+        this.gridWidth = this.layout[0].length + 1; // +1 for the right of the slot
         this.shapes = _shapes; // array of shapes and their positions
     }
 
@@ -29,8 +29,8 @@ class Cellular {
                 alive: false
             });
         }
-          // top wall
-          for (let i = 1; i < this.gridWidth - 1; i++) {
+        // top wall
+        for (let i = 1; i < this.gridWidth - 1; i++) {
             this.grid[this.gridHeight - 1][i].push({
                 strain: 0,
                 alive: false
@@ -41,7 +41,7 @@ class Cellular {
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
             let shapeEnds = this.overhangShift(shape);
-            let bottomLength = shapeEnds[1] - shapeEnds[0] + 1;
+            let bottomLength = shapeEnds[1] - shapeEnds[0] + 2;
 
             for (let j = 0; j < bottomLength; j++) {
                 // add a cell 
@@ -63,22 +63,48 @@ class Cellular {
         // if alive, grow once
         for (let y = 0; y < this.grid.length; y++) {
             for (let x = 0; x < this.grid[y].length; x++) {
-                // is there a cell here? and is it alive?
-                if (this.grid[y][x] && this.grid[y][x].alive) {
-                    // grow the cell
-                    let leftSlot;
-                    let upSlot;
-                    let rightSlot;
-                    if (this.slotInBounds(y, x - 1)) {
-                        leftSlot = this.grid[y][x - 1];
-                    }
-                    if (this.slotInBounds(y + 1, x)) {
-                        upSlot = this.grid[y + 1][x];
-                    }
-                    if (this.slotInBounds(y, x + 1)) {
-                        rightSlot = this.grid[y][x + 1];
+
+                // Rule 1: crowd - when cells overlap, they die
+                if (this.grid[y][x].length > 1) {
+                    for (let cell of this.grid[y][x]) {
+                        cell.alive = false;
                     }
                 }
+
+                for (let cell of this.grid[y][x]) {
+                    if (cell.alive) {
+                        console.log("alive cell found at x: " + x + ", y: " + y);
+                        // Rule 2: attraction - if another strain nearby, grow towards it
+
+
+
+
+
+
+                    }
+
+                }
+
+
+
+
+
+                // // is there a cell here? and is it alive?
+                // if (this.grid[y][x].length > 0 && this.grid[y][x].alive) {
+                //     // grow the cell
+                //     let leftSlot;
+                //     let upSlot;
+                //     let rightSlot;
+                //     if (this.slotInBounds(y, x - 1)) {
+                //         leftSlot = this.grid[y][x - 1];
+                //     }
+                //     if (this.slotInBounds(y + 1, x)) {
+                //         upSlot = this.grid[y + 1][x];
+                //     }
+                //     if (this.slotInBounds(y, x + 1)) {
+                //         rightSlot = this.grid[y][x + 1];
+                //     }
+                // }
             }
         }
     }
