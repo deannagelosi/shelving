@@ -1,6 +1,7 @@
 class Cellular {
     constructor(_solution) {
         this.grid = [[]]; // 2D array of cell objects
+        this.gridScores = [[]]; // 2D array of scores for each slot
         this.layout = _solution.layout; // array of shapes in their annealed position
         this.gridHeight = this.layout.length + 1; // +1 for the top of the slot
         this.gridWidth = this.layout[0].length + 1; // +1 for the right of the slot
@@ -11,10 +12,15 @@ class Cellular {
     initGrid() {
         // initialize grid with empty slots for cells in the correct dimensions
         this.grid = []; // clear the grid
-        for (let i = 0; i < this.gridHeight; i++) {
+        this.gridScores = []; // clear the scores
+
+        for (let y = 0; y < this.gridHeight; y++) {
             this.grid.push([]);
-            for (let j = 0; j < this.gridWidth; j++) {
-                this.grid[i].push([]);
+            this.gridScores.push([]);
+
+            for (let x = 0; x < this.gridWidth; x++) {
+                this.grid[y].push([]);
+                this.gridScores[y].push(this.getScore(x, y));
             }
         }
 
@@ -54,8 +60,6 @@ class Cellular {
                 });
             }
         }
-
-        console.log(this.grid);
     }
 
     growCells() {
@@ -74,44 +78,67 @@ class Cellular {
 
                 for (let cell of this.grid[y][x]) {
                     if (cell.alive) {
-                        console.log("alive cell found at x: " + x + ", y: " + y);
+                        // gather information about the cell's neighborhood
+                        let leftSlot = this.findCells(y, x - 1, "left");
+                        let upSlot = this.findCells(y + 1, x, "up");
+                        let rightSlot = this.findCells(y, x + 1, "right");
+                        let allSlots = [...leftSlot, ...upSlot, ...rightSlot];
+
                         // Rule 2: attraction - if another strain nearby, grow towards it
+                        let validOptions = allSlots.filter(foundCell => foundCell.strain != cell.strain);
+                        if (validOptions.length > 0) {
+                            // todo: implement chooseDirection and addCell
+                            // let dir = this.chooseDirection(validOptions);
+                            // this.addCell(dir.y, dir.x, cell.strain);
+                        }
 
-
-
-
-
+                        // Rule 3: ...
 
                     }
-
                 }
-
-
-
-
-
-                // // is there a cell here? and is it alive?
-                // if (this.grid[y][x].length > 0 && this.grid[y][x].alive) {
-                //     // grow the cell
-                //     let leftSlot;
-                //     let upSlot;
-                //     let rightSlot;
-                //     if (this.slotInBounds(y, x - 1)) {
-                //         leftSlot = this.grid[y][x - 1];
-                //     }
-                //     if (this.slotInBounds(y + 1, x)) {
-                //         upSlot = this.grid[y + 1][x];
-                //     }
-                //     if (this.slotInBounds(y, x + 1)) {
-                //         rightSlot = this.grid[y][x + 1];
-                //     }
-                // }
             }
         }
     }
 
-    getScore() {
+    chooseDirection(options) {
+        // choose a direction to grow towards
+        // if there is only one option, return that options x and y
+        // if there are 2 options, return the one with the smaller score
 
+    }
+
+    getScore(x, y) {
+        // translate from grid coordinates to layout coordinates
+        // find the unit scores in the layout to the UL and UR of the grid slot position
+        let ULScore;
+        let URScore;
+        
+        if (y == this.layout.length) {
+            ULScore = 8;
+            URScore = 8;
+        } else if (x == 0) {
+            ULScore = 8;
+            URScore = this.layout[y][x].unitScore;
+        } else if (x == this.layout[y].length) {
+            ULScore = this.layout[y][x - 1].unitScore;
+            URScore = 8;
+        } else {
+            ULScore = this.layout[y][x - 1].unitScore;
+            URScore = this.layout[y][x].unitScore;
+        }
+
+        // calculate the score
+        // if both integers above 0, return the absolute difference in an array
+        // if both integers are 0, return both shapeIDs in an array
+        if (ULScore > 0 || URScore > 0) {
+            return [Math.abs(ULScore - URScore)];
+        } else {
+            // both units have a shape, return the shapeIDs
+            let ULId = String(this.layout[y][x - 1].shapes[0].posX) + String(this.layout[y][x - 1].shapes[0].posY);
+            let URId = String(this.layout[y][x].shapes[0].posX) + String(this.layout[y][x].shapes[0].posY);
+
+            return [ULId, URId];
+        }
     }
 
     showCells() {
@@ -162,6 +189,19 @@ class Cellular {
         } else {
             return false;
         }
+    }
+
+    findCells(y, x, note) {
+        // find the cells at the grid slot
+        let slotContents = this.slotInBounds(y, x) ? this.grid[y][x] : [];
+        let updatedCells = [];
+        for (let cell of slotContents) {
+            cell.x = x;
+            cell.y = y;
+            cell.note = note;
+            updatedCells.push(cell);
+        }
+        return updatedCells;
     }
 
     strainColor(strain) {
