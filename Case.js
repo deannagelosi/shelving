@@ -36,9 +36,10 @@ class Case {
     }
 
     initCellular() {
-        this.cellular = new Cellular(this.solution.layout, this.solution.shapes);
+        this.cellular = new Cellular(this.solution);
         this.cellular.initGrid();
         this.cellular.growCells();
+        this.cellular.showCells();
     }
 
     // createAutomata() {
@@ -184,75 +185,75 @@ class Case {
         }
     }
 
-    showResult() {
-        if (this.showBoards) {
-            // show boards
-            let counter = 0;
-            for (let i = 0; i < this.boards.length; i++) {
-                let board = this.boards[i];
-                stroke("rgb(175, 141, 117)");
-                strokeWeight(5);
-                line(
-                    board.startCoords.x * this.solution.unitSize,
-                    canvasHeight - (board.startCoords.y * this.solution.unitSize),
-                    board.endCoords.x * this.solution.unitSize,
-                    canvasHeight - (board.endCoords.y * this.solution.unitSize)
-                );
-            }
-        } else {
-            // show dots
-            let counter = 0;
-            for (let i = 0; i < this.automata.length; i++) {
-                let automaton = this.automata[i];
-                let prevPosX = automaton.dots[i].x;
-                let currPosX = prevPosX;
-                let prevPosY = automaton.dots[i].y;
-                let currPosY = prevPosY;
+    // showResult() {
+    //     if (this.showBoards) {
+    //         // show boards
+    //         let counter = 0;
+    //         for (let i = 0; i < this.boards.length; i++) {
+    //             let board = this.boards[i];
+    //             stroke("rgb(175, 141, 117)");
+    //             strokeWeight(5);
+    //             line(
+    //                 board.startCoords.x * this.solution.unitSize,
+    //                 canvasHeight - (board.startCoords.y * this.solution.unitSize),
+    //                 board.endCoords.x * this.solution.unitSize,
+    //                 canvasHeight - (board.endCoords.y * this.solution.unitSize)
+    //             );
+    //         }
+    //     } else {
+    //         // show dots
+    //         let counter = 0;
+    //         for (let i = 0; i < this.automata.length; i++) {
+    //             let automaton = this.automata[i];
+    //             let prevPosX = automaton.dots[i].x;
+    //             let currPosX = prevPosX;
+    //             let prevPosY = automaton.dots[i].y;
+    //             let currPosY = prevPosY;
 
-                fill(color(random(255), random(255), random(255)));
-                for (let j = 0; j < automaton.dots.length; j++) {
+    //             fill(color(random(255), random(255), random(255)));
+    //             for (let j = 0; j < automaton.dots.length; j++) {
 
-                    if (devMode) {
-                        // show each dot
-                        noStroke(); // No border for the dots
-                        circle(
-                            automaton.dots[j].x * this.solution.unitSize,
-                            canvasHeight - (automaton.dots[j].y * this.solution.unitSize),
-                            10
-                        );
-                    } else {
-                        // animate the dots drawing in
-                        setTimeout(() => {
-                            // update the current position to the new dot's position
-                            currPosX = automaton.dots[j].x;
-                            currPosY = automaton.dots[j].y;
+    //                 if (devMode) {
+    //                     // show each dot
+    //                     noStroke(); // No border for the dots
+    //                     circle(
+    //                         automaton.dots[j].x * this.solution.unitSize,
+    //                         canvasHeight - (automaton.dots[j].y * this.solution.unitSize),
+    //                         10
+    //                     );
+    //                 } else {
+    //                     // animate the dots drawing in
+    //                     setTimeout(() => {
+    //                         // update the current position to the new dot's position
+    //                         currPosX = automaton.dots[j].x;
+    //                         currPosY = automaton.dots[j].y;
 
-                            stroke("rgb(175, 141, 117)");
-                            strokeWeight(5);
-                            if (Math.abs(prevPosX - currPosX) == 1 && Math.abs(prevPosY - currPosY) == 0 || Math.abs(prevPosX - currPosX) == 0 && Math.abs(prevPosY - currPosY) == 1) {
-                                line(
-                                    prevPosX * this.solution.unitSize,
-                                    canvasHeight - (prevPosY * this.solution.unitSize),
-                                    currPosX * this.solution.unitSize,
-                                    canvasHeight - (currPosY * this.solution.unitSize)
-                                );
-                            } else {
-                                console.log("prevPosX,Y: ", prevPosX, prevPosY, "currPosX, Y: ", currPosX, currPosY);
-                            }
+    //                         stroke("rgb(175, 141, 117)");
+    //                         strokeWeight(5);
+    //                         if (Math.abs(prevPosX - currPosX) == 1 && Math.abs(prevPosY - currPosY) == 0 || Math.abs(prevPosX - currPosX) == 0 && Math.abs(prevPosY - currPosY) == 1) {
+    //                             line(
+    //                                 prevPosX * this.solution.unitSize,
+    //                                 canvasHeight - (prevPosY * this.solution.unitSize),
+    //                                 currPosX * this.solution.unitSize,
+    //                                 canvasHeight - (currPosY * this.solution.unitSize)
+    //                             );
+    //                         } else {
+    //                             console.log("prevPosX,Y: ", prevPosX, prevPosY, "currPosX, Y: ", currPosX, currPosY);
+    //                         }
 
-                            // update previous position to current for the next iteration
-                            prevPosX = currPosX;
-                            prevPosY = currPosY;
+    //                         // update previous position to current for the next iteration
+    //                         prevPosX = currPosX;
+    //                         prevPosY = currPosY;
 
 
-                        }, counter);
-                        counter += 50;
+    //                     }, counter);
+    //                     counter += 50;
 
-                    }
-                }
-            }
-        }
-    }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     renderBoards() {
         // use board objects and translating them into rectangles

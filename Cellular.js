@@ -1,10 +1,11 @@
 class Cellular {
-    constructor(_layout, _shapes) {
+    constructor(_solution) {
         this.grid = [[]]; // 2D array of cell objects
-        this.layout = _layout; // array of shapes in their annealed position
+        this.layout = _solution.layout; // array of shapes in their annealed position
         this.gridHeight = this.layout.length + 1; // +1 for the top of the slot
         this.gridWidth = this.layout[0].length + 1; // +1 for the right of the slot
-        this.shapes = _shapes; // array of shapes and their positions
+        this.shapes = _solution.shapes; // array of shapes and their positions
+        this.unitSize = _solution.unitSize; // size of each square in the grid
     }
 
     initGrid() {
@@ -113,6 +114,23 @@ class Cellular {
 
     }
 
+    showCells() {
+        // loop grid and display cells on the canvas
+        for (let y = 0; y < this.grid.length; y++) {
+            for (let x = 0; x < this.grid[y].length; x++) {
+                for (let cell of this.grid[y][x]) {
+                    fill(this.strainColor(cell.strain));
+                    noStroke();
+                    circle(
+                        x * this.unitSize,
+                        canvasHeight - (y * this.unitSize),
+                        10
+                    );
+                }
+            }
+        }
+    }
+
     //-- Helper functions --//
     overhangShift(shape) {
         // for shapes with overhang, find the bottom corner of the shape
@@ -144,5 +162,14 @@ class Cellular {
         } else {
             return false;
         }
+    }
+
+    strainColor(strain) {
+        let value = ((strain + 1) * 255) % 256;
+        return color(this.range(value), this.range(value * 70), this.range(value * 56));
+    }
+
+    range(num) {
+        return num % 256;
     }
 }

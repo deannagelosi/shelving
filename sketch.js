@@ -71,10 +71,10 @@ function createCase() {
     // newCase.createAutomata();
     // newCase.growAutomata();
     // newCase.makeBoards();
-    newCase.initCellular();
-
+    
     // show result
     annealing.currSolution.showLayout();
+    newCase.initCellular();
     // newCase.showResult();
 
     console.log(annealing.currSolution);
