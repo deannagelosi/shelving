@@ -11,9 +11,10 @@ class Cellular {
 
     initGrid() {
         // initialize grid with empty slots for cells in the correct dimensions
+        // prescore each slot in the grid
         this.grid = []; // clear the grid
         this.gridScores = []; // clear the scores
-
+        
         for (let y = 0; y < this.gridHeight; y++) {
             this.grid.push([]);
             this.gridScores.push([]);
@@ -23,6 +24,7 @@ class Cellular {
                 this.gridScores[y].push(this.getScore(x, y));
             }
         }
+        console.log("this.gridScores: ", this.gridScores);
 
         // populate grid with perimeter cells
         // left + right walls
@@ -55,7 +57,7 @@ class Cellular {
                 this.grid[shape.posY][shapeEnds[0] + j].push({
                     strain: i + 1,
                     dir: j == 0 ? "left" : j == bottomLength - 1 ? "right" : "",
-                    alive: j == 0 ? true : j == bottomLength - 1 ? true : false
+                    alive: j == 0 || j == bottomLength - 1 ? true : false
                 });
             }
         }
@@ -88,7 +90,7 @@ class Cellular {
                         if (validOptions.length > 0) {
                             let newLoc = this.chooseDirection(validOptions, cell.dir);
                             if (newLoc) {
-                                this.addCell(newLoc.y, newLoc.x, newLoc.dir, cell.strain);
+                                this.addCell(newLoc.y, newLoc.x, newLoc.dir, cell);
                             }
                         }
 
@@ -98,13 +100,15 @@ class Cellular {
                 }
             }
         }
-        console.log(this.grid);
+        console.log("this.grid: ", this.grid);
     }
 
-    addCell(_y, _x, _dir, _strain) {
+    addCell(_y, _x, _dir, _cell) {
+        // kill old cell before replicating
+        _cell.alive = false;
         // add a new cell to the grid
         this.grid[_y][_x].push({
-            strain: _strain,
+            strain: _cell.strain,
             dir: _dir,
             alive: true
         });
@@ -212,7 +216,11 @@ class Cellular {
         for (let y = 0; y < this.grid.length; y++) {
             for (let x = 0; x < this.grid[y].length; x++) {
                 for (let cell of this.grid[y][x]) {
-                    fill(this.strainColor(cell.strain));
+                    let cellColor = this.strainColor(cell.strain);
+                    if (!cell.alive) {
+                        cellColor = lerpColor(cellColor, color(0, 0, 0), 0.4)
+                    }
+                    fill(cellColor);
                     noStroke();
                     circle(
                         x * this.unitSize,

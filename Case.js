@@ -38,7 +38,11 @@ class Case {
     initCellular() {
         this.cellular = new Cellular(this.solution);
         this.cellular.initGrid();
-        this.cellular.growCells();
+
+        for (let i = 0; i < 2; i++) {
+            this.cellular.growCells();
+        }
+
         this.cellular.showCells();
     }
 
