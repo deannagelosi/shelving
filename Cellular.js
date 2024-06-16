@@ -55,7 +55,6 @@ class Cellular {
                 this.grid[shape.posY][shapeEnds[0] + j].push({
                     strain: i + 1,
                     dir: j == 0 ? "left" : j == bottomLength - 1 ? "right" : "",
-                    score: null,
                     alive: j == 0 ? true : j == bottomLength - 1 ? true : false
                 });
             }
@@ -87,10 +86,9 @@ class Cellular {
                         // Rule 2: attraction - if another strain nearby, grow towards it
                         let validOptions = allSlots.filter(foundCell => foundCell.strain != cell.strain);
                         if (validOptions.length > 0) {
-                            // todo: implement addCell
-                            let dir = this.chooseDirection(validOptions, cell.dir);
-                            if (dir) {
-                                // this.addCell(dir.y, dir.x, cell.strain);
+                            let newLoc = this.chooseDirection(validOptions, cell.dir);
+                            if (newLoc) {
+                                this.addCell(newLoc.y, newLoc.x, newLoc.dir, cell.strain);
                             }
                         }
 
@@ -100,6 +98,16 @@ class Cellular {
                 }
             }
         }
+        console.log(this.grid);
+    }
+
+    addCell(_y, _x, _dir, _strain) {
+        // add a new cell to the grid
+        this.grid[_y][_x].push({
+            strain: _strain,
+            dir: _dir,
+            alive: true
+        });
     }
 
     chooseDirection(_cells, _dir) {
@@ -118,15 +126,15 @@ class Cellular {
         for (let cell of _cells) {
             if (cell.loc == "left") {
                 leftCount += 1;
-                leftCoords = { x: cell.x, y: cell.y };
+                leftCoords = { x: cell.x, y: cell.y, dir: "left"};
                 leftScore = this.gridScores[cell.y][cell.x];
             } else if (cell.loc == "up") {
                 upCount += 1;
-                upCoords = { x: cell.x, y: cell.y };
+                upCoords = { x: cell.x, y: cell.y, dir: "up"};
                 upScore = this.gridScores[cell.y][cell.x];
             } else if (cell.loc == "right") {
                 rightCount += 1;
-                rightCoords = { x: cell.x, y: cell.y };
+                rightCoords = { x: cell.x, y: cell.y, dir: "right"};
                 rightScore = this.gridScores[cell.y][cell.x];
             }
         }
