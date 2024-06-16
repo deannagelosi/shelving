@@ -14,7 +14,7 @@ class Cellular {
         // prescore each slot in the grid
         this.grid = []; // clear the grid
         this.gridScores = []; // clear the scores
-        
+
         for (let y = 0; y < this.gridHeight; y++) {
             this.grid.push([]);
             this.gridScores.push([]);
@@ -70,31 +70,66 @@ class Cellular {
         for (let y = 0; y < this.grid.length; y++) {
             for (let x = 0; x < this.grid[y].length; x++) {
 
-                // Rule 1: crowd - when cells overlap, they die
+                // Rule 1: CROWDED - when cells overlap, they die
                 if (this.grid[y][x].length > 1) {
                     for (let cell of this.grid[y][x]) {
                         cell.alive = false;
                     }
                 }
 
-                for (let cell of this.grid[y][x]) {
-                    if (cell.alive) {
-                        // gather information about the cell's neighborhood
+                for (let parentCell of this.grid[y][x]) {
+                    if (parentCell.alive) {
+                        // gather information about the parent cell's neighborhood
                         let leftSlot = this.findCells(y, x - 1, "left");
                         let upSlot = this.findCells(y + 1, x, "up");
                         let rightSlot = this.findCells(y, x + 1, "right");
                         let allSlots = [...leftSlot, ...upSlot, ...rightSlot];
 
-                        // Rule 2: attraction - if another strain nearby, grow towards it
-                        let validOptions = allSlots.filter(foundCell => foundCell.strain != cell.strain);
+                        // Rule 2: ATTRACTION - if another strain nearby, grow towards it
+                        let validOptions = allSlots.filter(foundCell => foundCell.strain != parentCell.strain);
                         if (validOptions.length > 0) {
-                            let newLoc = this.chooseDirection(validOptions, cell.dir);
+                            let newLoc = this.chooseDirection(validOptions, parentCell.dir);
                             if (newLoc) {
-                                this.addCell(newLoc.y, newLoc.x, newLoc.dir, cell);
+                                return this.addCell(newLoc.y, newLoc.x, newLoc.dir, parentCell);
                             }
                         }
 
-                        // Rule 3: ...
+                        // check if there's a shape nearby
+                        let leftScore = this.findScore(y, x - 1);
+                        let upScore = this.findScore(y + 1, x);
+                        let rightScore = this.findScore(y, x + 1);
+
+                        if (leftScore.length == 1 && upScore.length == 1 && rightScore.length == 1) {
+                            // no shapes nearby
+                            // find the direction(s) with the smallest score not occupied by parent strain
+                            let options = this.findOptions(y, x, parentCell.strain);
+
+
+                            // Rule 3: SMALLEST - choose the direction with the smallest score
+                            if (options.length == 1) {
+                                return this.addCell(options[0].y, options[0].x, options[0].dir, parentCell);
+                            };
+
+                            // Rule 4: MIDDLE - if left and right tie, go up
+                            // if options contains an object with dir = "left" and dir = "right", choose "up"
+                            let left = options.filter(option => option.dir == "left");
+                            let right = options.filter(option => option.dir == "right");
+                            if (left.length > 0 && right.length > 0) {
+                                let up = options.filter(option => option.dir == "up");
+                                return this.addCell(up[0].y, up[0].x, up[0].dir, parentCell);
+                            }
+                            
+                            // Rule 5: TURN - if tied between current direction and new direction, choose new direction
+                            // if options.length == 2 and one of the option's dir = parentCell.dir, choose the other options direction
+                            if (options.length == 2) {
+                                let newDir = options.filter(option => option.dir != parentCell.dir);
+                                return this.addCell(newDir[0].y, newDir[0].x, newDir[0].dir, parentCell);
+                            };
+
+
+                        } else {
+                            // at least one shape nearby
+                        }
 
                     }
                 }
@@ -112,6 +147,54 @@ class Cellular {
             dir: _dir,
             alive: true
         });
+    }
+
+    findOptions(_y, _x, _strain) {
+        // find the direction(s) with the smallest score not occupied by parent strain
+        let leftScore = this.findScore(_y, _x - 1)[0];
+        let upScore = this.findScore(_y + 1, _x)[0];
+        let rightScore = this.findScore(_y, _x + 1)[0];
+        let leftCells = this.findCells(_y, _x - 1, "left");
+        let rightCells = this.findCells(_y, _x + 1, "right");
+        
+        let options = {
+            // all valid directions
+            left: true,
+            up: true,
+            right: true
+        };
+        // filter out directions with the parent strain
+        if (leftCells.length > 0) {
+            for (let cell of leftCells) {
+                if (cell.strain == _strain) {
+                    options.left = false;
+                }
+            }    
+        }
+        if (rightCells.length > 0) {
+            for (let cell of rightCells) {
+                if (cell.strain == _strain) {
+                    options.right = false;
+                }
+            }
+        }
+        
+        // if more than one option remains, sort by score and return all directions with the smallest score
+        // sort directions by score only if they are true
+        let optionScores = [];
+        if (options.left == true) optionScores.push({ x: _x - 1, y: _y, dir: "left", score: leftScore });
+        if (options.up == true) optionScores.push({ x: _x, y: _y + 1, dir: "up", score: upScore });
+        if (options.right == true) optionScores.push({ x: _x + 1, y: _y, dir: "right", score: rightScore });
+        
+        // if only one option remains (e.g., up), return that direction
+        if (optionScores.length == 1) {
+            return [optionScores[0]];
+        } else {
+            // if more than one option remains, sort by score and return all directions with the smallest score
+            let minScore = optionScores.reduce((min, option) => option.score < min.score ? option : min, optionScores[0]).score;
+            let minOptions = optionScores.filter(option => option.score == minScore);
+            return minOptions;
+        }
     }
 
     chooseDirection(_cells, _dir) {
@@ -276,6 +359,11 @@ class Cellular {
             updatedCells.push(cell);
         }
         return updatedCells;
+    }
+
+    findScore(_y, _x) {
+        // find the score at the grid slot
+        return this.slotInBounds(_y, _x) ? this.gridScores[_y][_x] : [];
     }
 
     strainColor(strain) {
