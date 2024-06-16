@@ -87,9 +87,11 @@ class Cellular {
                         // Rule 2: attraction - if another strain nearby, grow towards it
                         let validOptions = allSlots.filter(foundCell => foundCell.strain != cell.strain);
                         if (validOptions.length > 0) {
-                            // todo: implement chooseDirection and addCell
-                            // let dir = this.chooseDirection(validOptions);
-                            // this.addCell(dir.y, dir.x, cell.strain);
+                            // todo: implement addCell
+                            let dir = this.chooseDirection(validOptions, cell.dir);
+                            if (dir) {
+                                // this.addCell(dir.y, dir.x, cell.strain);
+                            }
                         }
 
                         // Rule 3: ...
@@ -100,11 +102,67 @@ class Cellular {
         }
     }
 
-    chooseDirection(options) {
+    chooseDirection(_cells, _dir) {
+        // _cells is an array of cells that also have an x-key, y-key, and loc-key
         // choose a direction to grow towards
-        // if there is only one option, return that options x and y
-        // if there are 2 options, return the one with the smaller score
+        let leftCount = 0;
+        let upCount = 0;
+        let rightCount = 0;
+        let leftCoords;
+        let upCoords;
+        let rightCoords;
+        let leftScore = Infinity;
+        let upScore = Infinity;
+        let rightScore = Infinity;
 
+        for (let cell of _cells) {
+            if (cell.loc == "left") {
+                leftCount += 1;
+                leftCoords = { x: cell.x, y: cell.y };
+                leftScore = this.gridScores[cell.y][cell.x];
+            } else if (cell.loc == "up") {
+                upCount += 1;
+                upCoords = { x: cell.x, y: cell.y };
+                upScore = this.gridScores[cell.y][cell.x];
+            } else if (cell.loc == "right") {
+                rightCount += 1;
+                rightCoords = { x: cell.x, y: cell.y };
+                rightScore = this.gridScores[cell.y][cell.x];
+            }
+        }
+
+        // Case 1: only one option, choose that one
+        if (leftCount > 0 && upCount === 0 && rightCount === 0) {
+            return leftCoords;
+        } else if (upCount > 0 && leftCount === 0 && rightCount === 0) {
+            return upCoords;
+        } else if (rightCount > 0 && leftCount === 0 && upCount === 0) {
+            return rightCoords;
+        }
+
+        // Case 2: two or three options and choose the one in the direction traveled
+        if (_dir === "left" && leftCount > 0) {
+            return leftCoords;
+        } else if (_dir === "up" && upCount > 0) {
+            return upCoords;
+        } else if (_dir === "right" && rightCount > 0) {
+            return rightCoords;
+        }
+
+        // Case 3: two options and neither is in the direction traveled, choose the one with the smaller score
+        let options = [];
+        if (leftCount > 0) options.push({ coords: leftCoords, score: leftScore });
+        if (upCount > 0) options.push({ coords: upCoords, score: upScore });
+        if (rightCount > 0) options.push({ coords: rightCoords, score: rightScore });
+
+        if (options.length >= 2) {
+            let minOption = options.reduce((min, option) => option.score < min.score ? option : min, options[0]);
+            return minOption.coords;
+        }
+
+        // Default case if no valid direction is found
+        console.log("No valid direction found");
+        return null;
     }
 
     getScore(x, y) {
@@ -112,7 +170,7 @@ class Cellular {
         // find the unit scores in the layout to the UL and UR of the grid slot position
         let ULScore;
         let URScore;
-        
+
         if (y == this.layout.length) {
             ULScore = 8;
             URScore = 8;
@@ -191,14 +249,14 @@ class Cellular {
         }
     }
 
-    findCells(y, x, note) {
+    findCells(_y, _x, _loc) {
         // find the cells at the grid slot
-        let slotContents = this.slotInBounds(y, x) ? this.grid[y][x] : [];
+        let slotContents = this.slotInBounds(_y, _x) ? this.grid[_y][_x] : [];
         let updatedCells = [];
         for (let cell of slotContents) {
-            cell.x = x;
-            cell.y = y;
-            cell.note = note;
+            cell.x = _x;
+            cell.y = _y;
+            cell.loc = _loc; // location relative to the reference cell
             updatedCells.push(cell);
         }
         return updatedCells;
