@@ -86,3 +86,29 @@
 - example boolean (sketch.js)
 - show boards boolean (Case.js)
 - example coords (Solution.js)
+
+## Cellular Automata Rules
+
+Cells have 3 options for growth: Left, Up, or Right
+
+Step 1: Eliminate options
+
+- If overlapping another cell, stop growing and die
+- Can't grow through a shape
+- Can't backtrack (ie grow where a cell in your strain already is)
+
+Step 2: Choose between remaining options
+
+- Cells only grow upward
+- Cells are attracted to different strains
+- Cells are attracted to easy paths (small grid scores)
+- Cells are attracted to change (growing in a new direction)
+
+Step 3: Divide to solve problems
+
+- If can't decide between 2 options (left or right while growing up), grow both ways
+
+### Next Steps
+
+1. Score the grid and line segments for cellular automata
+2. Implement rules

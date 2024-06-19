@@ -249,20 +249,43 @@ class Solution {
                 let rectY = (canvasHeight - unitSize) - (y * unitSize); // draw from bottom up
                 rect(rectX, rectY, unitSize, unitSize);
 
-                // display the unit score if its empty of shapes
-                if (this.layout[y][x].unitScore > 0) {
-                    if (devMode) {
-                        fill(0);
-                        text(this.layout[y][x].unitScore, rectX + unitSize / 3, rectY + unitSize / 1.5);
-                    }
-                } else if (this.layout[y][x].unitScore == 0) {
-                    if (devMode) {
-                        let shapeID;
-                        if (this.layout[y][x].shapes.length > 0) {
-                            shapeID = this.layout[y][x].shapes[0].data.title[0]
+                // old location of showScores
+            }
+        }
+    }
+
+    showScores(_devMode) {
+        if (_devMode) {
+            // display the design space grid
+            stroke(0);
+            strokeWeight(0.5);
+            textSize(10);
+
+            let unitHeight = canvasHeight / this.layout.length;
+            let unitWidth = canvasWidth / this.layout[0].length;
+            let unitSize = Math.min(unitHeight, unitWidth);    
+
+            let designHeight = this.layout.length;
+            let designWidth = this.layout[0].length;
+            for (let x = 0; x < designWidth; x++) {
+                for (let y = 0; y < designHeight; y++) {
+                    let rectX = x * unitSize;
+                    let rectY = (canvasHeight - unitSize) - (y * unitSize);
+                    // display the unit score if its empty of shapes
+                    if (this.layout[y][x].unitScore > 0) {
+                        if (devMode) {
+                            fill(0);
+                            text(this.layout[y][x].unitScore, rectX + unitSize / 3, rectY + unitSize / 1.5);
                         }
-                        fill(0);
-                        text(shapeID, rectX + unitSize / 3, rectY + unitSize / 1.5);
+                    } else if (this.layout[y][x].unitScore == 0) {
+                        if (devMode) {
+                            let shapeID;
+                            if (this.layout[y][x].shapes.length > 0) {
+                                shapeID = this.layout[y][x].shapes[0].data.title[0]
+                            }
+                            fill(0);
+                            text(shapeID, rectX + unitSize / 3, rectY + unitSize / 1.5);
+                        }
                     }
                 }
             }

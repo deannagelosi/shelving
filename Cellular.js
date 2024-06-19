@@ -3,28 +3,135 @@ class Cellular {
         this.grid = [[]]; // 2D array of cell objects
         this.gridScores = [[]]; // 2D array of scores for each slot
         this.layout = _solution.layout; // array of shapes in their annealed position
-        this.gridHeight = this.layout.length + 1; // +1 for the top of the slot
-        this.gridWidth = this.layout[0].length + 1; // +1 for the right of the slot
+        this.gridHeight = this.layout.length;
+        this.gridWidth = this.layout[0].length;
         this.shapes = _solution.shapes; // array of shapes and their positions
         this.unitSize = _solution.unitSize; // size of each square in the grid
+    }
+
+    scoreGrid() {
+        // assign scores to all slots to make topography
+        // initial state: all slots occupied by shapes start at infinity, all empty slots start at 0
+        // loop until no slots are zero, adding a point to any slot touching a slot with a non-zero score
+        // repeat until all slots have a score
+
+        // set up initial state
+        this.gridScores = []; // clear the scores
+        let prevScores = [];
+
+        for (let y = 0; y < this.gridHeight; y++) {
+            this.gridScores.push([]);
+            prevScores.push([]);
+            for (let x = 0; x < this.gridWidth; x++) {
+                if (this.layout[y][x].shapes.length > 0) {
+                    // shape at (x,y) assigned a score of infinity
+                    this.gridScores[y].push(Infinity);
+                    prevScores[y].push(Infinity);
+                } else {
+                    // empty slot at (x,y) assigned a score of 0
+                    this.gridScores[y].push(0);
+                    prevScores[y].push(0);
+                }
+            }
+        }
+        // loop until all slots have a score
+        // track all slots with a score of 0
+        // add a point to any slot touching a slot with a non-zero score, even diagonally
+        // stash the updated values to reference the next loop
+        let maxSlotScore = 0;
+        let numZero;
+        while (numZero != 0) {
+            numZero = 0;
+            // loop until no zero slot values
+            for (let y = 0; y < this.gridHeight; y++) {
+                for (let x = 0; x < this.gridWidth; x++) {
+                    let numTouch = 0;
+                    if (prevScores[y][x] != Infinity) {
+                        // check the 8 possible adjacent slots
+                        for (let localY = Math.max(0, y - 1); localY <= Math.min(y + 1, this.gridHeight - 1); localY++) {
+                            for (let localX = Math.max(0, x - 1); localX <= Math.min(x + 1, this.gridWidth - 1); localX++) {
+                                // don't count the slot itself
+                                if (localX !== x || localY !== y) {
+                                    // count if the adjacent slot is empty
+                                    if (prevScores[localY][localX] > 0) {
+                                        numTouch++;
+                                    }
+                                }
+                            }
+                        }
+                        // assign the score to the slot
+                        this.gridScores[y][x] += numTouch;
+                        if (this.gridScores[y][x] > maxSlotScore) {
+                            maxSlotScore = this.gridScores[y][x];
+                        }
+                        // calculate the number of units with a score of 8
+                        if (numTouch == 0) {
+                            numZero++;
+                        }
+                    }
+                }
+            }
+            // current scores become previous scores
+            prevScores = this.gridScores.map(xArray => [...xArray]);
+        }
+        // replace infinity with a score larger than the max slot score
+        for (let y = 0; y < this.gridHeight; y++) {
+            for (let x = 0; x < this.gridWidth; x++) {
+                if (this.gridScores[y][x] == Infinity) {
+                    this.gridScores[y][x] = maxSlotScore + 2;
+                }
+            }
+        }
+    }
+
+    showScores(_devMode) {
+        if (_devMode) {
+            // display the design space grid
+            stroke(0);
+            strokeWeight(0.5);
+            textSize(10);
+            fill(0);
+
+            let slotHeight = canvasHeight / this.gridHeight;
+            let slotWidth = canvasWidth / this.gridWidth;
+            let slotSize = Math.min(slotHeight, slotWidth);
+
+            for (let x = 0; x < this.gridWidth; x++) {
+                for (let y = 0; y < this.gridHeight; y++) {
+                    let rectX = x * slotSize;
+                    let rectY = (canvasHeight - slotSize) - (y * slotSize);
+                    // display the slot score if not infinity
+                    if (this.gridScores[y][x] != Infinity) {
+                        text(this.gridScores[y][x], rectX + slotSize / 3, rectY + slotSize / 1.5);
+                    } else {
+                        text("∞", rectX + slotSize / 3, rectY + slotSize / 1.5);
+                    }
+                }
+            }
+        }
+    }
+
+    scorePaths() {
+        // assign scores to all paths (i.e., lines on grid) to make topography
+        // determine path values based on the adjacent slots
+        // take the minimum slot score and assign to the path
+        // special case: if both infinity, check if the shapes are the same
+        // if the shapes are the same, assign a score of infinity
+        // if the shapes are different, assign a score of 1 to the path 
     }
 
     initGrid() {
         // initialize grid with empty slots for cells in the correct dimensions
         // prescore each slot in the grid
-        this.grid = []; // clear the grid
-        this.gridScores = []; // clear the scores
 
+        this.grid = []; // clear the grid
         for (let y = 0; y < this.gridHeight; y++) {
             this.grid.push([]);
-            this.gridScores.push([]);
 
             for (let x = 0; x < this.gridWidth; x++) {
                 this.grid[y].push([]);
-                this.gridScores[y].push(this.getScore(x, y));
             }
         }
-        console.log("this.gridScores: ", this.gridScores);
 
         // populate grid with perimeter cells
         // left + right walls
@@ -78,60 +185,7 @@ class Cellular {
                 }
 
                 for (let parentCell of this.grid[y][x]) {
-                    if (parentCell.alive) {
-                        // gather information about the parent cell's neighborhood
-                        let leftSlot = this.findCells(y, x - 1, "left");
-                        let upSlot = this.findCells(y + 1, x, "up");
-                        let rightSlot = this.findCells(y, x + 1, "right");
-                        let allSlots = [...leftSlot, ...upSlot, ...rightSlot];
-
-                        // Rule 2: ATTRACTION - if another strain nearby, grow towards it
-                        let validOptions = allSlots.filter(foundCell => foundCell.strain != parentCell.strain);
-                        if (validOptions.length > 0) {
-                            let newLoc = this.chooseDirection(validOptions, parentCell.dir);
-                            if (newLoc) {
-                                return this.addCell(newLoc.y, newLoc.x, newLoc.dir, parentCell);
-                            }
-                        }
-
-                        // check if there's a shape nearby
-                        let leftScore = this.findScore(y, x - 1);
-                        let upScore = this.findScore(y + 1, x);
-                        let rightScore = this.findScore(y, x + 1);
-
-                        if (leftScore.length == 1 && upScore.length == 1 && rightScore.length == 1) {
-                            // no shapes nearby
-                            // find the direction(s) with the smallest score not occupied by parent strain
-                            let options = this.findOptions(y, x, parentCell.strain);
-
-
-                            // Rule 3: SMALLEST - choose the direction with the smallest score
-                            if (options.length == 1) {
-                                return this.addCell(options[0].y, options[0].x, options[0].dir, parentCell);
-                            };
-
-                            // Rule 4: MIDDLE - if left and right tie, go up
-                            // if options contains an object with dir = "left" and dir = "right", choose "up"
-                            let left = options.filter(option => option.dir == "left");
-                            let right = options.filter(option => option.dir == "right");
-                            if (left.length > 0 && right.length > 0) {
-                                let up = options.filter(option => option.dir == "up");
-                                return this.addCell(up[0].y, up[0].x, up[0].dir, parentCell);
-                            }
-                            
-                            // Rule 5: TURN - if tied between current direction and new direction, choose new direction
-                            // if options.length == 2 and one of the option's dir = parentCell.dir, choose the other options direction
-                            if (options.length == 2) {
-                                let newDir = options.filter(option => option.dir != parentCell.dir);
-                                return this.addCell(newDir[0].y, newDir[0].x, newDir[0].dir, parentCell);
-                            };
-
-
-                        } else {
-                            // at least one shape nearby
-                        }
-
-                    }
+                    if (parentCell.alive) { }
                 }
             }
         }
@@ -156,7 +210,7 @@ class Cellular {
         let rightScore = this.findScore(_y, _x + 1)[0];
         let leftCells = this.findCells(_y, _x - 1, "left");
         let rightCells = this.findCells(_y, _x + 1, "right");
-        
+
         let options = {
             // all valid directions
             left: true,
@@ -169,7 +223,7 @@ class Cellular {
                 if (cell.strain == _strain) {
                     options.left = false;
                 }
-            }    
+            }
         }
         if (rightCells.length > 0) {
             for (let cell of rightCells) {
@@ -178,14 +232,14 @@ class Cellular {
                 }
             }
         }
-        
+
         // if more than one option remains, sort by score and return all directions with the smallest score
         // sort directions by score only if they are true
         let optionScores = [];
         if (options.left == true) optionScores.push({ x: _x - 1, y: _y, dir: "left", score: leftScore });
         if (options.up == true) optionScores.push({ x: _x, y: _y + 1, dir: "up", score: upScore });
         if (options.right == true) optionScores.push({ x: _x + 1, y: _y, dir: "right", score: rightScore });
-        
+
         // if only one option remains (e.g., up), return that direction
         if (optionScores.length == 1) {
             return [optionScores[0]];
@@ -213,15 +267,15 @@ class Cellular {
         for (let cell of _cells) {
             if (cell.loc == "left") {
                 leftCount += 1;
-                leftCoords = { x: cell.x, y: cell.y, dir: "left"};
+                leftCoords = { x: cell.x, y: cell.y, dir: "left" };
                 leftScore = this.gridScores[cell.y][cell.x];
             } else if (cell.loc == "up") {
                 upCount += 1;
-                upCoords = { x: cell.x, y: cell.y, dir: "up"};
+                upCoords = { x: cell.x, y: cell.y, dir: "up" };
                 upScore = this.gridScores[cell.y][cell.x];
             } else if (cell.loc == "right") {
                 rightCount += 1;
-                rightCoords = { x: cell.x, y: cell.y, dir: "right"};
+                rightCoords = { x: cell.x, y: cell.y, dir: "right" };
                 rightScore = this.gridScores[cell.y][cell.x];
             }
         }

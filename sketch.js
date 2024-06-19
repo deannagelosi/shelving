@@ -53,6 +53,7 @@ function draw() {
                     clear();
                     background(255);
                     annealing.currSolution.showLayout(devMode)
+                    annealing.currSolution.showScores(devMode);
                 }
             } else {
                 // optimization complete
@@ -66,18 +67,14 @@ function draw() {
 function createCase() {
     clear();
     background(255);
+    // show shapes and grid
+    annealing.currSolution.showLayout(devMode);
+    console.log(annealing.currSolution);
+
     // build case
     newCase = new Case(annealing.currSolution);
-    // newCase.createAutomata();
-    // newCase.growAutomata();
-    // newCase.makeBoards();
-    
-    // show result
-    annealing.currSolution.showLayout();
-    newCase.initCellular();
-    // newCase.showResult();
-
-    console.log(annealing.currSolution);
+    newCase.cellular.scoreGrid();
+    newCase.cellular.showScores(devMode);
 }
 
 function keyPressed() {

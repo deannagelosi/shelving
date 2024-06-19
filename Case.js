@@ -1,6 +1,7 @@
 class Case {
     constructor(_solution) {
         this.solution = _solution;
+        this.cellular = new Cellular(this.solution);
         // this.automata = [];
         this.cellular;
         this.allDots = [];
@@ -33,38 +34,9 @@ class Case {
         let svgHeight = (this.materialHeight * this.sheets.length) * this.ppi + this.buffer;
 
         this.svgOutput = createGraphics(svgWidth, svgHeight, SVG);
+
+
     }
-
-    initCellular() {
-        this.cellular = new Cellular(this.solution);
-        this.cellular.initGrid();
-
-        for (let i = 0; i < 2; i++) {
-            this.cellular.growCells();
-        }
-
-        this.cellular.showCells();
-    }
-
-    // createAutomata() {
-    //     this.automata = [];
-
-    //     // create and grow the perimeter dots around the edge of the layout
-    //     let perimeter = new Automaton(this.solution.layout, this.solution.shapes[0], this.allDots, 0, 0);
-    //     perimeter.plantSeed();
-    //     perimeter.growModeEnd = -1; // grow perimeters
-    //     while (perimeter.grow([]) != false) { }
-    //     perimeter.isGrowingEnd = false; // stop growth on both ends of the automaton
-    //     perimeter.isGrowingStart = false;
-    //     this.automata.push(perimeter);
-
-    //     // create automata for each shape
-    //     for (let i = 0; i < this.solution.shapes.length; i++) {
-    //         let automaton = new Automaton(this.solution.layout, this.solution.shapes[i], this.allDots);
-    //         automaton.plantSeed();
-    //         this.automata.push(automaton);
-    //     }
-    // }
 
     growAutomata() {
         // bottom: grow shelves along all the bottoms
