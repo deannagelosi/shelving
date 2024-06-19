@@ -278,33 +278,33 @@ class Solution {
         let overlappingUnits = 0; // number of squares containing overlapping shapes
 
         // count all the empty units in the layout
-        for (let i = 0; i < this.layout.length; i++) {
-            for (let j = 0; j < this.layout[i].length; j++) {
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
                 totalNumUnits++; // the total number of unit squares
 
                 // the number of overlapping unit squares
-                if (this.layout[i][j].shapes.length > 1) {
-                    overlappingUnits += this.layout[i][j].shapes.length - 1;
+                if (this.layout[y][x].shapes.length > 1) {
+                    overlappingUnits += this.layout[y][x].shapes.length - 1;
                 }
 
                 // the number of units with a score of 8 (no adjacent empty spots) and calc ratio
-                if (this.layout[i][j].shapes.length == 0) {
+                if (this.layout[y][x].shapes.length == 0) {
                     // unit is empty, calculate the unit score
                     let uScore = 8;
                     // check the 8 possible adjacent units
-                    for (let x = Math.max(0, i - 1); x <= Math.min(i + 1, this.layout.length - 1); x++) {
-                        for (let y = Math.max(0, j - 1); y <= Math.min(j + 1, this.layout[0].length - 1); y++) {
+                    for (let localY = Math.max(0, y - 1); localY <= Math.min(y + 1, this.layout.length - 1); localY++) {
+                        for (let localX = Math.max(0, x - 1); localX <= Math.min(x + 1, this.layout[0].length - 1); localX++) {
                             // don't count the unit square itself
-                            if (x !== i || y !== j) {
+                            if (localX !== x || localY !== y) {
                                 // count if the adjacent unit is empty
-                                if (this.layout[x][y].shapes.length > 0) {
+                                if (this.layout[localY][localX].shapes.length > 0) {
                                     uScore--;
                                 }
                             }
                         }
                     }
                     // assign the score to the unit
-                    this.layout[i][j].unitScore = uScore;
+                    this.layout[y][x].unitScore = uScore;
                     // calculate the number of units with a score of 8
                     if (uScore == 8) {
                         numUnits8++;
