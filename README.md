@@ -89,26 +89,42 @@
 
 ## Cellular Automata Rules
 
+- Precalculate all path scores, store in an array
+
 Cells have 3 options for growth: Left, Up, or Right
 
-Step 1: Eliminate options
+- Start with left, up, and right set to True
+- Cell calculates score of path for left, up, and right
 
-- If overlapping another cell, stop growing and die
+Step 1: Eliminate Options
+
+- If there's a collision with another cell, both cells die
 - Can't grow through a shape
-- Can't backtrack (ie grow where a cell in your strain already is)
+  - Path is assigned maximum value
+  - Set direction to False
+- Cannot backtrack
+  - Can only move in directions that is not occupied by myself (check strain)
 
-Step 2: Choose between remaining options
+Step 2: Choose a Remaining Direction
 
-- Cells only grow upward
-- Cells are attracted to different strains
-- Cells are attracted to easy paths (small grid scores)
-- Cells are attracted to change (growing in a new direction)
+- Cells of different strains are attracted to one another (prevents parallel paths)
+  - One cell will move towards another
+- Cells like easy paths (low values)
+  - If there are two or more remaining paths, look ahead to the next intersection
+    - Calculate the available path scores at that intersection
+    - Return the lowest value
+    - Calculate the cumulative score of the initial path and the lowest value path in the future
+    - Compare the available combined path scores, and take the lowest path (gets out of local minimum)
+- Cells are attracted to change
+  - Growing in a new direction
 
 Step 3: Divide to solve problems
 
-- If can't decide between 2 options (left or right while growing up), grow both ways
+- If can't decide between remaining options, add a new cell in all remaining directions
 
 ### Next Steps
 
-1. Score the grid and line segments for cellular automata
-2. Implement rules
+1. Score the grid slots for cellular automata
+2. Score the line segments for cellular automata
+3. Implement rules
+

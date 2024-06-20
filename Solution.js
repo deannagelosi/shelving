@@ -199,23 +199,32 @@ class Solution {
         let unitHeight = canvasHeight / this.layout.length;
         let unitWidth = canvasWidth / this.layout[0].length;
         this.unitSize = Math.min(unitHeight, unitWidth);
+
+        // assign IDs to shapes based on position
+        for (let i = 0; i < this.shapes.length; i++) {
+            let shapeID = this.shapes[i].posY.toString() + this.shapes[i].posX.toString();
+            this.shapes[i].shapeID = shapeID;
+        }
     }
 
     showLayout() {
         let lineColor;
         let bkrdColor;
         let boundaryColor;
+        let shapeColor;
         let collisionColor;
 
         if (devMode) {
             lineColor = 0;
             bkrdColor = 255;
             boundaryColor = "rgb(255, 192, 203)";
+            shapeColor = "grey";
             collisionColor = "red";
         } else if (!devMode) {
             lineColor = "rgb(198, 198, 197)";
             bkrdColor = "rgb(229, 229, 229)";
             boundaryColor = "rgb(209, 209, 209)";
+            shapeColor = "grey";
             collisionColor = "rgb(135, 160, 103)"
         }
 
@@ -238,8 +247,8 @@ class Solution {
                     // fill square pink if it's occupied by the boundary shape
                     fill(boundaryColor); // pink (boundary)
                     if (this.layout[y][x].isShape) {
-                        // fill square black if it's occupied by the shape
-                        fill("grey"); // black (shape)
+                        // square is occupied by the shape
+                        fill(shapeColor);
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
                     fill(collisionColor);  // collision
@@ -248,8 +257,6 @@ class Solution {
                 let rectX = x * unitSize;
                 let rectY = (canvasHeight - unitSize) - (y * unitSize); // draw from bottom up
                 rect(rectX, rectY, unitSize, unitSize);
-
-                // old location of showScores
             }
         }
     }
