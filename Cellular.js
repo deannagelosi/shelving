@@ -129,10 +129,10 @@ class Cellular {
             this.pathScores.push([]);
             for (let x = 0; x < this.gridWidth + 1; x++) {
                 // calculate the path score
-                let ULScore = this.getScore(y, x - 1);
-                let DLScore = this.getScore(y - 1, x - 1);
-                let URScore = this.getScore(y, x);
-                let DRScore = this.getScore(y - 1, x);
+                let ULScore = this.getSlotScore(y, x - 1);
+                let DLScore = this.getSlotScore(y - 1, x - 1);
+                let URScore = this.getSlotScore(y, x);
+                let DRScore = this.getSlotScore(y - 1, x);
 
                 let ULShapeID = this.getShapeID(y, x - 1);
                 let DLShapeID = this.getShapeID(y - 1, x - 1);
@@ -245,11 +245,41 @@ class Cellular {
                 }
 
                 for (let parentCell of this.grid[y][x]) {
-                    if (parentCell.alive) { }
+                    if (parentCell.alive) {
+                        let options = [
+                            { dir: "left", x: x - 1, y: y, valid: true, score: null },
+                            { dir: "up", x: x, y: y + 1, valid: true },
+                            { dir: "right", x: x + 1, y: y, valid: true }
+                        ]
+
+
+
+
+
+                    }
                 }
             }
         }
         // console.log("this.grid: ", this.grid);
+    }
+
+    calcOptionScore(_y, _x, _dir, _strain) {
+        // return the sum of the path score plus the best opportunity (minimum) score
+        // first calculate the path score
+        let pathScore = this.pathScores[_y][_x]._dir;
+        // check if there are cells in left, up, and right directions
+        // if there are, check if any cell is the same strain
+        let oppScore = null;
+        if (this.grid[_y][_x].length > 0) {
+            for (let cell of this.grid[_y][_x]) {
+                if (cell.strain == _strain) {
+                    // very large number to avoid this option
+                    oppScore = Infinity;
+                }
+            }
+        
+        }
+
     }
 
     addCell(_y, _x, _dir, _cell) {
@@ -326,40 +356,6 @@ class Cellular {
         return null;
     }
 
-    getScore(x, y) {
-        // translate from grid coordinates to layout coordinates
-        // find the unit scores in the layout to the UL and UR of the grid slot position
-        let ULScore;
-        let URScore;
-
-        if (y == this.layout.length) {
-            ULScore = 8;
-            URScore = 8;
-        } else if (x == 0) {
-            ULScore = 8;
-            URScore = this.layout[y][x].unitScore;
-        } else if (x == this.layout[y].length) {
-            ULScore = this.layout[y][x - 1].unitScore;
-            URScore = 8;
-        } else {
-            ULScore = this.layout[y][x - 1].unitScore;
-            URScore = this.layout[y][x].unitScore;
-        }
-
-        // calculate the score
-        // if both integers above 0, return the absolute difference in an array
-        // if both integers are 0, return both shapeIDs in an array
-        if (ULScore > 0 || URScore > 0) {
-            return [Math.abs(ULScore - URScore)];
-        } else {
-            // both units have a shape, return the shapeIDs
-            let ULId = String(this.layout[y][x - 1].shapes[0].posX) + String(this.layout[y][x - 1].shapes[0].posY);
-            let URId = String(this.layout[y][x].shapes[0].posX) + String(this.layout[y][x].shapes[0].posY);
-
-            return [ULId, URId];
-        }
-    }
-
     showCells() {
         // loop grid and display cells on the canvas
         for (let y = 0; y < this.grid.length; y++) {
@@ -425,7 +421,7 @@ class Cellular {
         }
     }
 
-    getScore(_y, _x) {
+    getSlotScore(_y, _x) {
         // find the score at the grid slot
         return this.pathInBounds(_y, _x) ? this.gridScores[_y][_x] : 1;
     }

@@ -94,15 +94,16 @@
 Cells have 3 options for growth: Left, Up, or Right
 
 - Start with left, up, and right set to True
-- Cell calculates score of path for left, up, and right
+- Cell retrieve score of path for left, up, and right
 
 Step 1: Eliminate Options
 
 - If there's a collision with another cell, both cells die
+- Can't be out of bounds
+- Cannot backtrack
 - Can't grow through a shape
   - Path is assigned maximum value
   - Set direction to False
-- Cannot backtrack
   - Can only move in directions that is not occupied by myself (check strain)
 
 Step 2: Choose a Remaining Direction
