@@ -3,8 +3,8 @@ class Solution {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy the layout
         this.score;
-        this.unitSize;
-        this.eightThreshold = 0.07; // ratio limit for unit scores of 8
+        this.squareSize;
+        this.eightThreshold = 0.07; // ratio limit for anneal scores of 8
     }
 
     exampleSolution() {
@@ -120,10 +120,11 @@ class Solution {
             let shape = this.shapes[i];
             // place shape boundary
 
-            let unitData = {
+            let posData = {
                 shapes: [],
                 isShape: false,
-                unitScore: 0
+                annealScore: 0,
+                terrainValue: 0
             };
 
             for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
@@ -139,16 +140,16 @@ class Solution {
                         while (!xInBounds) {
                             // grow the x+ direction by two
                             for (let i = 0; i < this.layout.length; i++) {
-                                // grow every row with a new unitData object
-                                this.layout[i].push(JSON.parse(JSON.stringify(unitData)));
-                                this.layout[i].push(JSON.parse(JSON.stringify(unitData)));
+                                // grow every row with a new posData object
+                                this.layout[i].push(JSON.parse(JSON.stringify(posData)));
+                                this.layout[i].push(JSON.parse(JSON.stringify(posData)));
                             }
                             xInBounds = shape.posX + x + 1 < this.layout[0].length;
                         }
                         while (!yInBounds) {
                             // grow the y+ direction
                             // add a new row filled with unique objects
-                            let newRow = new Array(this.layout[0].length).fill(null).map(() => (JSON.parse(JSON.stringify(unitData))));
+                            let newRow = new Array(this.layout[0].length).fill(null).map(() => (JSON.parse(JSON.stringify(posData))));
                             this.layout.push(newRow);
 
                             yInBounds = shape.posY + y < this.layout.length;
@@ -167,11 +168,11 @@ class Solution {
 
         // trim layout and remove empty rows
         // trim the last row if it's empty
-        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(unit => unit.shapes.length == 0)) {
+        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(posData => posData.shapes.length == 0)) {
             this.layout.pop();
         }
         // trim the first row if it's empty
-        while (this.layout.length > 0 && this.layout[0].every(unit => unit.shapes.length == 0)) {
+        while (this.layout.length > 0 && this.layout[0].every(posData => posData.shapes.length == 0)) {
             this.layout.shift();
             // update shape.posY with new position for every shape
             for (let i = 0; i < this.shapes.length; i++) {
@@ -195,10 +196,10 @@ class Solution {
             }
         }
 
-        // update unitSize for this layout
-        let unitHeight = canvasHeight / this.layout.length;
-        let unitWidth = canvasWidth / this.layout[0].length;
-        this.unitSize = Math.min(unitHeight, unitWidth);
+        // update squareSize for this layout
+        let squareHeight = canvasHeight / this.layout.length;
+        let squareWidth = canvasWidth / this.layout[0].length;
+        this.squareSize = Math.min(squareHeight, squareWidth);
 
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
@@ -228,9 +229,9 @@ class Solution {
             collisionColor = "rgb(135, 160, 103)"
         }
 
-        let unitHeight = canvasHeight / this.layout.length;
-        let unitWidth = canvasWidth / this.layout[0].length;
-        let unitSize = Math.min(unitHeight, unitWidth);
+        let squareHeight = canvasHeight / this.layout.length;
+        let squareWidth = canvasWidth / this.layout[0].length;
+        let squareSize = Math.min(squareHeight, squareWidth);
 
         // display the design space grid
         stroke(lineColor);
@@ -240,7 +241,7 @@ class Solution {
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
             for (let y = 0; y < designHeight; y++) {
-                // draw unit square
+                // draw each layout square
                 if (this.layout[y][x].shapes.length == 0) {
                     fill(bkrdColor); // white (empty)
                 } else if (this.layout[y][x].shapes.length == 1) {
@@ -254,9 +255,9 @@ class Solution {
                     fill(collisionColor);  // collision
                 }
 
-                let rectX = x * unitSize;
-                let rectY = (canvasHeight - unitSize) - (y * unitSize); // draw from bottom up
-                rect(rectX, rectY, unitSize, unitSize);
+                let rectX = x * squareSize;
+                let rectY = (canvasHeight - squareSize) - (y * squareSize); // draw from bottom up
+                rect(rectX, rectY, squareSize, squareSize);
             }
         }
     }
@@ -268,30 +269,30 @@ class Solution {
             strokeWeight(0.5);
             textSize(10);
 
-            let unitHeight = canvasHeight / this.layout.length;
-            let unitWidth = canvasWidth / this.layout[0].length;
-            let unitSize = Math.min(unitHeight, unitWidth);    
+            let squareHeight = canvasHeight / this.layout.length;
+            let squareWidth = canvasWidth / this.layout[0].length;
+            let squareSize = Math.min(squareHeight, squareWidth);
 
             let designHeight = this.layout.length;
             let designWidth = this.layout[0].length;
             for (let x = 0; x < designWidth; x++) {
                 for (let y = 0; y < designHeight; y++) {
-                    let rectX = x * unitSize;
-                    let rectY = (canvasHeight - unitSize) - (y * unitSize);
-                    // display the unit score if its empty of shapes
-                    if (this.layout[y][x].unitScore > 0) {
+                    let rectX = x * squareSize;
+                    let rectY = (canvasHeight - squareSize) - (y * squareSize);
+                    // display the anneal score if its empty of shapes
+                    if (this.layout[y][x].annealScore > 0) {
                         if (devMode) {
                             fill(0);
-                            text(this.layout[y][x].unitScore, rectX + unitSize / 3, rectY + unitSize / 1.5);
+                            text(this.layout[y][x].annealScore, rectX + squareSize / 3, rectY + squareSize / 1.5);
                         }
-                    } else if (this.layout[y][x].unitScore == 0) {
+                    } else if (this.layout[y][x].annealScore == 0) {
                         if (devMode) {
                             let shapeID;
                             if (this.layout[y][x].shapes.length > 0) {
                                 shapeID = this.layout[y][x].shapes[0].data.title[0]
                             }
                             fill(0);
-                            text(shapeID, rectX + unitSize / 3, rectY + unitSize / 1.5);
+                            text(shapeID, rectX + squareSize / 3, rectY + squareSize / 1.5);
                         }
                     }
                 }
@@ -303,41 +304,41 @@ class Solution {
         // the objective function in simulated annealing
 
         this.score = 0; // reset the score
-        let numUnits8 = 0; // reset the number of squares with a uScore of 8
-        let totalNumUnits = 0; // total number of squares in the layout
-        let overlappingUnits = 0; // number of squares containing overlapping shapes
+        let num8Scores = 0; // reset the number of squares with a anneal score of 8
+        let totalSquares = 0; // total number of squares in the layout
+        let overlappingSquares = 0; // number of squares containing overlapping shapes
 
-        // count all the empty units in the layout
+        // count all the empty squares in the layout
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
-                totalNumUnits++; // the total number of unit squares
+                totalSquares++; // the total number of squares
 
-                // the number of overlapping unit squares
+                // the number of overlapping squares
                 if (this.layout[y][x].shapes.length > 1) {
-                    overlappingUnits += this.layout[y][x].shapes.length - 1;
+                    overlappingSquares += this.layout[y][x].shapes.length - 1;
                 }
 
-                // the number of units with a score of 8 (no adjacent empty spots) and calc ratio
+                // the number with an anneal score of 8 (no adjacent empty spots) and calc ratio
                 if (this.layout[y][x].shapes.length == 0) {
-                    // unit is empty, calculate the unit score
-                    let uScore = 8;
-                    // check the 8 possible adjacent units
+                    // grid square is empty, calculate the score
+                    let annealScore = 8;
+                    // check the 8 possible adjacent squares
                     for (let localY = Math.max(0, y - 1); localY <= Math.min(y + 1, this.layout.length - 1); localY++) {
                         for (let localX = Math.max(0, x - 1); localX <= Math.min(x + 1, this.layout[0].length - 1); localX++) {
-                            // don't count the unit square itself
+                            // don't count the square itself
                             if (localX !== x || localY !== y) {
-                                // count if the adjacent unit is empty
+                                // count if the adjacent square is empty
                                 if (this.layout[localY][localX].shapes.length > 0) {
-                                    uScore--;
+                                    annealScore--;
                                 }
                             }
                         }
                     }
-                    // assign the score to the unit
-                    this.layout[y][x].unitScore = uScore;
-                    // calculate the number of units with a score of 8
-                    if (uScore == 8) {
-                        numUnits8++;
+                    // assign the score
+                    this.layout[y][x].annealScore = annealScore;
+                    // calculate the number of with a score of 8
+                    if (annealScore == 8) {
+                        num8Scores++;
                     }
                 }
             }
@@ -348,10 +349,10 @@ class Solution {
         // loop through each column to find the first shape from the bottom up
         for (let col = 0; col < this.layout[0].length; col++) {
             for (let row = 0; row < this.layout.length; row++) {
-                let unitData = this.layout[row][col];
-                if (unitData.shapes.length > 0) {
-                    // there is a shape(s) occupying this unit square
-                    let shape = unitData.shapes[0];
+                let posData = this.layout[row][col];
+                if (posData.shapes.length > 0) {
+                    // there is a shape(s) occupying this square
+                    let shape = posData.shapes[0];
                     // check if looking at the bottom row of the shape
                     if (row == shape.posY) {
                         // check if the shape already exists in bottomShapes
@@ -383,10 +384,10 @@ class Solution {
             totalYValues += yValue;
         }
 
-        if (overlappingUnits == 0 && numUnits8 / totalNumUnits < this.eightThreshold && totalYValues == 0) {
+        if (overlappingSquares == 0 && num8Scores / totalSquares < this.eightThreshold && totalYValues == 0) {
             this.score = 0;
         } else {
-            this.score = (this.layout.length * overlappingUnits) + numUnits8 + totalYValues;
+            this.score = (this.layout.length * overlappingSquares) + num8Scores + totalYValues;
         }
     }
 

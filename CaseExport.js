@@ -14,7 +14,7 @@ class CaseExport {
         this.vertKerf = 0.02; // kerf for vertical cuts
         this.cutWidth = this.boardThickness - this.vertKerf;
         this.boardLengthAdjust = this.boardThickness;
-        this.lengthMod = 2; // unit squares are 0.5 inches, so multiply by 2 to get length in inches
+        this.lengthMod = 2; // layout squares are 0.5 inches, so multiply by 2 to get length in inches
         this.printGap = 0.25 * this.pixelRes; // gap between printed boards
 
         this.bedRows = [0, 0, 0, 0, 0]; // 5 rows

@@ -22,7 +22,7 @@
 
 - **turn on input objects**
 - **export and import solution**
-- click a input slot a second time to deselect it
+- click a input square a second time to deselect it
 - save objects for future use
 
 ### Generation
@@ -30,7 +30,7 @@
 #### Automata
 
 - when growing vertically, find the center of zero-scores like in case 1
-- detect and fix "C" paths, ie when 3 walls on a unit (at least partially parallel with yourself)
+- detect and fix "C" paths, ie when 3 walls in a square (at least partially parallel with yourself)
 
 #### Annealing
 
@@ -122,10 +122,3 @@ Step 2: Choose a Remaining Direction
 Step 3: Divide to solve problems
 
 - If can't decide between remaining options, add a new cell in all remaining directions
-
-### Next Steps
-
-1. Score the grid slots for cellular automata
-2. Score the line segments for cellular automata
-3. Implement rules
-

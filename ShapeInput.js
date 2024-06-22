@@ -3,15 +3,15 @@ class ShapeInput {
         // User input grid size
         this.inputRows = 15;
         this.inputCols = 15;
-        this.inputUnitSize = 35;
-        this.gridHeight = (this.inputRows * this.inputUnitSize);
-        this.gridWidth = (this.inputCols * this.inputUnitSize);
+        this.inputSquareSize = 35;
+        this.inputGridHeight = (this.inputRows * this.inputSquareSize);
+        this.inputGridWidth = (this.inputCols * this.inputSquareSize);
         this.inputGrid = [];
 
         this.tbPadding = 50; // top bottom
         this.lrPadding = 25; // left right
 
-        // Initialize the stack for unit selection history
+        // Initialize the stack for square selection history
         this.selectionHistory = [];
         // Track shape titles displaying to hide later
         this.shapeTitleElements = [];
@@ -95,28 +95,28 @@ class ShapeInput {
     drawInputGrid() {
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
-                // draw input unit square
+                // draw input square
                 if (this.inputGrid[y][x]) {
                     fill(0); // Fill black if the rect is clicked
                 } else {
                     fill(255); // Fill white
                 }
 
-                let rectX = x * this.inputUnitSize
-                let rectY = (this.gridHeight - this.inputUnitSize) - (y * this.inputUnitSize); // draw from bottom up
+                let rectX = x * this.inputSquareSize
+                let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize); // draw from bottom up
 
-                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputUnitSize, this.inputUnitSize);
+                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputSquareSize, this.inputSquareSize);
             }
         }
     }
 
-    selectInputUnit(mouseX, mouseY) {
-        let xValid = mouseX >= this.lrPadding && mouseX <= this.gridWidth + this.lrPadding;
-        let yValid = mouseY >= this.tbPadding && mouseY <= this.gridHeight + this.tbPadding;
+    selectInputSquare(mouseX, mouseY) {
+        let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
+        let yValid = mouseY >= this.tbPadding && mouseY <= this.inputGridHeight + this.tbPadding;
         if (xValid && yValid) {
 
-            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputUnitSize); // Column
-            let gridY = Math.floor((this.gridHeight + this.tbPadding - mouseY) / this.inputUnitSize); // Row
+            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputSquareSize); // Column
+            let gridY = Math.floor((this.inputGridHeight + this.tbPadding - mouseY) / this.inputSquareSize); // Row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 if (!this.inputGrid[gridY][gridX]) {
@@ -140,7 +140,7 @@ class ShapeInput {
 
     saveShape() {
         // check if the shape is valid before saving
-        // check if the bottom has at least 1 clicked inout unit
+        // check if the bottom has at least 1 clicked inout square
         if (this.inputGrid[0].includes(true)) {
             // find the shape title
             let titleValue = this.titleInput.value();

@@ -15,7 +15,7 @@ class Case {
         this.materialWidth = 16.5;
         this.materialHeight = 11;
         this.materialThickness = 0.11;
-        this.unitToInch = 2; // input units (0.5 inches) to inch conversion
+        this.layoutToInch = 2; // layout squares (0.5 inches) to inch conversion
         this.lenMod = this.materialThickness;
         this.ppi = 40; // pixel per inch
         this.buffer = 0.25 * this.ppi; // gap between boards
@@ -170,10 +170,10 @@ class Case {
     //             stroke("rgb(175, 141, 117)");
     //             strokeWeight(5);
     //             line(
-    //                 board.startCoords.x * this.solution.unitSize,
-    //                 canvasHeight - (board.startCoords.y * this.solution.unitSize),
-    //                 board.endCoords.x * this.solution.unitSize,
-    //                 canvasHeight - (board.endCoords.y * this.solution.unitSize)
+    //                 board.startCoords.x * this.solution.squareSize,
+    //                 canvasHeight - (board.startCoords.y * this.solution.squareSize),
+    //                 board.endCoords.x * this.solution.squareSize,
+    //                 canvasHeight - (board.endCoords.y * this.solution.squareSize)
     //             );
     //         }
     //     } else {
@@ -193,8 +193,8 @@ class Case {
     //                     // show each dot
     //                     noStroke(); // No border for the dots
     //                     circle(
-    //                         automaton.dots[j].x * this.solution.unitSize,
-    //                         canvasHeight - (automaton.dots[j].y * this.solution.unitSize),
+    //                         automaton.dots[j].x * this.solution.squareSize,
+    //                         canvasHeight - (automaton.dots[j].y * this.solution.squareSize),
     //                         10
     //                     );
     //                 } else {
@@ -208,10 +208,10 @@ class Case {
     //                         strokeWeight(5);
     //                         if (Math.abs(prevPosX - currPosX) == 1 && Math.abs(prevPosY - currPosY) == 0 || Math.abs(prevPosX - currPosX) == 0 && Math.abs(prevPosY - currPosY) == 1) {
     //                             line(
-    //                                 prevPosX * this.solution.unitSize,
-    //                                 canvasHeight - (prevPosY * this.solution.unitSize),
-    //                                 currPosX * this.solution.unitSize,
-    //                                 canvasHeight - (currPosY * this.solution.unitSize)
+    //                                 prevPosX * this.solution.squareSize,
+    //                                 canvasHeight - (prevPosY * this.solution.squareSize),
+    //                                 currPosX * this.solution.squareSize,
+    //                                 canvasHeight - (currPosY * this.solution.squareSize)
     //                             );
     //                         } else {
     //                             console.log("prevPosX,Y: ", prevPosX, prevPosY, "currPosX, Y: ", currPosX, currPosY);
@@ -240,17 +240,17 @@ class Case {
 
         for (let i = 0; i < this.boards.length; i++) {
             let board = this.boards[i];
-            let startRectX = board.startCoords.x * this.solution.unitSize;
-            let startRectY = canvasHeight - (board.startCoords.y * this.solution.unitSize);
+            let startRectX = board.startCoords.x * this.solution.squareSize;
+            let startRectY = canvasHeight - (board.startCoords.y * this.solution.squareSize);
             let endRectX;
             let endRectY;
-            let boardWidth = this.solution.unitSize / 2;
+            let boardWidth = this.solution.squareSize / 2;
             if (board.orientation === "x") {
-                endRectX = board.endCoords.x * this.solution.unitSize + boardWidth;
+                endRectX = board.endCoords.x * this.solution.squareSize + boardWidth;
                 endRectY = startRectY - boardWidth;
             } else if (board.orientation === "y") {
                 endRectX = startRectX + boardWidth;
-                endRectY = canvasHeight - (board.endCoords.y * this.solution.unitSize) - boardWidth;
+                endRectY = canvasHeight - (board.endCoords.y * this.solution.squareSize) - boardWidth;
             }
 
             this.graphic.rect(startRectX, startRectY, endRectX, endRectY);
@@ -449,7 +449,7 @@ class Case {
             }
 
             // calculate the true board length
-            let boardWidth = (currBoard.getLength() / this.unitToInch) + this.lenMod;
+            let boardWidth = (currBoard.getLength() / this.layoutToInch) + this.lenMod;
             // find placement on material
             let boardPos = this.choosePlacement(boardWidth);
             let sheet = boardPos[0]; // sheet number
@@ -481,7 +481,7 @@ class Case {
 
             // draw T joints (slots)
             currBoard.poi.tJoints.forEach((tJoint) => {
-                let tJointX = topLeftX + ((tJoint / this.unitToInch) * this.ppi);
+                let tJointX = topLeftX + ((tJoint / this.layoutToInch) * this.ppi);
                 // tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
                 let tJointY = topLeftY + (0.2 * boardHeight * this.ppi);
                 let tJoints = [[tJointX, tJointY], [tJointX, tJointY + (0.4 * boardHeight * this.ppi)]];
@@ -493,7 +493,7 @@ class Case {
             // draw X joints (c-shape)
             currBoard.poi.xJoints.forEach((xJoint) => {
                 console.log(currBoard);
-                let xJointX = topLeftX + ((xJoint / this.unitToInch) * this.ppi);
+                let xJointX = topLeftX + ((xJoint / this.layoutToInch) * this.ppi);
                 let xJointY;
                 if (currBoard.orientation == "x") {
                     // cut joint on board bottom

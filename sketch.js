@@ -10,7 +10,7 @@ let newCase;
 let inputMode = true;
 
 // diagnostic toggles
-let useExample = true;
+let useExampleSolution = true;
 let devMode = true;
 
 function preload() {
@@ -38,7 +38,7 @@ function draw() {
             initialSolution();
         }
 
-        if (useExample) {
+        if (useExampleSolution) {
             // use example solution on example shapes
             createCase();
             noLoop();
@@ -73,7 +73,7 @@ function createCase() {
 
     // build case
     newCase = new Case(annealing.currSolution);
-    newCase.cellular.scoreGrid();
+    newCase.cellular.createTerrain();
     newCase.cellular.scorePaths();
     newCase.cellular.showScores(devMode);
 }
@@ -91,13 +91,13 @@ function keyPressed() {
 
 function mousePressed() {
     if (inputMode) {
-        shapeInput.selectInputUnit(mouseX, mouseY);
+        shapeInput.selectInputSquare(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
     if (inputMode) {
-        shapeInput.selectInputUnit(mouseX, mouseY);
+        shapeInput.selectInputSquare(mouseX, mouseY);
     }
 }
 
@@ -116,7 +116,7 @@ function initialSolution() {
 
     // generate the initial solution
     let initialSolution = new Solution(shapesPos);
-    if (useExample) {
+    if (useExampleSolution) {
         initialSolution.exampleSolution();
     } else {
         initialSolution.setInitialSolution();
