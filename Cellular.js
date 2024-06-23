@@ -174,8 +174,6 @@ class Cellular {
                 this.pathValues[y].push(values);
             }
         }
-        console.log("this.pathValues: ", this.pathValues);
-
     }
 
     makeInitialCells() {
@@ -226,10 +224,10 @@ class Cellular {
         }
     }
 
-    growCells() {
+    growCells(numGrow) {
         // grow alive cells until no more cells are alive
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < numGrow; i++) {
             this.growOnce();
         }
         console.log("this.cellSpace: ", this.cellSpace);
@@ -238,9 +236,9 @@ class Cellular {
     growOnce() {
         // loop cell space and grow any alive cells once
 
-        // save cells that will be added to grow at the end of the loop
+        // loop top down and add cells one row at a time
         let newCells = [];
-        for (let y = 0; y < this.cellSpace.length; y++) {
+        for (let y = this.cellSpace.length - 1; y >= 0; y--) {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
 
                 // Rule 1: CROWDED - when cells overlap, they die
@@ -293,14 +291,19 @@ class Cellular {
 
                         validOptions.sort((a, b) => a.score - b.score);
 
+                        let cellAdded = false; // track if cell growth happens
                         for (let option of validOptions) {
-                            for (let cell of this.cellSpace[option.y][option.x]) {
-                                if (cell.alive == false && cell.strain != parentCell.strain) {
-                                    // Selection Rule 2: Attraction - a cell is attracted to a dead cell of a different strain
-                                    newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
-                                    break;
-                                }
+                            // this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain)
+                            if (this.cellSpace[option.y][option.x].some(cell => !cell.alive && cell.strain != parentCell.strain)) {
+                                // Selection Rule 2: Attraction - a cell is attracted to a dead cell of a different strain
+                                newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
+                                cellAdded = true;
+                                break;
                             }
+                        }
+                        if (cellAdded) {
+                            // stop further growth
+                            break;
                         }
 
                         let isTied = validOptions[0].score == validOptions[1].score;
@@ -347,12 +350,13 @@ class Cellular {
                     }
                 }
             }
+            // Found all new cells for the row. Add them and move to the next row
+            for (let newCell of newCells) {
+                this.addCell(newCell.y, newCell.x, newCell.parentCell);
+            }
+            newCells = [];
         }
 
-        // add the new cells to the cell space
-        for (let newCell of newCells) {
-            this.addCell(newCell.y, newCell.x, newCell.parentCell);
-        }
     }
 
     calcOppScore(_y, _x, _strain) {

@@ -12,6 +12,7 @@ let inputMode = true;
 // diagnostic toggles
 let useExampleSolution = true;
 let devMode = true;
+let numGrow = 1;
 
 function preload() {
     shapeData = loadJSON('data/cardboard.json');
@@ -76,7 +77,7 @@ function createCase() {
     newCase.cellular.createTerrain();
     newCase.cellular.calcPathValues();
     newCase.cellular.makeInitialCells();
-    newCase.cellular.growCells();
+    newCase.cellular.growCells(numGrow);
 
     // display cells and terrain
     newCase.cellular.showTerrain(devMode);
@@ -90,6 +91,11 @@ function keyPressed() {
             newCase.buildLaserSVG();
             newCase.displaySVGExport();
             newCase.saveSVGExport();
+        } else if (key === 'a') {
+            // todo: remove this or move to dev mode
+            // advance one growth at a time
+            numGrow++
+            createCase();
         }
     }
 }
