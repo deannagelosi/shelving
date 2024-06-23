@@ -252,6 +252,7 @@ class Cellular {
 
                 for (let parentCell of this.cellSpace[y][x]) {
                     if (parentCell.alive) {
+                        // setup options for cell growth directions
                         let options = [
                             { dir: "left", x: x - 1, y: y, valid: true, score: null },
                             { dir: "up", x: x, y: y + 1, valid: true, score: null },
@@ -264,7 +265,46 @@ class Cellular {
                             option.score = pathValue + this.calcOppScore(option.y, option.x, parentCell.strain);
                         }
 
-                        // testing: choose the lowest score as the winner
+                        for (let option of options) {
+                            if (this.cellSpaceInBounds(option.y, option.x)) {
+                                // Checking all cells in potential position
+                                for (let cell of this.cellSpace[option.y][option.x]) {
+                                    // Elimination Rule 1: Can't Backtrack 
+                                    if (cell.strain == parentCell.strain) { option.valid = false };
+                                }
+
+                                if (this.pathValues[y][x][option.dir] == this.maxTerrain) {
+                                    // Elimination Rule 2: Can't grow through a shape
+                                    option.valid = false;
+                                }
+                            } else {
+                                // Elimination Rule 3: Can't go out bounds
+                                option.valid = false;
+                            }
+                        }
+
+                        // Selection Rule 1: if only one option remains, take it
+                        let validOptions = options.filter(option => option.valid === true);
+
+                        if (validOptions.length === 1) {
+                            newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                            break;
+                        }
+
+                        validOptions.sort((a, b) => a.score - b.score);
+
+                        for (let option of validOptions) {
+                            for (let cell of this.cellSpace[option.y][option.x]) {
+                                if (cell.alive == false && cell.strain != parentCell.strain) {
+                                    // Selection Rule 2: Attraction - a cell is attracted to a dead cell of a different strain
+                                    newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
+                                    break;
+                                }
+                            }
+                        }
+
+
+                        // // testing: choose the lowest score as the winner
                         // // Find the option with the lowest score
                         // let bestOption = options[0];
                         // for (let i = 1; i < options.length; i++) {
@@ -285,7 +325,7 @@ class Cellular {
     }
 
     calcOppScore(_y, _x, _strain) {
-         // opp_score = Math.min(possible_paths_from_here)
+        // opp_score = Math.min(possible_paths_from_here)
 
         // Calculate the opportunity score for at the given position (_y, _x)
         // The opportunity score is the best next possible path value from this point

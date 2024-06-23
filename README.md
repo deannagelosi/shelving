@@ -93,22 +93,25 @@
 
 Cells have 3 options for growth: Left, Up, or Right
 
+Step 1: Die Rule (end condition for a strain)
+
+- If there's a collision with another cell, both cells die
+
+Setup Phase:
+
 - Start with left, up, and right set to True
 - Cell retrieve score of path for left, up, and right
 
-Step 1: Eliminate Options
+Step 2: Eliminate Options
 
-- If there's a collision with another cell, both cells die
-- Can't be out of bounds
-- Cannot backtrack
-- Can't grow through a shape
-  - Path is assigned maximum value
-  - Set direction to False
-  - Can only move in directions that is not occupied by myself (check strain)
+- Can't backtrack -
+- Can't grow through a shape -
+- Can't go out of bounds -
 
-Step 2: Choose a Remaining Direction
+Step 3: Choose a Remaining Direction
 
-- Cells of different strains are attracted to one another (prevents parallel paths)
+- if only one option remains, take it -
+- A cell is attracted to a dead cell of a different strain (prevents parallel paths)
   - One cell will move towards another
 - Cells like easy paths (low values)
   - If there are two or more remaining paths, look ahead to the next intersection
@@ -119,7 +122,7 @@ Step 2: Choose a Remaining Direction
 - Cells are attracted to change
   - Growing in a new direction
 
-Step 3: Divide to solve problems
+Step 4: Divide to solve problems
 
 - If can't decide between remaining options, add a new cell in all remaining directions
 
