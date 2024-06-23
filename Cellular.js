@@ -14,7 +14,7 @@ class Cellular {
         // assign values to all squares in the layout to make topography
         // initial state: all spots occupied by shapes start at infinity, all empty spots start at 0
         // loop until none are zero, adding a point to any touching a non-zero value
-        // repeat until all train values are greater than 0
+        // repeat until all terrain values are greater than 0
 
         // set up initial state
         // clear the existing terrain values
@@ -29,20 +29,20 @@ class Cellular {
             prevValues.push([]);
             for (let x = 0; x < this.layoutWidth; x++) {
                 if (this.layout[y][x].shapes.length > 0) {
-                    // shape at (x,y) assigned a score of infinity
+                    // shape at (x,y) assigned a value (height) of infinity
                     this.layout[y][x].terrainValue = Infinity;
                     prevValues[y].push(Infinity);
                 } else {
-                    // no shapes at (x,y) assigned a initial score of 0
+                    // no shapes at (x,y), assign an initial value of 0
                     this.layout[y][x].terrainValue = 0;
                     prevValues[y].push(0);
                 }
             }
         }
-        // loop until all squares have a score greater than 0
+
+        // loop until all terrain squares have a value greater than 0
         // increment the terrain when touching a square with a non-zero terrain, even diagonally
         // stash the updated values to reference the next loop in prevValues
-
         let numZero;
         while (numZero != 0) {
             numZero = 0;
@@ -69,14 +69,14 @@ class Cellular {
                         if (this.layout[y][x].terrainValue > this.maxTerrain) {
                             this.maxTerrain = this.layout[y][x].terrainValue;
                         }
-                        // calculate the number remaining with a score of 0
+                        // track how many squares remain with a terrain height of 0
                         if (numTouch == 0) {
                             numZero++;
                         }
                     }
                 }
             }
-            // current scores become previous scores
+            // current values become previous values
             prevValues = this.layout.map(row => row.map(posData => posData.terrainValue));
         }
         // replace infinity with a the max terrain value
@@ -90,7 +90,7 @@ class Cellular {
         }
     }
 
-    showScores(_devMode) {
+    showTerrain(_devMode) {
         if (_devMode) {
             // display the design space
             stroke(0);
@@ -113,20 +113,20 @@ class Cellular {
         }
     }
 
-    scorePaths() {
-        // assign scores to all paths (i.e., lines on grid) to make topography
+    calcPathValues() {
+        // assign values to all paths (i.e., lines on grid) to make topography
         // determine path values based on the adjacent terrain values
-        // calculate the average score of the two values and assign to the path
+        // calculate the average value of the two adjacent terrains and assign to the path
         // special case: if both max value, check if the shapes are the same
-        // if the shapes are the same, assign a score of max value
-        // if the shapes are different, assign a score of 1 to the path 
+        // if the shapes are the same, assign the path the max terrain value
+        // if the shapes are different, assign a value of 1 to the path 
 
-        this.pathScores = []; // clear the scores
+        this.pathValues = []; // clear the values for all the path segments
         // add 1 to grid dimensions to account for the perimeter
         for (let y = 0; y < this.layoutHeight + 1; y++) {
-            this.pathScores.push([]);
+            this.pathValues.push([]);
             for (let x = 0; x < this.layoutWidth + 1; x++) {
-                // calculate the path score
+                // calculate the path value
                 let ULValue = this.getTerrain(y, x - 1);
                 let DLValue = this.getTerrain(y - 1, x - 1);
                 let URValue = this.getTerrain(y, x);
@@ -137,44 +137,44 @@ class Cellular {
                 let URShapeID = this.getShapeID(y, x);
                 let DRShapeID = this.getShapeID(y - 1, x);
 
-                let leftScore;
-                let upScore;
-                let rightScore;
+                let leftValue;
+                let upValue;
+                let rightValue;
 
-                // Score left path
+                // Left path
                 if (ULShapeID != null && DLShapeID != null && (ULShapeID !== DLShapeID)) {
                     // special case: both values one either side of the left path have a different shape
-                    leftScore = 1;
+                    leftValue = 1;
                 } else {
-                    leftScore = (ULValue + DLValue) / 2
+                    leftValue = (ULValue + DLValue) / 2
                 }
 
-                // Score up path
+                // Up path
                 if (ULShapeID != null && URShapeID != null && (ULShapeID !== URShapeID)) {
                     // special case: both values one either side of the left path have a different shape
-                    upScore = 1;
+                    upValue = 1;
                 } else {
-                    upScore = (ULValue + URValue) / 2
+                    upValue = (ULValue + URValue) / 2
                 }
 
-                // Score right path
+                // Right path
                 if (URShapeID != null && DRShapeID != null && (URShapeID !== DRShapeID)) {
                     // special case: both values one either side of the left path have a different shape
-                    rightScore = 1;
+                    rightValue = 1;
                 } else {
-                    rightScore = (URValue + DRValue) / 2
+                    rightValue = (URValue + DRValue) / 2
                 }
 
-                let scores = {
-                    left: leftScore,
-                    up: upScore,
-                    right: rightScore
+                let values = {
+                    left: leftValue,
+                    up: upValue,
+                    right: rightValue
                 };
 
-                this.pathScores[y].push(scores);
+                this.pathValues[y].push(values);
             }
         }
-        console.log("this.pathScores: ", this.pathScores);
+        console.log("this.pathValues: ", this.pathValues);
 
     }
 
@@ -242,7 +242,7 @@ class Cellular {
                 for (let parentCell of this.cellSpace[y][x]) {
                     if (parentCell.alive) {
                         let options = [
-                            { dir: "left", x: x - 1, y: y, valid: true, score: null },
+                            { dir: "left", x: x - 1, y: y, valid: true, score: null},
                             { dir: "up", x: x, y: y + 1, valid: true },
                             { dir: "right", x: x + 1, y: y, valid: true }
                         ]
@@ -259,15 +259,15 @@ class Cellular {
     calcOptionScore(_y, _x, _dir, _strain) {
         // return the sum of the path score plus the best opportunity (minimum) score
         // first calculate the path score
-        let pathScore = this.pathScores[_y][_x]._dir;
+        let pathValue = this.pathValues[_y][_x]._dir;
         // check if there are cells in left, up, and right directions
         // if there are, check if any cell is the same strain
-        let oppScore = null;
+        let oppMinScore = null;
         if (this.cellSpace[_y][_x].length > 0) {
             for (let cell of this.cellSpace[_y][_x]) {
                 if (cell.strain == _strain) {
                     // very large number to avoid this option
-                    oppScore = Infinity;
+                    oppMinScore = Infinity;
                 }
             }
 
@@ -332,6 +332,28 @@ class Cellular {
         // check if the grid is in bounds
         let yInBounds = coordY >= 0 && coordY < this.layout.length;
         let xInBounds = coordX >= 0 && coordX < this.layout[0].length;
+        if (yInBounds && xInBounds) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    cellSpaceInBounds(coordY, coordX) {
+        // check if the grid is in bounds
+        let yInBounds = coordY >= 0 && coordY < this.cellSpace.length;
+        let xInBounds = coordX >= 0 && coordX < this.cellSpace[0].length;
+        if (yInBounds && xInBounds) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    pathInBounds(coordY, coordX) {
+        // check if the grid is in bounds
+        let yInBounds = coordY >= 0 && coordY < this.pathValues.length;
+        let xInBounds = coordX >= 0 && coordX < this.pathValues[0].length;
         if (yInBounds && xInBounds) {
             return true;
         } else {

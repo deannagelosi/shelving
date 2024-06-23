@@ -74,8 +74,8 @@ function createCase() {
     // build case
     newCase = new Case(annealing.currSolution);
     newCase.cellular.createTerrain();
-    newCase.cellular.scorePaths();
-    newCase.cellular.showScores(devMode);
+    newCase.cellular.calcPathValues();
+    newCase.cellular.showTerrain(devMode);
 }
 
 function keyPressed() {
