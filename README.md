@@ -111,24 +111,14 @@ Step 2: Eliminate Options
 Step 3: Choose a Remaining Direction
 
 - if only one option remains, take it -
-- A cell is attracted to a dead cell of a different strain (prevents parallel paths)
-  - One cell will move towards another
-- Cells like easy paths (low values)
-  - If there are two or more remaining paths, look ahead to the next intersection
-    - Calculate the available path scores at that intersection
-    - Return the lowest value
-    - Calculate the cumulative score of the initial path and the lowest value path in the future
-    - Compare the available combined path scores, and take the lowest path (gets out of local minimum)
-- Cells are attracted to change
-  - Growing in a new direction
-
-Step 4: Divide to solve problems
-
-- If can't decide between remaining options, add a new cell in all remaining directions
+- A cell is attracted to a dead cell of a different strain (prevents parallel paths) -
+- Cells like easy paths (low values) -
+- Cells are attracted to change (Growing in a new direction) -
+- If can't decide between remaining options, add a new cell in all remaining directions -
 
 Notes:
 
 - calcOppScore should give a opportunity a good score if the attraction rule applies (another cell nearby) and not just path values
 - when two cells meet at a turn point, they die before one of them gets the chance to turn
-- dont allow c turns?
+- don't allow c turns?
 

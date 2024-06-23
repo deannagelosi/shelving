@@ -303,16 +303,47 @@ class Cellular {
                             }
                         }
 
+                        let isTied = validOptions[0].score == validOptions[1].score;
+                        if (!isTied) { // not tied. one score is lowest
+                            // Selection Rule 3: Easiest Path - choose the path with the lowest score
+                            newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                            break;
+                        } else {
+                            // There is a tie between 2 or 3 valid options. 
+                            // Determine remaining options
+                            let leftValid = validOptions.some(option => option.dir == "left");
+                            let upValid = validOptions.some(option => option.dir == "up");
+                            let rightValid = validOptions.some(option => option.dir == "right");
 
-                        // // testing: choose the lowest score as the winner
-                        // // Find the option with the lowest score
-                        // let bestOption = options[0];
-                        // for (let i = 1; i < options.length; i++) {
-                        //     if (options[i].score < bestOption.score) {
-                        //         bestOption = options[i];
-                        //     }
-                        // }
-                        // newCells.push({ y: bestOption.y, x: bestOption.x, parentCell: parentCell })
+                            // If right contains a cell of the same strain, growth is traveling leftward
+                            let growingLeft = this.cellSpaceInBounds(y, x + 1) && this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain);
+                            // If down contains a cell of the same strain, growth is traveling upward
+                            let growingUp = this.cellSpaceInBounds(y - 1, x) && this.cellSpace[y - 1][x].some(cell => cell.strain == parentCell.strain);
+                            // If left contains a cell of the same strain, growth is traveling rightward
+                            let growingRight = this.cellSpaceInBounds(y, x - 1) && this.cellSpace[y][x - 1].some(cell => cell.strain == parentCell.strain);
+
+                            if (growingUp && (leftValid && rightValid)) {
+                                // Traveling upward so Left and Right are new directions, but they are tied. Pick both
+                                // Selection Rule 4: Divide and Conquer: grow in both directions
+                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                                break;
+                            }
+
+                            // Selection Rule 5: Change is Good - if two options remain, grow in a new direction
+                            else if ((growingLeft || growingRight) && upValid) {
+                                newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
+                                break;
+                            } else if (growingUp && (leftValid && !rightValid)) {
+                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                                break;
+                            } else if (growingUp && (rightValid && !leftValid)) {
+                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                                break;
+                            } else {
+                                console.log("Error making growth decision. Location - x: ", x, " y: ", y);
+                            }
+                        }
                     }
                 }
             }
