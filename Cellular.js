@@ -249,7 +249,6 @@ class Cellular {
 
                     // Case 1: two or more alive cells meet
                     if (this.cellSpace[y][x].every(cell => cell.alive == true)) {
-                        console.log("hi at x: ", x, " y: ", y);
                         // Merge into the same strain family, leave one cell here alive
                         let strains = this.cellSpace[y][x].map(cell => cell.strain);
                         strains.sort((a, b) => a - b);
@@ -288,8 +287,8 @@ class Cellular {
                                     if (cell.strain == parentCell.strain) { option.valid = false };
                                 }
 
-                                if (this.pathValues[y][x][option.dir] == this.maxTerrain) {
-                                    // Elimination Rule 2: Can't grow through a shape
+                                if (this.pathValues[y][x][option.dir] == this.maxTerrain || option.score == Infinity) {
+                                    // Elimination Rule 2: Can't grow through a shape or infinity
                                     option.valid = false;
                                 }
                             } else {
@@ -299,7 +298,7 @@ class Cellular {
                         }
 
                         // Selection Rule 1: if only one option remains, take it
-                        let validOptions = options.filter(option => option.valid === true);
+                        let validOptions = options.filter(option => option.valid == true);
 
                         if (validOptions.length === 1) {
                             newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
@@ -382,7 +381,6 @@ class Cellular {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
                 for (let cell of this.cellSpace[y][x]) {
                     if (oldStrains.includes(cell.strain)) {
-                        console.log("x: ", x, "y: ", y);
                         cell.strain = newStrain;
                     }
                 }
@@ -404,6 +402,7 @@ class Cellular {
         let leftPathValue;
         let upPathValue;
         let rightPathValue;
+        let downPathValue; // used to detect "C" movements
 
         // check "left" opportunity
         if (this.cellSpaceInBounds(_y, _x - 1)) {
@@ -425,6 +424,19 @@ class Cellular {
             for (let cell of this.cellSpace[_y][_x + 1]) {
                 if (cell.strain == _strain) { rightPathValue = Infinity };
             }
+        }
+        // check "down" opportunity
+        if (this.cellSpaceInBounds(_y - 1, _x)) {
+            // eliminate down if there is a cell of the same strain
+            for (let cell of this.cellSpace[_y - 1][_x]) {
+                if (cell.strain == _strain) { downPathValue = Infinity };
+            }
+        }
+
+        // detect if an opportunity direction would cause a "C" shaped path
+        // i.e. - (left and down) or (right and down) are already occupied by the same strain
+        if (downPathValue == Infinity && (leftPathValue == Infinity || rightPathValue == Infinity)) {
+            return Infinity;
         }
 
         // if not eliminated, get the path values
