@@ -76,6 +76,7 @@ function createCase() {
     newCase.cellular.createTerrain();
     newCase.cellular.calcPathValues();
     newCase.cellular.makeInitialCells();
+    newCase.cellular.growCells();
 
     // display cells and terrain
     newCase.cellular.showTerrain(devMode);

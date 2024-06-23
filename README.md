@@ -122,3 +122,10 @@ Step 2: Choose a Remaining Direction
 Step 3: Divide to solve problems
 
 - If can't decide between remaining options, add a new cell in all remaining directions
+
+Notes:
+
+- calcOppScore should give a opportunity a good score if the attraction rule applies (another cell nearby) and not just path values
+- when two cells meet at a turn point, they die before one of them gets the chance to turn
+- dont allow c turns?
+
