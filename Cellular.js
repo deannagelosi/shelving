@@ -146,15 +146,18 @@ class Cellular {
                     // special case: both values one either side of the left path have a different shape
                     leftValue = 1;
                 } else {
-                    leftValue = (ULValue + DLValue) / 2
+                    leftValue = (ULValue + DLValue) / 2;
                 }
 
                 // Up path
                 if (ULShapeID != null && URShapeID != null && (ULShapeID !== URShapeID)) {
                     // special case: both values one either side of the left path have a different shape
                     upValue = 1;
+                } else if (ULValue != this.maxTerrain && ULValue == URValue) {
+                    // special case: the up path is a split (same terrain level on both sides)
+                    upValue = 1;
                 } else {
-                    upValue = (ULValue + URValue) / 2
+                    upValue = (ULValue + URValue) / 2;
                 }
 
                 // Right path
@@ -162,7 +165,7 @@ class Cellular {
                     // special case: both values one either side of the left path have a different shape
                     rightValue = 1;
                 } else {
-                    rightValue = (URValue + DRValue) / 2
+                    rightValue = (URValue + DRValue) / 2;
                 }
 
                 let values = {
@@ -241,10 +244,24 @@ class Cellular {
         for (let y = this.cellSpace.length - 1; y >= 0; y--) {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
 
-                // Rule 1: CROWDED - when cells overlap, they die
+                // Rule 1: Crowded - when cells overlap, they die
                 if (this.cellSpace[y][x].length > 1) {
-                    for (let cell of this.cellSpace[y][x]) {
-                        cell.alive = false;
+
+                    // Case 1: two or more alive cells meet
+                    if (this.cellSpace[y][x].every(cell => cell.alive == true)) {
+                        console.log("hi at x: ", x, " y: ", y);
+                        // Merge into the same strain family, leave one cell here alive
+                        let strains = this.cellSpace[y][x].map(cell => cell.strain);
+                        strains.sort((a, b) => a - b);
+                        // separate out the lowest strain and all the rest
+                        let newStrain = strains[0];
+                        let oldStrains = strains.slice(1);
+                        this.mergeStrains(oldStrains, newStrain);
+                        // remove all but one of the alive cells
+                        this.cellSpace[y][x] = [this.cellSpace[y][x][0]]
+                    } else {
+                        // Case 2: there is a dead cell, all cells die
+                        this.cellSpace[y][x].forEach(cell => cell.alive = false);
                     }
                 }
 
@@ -357,6 +374,20 @@ class Cellular {
             newCells = [];
         }
 
+    }
+
+    mergeStrains(oldStrains, newStrain) {
+        // Find any cells with strains matching oldStrains list and change them to newStrain
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (let cell of this.cellSpace[y][x]) {
+                    if (oldStrains.includes(cell.strain)) {
+                        console.log("x: ", x, "y: ", y);
+                        cell.strain = newStrain;
+                    }
+                }
+            }
+        }
     }
 
     calcOppScore(_y, _x, _strain) {
