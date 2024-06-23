@@ -75,7 +75,11 @@ function createCase() {
     newCase = new Case(annealing.currSolution);
     newCase.cellular.createTerrain();
     newCase.cellular.calcPathValues();
+    newCase.cellular.makeInitialCells();
+
+    // display cells and terrain
     newCase.cellular.showTerrain(devMode);
+    newCase.cellular.showCells();
 }
 
 function keyPressed() {

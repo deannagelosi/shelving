@@ -178,9 +178,8 @@ class Cellular {
 
     }
 
-    initCellSpace() {
+    makeInitialCells() {
         // initialize the space where cells live (intersections on the layout)
-
         this.cellSpace = []; // clear the space
         for (let y = 0; y < this.layoutHeight + 1; y++) {
             this.cellSpace.push([]);
@@ -191,20 +190,21 @@ class Cellular {
         }
 
         // populate cell space with perimeter cells
-        // left + right walls
-        for (let i = 0; i < this.layoutHeight; i++) {
-            this.cellSpace[i][0].push({
+        for (let y = 0; y < this.layoutHeight + 1; y++) {
+            // left wall
+            this.cellSpace[y][0].push({
                 strain: 0,
                 alive: false
             });
-            this.cellSpace[i][this.layoutWidth - 1].push({
+            // right wall
+            this.cellSpace[y][this.layoutWidth].push({
                 strain: 0,
                 alive: false
             });
         }
         // top wall
-        for (let i = 1; i < this.layoutWidth - 1; i++) {
-            this.cellSpace[this.layoutHeight - 1][i].push({
+        for (let x = 0; x < this.layoutWidth + 1; x++) {
+            this.cellSpace[this.layoutHeight][x].push({
                 strain: 0,
                 alive: false
             });
@@ -220,7 +220,6 @@ class Cellular {
                 // add a cell 
                 this.cellSpace[shape.posY][shapeEnds[0] + j].push({
                     strain: i + 1,
-                    dir: j == 0 ? "left" : j == bottomLength - 1 ? "right" : "",
                     alive: j == 0 || j == bottomLength - 1 ? true : false
                 });
             }
@@ -242,7 +241,7 @@ class Cellular {
                 for (let parentCell of this.cellSpace[y][x]) {
                     if (parentCell.alive) {
                         let options = [
-                            { dir: "left", x: x - 1, y: y, valid: true, score: null},
+                            { dir: "left", x: x - 1, y: y, valid: true, score: null },
                             { dir: "up", x: x, y: y + 1, valid: true },
                             { dir: "right", x: x + 1, y: y, valid: true }
                         ]
@@ -256,31 +255,70 @@ class Cellular {
         // console.log("this.cellSpace: ", this.cellSpace);
     }
 
-    calcOptionScore(_y, _x, _dir, _strain) {
-        // return the sum of the path score plus the best opportunity (minimum) score
-        // first calculate the path score
-        let pathValue = this.pathValues[_y][_x]._dir;
-        // check if there are cells in left, up, and right directions
-        // if there are, check if any cell is the same strain
-        let oppMinScore = null;
-        if (this.cellSpace[_y][_x].length > 0) {
-            for (let cell of this.cellSpace[_y][_x]) {
-                if (cell.strain == _strain) {
-                    // very large number to avoid this option
-                    oppMinScore = Infinity;
-                }
-            }
+    calcOppScore(_y, _x, _strain) {
+        // Calculate the opportunity score for at the given position (_y, _x)
+        // The opportunity score is the best next possible path value from this point
+        // The best path value is the minimum of the three possible directions 
+        //  ... excluding paths with cells of the same strain (to avoid backtracking)
 
+        // opp_score = Math.min(possible_paths_from_here)
+
+        // Check for cells in left, up, and right directions
+        // Eliminate directions with cells of the same strain
+        // Find the minimum path value from the remaining options
+        let leftPathValue;
+        let upPathValue;
+        let rightPathValue;
+
+        // check left opportunity
+        if (this.cellSpaceInBounds(_y, _x - 1)) {
+            // eliminate left if there is a cell of the same strain
+            for (let cell of this.cellSpace[_y][_x - 1]) {
+                if (cell.strain == _strain) { leftPathValue = Infinity };
+            }
+            // if not eliminated, get the path value
+            if (leftPathValue != Infinity) {
+                leftPathValue = this.pathValues[_y][_x].left;
+            }
         }
+
+        // check up opportunity
+        if (this.cellSpaceInBounds(_y + 1, _x)) {
+            // eliminate up if there is a cell of the same strain
+            for (let cell of this.cellSpace[_y + 1][_x]) {
+                if (cell.strain == _strain) { upPathValue = Infinity };
+            }
+            // if not eliminated, get the path value
+            if (upPathValue != Infinity) {
+                upPathValue = this.pathValues[_y][_x].up;
+            }
+        }
+        // check right opportunity
+        if (this.cellSpaceInBounds(_y, _x + 1)) {
+            // eliminate right if there is a cell of the same strain
+            for (let cell of this.cellSpace[_y][_x + 1]) {
+                if (cell.strain == _strain) { rightPathValue = Infinity };
+            }
+            // if not eliminated, get the path value
+            if (rightPathValue != Infinity) {
+                rightPathValue = this.pathValues[_y][_x].right;
+            }
+        }
+
+        // set any max terrain values to infinity
+        if (leftPathValue == this.maxTerrain) { leftPathValue = Infinity };
+        if (upPathValue == this.maxTerrain) { upPathValue = Infinity };
+        if (rightPathValue == this.maxTerrain) { rightPathValue = Infinity };
+        
+        return Math.min(leftPathValue, upPathValue, rightPathValue);
     }
 
-    addCell(_y, _x, _dir, _cell) {
+    addCell(_y, _x, _cell) {
         // kill old cell before replicating
         _cell.alive = false;
         // add a new cell to the cell space
         this.cellSpace[_y][_x].push({
             strain: _cell.strain,
-            dir: _dir,
             alive: true
         });
     }
