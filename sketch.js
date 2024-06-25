@@ -1,5 +1,5 @@
-let canvasWidth = 600;
-let canvasHeight = 600;
+let canvasWidth = 625;
+let canvasHeight = 625;
 let shapes = [];
 let shapesPos = [];
 let solutions = [];
@@ -10,12 +10,13 @@ let newCase;
 let inputMode = true;
 
 // diagnostic toggles
-let useExampleSolution = true;
+let useExampleSolution = false;
 let devMode = true;
 let numGrow = 1;
 
 function preload() {
-    shapeData = loadJSON('data/cardboard.json');
+    // shapeData = loadJSON('data/cardboard.json');
+    shapeData = loadJSON('data/sunny-shapes.json');
 }
 
 function setup() {

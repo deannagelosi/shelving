@@ -2,86 +2,63 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy the layout
+        this.eightThreshold = 0.07; // ratio limit for anneal scores of 8
         this.score;
         this.squareSize;
-        this.eightThreshold = 0.07; // ratio limit for anneal scores of 8
+        this.buffer; // left & bottom buffer when displaying
     }
 
     exampleSolution() {
-        // cardboard
-        this.shapes[0].posX = 0;
-        this.shapes[0].posY = 14;
-
-        this.shapes[1].posX = 0;
-        this.shapes[1].posY = 6;
-
-        this.shapes[2].posX = 10;
-        this.shapes[2].posY = 14;
-
-        this.shapes[3].posX = 8;
-        this.shapes[3].posY = 0;
-
-        this.shapes[4].posX = 11;
-        this.shapes[4].posY = 7;
-
-        this.shapes[5].posX = 0;
-        this.shapes[5].posY = 0;
-
-        // // test shapes
-        // this.shapes[0].posX = 17;
-        // this.shapes[0].posY = 12;
+        // // cardboard shapes example solution
+        // this.shapes[0].posX = 0;
+        // this.shapes[0].posY = 14;
 
         // this.shapes[1].posX = 0;
-        // this.shapes[1].posY = 0;
+        // this.shapes[1].posY = 6;
 
-        // this.shapes[2].posX = 9;
-        // this.shapes[2].posY = 7;
+        // this.shapes[2].posX = 10;
+        // this.shapes[2].posY = 14;
 
-        // this.shapes[3].posX = 14;  
-        // this.shapes[3].posY = 7;
+        // this.shapes[3].posX = 8;
+        // this.shapes[3].posY = 0;
 
-        // this.shapes[4].posX = 8;
-        // this.shapes[4].posY = 0;
-
-        // this.shapes[5].posX = 0;
-        // this.shapes[5].posY = 8;
-
-        // this.shapes[6].posX = 18;
-        // this.shapes[6].posY = 0;
-
-        // this.shapes[7].posX = 9;
-        // this.shapes[7].posY = 12;
-
-        // // sunny's shapes
-        // this.shapes[0].posX = 9; // Squash
-        // this.shapes[0].posY = 6;
-
-        // this.shapes[1].posX = 17; // Mushroom
-        // this.shapes[1].posY = 0;
-
-        // this.shapes[2].posX = 8;
-        // this.shapes[2].posY = 12;
-
-        // this.shapes[3].posX = 17; // Bottle
-        // this.shapes[3].posY = 13;
-
-        // this.shapes[4].posX = 1; // blueberries
+        // this.shapes[4].posX = 11;
         // this.shapes[4].posY = 7;
 
-        // this.shapes[5].posX = 8; // Milkweed Pod
-        // this.shapes[5].posY = 17;
+        // this.shapes[5].posX = 0;
+        // this.shapes[5].posY = 0;
 
-        // this.shapes[6].posX = 0;
-        // this.shapes[6].posY = 17;
 
-        // this.shapes[7].posX = 1;
-        // this.shapes[7].posY = 12;
+        // sunny's shapes example solution
+        this.shapes[0].posX = 18; // Squash
+        this.shapes[0].posY = 13;
 
-        // this.shapes[8].posX = 10;
-        // this.shapes[8].posY = 0;
+        this.shapes[1].posX = 19; // Mushroom
+        this.shapes[1].posY = 0;
 
-        // this.shapes[9].posX = 0;
-        // this.shapes[9].posY = 0;
+        this.shapes[2].posX = 0;
+        this.shapes[2].posY = 20;
+
+        this.shapes[3].posX = 0; // Bottle
+        this.shapes[3].posY = 12;
+
+        this.shapes[4].posX = 10; // Blueberries
+        this.shapes[4].posY = 10;
+
+        this.shapes[5].posX = 17; // Milkweed Pod
+        this.shapes[5].posY = 19;
+
+        this.shapes[6].posX = 9;
+        this.shapes[6].posY = 17;
+
+        this.shapes[7].posX = 1;
+        this.shapes[7].posY = 0;
+
+        this.shapes[8].posX = 0;
+        this.shapes[8].posY = 5;
+
+        this.shapes[9].posX = 10;
+        this.shapes[9].posY = 0;
     }
 
     setInitialSolution() {
@@ -197,9 +174,10 @@ class Solution {
         }
 
         // update squareSize for this layout
-        let squareHeight = canvasHeight / this.layout.length;
-        let squareWidth = canvasWidth / this.layout[0].length;
+        let squareHeight = canvasHeight / this.layout.length - 1; // -1 makes room for buffer
+        let squareWidth = canvasWidth / this.layout[0].length - 1; // -1 makes room for buffer
         this.squareSize = Math.min(squareHeight, squareWidth);
+        this.buffer = this.squareSize;
 
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
@@ -229,18 +207,35 @@ class Solution {
             collisionColor = "rgb(135, 160, 103)"
         }
 
-        let squareHeight = canvasHeight / this.layout.length;
-        let squareWidth = canvasWidth / this.layout[0].length;
-        let squareSize = Math.min(squareHeight, squareWidth);
+        textAlign(CENTER, CENTER);
+        let txtXOffset = this.squareSize / 2;
+        let txtYOffset = this.squareSize / 2;
+        let txtSize = this.squareSize / 2;
+        textSize(txtSize);
 
-        // display the design space grid
-        stroke(lineColor);
-        strokeWeight(0.5);
-        textSize(10);
+        // display the solution grid
         let designHeight = this.layout.length;
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
+            if (devMode) {
+                // display column number
+                strokeWeight(0);
+                fill(x % 5 === 0 ? "pink" : 100);
+                let textX = (x * this.squareSize) + this.buffer + txtXOffset;
+                let textY = (canvasHeight - this.squareSize) + txtYOffset;
+                text(x, textX, textY);
+            }
+
             for (let y = 0; y < designHeight; y++) {
+                if (devMode) {
+                    // display row number
+                    strokeWeight(0);
+                    fill(y % 5 === 0 ? "pink" : 100);
+                    let textX = txtXOffset;
+                    let textY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                    text(y, textX, textY);
+                }
+
                 // draw each layout square
                 if (this.layout[y][x].shapes.length == 0) {
                     fill(bkrdColor); // white (empty)
@@ -255,9 +250,12 @@ class Solution {
                     fill(collisionColor);  // collision
                 }
 
-                let rectX = x * squareSize;
-                let rectY = (canvasHeight - squareSize) - (y * squareSize); // draw from bottom up
-                rect(rectX, rectY, squareSize, squareSize);
+                let rectX = (x * this.squareSize) + this.buffer;
+                let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+
+                stroke(lineColor);
+                strokeWeight(0.75);
+                rect(rectX, rectY, this.squareSize, this.squareSize);
             }
         }
     }
@@ -265,34 +263,33 @@ class Solution {
     showScores(_devMode) {
         if (_devMode) {
             // display the design space grid
-            stroke(0);
-            strokeWeight(0.5);
-            textSize(10);
-
-            let squareHeight = canvasHeight / this.layout.length;
-            let squareWidth = canvasWidth / this.layout[0].length;
-            let squareSize = Math.min(squareHeight, squareWidth);
+            fill(50)
+            stroke(50);
+            strokeWeight(0.25);
+            textAlign(CENTER, CENTER);
+            let txtXOffset = this.squareSize / 2;
+            let txtYOffset = this.squareSize / 2;
+            let txtSize = this.squareSize / 1.5;
+            textSize(txtSize);
 
             let designHeight = this.layout.length;
             let designWidth = this.layout[0].length;
             for (let x = 0; x < designWidth; x++) {
                 for (let y = 0; y < designHeight; y++) {
-                    let rectX = x * squareSize;
-                    let rectY = (canvasHeight - squareSize) - (y * squareSize);
-                    // display the anneal score if its empty of shapes
-                    if (this.layout[y][x].annealScore > 0) {
-                        if (devMode) {
-                            fill(0);
-                            text(this.layout[y][x].annealScore, rectX + squareSize / 3, rectY + squareSize / 1.5);
-                        }
-                    } else if (this.layout[y][x].annealScore == 0) {
-                        if (devMode) {
-                            let shapeID;
-                            if (this.layout[y][x].shapes.length > 0) {
-                                shapeID = this.layout[y][x].shapes[0].data.title[0]
-                            }
-                            fill(0);
-                            text(shapeID, rectX + squareSize / 3, rectY + squareSize / 1.5);
+                    // find position for score or shape title[0] text, finding y from bottom up
+                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
+                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+
+                    if (devMode) {
+
+                        if (this.layout[y][x].annealScore > 0) {
+                            // display the anneal score if its empty of shapes
+                            text(this.layout[y][x].annealScore, rectX, rectY);
+
+                        } else if (this.layout[y][x].annealScore == 0 && this.layout[y][x].shapes.length > 0) {
+                            // display the first char of the shape title if there is a shape
+                            let shapeID = this.layout[y][x].shapes[0].data.title[0]
+                            text(shapeID, rectX, rectY);
                         }
                     }
                 }

@@ -7,6 +7,7 @@ class Cellular {
         this.layoutWidth = this.layout[0].length;
         this.shapes = _solution.shapes; // array of shapes and their positions
         this.squareSize = _solution.squareSize; // size of each square in the layout
+        this.buffer = this.squareSize; // left & bottom buffer when displaying
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
     }
 
@@ -93,21 +94,21 @@ class Cellular {
     showTerrain(_devMode) {
         if (_devMode) {
             // display the design space
-            stroke(0);
-            strokeWeight(0.5);
-            textSize(10);
-            fill(0);
-
-            let rectHeight = canvasHeight / this.layoutHeight;
-            let rectWidth = canvasWidth / this.layoutWidth;
-            let rectSize = Math.min(rectHeight, rectWidth);
+            fill(75); // dark grey
+            strokeWeight(0);
+            textAlign(CENTER, CENTER);
+            let txtXOffset = this.squareSize / 2;
+            let txtYOffset = this.squareSize / 2;
+            let txtSize = this.squareSize / 2;
+            textSize(txtSize);
 
             for (let x = 0; x < this.layoutWidth; x++) {
                 for (let y = 0; y < this.layoutHeight; y++) {
-                    let rectX = x * rectSize;
-                    let rectY = (canvasHeight - rectSize) - (y * rectSize);
+                    // calc text position, finding y from bottom up
+                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
+                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
                     // display the terrain value
-                    text(this.layout[y][x].terrainValue, rectX + rectSize / 3, rectY + rectSize / 1.5);
+                    text(this.layout[y][x].terrainValue, rectX, rectY);
                 }
             }
         }
@@ -474,11 +475,9 @@ class Cellular {
                     }
                     fill(cellColor);
                     noStroke();
-                    circle(
-                        x * this.squareSize,
-                        canvasHeight - (y * this.squareSize),
-                        10
-                    );
+                    let dotX = (x * this.squareSize) + this.buffer;
+                    let dotY = (canvasHeight - this.buffer) - (y * this.squareSize);
+                    circle(dotX, dotY, 10);
                 }
             }
         }
