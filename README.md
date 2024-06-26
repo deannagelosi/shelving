@@ -93,32 +93,33 @@
 
 Cells have 3 options for growth: Left, Up, or Right
 
-Step 1: Die Rule (end condition for a strain)
-
-- If there's a collision with another cell, both cells die
-
 Setup Phase:
 
 - Start with left, up, and right set to True
 - Cell retrieve score of path for left, up, and right
 
+Step 1: Merge and Die Rules
+
+- If two alive cells meet, they merge
+- If two alive cells pass by each other, they merge
+- If an alive cell meets a dead cell, it dies (crowded)
+
 Step 2: Eliminate Options
 
-- Can't backtrack -
-- Can't grow through a shape -
-- Can't go out of bounds -
+- Can't backtrack
+- Can't grow through a shape
+- Can't go out of bounds
 
 Step 3: Choose a Remaining Direction
 
-- if only one option remains, take it -
-- A cell is attracted to a dead cell of a different strain (prevents parallel paths) -
-- Cells like easy paths (low values) -
-- Cells are attracted to change (Growing in a new direction) -
-- If can't decide between remaining options, add a new cell in all remaining directions -
+- if only one option remains, take it
+- A cell is attracted to a dead cell of a different strain (prevents parallel paths)
+- Cells like easy paths (low values)
+- Cells avoid change (growing in new directions)
+- If still multiple valid options, log error and die
 
 Notes:
 
-- calcOppScore should give a opportunity a good score if the attraction rule applies (another cell nearby) and not just path values
-- when two cells meet at a turn point, they die before one of them gets the chance to turn
-- don't allow c turns?
-
+- grow till no alive cells
+- see other dead cells like low paths in opp scoring
+- set out of bounds to mirror terrain level / path score next to it, not just 1

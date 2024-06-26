@@ -42,6 +42,7 @@ function draw() {
 
         if (useExampleSolution) {
             // use example solution on example shapes
+            console.log(annealing.currSolution);
             createCase();
             noLoop();
         }
@@ -59,6 +60,7 @@ function draw() {
                 }
             } else {
                 // optimization complete
+                console.log(annealing.currSolution);
                 createCase();
                 noLoop(); // stop draw loop
             }
@@ -71,7 +73,6 @@ function createCase() {
     background(255);
     // show shapes and grid
     annealing.currSolution.showLayout(devMode);
-    console.log(annealing.currSolution);
 
     // build case
     newCase = new Case(annealing.currSolution);

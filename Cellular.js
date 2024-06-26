@@ -9,7 +9,7 @@ class Cellular {
         this.squareSize = _solution.squareSize; // size of each square in the layout
         this.buffer = this.squareSize; // left & bottom buffer when displaying
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
-        this.turnThreshold = 1; // score diff must be greater than this amount to justify a turn
+        this.scoreRecursion = 3; // how many extra steps to look ahead when calculating opportunity score
     }
 
     createTerrain() {
@@ -17,6 +17,7 @@ class Cellular {
         // initial state: all spots occupied by shapes start at infinity, all empty spots start at 0
         // loop until none are zero, adding a point to any touching a non-zero value
         // repeat until all terrain values are greater than 0
+        // then replace infinity with the max terrain value (highest point + 2)
 
         // set up initial state
         // clear the existing terrain values
@@ -67,7 +68,7 @@ class Cellular {
                         }
                         // add to the terrain value 
                         this.layout[y][x].terrainValue += numTouch;
-                        // update the max terrain value
+                        // if greater, update the max terrain value
                         if (this.layout[y][x].terrainValue > this.maxTerrain) {
                             this.maxTerrain = this.layout[y][x].terrainValue;
                         }
@@ -129,6 +130,8 @@ class Cellular {
             this.pathValues.push([]);
             for (let x = 0; x < this.layoutWidth + 1; x++) {
                 // calculate the path value
+                // get terrain for the squares surrounding the path. out of bounds returns 1. 
+                // (UL = Upper Left, DL = Down Left, UR = Upper Right, DR = Down Right)
                 let ULValue = this.getTerrain(y, x - 1);
                 let DLValue = this.getTerrain(y - 1, x - 1);
                 let URValue = this.getTerrain(y, x);
@@ -231,199 +234,171 @@ class Cellular {
         // loop cell space and grow any alive cells once
 
         // loop top down and add cells one row at a time
-        let newCells = [];
         for (let y = this.cellSpace.length - 1; y >= 0; y--) {
+            let newCells = []; // store new cells to add after the row is completely checked
             for (let x = 0; x < this.cellSpace[y].length; x++) {
+                if (this.cellSpace[y][x].length > 0) {
+                    // How many alive cells are at this position?
+                    let numAlive = this.cellSpace[y][x].filter(cell => cell.alive == true).length;
 
-                // Rule 1: Crowded - when cells overlap they either merge or die
-                if (this.cellSpace[y][x].length > 1) {
-                    // check for conditions and get information about the cells
-                    let allAlive = this.cellSpace[y][x].every(cell => cell.alive == true);
-                    let oneAlive = this.cellSpace[y][x].filter(cell => cell.alive == true).length == 1;
-                    let leftCells = [];
-                    let rightCells = [];
-                    let currOppScore = this.calcOppScore(y, x);
-                    let leftOppScore = Infinity;
-                    let rightOppScore = Infinity;
-                    let leftAlive = false;
-                    let rightAlive = false;
-                    if (oneAlive) {
-                        // Get the strain numbers of all the other dead cells
-                        let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
-                        if (this.cellSpaceInBounds(y, x - 1)) {
-                            leftCells = this.cellSpace[y][x - 1];
-                            leftOppScore = this.calcOppScore(y, x - 1);
-                            leftAlive = leftCells.some(cell => cell.alive && deadStrains.includes(cell.strain));
-                        }
-                        if (this.cellSpaceInBounds(y, x + 1)) {
-                            rightCells = this.cellSpace[y][x + 1];
-                            rightOppScore = this.calcOppScore(y, x + 1);
-                            rightAlive = rightCells.some(cell => cell.alive && deadStrains.includes(cell.strain));
-                        }
-                    }
-
-                    // Case 1: two or more alive cells meet (merge, keep one)
-                    if (allAlive) {
-                        // Merge into the same strain family
-                        this.mergeStrains(this.cellSpace[y][x]);
-                        // remove all but one of the alive cells
-                        this.cellSpace[y][x] = [this.cellSpace[y][x][0]]
-                    }
-                    // Case 2: Two alive cells just went past each other (merge, keep one)
-                    // (ie. alive cell overlaps a dead cell the same strain as an alive cell to the left or right)
-                    else if (oneAlive & (leftAlive || rightAlive)) {
+                    // == Start of Merge Rules == //
+                    if (numAlive > 1) {
+                        // == Merge Rule 1: Standard Merge - when alive cells overlap they merge and one dies
                         // merge into the same strain family
                         this.mergeStrains(this.cellSpace[y][x]);
-                        // remove the alive cell with the lower opportunity score
-                        if ((leftAlive && leftOppScore < currOppScore) || (rightAlive && rightOppScore < currOppScore)) {
-                            // cell to the left or right is better, kill the current cell
+                        // remove all but one of the alive cells
+                        this.cellSpace[y][x] = [this.cellSpace[y][x][0]];
+
+                    } else if (numAlive == 1) {
+                        // only one alive cell (parentCell) at this position
+                        let parentCell = this.cellSpace[y][x].find(cell => cell.alive);
+
+                        // find the strains for any dead cells at this position
+                        let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
+
+                        // setup options for directions of cell growth (left, up, or right)
+                        let options = [
+                            { dir: "left", x: x - 1, y: y, valid: true, score: null, cells: [], passing: false },
+                            { dir: "up", x: x, y: y + 1, valid: true, score: null, cells: [], passing: false },
+                            { dir: "right", x: x + 1, y: y, valid: true, score: null, cells: [], passing: false }
+                        ];
+                        // find path scores and cell info for each option
+                        for (let option of options) {
+                            option.score = this.calcOppScore(y, x, parentCell.strain, option);
+                            // let pathValue = this.pathValues[y][x][option.dir]; // value of path towards the option
+                            // option.score = this.calcOppScore(option.y, option.x, parentCell.strain, pathValue);
+                            // check for passing merge (if the left or right and current just passed each other)
+                            if (this.cellSpaceInBounds(option.y, option.x)) {
+                                option.cells = this.cellSpace[option.y][option.x];
+                                if (option.cells.length > 1) {
+                                    option.passing = option.cells.some(cell => cell.alive && deadStrains.includes(cell.strain));
+                                }
+                            }
+                        }
+
+                        // check if two alive cells just passed by each other
+                        let leftSide = options.find(o => o.dir == "left");
+                        let rightSide = options.find(o => o.dir == "right");
+                        if (leftSide.passing || rightSide.passing) {
+                            // == Merge Rule 2: Passing Merge - when alive cells past each other, merge and one dies
+                            // first merge into the same strain family
+                            this.mergeStrains(this.cellSpace[y][x]);
+                            // then find best score to determine which alive cell to keep
+                            let leftScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, leftSide);
+                            let rightScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, rightSide);
+                            let currScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, { dir: "up", x: x, y: y + 1 });
+
+                            let leftWins = leftSide.merge && (leftScore < currScore); // left passing and a better score
+                            let rightWins = rightSide.merge && (rightScore < currScore); // right passing and a better score
+                            if (leftWins || rightWins) {
+                                // cell to the left or right is better, kill the current cell
+                                this.cellSpace[y][x].forEach(cell => cell.alive = false);
+                            } else {
+                                // current cell is better, kill the left and right cells
+                                leftSide.cells.forEach(cell => cell.alive = false);
+                                rightSide.cells.forEach(cell => cell.alive = false);
+                            }
+                        } else if (this.cellSpace[y][x].length > 1) {
+                            // 1 alive cell, but multiple cells and no passing merge
+
+                            // == Merge Rule 3: Crowded - alive cell encounters a dead cell, dies
                             this.cellSpace[y][x].forEach(cell => cell.alive = false);
                         }
-                        else {
-                            // current cell is better, kill the left or right cells
-                            leftCells.forEach(cell => cell.alive = false);
-                            rightCells.forEach(cell => cell.alive = false);
-                        }
+                        if (!parentCell.alive) { continue; }
 
-                    }
-                    // Case 3: there is just a dead cell, all cells die
-                    else {
-                        this.cellSpace[y][x].forEach(cell => cell.alive = false);
-                    }
-                }
-
-                // loop the remaining alive cells and grow them
-                for (let parentCell of this.cellSpace[y][x]) {
-                    if (parentCell.alive) {
-                        // setup options for cell growth directions
-                        let options = [
-                            { dir: "left", x: x - 1, y: y, valid: true, score: null },
-                            { dir: "up", x: x, y: y + 1, valid: true, score: null },
-                            { dir: "right", x: x + 1, y: y, valid: true, score: null }
-                        ]
-
-                        // find the score for each option
-                        for (let option of options) {
-                            let pathValue = this.pathValues[y][x][option.dir];
-                            option.score = pathValue + this.calcOppScore(option.y, option.x, parentCell.strain);
-                        }
-
+                        // == End of Merge Rules, Begin Option Elimination Rules == //
                         for (let option of options) {
                             if (this.cellSpaceInBounds(option.y, option.x)) {
-                                // Checking all cells in potential position
-                                for (let cell of this.cellSpace[option.y][option.x]) {
-                                    // Elimination Rule 1: Can't Backtrack 
-                                    if (cell.strain == parentCell.strain) { option.valid = false };
+                                // == Elimination Rule 1: Can't Backtrack - can't grow into a cell of the same strain
+                                if (this.cellSpace[option.y][option.x].some(cell => cell.strain == parentCell.strain)) {
+                                    option.valid = false;
                                 }
 
-                                if (this.pathValues[y][x][option.dir] == this.maxTerrain || option.score == Infinity) {
-                                    // Elimination Rule 2: Can't grow through a shape or infinity
+                                // == Elimination Rule 2: Can't Grow Through Shapes - a path at max terrain is blocked by a shape
+                                if (this.pathValues[y][x][option.dir] == this.maxTerrain) {
                                     option.valid = false;
                                 }
                             } else {
-                                // Elimination Rule 3: Can't go out bounds
+                                // == Elimination Rule 3: Can't go out bounds
                                 option.valid = false;
                             }
                         }
 
-                        // Selection Rule 1: if only one option remains, take it
                         let validOptions = options.filter(option => option.valid == true);
-
-                        if (validOptions.length === 1) {
-                            newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
-                            break;
-                        }
-
                         validOptions.sort((a, b) => a.score - b.score);
 
-                        let cellAdded = false; // track if cell growth happens
-                        for (let option of validOptions) {
-                            // this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain)
-                            if (this.cellSpace[option.y][option.x].some(cell => !cell.alive && cell.strain != parentCell.strain)) {
-                                // Selection Rule 2: Attraction - a cell is attracted to a dead cell of a different strain
-                                newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
-                                cellAdded = true;
-                                break;
-                            }
-                        }
-                        if (cellAdded) {
-                            // stop further growth
-                            break;
-                        }
+                        // == End of Elimination Rules, Begin Selection Rules == //
 
-                        // Determine the current direction of growth by looking at the surrounding cells
-                        let growingLeft = this.cellSpaceInBounds(y, x + 1) && this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain);
-                        let growingUp = this.cellSpaceInBounds(y - 1, x) && this.cellSpace[y - 1][x].some(cell => cell.strain == parentCell.strain);
-                        let growingRight = this.cellSpaceInBounds(y, x - 1) && this.cellSpace[y][x - 1].some(cell => cell.strain == parentCell.strain);
-
-                        let isTied = validOptions[0].score == validOptions[1].score;
-                        if (!isTied) { // not tied. one score is lowest
-                            // Selection Rule 3: Easiest Path - choose the path with the lowest score
+                        // if no valid options, log the issue and kill the cell
+                        if (validOptions.length == 0) {
+                            console.error("No valid options at x: ", x, " y: ", y, " for parentCell: ", parentCell);
+                            parentCell.alive = false;
+                            continue;
+                        } else if (validOptions.length == 1) {
+                            // == Selection Rule 1: if only one option remains, take it
                             newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
-                            break;
-
-
-
-                            // newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
-                            // break;
-                        } else {
-                            // There is a tie (or not big enough of an improvement) between 2 or 3 valid options. 
-                            // Determine remaining options
-                            let leftValid = validOptions.some(option => option.dir == "left");
-                            let upValid = validOptions.some(option => option.dir == "up");
-                            let rightValid = validOptions.some(option => option.dir == "right");
-
-
-                            // Selection Rule 5: Change is Good - if two options remain, grow in a new direction
-                            // else if ((growingLeft || growingRight) && upValid) {
-                            //     newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
-                            //     break;
-                            // } else if (growingUp && (leftValid && !rightValid)) {
-                            //     newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
-                            //     break;
-                            // } else if (growingUp && (rightValid && !leftValid)) {
-                            //     newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
-                            //     break;
-                            // } else {
-                            //     console.error("Error making growth decision. Location - x: ", x, " y: ", y);
-                            // }
-
-                            // Selection Rule 5: Change is Bad - if two options remain, grow in the same direction
-                            if (growingLeft && leftValid) {
-                                console.log("growing left");
-                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
-                                break;
-                            } else if (growingUp && upValid) {
-                                console.log("growing up");
-                                newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
-                                break;
-                            } else if (growingRight && rightValid) {
-                                console.log("growing right");
-                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
-                                break;
+                            continue;
+                        } else if (validOptions.length > 1) {
+                            // == Selection Rule 2: Attraction - cells are attracted to cells of a different strain
+                            let cellAdded = false;
+                            for (let option of validOptions) {
+                                // this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain)
+                                // if (this.cellSpace[option.y][option.x].some(cell => !cell.alive && cell.strain != parentCell.strain)) {
+                                if (this.cellSpace[option.y][option.x].some(cell => cell.strain != parentCell.strain)) {
+                                    newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
+                                    cellAdded = true;
+                                    break;
+                                }
                             }
+                            if (cellAdded) { continue; }
 
-                            if (growingUp && (leftValid && rightValid)) {
-                                // Traveling upward so Left and Right are new directions, but they are tied. Pick both
-                                // Selection Rule 4: Divide and Conquer: grow in both directions
-                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
-                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
-                                break;
+                            // Still multiple valid options. If no tie, pick the best score. If tie, avoid changing direction
+
+                            // Determine current direction of growth by looking at surrounding cells
+                            let growingLeft = this.cellSpaceInBounds(y, x + 1) && this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain);
+                            let growingUp = this.cellSpaceInBounds(y - 1, x) && this.cellSpace[y - 1][x].some(cell => cell.strain == parentCell.strain);
+                            let growingRight = this.cellSpaceInBounds(y, x - 1) && this.cellSpace[y][x - 1].some(cell => cell.strain == parentCell.strain);
+
+                            // todo: round up the scores?
+
+                            if (validOptions[0].score != validOptions[1].score) {
+                                // not tied
+                                // == Selection Rule 3: Easiest Path - take the path with the lowest score
+                                newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                                continue;
+                            } else {
+                                // Tie in the remaining options
+                                // Determine remaining options
+                                let leftValid = validOptions.some(option => option.dir == "left");
+                                let upValid = validOptions.some(option => option.dir == "up");
+                                let rightValid = validOptions.some(option => option.dir == "right");
+
+                                // Selection Rule 5: Change is Bad - grow in the same direction if possible
+                                if (growingLeft && leftValid) {
+                                    newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                                    continue;
+                                } else if (growingUp && upValid) {
+                                    newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
+                                    continue;
+                                } else if (growingRight && rightValid) {
+                                    newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                                    continue;
+                                }
+
+                                console.error("Unable to break tie in growth at x: ", x, " y: ", y);
                             }
-
-                            console.error("Error making growth decision. Location - x: ", x, " y: ", y);
-
                         }
+                        console.error("Error growing at x: ", x, " y: ", y, " with parentCell: ", parentCell, " and options: ", options);
                     }
                 }
             }
+            // end of x loop
             // Found all new cells for the row. Add them and move to the next row
             for (let newCell of newCells) {
                 this.addCell(newCell.y, newCell.x, newCell.parentCell);
             }
-            newCells = [];
         }
-
+        // end of y loop
     }
 
     mergeStrains(_cells) {
@@ -445,57 +420,82 @@ class Cellular {
         }
     }
 
-    calcOppScore(_y, _x, _strain, _recurse = false) {
-        // out of bounds is desirable (low is good) as it completes the path
-        if (!this.pathInBounds(_y, _x)) { return 1 };
+    calcOppScore(_originY, _originX, _strain, _option, _recurseSteps = this.scoreRecursion) {
+        // recursive function to calculate the opportunity score to move to a given option
+        // opportunity score = path value to the option + best (minimum) valid path leading away from the option
+        // valid means excluding paths blocked with cells of the same strain or origin (backtracking)
+        // call recursively for each valid path leading from the option
+        // base cases are: stop on "C" shapes, going out of bounds, or when _recurseSteps is 0
 
-        // function calculates the score of the best path (opportunity) at a given position
-        // opp_score = Math.min(possible_paths_from_here)
+        // Base Case 1: looking out of bounds
+        //  return a good score (low is good) since it completes the path
+        if (!this.pathInBounds(_option.y, _option.x)) {
+            return 1;
+        };
 
-        // Calculate the opportunity score for at the given position (_y, _x)
-        // The opportunity score is the best next possible path value from this point
-        // The best path value is the minimum of the three possible directions 
-        //  ... excluding paths with cells of the same strain (to avoid backtracking)
-
-        // Check for cells in left, up, and right directions
-        // Eliminate directions with cells of the same strain
-        // Find the minimum path value from the remaining options
-
+        // find the valid paths (and their values) leading from the option's point
         let paths = [
-            { dir: "left", x: _x - 1, y: _y, valid: true, value: Infinity },
-            { dir: "up", x: _x, y: _y + 1, valid: true, value: Infinity },
-            { dir: "right", x: _x + 1, y: _y, valid: true, value: Infinity },
-            { dir: "down", x: _x, y: _y - 1, valid: true, value: Infinity }
-        ]
+            { dir: "left", x: _option.x - 1, y: _option.y, valid: true, value: null },
+            { dir: "up", x: _option.x, y: _option.y + 1, valid: true, value: null },
+            { dir: "right", x: _option.x + 1, y: _option.y, valid: true, value: null },
+            { dir: "down", x: _option.x, y: _option.y - 1, valid: true, value: null }
+        ];
 
         for (let p of paths) {
-            // eliminate paths blocked by a cell of the same strain
-            let sameStrain = this.cellSpaceInBounds(p.y, p.x) && this.cellSpace[p.y][p.x].some(cell => cell.strain == _strain);
-            if (sameStrain) {
-                p.valid = false;
+            // if the spot the path leads to is in bounds, check for cells
+            // if it has a cell of the same strain, mark the path as invalid
+            if (this.cellSpaceInBounds(p.y, p.x)) {
+                // not valid if looking back at the request origin or if any cells have the same strain
+                if ((p.y == _originY && p.x == _originX) || (this.cellSpace[p.y][p.x].some(cell => cell.strain == _strain))) {
+                    p.valid = false;
+                }
             }
+            // if the path is valid, get its value. if not, set the value to infinity
+            p.value = p.valid ? this.pathValues[_option.y][_option.x][p.dir] : Infinity;
+            // set any paths blocked by a shape to Infinity
+            p.value = p.value == this.maxTerrain ? Infinity : p.value;
         }
 
-        // don't cause "C" shaped paths, (left && down, or a right && down, are occupied by same strain)
+        // if this is the first step, add the value of the path to the option
+        if (_recurseSteps == this.scoreRecursion) {
+            // find the path value from the first origin point to the option
+            paths.forEach(p => p.value += this.pathValues[_originY][_originX][_option.dir]);
+        }
+
+        // Base Case 2: end if using this spot would cause a "C" shaped path
+        //  (left && down, or right && down, are occupied by same original strain)
         let downSame = !paths.find(p => p.dir == "down").valid;
         let leftSame = !paths.find(p => p.dir == "left").valid;
         let rightSame = !paths.find(p => p.dir == "right").valid;
         if (downSame && (leftSame || rightSame)) {
+            // // end early and return max possible score for the rest of the recursion
+            // console.log("C shaped path found at y: ", _y, " x: ", _x, " strain: ", _strain);
+            // return this.maxTerrain + (this.maxTerrain * _recurseSteps) + _pathValueTo;
             return Infinity;
         }
 
-        // get path values for remaining possible paths
+        // find the remaining valid paths
         let validPaths = paths.filter(p => p.valid == true && p.dir != "down");
-        for (let p of validPaths) {
-            p.value = this.pathValues[_y][_x][p.dir];
-            // set any max terrain values to Infinity
-            if (p.value == this.maxTerrain) {
-                p.value = Infinity;
-            }
-        }
 
-        // return the minimum (best) path valid value
-        return  Math.min(...validPaths.map(p => p.value));
+        // Base Case 3: no more steps
+        //  end and return the best (minimum) path value from this spot + the cost to get here
+        if (_recurseSteps == 0) {
+            // return the best option from this spot + the path value to get here
+            let bestPathValue = Math.min(...validPaths.map(p => p.value));
+            return bestPathValue; // + pathValueTo;
+        }
+        // Recursive Case: decrement and call the function again for each valid path
+        else if (_recurseSteps > 0) {
+
+            let nextSteps = _recurseSteps - 1;
+            for (let p of validPaths) {
+                p.value += this.calcOppScore(_option.y, _option.x, _strain, p, nextSteps);
+
+            }
+            // return the best (minimum) score from the returned scores
+            let bestPathValue = Math.min(...validPaths.map(p => p.value));
+            return bestPathValue; // + pathValueTo;
+        }
     }
 
     addCell(_y, _x, _parentCell, _alive = true) {
