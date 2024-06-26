@@ -150,7 +150,7 @@ class ShapeInput {
 
             let depthValue = this.depthInput.value();
             if (depthValue === '') { // no depth entered by user
-                console.log('no depth entered');
+                console.error('no depth entered');
             }
 
             // save the shape

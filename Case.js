@@ -316,10 +316,10 @@ class Case {
         for (let i = 0; i < this.boards.length; i++) {
             for (let j = 0; j < this.boards.length; j++) {
                 if (this.boards[i].orientation != "x" && this.boards[i].orientation != "y") {
-                    console.log("Invalid board orientation")
+                    console.error("Invalid board orientation")
                 }
                 if (this.boards[j].orientation != "x" && this.boards[j].orientation != "y") {
-                    console.log("Invalid board orientation")
+                    console.error("Invalid board orientation")
                 }
 
                 // compare boards in different orientations

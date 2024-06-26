@@ -9,6 +9,7 @@ class Cellular {
         this.squareSize = _solution.squareSize; // size of each square in the layout
         this.buffer = this.squareSize; // left & bottom buffer when displaying
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
+        this.turnThreshold = 1; // score diff must be greater than this amount to justify a turn
     }
 
     createTerrain() {
@@ -245,26 +246,64 @@ class Cellular {
         for (let y = this.cellSpace.length - 1; y >= 0; y--) {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
 
-                // Rule 1: Crowded - when cells overlap, they die
+                // Rule 1: Crowded - when cells overlap they either merge or die
                 if (this.cellSpace[y][x].length > 1) {
+                    // check for conditions and get information about the cells
+                    let allAlive = this.cellSpace[y][x].every(cell => cell.alive == true);
+                    let oneAlive = this.cellSpace[y][x].filter(cell => cell.alive == true).length == 1;
+                    let leftCells = [];
+                    let rightCells = [];
+                    let currOppScore = this.calcOppScore(y, x);
+                    let leftOppScore = Infinity;
+                    let rightOppScore = Infinity;
+                    let leftAlive = false;
+                    let rightAlive = false;
+                    if (oneAlive) {
+                        // Get the strain numbers of all the other dead cells
+                        let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
+                        if (this.cellSpaceInBounds(y, x - 1)) {
+                            leftCells = this.cellSpace[y][x - 1];
+                            leftOppScore = this.calcOppScore(y, x - 1);
+                            leftAlive = leftCells.some(cell => cell.alive && deadStrains.includes(cell.strain));
+                        }
+                        if (this.cellSpaceInBounds(y, x + 1)) {
+                            rightCells = this.cellSpace[y][x + 1];
+                            rightOppScore = this.calcOppScore(y, x + 1);
+                            rightAlive = rightCells.some(cell => cell.alive && deadStrains.includes(cell.strain));
+                        }
+                    }
 
-                    // Case 1: two or more alive cells meet
-                    if (this.cellSpace[y][x].every(cell => cell.alive == true)) {
-                        // Merge into the same strain family, leave one cell here alive
-                        let strains = this.cellSpace[y][x].map(cell => cell.strain);
-                        strains.sort((a, b) => a - b);
-                        // separate out the lowest strain and all the rest
-                        let newStrain = strains[0];
-                        let oldStrains = strains.slice(1);
-                        this.mergeStrains(oldStrains, newStrain);
+                    // Case 1: two or more alive cells meet (merge, keep one)
+                    if (allAlive) {
+                        // Merge into the same strain family
+                        this.mergeStrains(this.cellSpace[y][x]);
                         // remove all but one of the alive cells
                         this.cellSpace[y][x] = [this.cellSpace[y][x][0]]
-                    } else {
-                        // Case 2: there is a dead cell, all cells die
+                    }
+                    // Case 2: Two alive cells just went past each other (merge, keep one)
+                    // (ie. alive cell overlaps a dead cell the same strain as an alive cell to the left or right)
+                    else if (oneAlive & (leftAlive || rightAlive)) {
+                        // merge into the same strain family
+                        this.mergeStrains(this.cellSpace[y][x]);
+                        // remove the alive cell with the lower opportunity score
+                        if ((leftAlive && leftOppScore < currOppScore) || (rightAlive && rightOppScore < currOppScore)) {
+                            // cell to the left or right is better, kill the current cell
+                            this.cellSpace[y][x].forEach(cell => cell.alive = false);
+                        }
+                        else {
+                            // current cell is better, kill the left or right cells
+                            leftCells.forEach(cell => cell.alive = false);
+                            rightCells.forEach(cell => cell.alive = false);
+                        }
+
+                    }
+                    // Case 3: there is just a dead cell, all cells die
+                    else {
                         this.cellSpace[y][x].forEach(cell => cell.alive = false);
                     }
                 }
 
+                // loop the remaining alive cells and grow them
                 for (let parentCell of this.cellSpace[y][x]) {
                     if (parentCell.alive) {
                         // setup options for cell growth directions
@@ -323,24 +362,57 @@ class Cellular {
                             break;
                         }
 
+                        // Determine the current direction of growth by looking at the surrounding cells
+                        let growingLeft = this.cellSpaceInBounds(y, x + 1) && this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain);
+                        let growingUp = this.cellSpaceInBounds(y - 1, x) && this.cellSpace[y - 1][x].some(cell => cell.strain == parentCell.strain);
+                        let growingRight = this.cellSpaceInBounds(y, x - 1) && this.cellSpace[y][x - 1].some(cell => cell.strain == parentCell.strain);
+
                         let isTied = validOptions[0].score == validOptions[1].score;
                         if (!isTied) { // not tied. one score is lowest
                             // Selection Rule 3: Easiest Path - choose the path with the lowest score
                             newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
                             break;
+
+
+
+                            // newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                            // break;
                         } else {
-                            // There is a tie between 2 or 3 valid options. 
+                            // There is a tie (or not big enough of an improvement) between 2 or 3 valid options. 
                             // Determine remaining options
                             let leftValid = validOptions.some(option => option.dir == "left");
                             let upValid = validOptions.some(option => option.dir == "up");
                             let rightValid = validOptions.some(option => option.dir == "right");
 
-                            // If right contains a cell of the same strain, growth is traveling leftward
-                            let growingLeft = this.cellSpaceInBounds(y, x + 1) && this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain);
-                            // If down contains a cell of the same strain, growth is traveling upward
-                            let growingUp = this.cellSpaceInBounds(y - 1, x) && this.cellSpace[y - 1][x].some(cell => cell.strain == parentCell.strain);
-                            // If left contains a cell of the same strain, growth is traveling rightward
-                            let growingRight = this.cellSpaceInBounds(y, x - 1) && this.cellSpace[y][x - 1].some(cell => cell.strain == parentCell.strain);
+
+                            // Selection Rule 5: Change is Good - if two options remain, grow in a new direction
+                            // else if ((growingLeft || growingRight) && upValid) {
+                            //     newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
+                            //     break;
+                            // } else if (growingUp && (leftValid && !rightValid)) {
+                            //     newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                            //     break;
+                            // } else if (growingUp && (rightValid && !leftValid)) {
+                            //     newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                            //     break;
+                            // } else {
+                            //     console.error("Error making growth decision. Location - x: ", x, " y: ", y);
+                            // }
+
+                            // Selection Rule 5: Change is Bad - if two options remain, grow in the same direction
+                            if (growingLeft && leftValid) {
+                                console.log("growing left");
+                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                                break;
+                            } else if (growingUp && upValid) {
+                                console.log("growing up");
+                                newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
+                                break;
+                            } else if (growingRight && rightValid) {
+                                console.log("growing right");
+                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                                break;
+                            }
 
                             if (growingUp && (leftValid && rightValid)) {
                                 // Traveling upward so Left and Right are new directions, but they are tied. Pick both
@@ -350,19 +422,8 @@ class Cellular {
                                 break;
                             }
 
-                            // Selection Rule 5: Change is Good - if two options remain, grow in a new direction
-                            else if ((growingLeft || growingRight) && upValid) {
-                                newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
-                                break;
-                            } else if (growingUp && (leftValid && !rightValid)) {
-                                newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
-                                break;
-                            } else if (growingUp && (rightValid && !leftValid)) {
-                                newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
-                                break;
-                            } else {
-                                console.log("Error making growth decision. Location - x: ", x, " y: ", y);
-                            }
+                            console.error("Error making growth decision. Location - x: ", x, " y: ", y);
+
                         }
                     }
                 }
@@ -376,7 +437,13 @@ class Cellular {
 
     }
 
-    mergeStrains(oldStrains, newStrain) {
+    mergeStrains(_cells) {
+        let strains = _cells.map(cell => cell.strain);
+        strains.sort((a, b) => a - b);
+        // separate out the lowest strain and all the rest
+        let newStrain = strains[0];
+        let oldStrains = strains.slice(1);
+
         // Find any cells with strains matching oldStrains list and change them to newStrain
         for (let y = 0; y < this.cellSpace.length; y++) {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
@@ -389,7 +456,11 @@ class Cellular {
         }
     }
 
-    calcOppScore(_y, _x, _strain) {
+    calcOppScore(_y, _x, _strain, _recurse = false) {
+        // out of bounds is desirable (low is good) as it completes the path
+        if (!this.pathInBounds(_y, _x)) { return 1 };
+
+        // function calculates the score of the best path (opportunity) at a given position
         // opp_score = Math.min(possible_paths_from_here)
 
         // Calculate the opportunity score for at the given position (_y, _x)
@@ -400,58 +471,42 @@ class Cellular {
         // Check for cells in left, up, and right directions
         // Eliminate directions with cells of the same strain
         // Find the minimum path value from the remaining options
-        let leftPathValue;
-        let upPathValue;
-        let rightPathValue;
-        let downPathValue; // used to detect "C" movements
 
-        // check "left" opportunity
-        if (this.cellSpaceInBounds(_y, _x - 1)) {
-            // eliminate left if there is a cell of the same strain
-            for (let cell of this.cellSpace[_y][_x - 1]) {
-                if (cell.strain == _strain) { leftPathValue = Infinity };
-            }
-        }
-        // check "up" opportunity
-        if (this.cellSpaceInBounds(_y + 1, _x)) {
-            // eliminate up if there is a cell of the same strain
-            for (let cell of this.cellSpace[_y + 1][_x]) {
-                if (cell.strain == _strain) { upPathValue = Infinity };
-            }
-        }
-        // check "right" opportunity
-        if (this.cellSpaceInBounds(_y, _x + 1)) {
-            // eliminate right if there is a cell of the same strain
-            for (let cell of this.cellSpace[_y][_x + 1]) {
-                if (cell.strain == _strain) { rightPathValue = Infinity };
-            }
-        }
-        // check "down" opportunity
-        if (this.cellSpaceInBounds(_y - 1, _x)) {
-            // eliminate down if there is a cell of the same strain
-            for (let cell of this.cellSpace[_y - 1][_x]) {
-                if (cell.strain == _strain) { downPathValue = Infinity };
+        let paths = [
+            { dir: "left", x: _x - 1, y: _y, valid: true, value: Infinity },
+            { dir: "up", x: _x, y: _y + 1, valid: true, value: Infinity },
+            { dir: "right", x: _x + 1, y: _y, valid: true, value: Infinity },
+            { dir: "down", x: _x, y: _y - 1, valid: true, value: Infinity }
+        ]
+
+        for (let p of paths) {
+            // eliminate paths blocked by a cell of the same strain
+            let sameStrain = this.cellSpaceInBounds(p.y, p.x) && this.cellSpace[p.y][p.x].some(cell => cell.strain == _strain);
+            if (sameStrain) {
+                p.valid = false;
             }
         }
 
-        // detect if an opportunity direction would cause a "C" shaped path
-        // i.e. - (left and down) or (right and down) are already occupied by the same strain
-        if (downPathValue == Infinity && (leftPathValue == Infinity || rightPathValue == Infinity)) {
+        // don't cause "C" shaped paths, (left && down, or a right && down, are occupied by same strain)
+        let downSame = !paths.find(p => p.dir == "down").valid;
+        let leftSame = !paths.find(p => p.dir == "left").valid;
+        let rightSame = !paths.find(p => p.dir == "right").valid;
+        if (downSame && (leftSame || rightSame)) {
             return Infinity;
         }
 
-        // if not eliminated, get the path values
-        if (leftPathValue != Infinity) { leftPathValue = this.pathValues[_y][_x].left };
-        if (upPathValue != Infinity) { upPathValue = this.pathValues[_y][_x].up };
-        if (rightPathValue != Infinity) { rightPathValue = this.pathValues[_y][_x].right };
+        // get path values for remaining possible paths
+        let validPaths = paths.filter(p => p.valid == true && p.dir != "down");
+        for (let p of validPaths) {
+            p.value = this.pathValues[_y][_x][p.dir];
+            // set any max terrain values to Infinity
+            if (p.value == this.maxTerrain) {
+                p.value = Infinity;
+            }
+        }
 
-        // set any max terrain values to infinity
-        if (leftPathValue == this.maxTerrain) { leftPathValue = Infinity };
-        if (upPathValue == this.maxTerrain) { upPathValue = Infinity };
-        if (rightPathValue == this.maxTerrain) { rightPathValue = Infinity };
-
-        // return the minimum (best) path value
-        return Math.min(leftPathValue, upPathValue, rightPathValue);
+        // return the minimum (best) path valid value
+        return  Math.min(...validPaths.map(p => p.value));
     }
 
     addCell(_y, _x, _parentCell) {

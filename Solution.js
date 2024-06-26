@@ -29,36 +29,67 @@ class Solution {
         // this.shapes[5].posY = 0;
 
 
-        // sunny's shapes example solution
-        this.shapes[0].posX = 18; // Squash
-        this.shapes[0].posY = 13;
+        // // sunny's shapes example solution 1
+        // this.shapes[0].posX = 18; // Squash
+        // this.shapes[0].posY = 13;
 
-        this.shapes[1].posX = 19; // Mushroom
-        this.shapes[1].posY = 0;
+        // this.shapes[1].posX = 19; // Mushroom
+        // this.shapes[1].posY = 0;
+
+        // this.shapes[2].posX = 0;
+        // this.shapes[2].posY = 20;
+
+        // this.shapes[3].posX = 0; // Bottle
+        // this.shapes[3].posY = 12;
+
+        // this.shapes[4].posX = 10; // Blueberries
+        // this.shapes[4].posY = 10;
+
+        // this.shapes[5].posX = 17; // Milkweed Pod
+        // this.shapes[5].posY = 19;
+
+        // this.shapes[6].posX = 9;
+        // this.shapes[6].posY = 17;
+
+        // this.shapes[7].posX = 1;
+        // this.shapes[7].posY = 0;
+
+        // this.shapes[8].posX = 0;
+        // this.shapes[8].posY = 5;
+
+        // this.shapes[9].posX = 10;
+        // this.shapes[9].posY = 0;
+
+        // sunny's shapes example solution 2
+        this.shapes[0].posX = 24;
+        this.shapes[0].posY = 11;
+
+        this.shapes[1].posX = 8;
+        this.shapes[1].posY = 7;
 
         this.shapes[2].posX = 0;
-        this.shapes[2].posY = 20;
+        this.shapes[2].posY = 15;
 
-        this.shapes[3].posX = 0; // Bottle
-        this.shapes[3].posY = 12;
+        this.shapes[3].posX = 23;
+        this.shapes[3].posY = 0;
 
-        this.shapes[4].posX = 10; // Blueberries
-        this.shapes[4].posY = 10;
+        this.shapes[4].posX = 16;
+        this.shapes[4].posY = 17;
 
-        this.shapes[5].posX = 17; // Milkweed Pod
-        this.shapes[5].posY = 19;
+        this.shapes[5].posX = 1;
+        this.shapes[5].posY = 0;
 
-        this.shapes[6].posX = 9;
-        this.shapes[6].posY = 17;
+        this.shapes[6].posX = 0;
+        this.shapes[6].posY = 7;
 
-        this.shapes[7].posX = 1;
-        this.shapes[7].posY = 0;
+        this.shapes[7].posX = 17;
+        this.shapes[7].posY = 5;
 
-        this.shapes[8].posX = 0;
-        this.shapes[8].posY = 5;
+        this.shapes[8].posX = 13;
+        this.shapes[8].posY = 0;
 
-        this.shapes[9].posX = 10;
-        this.shapes[9].posY = 0;
+        this.shapes[9].posX = 17;
+        this.shapes[9].posY = 10;
     }
 
     setInitialSolution() {

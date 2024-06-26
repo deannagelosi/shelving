@@ -10,9 +10,9 @@ let newCase;
 let inputMode = true;
 
 // diagnostic toggles
-let useExampleSolution = false;
+let useExampleSolution = true;
 let devMode = true;
-let numGrow = 1;
+let numGrow = 0;
 
 function preload() {
     // shapeData = loadJSON('data/cardboard.json');
