@@ -195,22 +195,13 @@ class Cellular {
         // populate cell space with perimeter cells
         for (let y = 0; y < this.layoutHeight + 1; y++) {
             // left wall
-            this.cellSpace[y][0].push({
-                strain: 0,
-                alive: false
-            });
+            this.addCell(y, 0, { strain: 0 }, false);
             // right wall
-            this.cellSpace[y][this.layoutWidth].push({
-                strain: 0,
-                alive: false
-            });
+            this.addCell(y, this.layoutWidth, { strain: 0 }, false);
         }
         // top wall
         for (let x = 0; x < this.layoutWidth + 1; x++) {
-            this.cellSpace[this.layoutHeight][x].push({
-                strain: 0,
-                alive: false
-            });
+            this.addCell(this.layoutHeight, x, { strain: 0 }, false);
         }
 
         // populate cell space with cells at the bottom of each shape
@@ -221,10 +212,8 @@ class Cellular {
 
             for (let j = 0; j < bottomLength; j++) {
                 // add a cell 
-                this.cellSpace[shape.posY][shapeEnds[0] + j].push({
-                    strain: i + 1,
-                    alive: j == 0 || j == bottomLength - 1 ? true : false
-                });
+                let isAlive = j == 0 || j == bottomLength - 1 ? true : false;
+                this.addCell(shape.posY, shapeEnds[0] + j, { strain: i + 1 }, isAlive);
             }
         }
     }
@@ -509,13 +498,13 @@ class Cellular {
         return  Math.min(...validPaths.map(p => p.value));
     }
 
-    addCell(_y, _x, _parentCell) {
+    addCell(_y, _x, _parentCell, _alive = true) {
         // kill parent cell when replicating
         _parentCell.alive = false;
         // add a new child cell to the cell space
         this.cellSpace[_y][_x].push({
             strain: _parentCell.strain,
-            alive: true
+            alive: _alive,
         });
     }
 
