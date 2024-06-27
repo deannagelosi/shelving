@@ -11,6 +11,7 @@ let inputMode = true;
 
 // diagnostic toggles
 let useExampleSolution = true;
+let enableCellular = false;
 let devMode = true;
 let numGrow = 0;
 
@@ -21,8 +22,6 @@ function preload() {
 
 function setup() {
     createCanvas(canvasWidth, canvasHeight);
-    textSize(16);
-    fill(0);
 
     if (inputMode == true) {
         shapeInput = new ShapeInput(); // setup buttons and input fields
@@ -43,7 +42,7 @@ function draw() {
         if (useExampleSolution) {
             // use example solution on example shapes
             console.log(annealing.currSolution);
-            createCase();
+            displayResult();
             noLoop();
         }
         else {
@@ -53,37 +52,48 @@ function draw() {
                 annealing.tempCurr = annealing.coolingSchedule();
                 loopCount++;
                 if (loopCount % 10 == 0) {
-                    clear();
-                    background(255);
-                    annealing.currSolution.showLayout(devMode)
-                    annealing.currSolution.showScores(devMode);
+                    showLayoutGrid();
                 }
             } else {
                 // optimization complete
                 console.log(annealing.currSolution);
-                createCase();
+                displayResult();
                 noLoop(); // stop draw loop
             }
         }
     }
 }
 
-function createCase() {
+function showLayoutGrid() {
     clear();
     background(255);
-    // show shapes and grid
+    // show shapes, grid, and annealing scores
+    annealing.currSolution.showLayout(devMode)
+    annealing.currSolution.showScores(devMode);
+}
+
+function displayResult() {
+    clear();
+    background(255);
+    // show shapes and grid but not annealing scores
     annealing.currSolution.showLayout(devMode);
+    
+    if (!enableCellular) {
+        // display annealing scores if not showing cellular scores
+        annealing.currSolution.showScores(devMode);
+    }
+    else if (enableCellular) {
+        // setup case for cellular and boards
+        newCase = new Case(annealing.currSolution);
+        newCase.cellular.createTerrain();
+        newCase.cellular.calcPathValues();
+        newCase.cellular.makeInitialCells();
+        newCase.cellular.growCells(numGrow);
 
-    // build case
-    newCase = new Case(annealing.currSolution);
-    newCase.cellular.createTerrain();
-    newCase.cellular.calcPathValues();
-    newCase.cellular.makeInitialCells();
-    newCase.cellular.growCells(numGrow);
-
-    // display cells and terrain
-    newCase.cellular.showTerrain(devMode);
-    newCase.cellular.showCells();
+        // display cells and terrain (cellular scores)
+        newCase.cellular.showTerrain(devMode);
+        newCase.cellular.showCells();
+    }
 }
 
 function keyPressed() {
@@ -97,7 +107,7 @@ function keyPressed() {
             // todo: remove this or move to dev mode
             // advance one growth at a time
             numGrow++
-            createCase();
+            displayResult();
         }
     }
 }
