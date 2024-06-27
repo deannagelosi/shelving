@@ -213,7 +213,6 @@ class Cellular {
         for (let i = 0; i < numGrow; i++) {
             this.growOnce();
         }
-        console.log("this.cellSpace: ", this.cellSpace);
     }
 
     growOnce() {
@@ -239,8 +238,6 @@ class Cellular {
                         // only one alive cell (parentCell) at this position
                         let parentCell = this.cellSpace[y][x].find(cell => cell.alive);
 
-                        // find the strains for any dead cells at this position
-                        let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
 
                         // setup options for directions of cell growth (left, up, or right)
                         let options = [
@@ -251,45 +248,49 @@ class Cellular {
                         // find path scores and cell info for each option
                         for (let option of options) {
                             option.score = this.calcOppScore(y, x, parentCell.strain, option);
-                            // let pathValue = this.pathValues[y][x][option.dir]; // value of path towards the option
-                            // option.score = this.calcOppScore(option.y, option.x, parentCell.strain, pathValue);
-                            // check for passing merge (if the left or right and current just passed each other)
-                            if (this.cellSpaceInBounds(option.y, option.x)) {
-                                option.cells = this.cellSpace[option.y][option.x];
-                                if (option.cells.length > 1) {
-                                    option.passing = option.cells.some(cell => cell.alive && deadStrains.includes(cell.strain));
+                        }
+
+                        // == Merge Rule 2: Passing Merge - when alive cells past each other, merge and one dies
+                        // check to the left and the right for passing cells
+                        let sides = options.filter(o => o.dir == "left" || o.dir == "right");
+                        for (let side of sides) {
+                            side.cells = this.cellSpaceInBounds(side.y, side.x) ? this.cellSpace[side.y][side.x] : [];
+                            if (side.cells.length > 1) {
+                                // if an alive cell to the side matches a dead cells at the parent, they just passed each other
+                                // find dead cell strains at the parentCell's position
+                                let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
+                                side.passing = side.cells.some(cell => cell.alive && deadStrains.includes(cell.strain));
+                            }
+
+                            if (side.passing == true) {
+                                // first merge into the same strain family
+                                this.mergeStrains(this.cellSpace[y][x]);
+                                let strain = this.cellSpace[y][x][0].strain;
+                                // find best score to determine which cell to keep alive (current, or passing cell to the side)
+                                let currScore = this.calcOppScore(y, x, strain, { dir: "up", x: x, y: y + 1 });
+                                let sideScore = this.calcOppScore(side.y, side.x, strain, { dir: "up", x: side.x, y: side.y + 1 });
+
+                                if (sideScore < currScore) {
+                                    // side passing has a better score, kill the current cell
+                                    parentCell.alive = false;
+
+                                } else {
+                                    // current cell is same or better, kill the passing cell
+                                    side.cells.forEach(cell => cell.alive = false);
                                 }
                             }
                         }
 
-                        // check if two alive cells just passed by each other
-                        let leftSide = options.find(o => o.dir == "left");
-                        let rightSide = options.find(o => o.dir == "right");
-                        if (leftSide.passing || rightSide.passing) {
-                            // == Merge Rule 2: Passing Merge - when alive cells past each other, merge and one dies
-                            // first merge into the same strain family
-                            this.mergeStrains(this.cellSpace[y][x]);
-                            // then find best score to determine which alive cell to keep
-                            let leftScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, leftSide);
-                            let rightScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, rightSide);
-                            let currScore = this.calcOppScore(y, x, this.cellSpace[y][x][0].strain, { dir: "up", x: x, y: y + 1 });
-
-                            let leftWins = leftSide.merge && (leftScore < currScore); // left passing and a better score
-                            let rightWins = rightSide.merge && (rightScore < currScore); // right passing and a better score
-                            if (leftWins || rightWins) {
-                                // cell to the left or right is better, kill the current cell
-                                this.cellSpace[y][x].forEach(cell => cell.alive = false);
-                            } else {
-                                // current cell is better, kill the left and right cells
-                                leftSide.cells.forEach(cell => cell.alive = false);
-                                rightSide.cells.forEach(cell => cell.alive = false);
+                        // == Merge Rule 3: Crowded - alive cell encounters a dead cell of a different strain, dies
+                        if (parentCell.alive && this.cellSpace[y][x].length > 1) {
+                            // find any dead cell strains at the parentCell's position
+                            let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
+                            if (!deadStrains.includes(parentCell.strain)) {
+                                parentCell.alive = false;
                             }
-                        } else if (this.cellSpace[y][x].length > 1) {
-                            // 1 alive cell, but multiple cells and no passing merge
-
-                            // == Merge Rule 3: Crowded - alive cell encounters a dead cell, dies
-                            this.cellSpace[y][x].forEach(cell => cell.alive = false);
                         }
+
+                        // if the parent cell is now dead, skip the rest of the growth rules
                         if (!parentCell.alive) { continue; }
 
                         // == End of Merge Rules, Begin Option Elimination Rules == //
