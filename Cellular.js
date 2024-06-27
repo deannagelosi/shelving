@@ -419,7 +419,7 @@ class Cellular {
             return 1;
         };
 
-        // find the valid paths (and their values) leading from the option's point
+        // find the valid paths (ie. no backtracks), and their values, leading away from the option being scored
         let paths = [
             { dir: "left", x: _option.x - 1, y: _option.y, valid: true, value: null },
             { dir: "up", x: _option.x, y: _option.y + 1, valid: true, value: null },
@@ -428,18 +428,20 @@ class Cellular {
         ];
 
         for (let p of paths) {
+            // get the value of the path
+            p.value = this.pathValues[_option.y][_option.x][p.dir];
+
             // if the spot the path leads to is in bounds, check for cells
-            // if it has a cell of the same strain, mark the path as invalid
             if (this.cellSpaceInBounds(p.y, p.x)) {
-                // not valid if looking back at the request origin or if any cells have the same strain
+                // not valid if backtracking (looking back at origin or has cells with the same strain)
                 if ((p.y == _originY && p.x == _originX) || (this.cellSpace[p.y][p.x].some(cell => cell.strain == _strain))) {
                     p.valid = false;
                 }
+                // good score if path leads to a dead cell of a different strain
+                if (this.cellSpace[p.y][p.x].some(cell => !cell.alive && cell.strain != _strain)) {
+                    p.value = 1;
+                }
             }
-            // if the path is valid, get its value. if not, set the value to infinity
-            p.value = p.valid ? this.pathValues[_option.y][_option.x][p.dir] : Infinity;
-            // set any paths blocked by a shape to Infinity
-            p.value = p.value == this.maxTerrain ? Infinity : p.value;
         }
 
         // if this is the first step, add the value of the path to the option
@@ -454,9 +456,7 @@ class Cellular {
         let leftSame = !paths.find(p => p.dir == "left").valid;
         let rightSame = !paths.find(p => p.dir == "right").valid;
         if (downSame && (leftSame || rightSame)) {
-            // // end early and return max possible score for the rest of the recursion
-            // console.log("C shaped path found at y: ", _y, " x: ", _x, " strain: ", _strain);
-            // return this.maxTerrain + (this.maxTerrain * _recurseSteps) + _pathValueTo;
+            // bad path. end early and return max possible score for the rest of the recursion
             return Infinity;
         }
 
