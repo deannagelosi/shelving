@@ -123,3 +123,4 @@ Notes:
 - grow till no alive cells
 - see other dead cells like low paths in opp scoring
 - set out of bounds to mirror terrain level / path score next to it, not just 1
+- test diff recurse levels nad stop when # of total boards isn't improving

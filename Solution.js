@@ -90,6 +90,37 @@ class Solution {
 
         this.shapes[9].posX = 17;
         this.shapes[9].posY = 10;
+
+        // // sunny's shapes example solution 3
+        // this.shapes[0].posX = 0;
+        // this.shapes[0].posY = 0;
+
+        // this.shapes[1].posX = 17;
+        // this.shapes[1].posY = 8;
+
+        // this.shapes[2].posX = 8;
+        // this.shapes[2].posY = 6;
+
+        // this.shapes[3].posX = 16;
+        // this.shapes[3].posY = 0;
+
+        // this.shapes[4].posX = 25;
+        // this.shapes[4].posY = 0;
+
+        // this.shapes[5].posX = 0;
+        // this.shapes[5].posY = 13;
+
+        // this.shapes[6].posX = 24;
+        // this.shapes[6].posY = 5;
+
+        // this.shapes[7].posX = 9;
+        // this.shapes[7].posY = 0;
+
+        // this.shapes[8].posX = 0;
+        // this.shapes[8].posY = 7;
+
+        // this.shapes[9].posX = 10;
+        // this.shapes[9].posY = 12;
     }
 
     setInitialSolution() {
