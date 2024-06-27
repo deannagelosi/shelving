@@ -132,55 +132,41 @@ class Cellular {
                 // calculate the path value
                 // get terrain for the squares surrounding the path. out of bounds returns 1. 
                 // (UL = Upper Left, DL = Down Left, UR = Upper Right, DR = Down Right)
-                let ULValue = this.getTerrain(y, x - 1);
-                let DLValue = this.getTerrain(y - 1, x - 1);
-                let URValue = this.getTerrain(y, x);
-                let DRValue = this.getTerrain(y - 1, x);
-
-                let ULShapeID = this.getShapeID(y, x - 1);
-                let DLShapeID = this.getShapeID(y - 1, x - 1);
-                let URShapeID = this.getShapeID(y, x);
-                let DRShapeID = this.getShapeID(y - 1, x);
-
-                let leftValue;
-                let upValue;
-                let rightValue;
-
-                // Left path
-                if (ULShapeID != null && DLShapeID != null && (ULShapeID !== DLShapeID)) {
-                    // special case: both values one either side of the left path have a different shape
-                    leftValue = 1;
-                } else {
-                    leftValue = (ULValue + DLValue) / 2;
+                let ULSquare = {
+                    shape: this.getShapeID(y, x - 1),
+                    value: this.getTerrain(y, x - 1)
+                }
+                let DLSquare = {
+                    shape: this.getShapeID(y - 1, x - 1),
+                    value: this.getTerrain(y - 1, x - 1)
+                }
+                let URSquare = {
+                    shape: this.getShapeID(y, x),
+                    value: this.getTerrain(y, x)
+                }
+                let DRSquare = {
+                    shape: this.getShapeID(y - 1, x),
+                    value: this.getTerrain(y - 1, x)
                 }
 
-                // Up path
-                if (ULShapeID != null && URShapeID != null && (ULShapeID !== URShapeID)) {
-                    // special case: both values one either side of the left path have a different shape
-                    upValue = 1;
-                } else if (ULValue != this.maxTerrain && ULValue == URValue) {
-                    // special case: the up path is a split (same terrain level on both sides)
-                    upValue = 1;
-                } else {
-                    upValue = (ULValue + URValue) / 2;
-                }
-
-                // Right path
-                if (URShapeID != null && DRShapeID != null && (URShapeID !== DRShapeID)) {
-                    // special case: both values one either side of the left path have a different shape
-                    rightValue = 1;
-                } else {
-                    rightValue = (URValue + DRValue) / 2;
-                }
-
-                let values = {
-                    left: leftValue,
-                    up: upValue,
-                    right: rightValue
-                };
-
-                this.pathValues[y].push(values);
+                this.pathValues[y].push({
+                    left: this.getPathValue(ULSquare, DLSquare),
+                    up: this.getPathValue(ULSquare, URSquare),
+                    right: this.getPathValue(URSquare, DRSquare)
+                });
             }
+        }
+    }
+
+    getPathValue(square1, square2) {
+        // Check adjacent squares to find and return the path value
+        if (square1.shape != null && square2.shape != null && (square1.shape !== square2.shape)) {
+            // special case: both squares one either side of the path have a different shape
+            // return a value of 1 to make a desirable path between the shapes
+            return 1;
+        } else {
+            // return the average terrain height of the two adjacent squares
+            return (square1.value + square2.value) / 2;
         }
     }
 
