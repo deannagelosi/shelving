@@ -609,8 +609,7 @@
         "boundaryWidth": 17,
         "shapeHeight": 9,
         "shapeWidth": 15,
-        "shapeDepth": "2",
-        "rectArea": 170
+        "shapeDepth": "2"
     },
     {
         "shape": [
@@ -1010,8 +1009,7 @@
         "boundaryWidth": 9,
         "shapeHeight": 6,
         "shapeWidth": 7,
-        "shapeDepth": "2.5",
-        "rectArea": 63
+        "shapeDepth": "2.5"
     },
     {
         "shape": [
@@ -1344,8 +1342,7 @@
         "boundaryWidth": 8,
         "shapeHeight": 3,
         "shapeWidth": 6,
-        "shapeDepth": "2",
-        "rectArea": 32
+        "shapeDepth": "2"
     },
     {
         "shape": [
@@ -1725,8 +1722,7 @@
         "boundaryWidth": 9,
         "shapeHeight": 5,
         "shapeWidth": 7,
-        "shapeDepth": "1.5",
-        "rectArea": 54
+        "shapeDepth": "1.5"
     },
     {
         "shape": [
@@ -2077,8 +2073,7 @@
         "boundaryWidth": 8,
         "shapeHeight": 4,
         "shapeWidth": 6,
-        "shapeDepth": "1.5",
-        "rectArea": 40
+        "shapeDepth": "1.5"
     },
     {
         "shape": [
@@ -2383,7 +2378,6 @@
         "boundaryWidth": 4,
         "shapeHeight": 3,
         "shapeWidth": 2,
-        "shapeDepth": "1.5",
-        "rectArea": 16
+        "shapeDepth": "1.5"
     }
 ]

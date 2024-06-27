@@ -50,7 +50,7 @@ class ShapeInput {
         this.nextButton.position(
             this.saveButton.x + this.nextButton.width + 10, height + 20
         );
-        this.nextButton.mousePressed(() => this.moveToNextView());
+        this.nextButton.mousePressed(() => this.loadAndAnneal());
 
         // Create the LOAD EXAMPLE button
         this.exampleButton = createButton('LOAD EXAMPLE');
@@ -72,10 +72,24 @@ class ShapeInput {
         }
     }
 
-    moveToNextView() {
+    loadAndAnneal() {
+        // 1. prep the inputted shapes for annealing the first solution
+        // - wrap user inputted shapes with extra position
+        // - gives each solution unique position data, while sharing the same shape data
+        shapesPos = [];
+        for (let i = 0; i < shapes.length; i++) {
+            let shapeData = {
+                data: shapes[i],
+                // pos is bottom left corner of the shape, including overhangs
+                posX: 0,
+                posY: 0,
+            };
+            shapesPos.push(shapeData);
+        }
+
+        // 2. change to the next user screen (annealing)
         // Set inputMode to false
         inputMode = false;
-
         // Hide all UI elements
         this.titleLabel.hide();
         this.titleInput.hide();

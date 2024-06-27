@@ -9,6 +9,9 @@ class Solution {
     }
 
     exampleSolution() {
+        // use a hardcoded example solution for testing
+        // no annealing will be done on this solution
+
         // // cardboard shapes example solution
         // this.shapes[0].posX = 0;
         // this.shapes[0].posY = 14;
@@ -60,97 +63,106 @@ class Solution {
         // this.shapes[9].posX = 10;
         // this.shapes[9].posY = 0;
 
-        // sunny's shapes example solution 2
-        this.shapes[0].posX = 24;
-        this.shapes[0].posY = 11;
+        // // sunny's shapes example solution 2
+        // this.shapes[0].posX = 24;
+        // this.shapes[0].posY = 11;
 
-        this.shapes[1].posX = 8;
-        this.shapes[1].posY = 7;
+        // this.shapes[1].posX = 8;
+        // this.shapes[1].posY = 7;
 
-        this.shapes[2].posX = 0;
-        this.shapes[2].posY = 15;
+        // this.shapes[2].posX = 0;
+        // this.shapes[2].posY = 15;
 
-        this.shapes[3].posX = 23;
-        this.shapes[3].posY = 0;
-
-        this.shapes[4].posX = 16;
-        this.shapes[4].posY = 17;
-
-        this.shapes[5].posX = 1;
-        this.shapes[5].posY = 0;
-
-        this.shapes[6].posX = 0;
-        this.shapes[6].posY = 7;
-
-        this.shapes[7].posX = 17;
-        this.shapes[7].posY = 5;
-
-        this.shapes[8].posX = 13;
-        this.shapes[8].posY = 0;
-
-        this.shapes[9].posX = 17;
-        this.shapes[9].posY = 10;
-
-        // // sunny's shapes example solution 3
-        // this.shapes[0].posX = 0;
-        // this.shapes[0].posY = 0;
-
-        // this.shapes[1].posX = 17;
-        // this.shapes[1].posY = 8;
-
-        // this.shapes[2].posX = 8;
-        // this.shapes[2].posY = 6;
-
-        // this.shapes[3].posX = 16;
+        // this.shapes[3].posX = 23;
         // this.shapes[3].posY = 0;
 
-        // this.shapes[4].posX = 25;
-        // this.shapes[4].posY = 0;
+        // this.shapes[4].posX = 16;
+        // this.shapes[4].posY = 17;
 
-        // this.shapes[5].posX = 0;
-        // this.shapes[5].posY = 13;
+        // this.shapes[5].posX = 1;
+        // this.shapes[5].posY = 0;
 
-        // this.shapes[6].posX = 24;
-        // this.shapes[6].posY = 5;
+        // this.shapes[6].posX = 0;
+        // this.shapes[6].posY = 7;
 
-        // this.shapes[7].posX = 9;
-        // this.shapes[7].posY = 0;
+        // this.shapes[7].posX = 17;
+        // this.shapes[7].posY = 5;
 
-        // this.shapes[8].posX = 0;
-        // this.shapes[8].posY = 7;
+        // this.shapes[8].posX = 13;
+        // this.shapes[8].posY = 0;
 
-        // this.shapes[9].posX = 10;
-        // this.shapes[9].posY = 12;
+        // this.shapes[9].posX = 17;
+        // this.shapes[9].posY = 10;
+
+        // sunny's shapes example solution 3
+        this.shapes[0].posX = 0;
+        this.shapes[0].posY = 0;
+
+        this.shapes[1].posX = 17;
+        this.shapes[1].posY = 8;
+
+        this.shapes[2].posX = 8;
+        this.shapes[2].posY = 6;
+
+        this.shapes[3].posX = 16;
+        this.shapes[3].posY = 0;
+
+        this.shapes[4].posX = 25;
+        this.shapes[4].posY = 0;
+
+        this.shapes[5].posX = 0;
+        this.shapes[5].posY = 13;
+
+        this.shapes[6].posX = 24;
+        this.shapes[6].posY = 5;
+
+        this.shapes[7].posX = 9;
+        this.shapes[7].posY = 0;
+
+        this.shapes[8].posX = 0;
+        this.shapes[8].posY = 7;
+
+        this.shapes[9].posX = 10;
+        this.shapes[9].posY = 12;
+
+        // make the layout and calculate the score using the example positions
+        this.makeLayout();
+        this.calcScore();
     }
 
-    setInitialSolution() {
-        //== Create a Design Space ==//
+    randomLayout() {
+        // randomly place shapes in the layout as an initial solution
+        // annealing will optimize the layout from here
 
-        // this.shapes is an array of all shapes
-        // the Shapes class has an attribute called rectArea
-        // sum up all of the rectAreas for every shape
-        // return the sum
+        // find the total area (in terms of number of grid squares) of all shapes
+        // - find the area of each shape (including their boundary buffer)
+        // - sum up all the areas
+
         let totalArea = 0;
         for (let i = 0; i < this.shapes.length; i++) {
-            totalArea += this.shapes[i].data.rectArea;
+            let shapeHeight = this.shapes[i].data.boundaryHeight
+            let shapeWidth = this.shapes[i].data.boundaryWidth;
+            totalArea += (shapeHeight * shapeWidth);
         }
-        // add multiplier to give extra space to work with
-        let designArea = totalArea * 1.5;
-        // find the closest rectangle to the designArea
-        let width = Math.floor(Math.sqrt(designArea));
-        let height = Math.floor(designArea / width);
+        // give extra space and find the closest rectangle that can hold that area
+        let layoutArea = totalArea * 1.5;
+        let width = Math.ceil(Math.sqrt(layoutArea));
+        let height = Math.ceil(layoutArea / width);
 
-        //== Randomly choose initial shape locations in designArea ==//
-        // loop shapes and randomly place in the layout
+        // pick random locations for each shape within the potential layout bounds
         for (let i = 0; i < this.shapes.length; i++) {
             let currShape = this.shapes[i];
             currShape.posX = Math.floor(Math.random() * width);
             currShape.posY = Math.floor(Math.random() * height);
         }
+
+        // make the layout using the random positions and calculate the score
+        this.makeLayout();
+        this.calcScore();
     }
 
     makeLayout() {
-        // create a 2D array to represent the design space
+        // create a 2D array to represent the layout design space
 
         this.layout = [[]]; // clear the layout
 
@@ -248,117 +260,6 @@ class Solution {
         }
     }
 
-    showLayout() {
-        let lineColor;
-        let bkrdColor;
-        let boundaryColor;
-        let shapeColor;
-        let collisionColor;
-
-        if (devMode) {
-            lineColor = 0;
-            bkrdColor = 255;
-            boundaryColor = "rgb(255, 192, 203)";
-            shapeColor = "grey";
-            collisionColor = "red";
-        } else if (!devMode) {
-            lineColor = "rgb(198, 198, 197)";
-            bkrdColor = "rgb(229, 229, 229)";
-            boundaryColor = "rgb(209, 209, 209)";
-            shapeColor = "grey";
-            collisionColor = "rgb(135, 160, 103)"
-        }
-
-        textAlign(CENTER, CENTER);
-        let txtXOffset = this.squareSize / 2;
-        let txtYOffset = this.squareSize / 2;
-        let txtSize = this.squareSize / 2;
-        textSize(txtSize);
-
-        // display the solution grid
-        let designHeight = this.layout.length;
-        let designWidth = this.layout[0].length;
-        for (let x = 0; x < designWidth; x++) {
-            if (devMode) {
-                // display column number
-                strokeWeight(0);
-                fill(x % 5 === 0 ? "pink" : 100);
-                let textX = (x * this.squareSize) + this.buffer + txtXOffset;
-                let textY = (canvasHeight - this.squareSize) + txtYOffset;
-                text(x, textX, textY);
-            }
-
-            for (let y = 0; y < designHeight; y++) {
-                if (devMode) {
-                    // display row number
-                    strokeWeight(0);
-                    fill(y % 5 === 0 ? "pink" : 100);
-                    let textX = txtXOffset;
-                    let textY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                    text(y, textX, textY);
-                }
-
-                // draw each layout square
-                if (this.layout[y][x].shapes.length == 0) {
-                    fill(bkrdColor); // white (empty)
-                } else if (this.layout[y][x].shapes.length == 1) {
-                    // fill square pink if it's occupied by the boundary shape
-                    fill(boundaryColor); // pink (boundary)
-                    if (this.layout[y][x].isShape) {
-                        // square is occupied by the shape
-                        fill(shapeColor);
-                    }
-                } else if (this.layout[y][x].shapes.length > 1) {
-                    fill(collisionColor);  // collision
-                }
-
-                let rectX = (x * this.squareSize) + this.buffer;
-                let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-
-                stroke(lineColor);
-                strokeWeight(0.75);
-                rect(rectX, rectY, this.squareSize, this.squareSize);
-            }
-        }
-    }
-
-    showScores(_devMode) {
-        if (_devMode) {
-            // display the design space grid
-            fill(50)
-            stroke(50);
-            strokeWeight(0.25);
-            textAlign(CENTER, CENTER);
-            let txtXOffset = this.squareSize / 2;
-            let txtYOffset = this.squareSize / 2;
-            let txtSize = this.squareSize / 1.5;
-            textSize(txtSize);
-
-            let designHeight = this.layout.length;
-            let designWidth = this.layout[0].length;
-            for (let x = 0; x < designWidth; x++) {
-                for (let y = 0; y < designHeight; y++) {
-                    // find position for score or shape title[0] text, finding y from bottom up
-                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
-                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-
-                    if (devMode) {
-
-                        if (this.layout[y][x].annealScore > 0) {
-                            // display the anneal score if its empty of shapes
-                            text(this.layout[y][x].annealScore, rectX, rectY);
-
-                        } else if (this.layout[y][x].annealScore == 0 && this.layout[y][x].shapes.length > 0) {
-                            // display the first char of the shape title if there is a shape
-                            let shapeID = this.layout[y][x].shapes[0].data.title[0]
-                            text(shapeID, rectX, rectY);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     calcScore() {
         // the objective function in simulated annealing
 
@@ -450,17 +351,13 @@ class Solution {
         }
     }
 
-    makeNeighbor(_tempCurr, _tempMax, _tempMin) {
+    createNeighbor(_maxShift) {
         // create a new solution that's a neighbor to the current solution
+        // max shift (movement) amount is based on temperature
 
         // make a shallow copy of shapes; ie new posX and posY, but same shape data
         let shapesCopy = this.shapes.map(shape => ({ ...shape }));
         let newSolution = new Solution(shapesCopy);
-
-        // pick shift amount based on temperature
-        let shiftMax = 10; // maximum shift distance
-        let shiftMin = 1; // minimum shift distance
-        let shiftCurr = this.mapValueThenRound(_tempCurr, _tempMax, _tempMin, shiftMax, shiftMin);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
@@ -469,16 +366,16 @@ class Solution {
         // pick a randomly to shift the shape or swap with another shape
         let randOption = Math.floor(Math.random() * 9) + 1;
         if (randOption == 1 || randOption == 2) {
-            selectedShape.posX -= shiftCurr; // shift x-value smaller
+            selectedShape.posX -= _maxShift; // shift x-value smaller
 
         } else if (randOption == 3 || randOption == 4) {
-            selectedShape.posX += shiftCurr; // shift x-value bigger
+            selectedShape.posX += _maxShift; // shift x-value bigger
 
         } else if (randOption == 5 || randOption == 6) {
-            selectedShape.posY -= shiftCurr; // shift y-value smaller
+            selectedShape.posY -= _maxShift; // shift y-value smaller
 
         } else if (randOption == 7 || randOption == 8) {
-            selectedShape.posY += shiftCurr; // shift y-value bigger
+            selectedShape.posY += _maxShift; // shift y-value bigger
 
         }
         else if (randOption == 9) { // pick two shapes and swap their positions
@@ -502,11 +399,127 @@ class Solution {
             selectedShape.posY = 0;
         }
 
+        // calculate the score of the new solution
+        newSolution.makeLayout();
+        newSolution.calcScore();
+
         return newSolution;
     }
 
-    mapValueThenRound(oldCurr, oldMin, oldMax, newMin, newMax) {
-        let newCurr = ((oldCurr - oldMin) / (oldMax - oldMin)) * (newMax - newMin) + newMin;
-        return Math.round(newCurr);
+    showLayout() {
+        let lineColor;
+        let bkrdColor;
+        let boundaryColor;
+        let shapeColor;
+        let collisionColor;
+
+        if (devMode) {
+            lineColor = 0;
+            bkrdColor = 255;
+            boundaryColor = "rgb(255, 192, 203)";
+            shapeColor = "grey";
+            collisionColor = "red";
+        } else if (!devMode) {
+            lineColor = "rgb(198, 198, 197)";
+            bkrdColor = "rgb(229, 229, 229)";
+            boundaryColor = "rgb(209, 209, 209)";
+            shapeColor = "grey";
+            collisionColor = "rgb(135, 160, 103)"
+        }
+
+        textAlign(CENTER, CENTER);
+        let txtXOffset = this.squareSize / 2;
+        let txtYOffset = this.squareSize / 2;
+        let txtSize = this.squareSize / 2;
+        textSize(txtSize);
+
+        // display the solution grid
+        let designHeight = this.layout.length;
+        let designWidth = this.layout[0].length;
+        for (let x = 0; x < designWidth; x++) {
+            if (devMode) {
+                // display column number
+                strokeWeight(0);
+                fill(x % 5 === 0 ? "pink" : 100);
+                let textX = (x * this.squareSize) + this.buffer + txtXOffset;
+                let textY = (canvasHeight - this.squareSize) + txtYOffset;
+                text(x, textX, textY);
+            }
+
+            for (let y = 0; y < designHeight; y++) {
+                if (devMode) {
+                    // display row number
+                    strokeWeight(0);
+                    fill(y % 5 === 0 ? "pink" : 100);
+                    let textX = txtXOffset;
+                    let textY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                    text(y, textX, textY);
+                }
+
+                // draw each layout square
+                if (this.layout[y][x].shapes.length == 0) {
+                    fill(bkrdColor); // white (empty)
+                } else if (this.layout[y][x].shapes.length == 1) {
+                    // fill square pink if it's occupied by the boundary shape
+                    fill(boundaryColor); // pink (boundary)
+                    if (this.layout[y][x].isShape) {
+                        // square is occupied by the shape
+                        fill(shapeColor);
+                    }
+                } else if (this.layout[y][x].shapes.length > 1) {
+                    fill(collisionColor);  // collision
+                }
+
+                let rectX = (x * this.squareSize) + this.buffer;
+                let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+
+                stroke(lineColor);
+                strokeWeight(0.75);
+                rect(rectX, rectY, this.squareSize, this.squareSize);
+            }
+        }
     }
+
+    showScores() {
+        if (devMode) {
+            // display the design space grid
+            fill(50)
+            stroke(50);
+            strokeWeight(0.25);
+            textAlign(CENTER, CENTER);
+            let txtXOffset = this.squareSize / 2;
+            let txtYOffset = this.squareSize / 2;
+            let txtSize = this.squareSize / 1.5;
+            textSize(txtSize);
+
+            let designHeight = this.layout.length;
+            let designWidth = this.layout[0].length;
+            for (let x = 0; x < designWidth; x++) {
+                for (let y = 0; y < designHeight; y++) {
+                    // find position for score or shape title[0] text, finding y from bottom up
+                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
+                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+
+                    if (devMode) {
+
+                        if (this.layout[y][x].annealScore > 0) {
+                            // display the anneal score if its empty of shapes
+                            text(this.layout[y][x].annealScore, rectX, rectY);
+
+                        } else if (this.layout[y][x].annealScore == 0 && this.layout[y][x].shapes.length > 0) {
+                            // display the first char of the shape title if there is a shape
+                            let shapeID = this.layout[y][x].shapes[0].data.title[0]
+                            text(shapeID, rectX, rectY);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // // helper functions
+    // mapValueThenRound(oldCurr, oldMin, oldMax, newMin, newMax) {
+    //     let newCurr = ((oldCurr - oldMin) / (oldMax - oldMin)) * (newMax - newMin) + newMin;
+    //     return Math.round(newCurr);
+    // }
 }

@@ -10,7 +10,6 @@ class Shape {
         this.shapeDepth;
         this.boundaryHeight;
         this.boundaryWidth;
-        this.rectArea; // boundaryHeight * boundaryWidth
         this.weight;
     }
 
@@ -96,8 +95,6 @@ class Shape {
         this.shapeHeight = this.shape.length;
         this.shapeWidth = this.shape[0].length;
         this.shapeDepth = _depthValue;
-
-        this.rectArea = this.boundaryHeight * this.boundaryWidth;
     }
 
     // Function to set values to true between two indices

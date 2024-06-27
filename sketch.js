@@ -2,15 +2,12 @@ let canvasWidth = 625;
 let canvasHeight = 625;
 let shapes = [];
 let shapesPos = [];
-let solutions = [];
-let annealing; // simulated annealing
-let initialScore;
-let loopCount;
+let annealing;
 let newCase;
-let inputMode = true;
+let inputMode = true; // don't modify. used for screen switching
 
 // diagnostic toggles
-let useExampleSolution = true;
+let useExampleSolution = false;
 let enableCellular = false;
 let devMode = true;
 let numGrow = 0;
@@ -34,64 +31,51 @@ function draw() {
         shapeInput.drawInputGrid();
         noLoop(); // don't loop input screen
 
-    } else {
-        if (!annealing) {
-            initialSolution();
-        }
+    } else if (!annealing) {
+        // run the annealing process
+        // (note: if useExampleSolution is true, run() skips annealing and returns example solution)
 
-        if (useExampleSolution) {
-            // use example solution on example shapes
-            console.log(annealing.currSolution);
-            displayResult();
-            noLoop();
-        }
-        else {
-            // optimization loop for annealing the solution
-            if (annealing.epoch()) {
-                // continue optimization
-                annealing.tempCurr = annealing.coolingSchedule();
-                loopCount++;
-                if (loopCount % 10 == 0) {
-                    showLayoutGrid();
-                }
-            } else {
-                // optimization complete
-                console.log(annealing.currSolution);
-                displayResult();
-                noLoop(); // stop draw loop
-            }
-        }
-    }
+        let options = {}; // blank uses default options
+        annealing = new Anneal(updateDisplay, options);
+        let solution = annealing.run();
+
+        noLoop();
+    } 
 }
 
-function showLayoutGrid() {
+function updateDisplay(currentSolution, iteration, temperature) {
+    // passed as a callback to the annealing process so it can update the display
+    console.log("updateDisplay called");
+
     clear();
     background(255);
     // show shapes, grid, and annealing scores
-    annealing.currSolution.showLayout(devMode)
-    annealing.currSolution.showScores(devMode);
+    currentSolution.showLayout()
+    currentSolution.showScores();
+
+    text(`Iteration: ${iteration}, Temperature: ${temperature.toFixed(2)}`, 10, height - 20);
 }
 
-function displayResult() {
+function displayResult(_solution) {
     clear();
     background(255);
     // show shapes and grid but not annealing scores
-    annealing.currSolution.showLayout(devMode);
-    
+    _solution.showLayout();
+
     if (!enableCellular) {
         // display annealing scores if not showing cellular scores
-        annealing.currSolution.showScores(devMode);
+        _solution.showScores();
     }
     else if (enableCellular) {
         // setup case for cellular and boards
-        newCase = new Case(annealing.currSolution);
+        newCase = new Case(_solution);
         newCase.cellular.createTerrain();
         newCase.cellular.calcPathValues();
         newCase.cellular.makeInitialCells();
         newCase.cellular.growCells(numGrow);
 
         // display cells and terrain (cellular scores)
-        newCase.cellular.showTerrain(devMode);
+        newCase.cellular.showTerrain();
         newCase.cellular.showCells();
     }
 }
@@ -122,40 +106,4 @@ function mouseDragged() {
     if (inputMode) {
         shapeInput.selectInputSquare(mouseX, mouseY);
     }
-}
-
-function initialSolution() {
-    // populate the user input shapes into shapesPos
-    shapesPos = []; // shape data plus positions
-    for (let i = 0; i < shapes.length; i++) {
-        let shapeData = {
-            data: shapes[i],
-            // pos is bottom left corner of the shape, including overhangs
-            posX: 0,
-            posY: 0,
-        };
-        shapesPos.push(shapeData);
-    }
-
-    // generate the initial solution
-    let initialSolution = new Solution(shapesPos);
-    if (useExampleSolution) {
-        initialSolution.exampleSolution();
-    } else {
-        initialSolution.setInitialSolution();
-    }
-    initialSolution.makeLayout();
-    initialSolution.calcScore();
-    initialScore = initialSolution.score;
-
-    let tempMax = 5000;
-    let tempMin = 1;
-
-    annealing = new Anneal(
-        tempMax,
-        tempMin,
-        initialSolution
-    );
-
-    loopCount = 0;
 }
