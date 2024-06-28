@@ -5,6 +5,8 @@ let shapesPos = [];
 let annealing;
 let newCase;
 let inputMode = true; // don't modify. used for screen switching
+let annealingComplete = false;
+let topLabel = "";
 
 // diagnostic toggles
 let useExampleSolution = false;
@@ -32,20 +34,38 @@ function draw() {
         noLoop(); // don't loop input screen
 
     } else if (!annealing) {
-        // run the annealing process
-        // (note: if useExampleSolution is true, run() skips annealing and returns example solution)
+        if (useExampleSolution) {
+            // load the example solution and don't anneal
+            let solution = new Solution(shapesPos);
+            solution.exampleSolution();
+            displayResult(solution);
+            noLoop();
+        } else {
+            // run the annealing process
+            startAnnealing();
+        }
+    }
+    // else if (!annealingComplete) {
+    //     // annealing is in progress, update display if needed
+    //     background(220);
+    //     text("Annealing in progress...", width/2, height/2);
+    // }
+}
 
-        let options = {}; // blank uses default options
-        annealing = new Anneal(updateDisplay, options);
-        let solution = annealing.run();
+async function startAnnealing() {
+    let options = {}; // blank uses default options
+    annealing = new Anneal(updateDisplay, options);
 
-        noLoop();
-    } 
+    let solution = await annealing.run();
+    displayResult(solution);
+    annealingComplete = true;
+
+    console.log("Annealing complete. Score: ", solution.score);
+    noLoop();
 }
 
 function updateDisplay(currentSolution, iteration, temperature) {
     // passed as a callback to the annealing process so it can update the display
-    console.log("updateDisplay called");
 
     clear();
     background(255);
@@ -53,7 +73,8 @@ function updateDisplay(currentSolution, iteration, temperature) {
     currentSolution.showLayout()
     currentSolution.showScores();
 
-    text(`Iteration: ${iteration}, Temperature: ${temperature.toFixed(2)}`, 10, height - 20);
+    textAlign(LEFT);
+    text(topLabel, 10, 10);
 }
 
 function displayResult(_solution) {

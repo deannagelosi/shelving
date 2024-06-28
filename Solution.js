@@ -2,7 +2,7 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy the layout
-        this.eightThreshold = 0.07; // ratio limit for anneal scores of 8
+        this.eightThreshold = 0.05; //0.07; // ratio limit for anneal scores of 8
         this.score;
         this.squareSize;
         this.buffer; // left & bottom buffer when displaying
@@ -338,17 +338,24 @@ class Solution {
         let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
 
         // calculate the height off the ground of each bottom shape
-        let totalYValues = 0;
+        let totalBottomLift = 0;
         for (let i = 0; i < bottomShapes.length; i++) {
             let yValue = bottomShapes[i].shape.posY;
-            totalYValues += yValue;
+            totalBottomLift += yValue;
         }
 
-        if (overlappingSquares == 0 && num8Scores / totalSquares < this.eightThreshold && totalYValues == 0) {
-            this.score = 0;
-        } else {
-            this.score = (this.layout.length * overlappingSquares) + num8Scores + totalYValues;
+        // add penalties and bonuses to the scores
+        if ((num8Scores / totalSquares) < this.eightThreshold) {
+            num8Scores = 0;
         }
+        if (totalBottomLift > 0) {
+            totalBottomLift = 100;
+        }
+        if (overlappingSquares > 0) {
+            overlappingSquares = overlappingSquares * this.layout.length
+        }
+
+        this.score = overlappingSquares + num8Scores + totalBottomLift;
     }
 
     createNeighbor(_maxShift) {
@@ -516,10 +523,4 @@ class Solution {
             }
         }
     }
-
-    // // helper functions
-    // mapValueThenRound(oldCurr, oldMin, oldMax, newMin, newMax) {
-    //     let newCurr = ((oldCurr - oldMin) / (oldMax - oldMin)) * (newMax - newMin) + newMin;
-    //     return Math.round(newCurr);
-    // }
 }
