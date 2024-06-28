@@ -6,6 +6,7 @@ let annealing;
 let newCase;
 let inputMode = true; // don't modify. used for screen switching
 let annealingComplete = false;
+let currentSolution;
 let topLabel = "";
 
 // diagnostic toggles
@@ -38,7 +39,8 @@ function draw() {
             // load the example solution and don't anneal
             let solution = new Solution(shapesPos);
             solution.exampleSolution();
-            displayResult(solution);
+            currentSolution = solution; // save for displayResult
+            displayResult();
             noLoop();
         } else {
             // run the annealing process
@@ -57,7 +59,8 @@ async function startAnnealing() {
     annealing = new Anneal(updateDisplay, options);
 
     let solution = await annealing.run();
-    displayResult(solution);
+    currentSolution = solution; // save for displayResult
+    displayResult();
     annealingComplete = true;
 
     console.log("Annealing complete. Score: ", solution.score);
@@ -77,28 +80,31 @@ function updateDisplay(currentSolution, iteration, temperature) {
     text(topLabel, 10, 10);
 }
 
-function displayResult(_solution) {
-    clear();
-    background(255);
+function displayResult() {
     // show shapes and grid but not annealing scores
-    _solution.showLayout();
+    if (currentSolution) {
+        clear();
+        background(255);
+        currentSolution.showLayout();
 
-    if (!enableCellular) {
-        // display annealing scores if not showing cellular scores
-        _solution.showScores();
-    }
-    else if (enableCellular) {
-        // setup case for cellular and boards
-        newCase = new Case(_solution);
-        newCase.cellular.createTerrain();
-        newCase.cellular.calcPathValues();
-        newCase.cellular.makeInitialCells();
-        newCase.cellular.growCells(numGrow);
+        if (!enableCellular) {
+            // display annealing scores if not showing cellular scores
+            currentSolution.showScores();
+        }
+        else if (enableCellular) {
+            // setup case for cellular and boards
+            newCase = new Case(currentSolution);
+            newCase.cellular.createTerrain();
+            newCase.cellular.calcPathValues();
+            newCase.cellular.makeInitialCells();
+            newCase.cellular.growCells(numGrow);
 
-        // display cells and terrain (cellular scores)
-        newCase.cellular.showTerrain();
-        newCase.cellular.showCells();
+            // display cells and terrain (cellular scores)
+            newCase.cellular.showTerrain();
+            newCase.cellular.showCells();
+        }
     }
+
 }
 
 function keyPressed() {
