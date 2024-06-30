@@ -5,9 +5,6 @@ class Solution {
         this.squareSize;
         this.buffer; // left & bottom buffer when displaying
         this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
-        this.overlappingCount;
-        this.clusterPenalty;
-        this.totalBottomLift;
         this.score;
         this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
     }
@@ -269,7 +266,7 @@ class Solution {
 
         // calculate annealing scores and find squares with overlapping shapes
         this.score = 0; // reset the score
-        this.overlappingCount = 0; // number of squares containing overlapping shapes
+        let overlappingCount = 0; // number of squares containing overlapping shapes
         let totalSquares = 0;
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -277,7 +274,7 @@ class Solution {
 
                 // the number squares with overlapping shapes
                 if (this.layout[y][x].shapes.length > 1) {
-                    this.overlappingCount += this.layout[y][x].shapes.length - 1;
+                    overlappingCount += this.layout[y][x].shapes.length - 1;
                 }
 
                 // the number with an anneal score of 8 (no adjacent empty spots) and calc ratio
@@ -303,8 +300,9 @@ class Solution {
         }
 
         // find the cluster penalties, ie. squares touching squares of the same value (above a limit)
-        // add up all anneal scores
-        this.clusterPenalty = 0;
+        // - add up all anneal scores
+        // - add up empty squares under an object, from the object to the floor
+        let clusterPenalty = 0;
         let totalAnnealScore = 0;
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -322,7 +320,7 @@ class Solution {
                                 // count if the adjacent square is the same score
                                 if (this.layout[localY][localX].annealScore == annealScore) {
                                     // skew larger clustered scores as worse
-                                    this.clusterPenalty += Math.pow(3, (annealScore - this.clusterLimit));
+                                    clusterPenalty += Math.pow(3, (annealScore - this.clusterLimit));
                                 }
                                 checkCount++; // used to see how many out-of-bounds (how many skipped)
                             }
@@ -330,75 +328,72 @@ class Solution {
                     }
                     // Add any out-of-bound (skipped) squares if the score is 8
                     if (annealScore == 8) {
-                        this.clusterPenalty += (8 - checkCount);
+                        clusterPenalty += (8 - checkCount);
                     }
                 }
             }
         }
 
-        // add penalty for bottom row shapes floating above the bottom row
-        // (bottom row shapes must touch the bottom of the case, ie. no float)
-        let rawBottomShapes = [];
-        // loop through each column to find the first shape from the bottom up
-        for (let col = 0; col < this.layout[0].length; col++) {
-            for (let row = 0; row < this.layout.length; row++) {
-                let posData = this.layout[row][col];
-                if (posData.shapes.length > 0) {
-                    // there is a shape(s) occupying this square
-                    let shape = posData.shapes[0];
-                    // check if looking at the bottom row of the shape
-                    if (row == shape.posY) {
-                        // check if the shape already exists in bottomShapes
-                        let existingData = rawBottomShapes.find(data => data.shape === shape);
+        // loop shapes and check for float values
+        // - bottom float: how far up a bottom row shape is from the bottom
+        // - middle float: if a other shape has a full empty row under it
+        let totalBottomLift = 0; // how many y-values lifted all the bottom shapes are
+        let totalBottomEmptyRow = 0; // sum of anneal scores on all full empty rows under shapes
+        for (let shape of this.shapes) {
+            let bottomY = shape.posY;
+            let bottomWidth = shape.data.boundaryShape[0].filter(Boolean).length;
+            let isBottomShape = true; // stays true if shape has no shapes under it
+            let shapeBottomEmptyRowScore = 0;
 
-                        if (existingData) {
-                            // increment numSeen if the shape already exists
-                            existingData.numSeen++;
-                        } else {
-                            // create a new data object if the shape doesn't exist
-                            let data = {
-                                shape: shape,
-                                numSeen: 1,
-                                bottomWidth: shape.data.boundaryShape[0].filter(Boolean).length
-                            };
-                            rawBottomShapes.push(data);
-                        }
-                        break; // move to the next column after finding the first shape
+            for (let x = shape.posX; x < shape.posX + bottomWidth; x++) {
+                // loop all of the shapes x-vales
+                let rowInBounds = this.layoutInBounds(bottomY - 1, x);
+                if (rowInBounds && this.layout[bottomY - 1][x].shapes.length === 0) {
+                    shapeBottomEmptyRowScore += this.layout[bottomY - 1][x].annealScore
+                } else {
+                    shapeBottomEmptyRowScore = 0;
+                    isBottomShape = false;
+                    break;
+                }
+
+                // loop all y-values till the bottom. stop if hit a shape
+                for (let y = bottomY - 1; y >= 0; y--) {
+                    if (this.layout[y][x].shapes.length > 0) {
+                        isBottomShape = false;
+                        break;
                     }
                 }
             }
-        }
-        // filter out which shapes bottom's are not occluded by another shape
-        let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
+            // save the row under score if it was all empty
+            totalBottomEmptyRow += shapeBottomEmptyRowScore;
 
-        // calculate the height off the ground of each bottom shape
-        this.totalBottomLift = 0;
-        for (let i = 0; i < bottomShapes.length; i++) {
-            let yValue = bottomShapes[i].shape.posY;
-            this.totalBottomLift += yValue;
+            // if shape was a bottom shape, add it's y-value to the total
+            if (isBottomShape) {
+                totalBottomLift += bottomY;
+            }
         }
 
         // adjust penalties
-        if (this.totalBottomLift > 0) {
-            this.totalBottomLift *= Math.pow(this.shapes.length, 3);
+        if (totalBottomLift > 0) {
+            totalBottomLift *= Math.pow(this.shapes.length, 3);
         }
-        if (this.overlappingCount > 0) {
-            this.overlappingCount *= Math.pow(this.shapes.length, 3);
+        if (overlappingCount > 0) {
+            overlappingCount *= Math.pow(this.shapes.length, 3);
         }
-        totalAnnealScore *= 0.025;
-        totalSquares *= 0.05;
+        let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / 1.5));
+        let spacePenalty = (totalAnnealScore + totalSquares) * 0.05;
 
         // check if solution is valid
-        if (this.totalBottomLift == 0 && this.overlappingCount == 0) {
+        if (totalBottomLift == 0 && overlappingCount == 0) {
             this.valid = true;
         }
         // calc the "squareness" of the result
         let w = this.layout[0].length
         let h = this.layout.length
         let whRatio = (Math.max(w, h) / Math.min(w, h)) - 1;
-        let squareness = Math.pow((whRatio * this.shapes.length), 2) * 2;
+        let squareness = Math.pow((whRatio * this.shapes.length), 2) * 1.5;
 
-        this.score = Math.floor(this.overlappingCount + this.clusterPenalty + this.totalBottomLift + squareness + totalSquares + totalAnnealScore);
+        this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + squareness + spacePenalty);
     }
 
     createNeighbor(_maxShift) {
@@ -588,6 +583,18 @@ class Solution {
                     }
                 }
             }
+        }
+    }
+
+    // helper functions
+    layoutInBounds(coordY, coordX) {
+        // check if the grid is in bounds
+        let yInBounds = coordY >= 0 && coordY < this.layout.length;
+        let xInBounds = coordX >= 0 && coordX < this.layout[0].length;
+        if (yInBounds && xInBounds) {
+            return true;
+        } else {
+            return false;
         }
     }
 }
