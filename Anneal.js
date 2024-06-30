@@ -1,24 +1,21 @@
 class Anneal {
-    constructor(_updateDisplayCallback, _options = {}) {
-        // annealing uses these strategies:
-        // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
-        // 2. adaptive cooling: if improving rapidly, cool faster. if stuck, heat up
-
-        this.options = {
-            numStarts: 5, // number of multi-starts
-            maxIterations: 5000, // max iterations per each anneal
-            reheatCounter: 100, // max iterations before reheating
-            initialTemp: 5000,
-            minTemp: 0.1, // temperature to stop annealing at
-            initialCoolingRate: 0.95, // initial cooling rate (higher = cools slower. range: 0-1)
-            reheatingBoost: 1.5, // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-            displayInterval: 50, // how often to update the display with a new solution
-            ..._options // spread operator (...) overrides default keys with any user-provided options
-        };
-
+    constructor(_updateDisplayCallback) {
         this.updateDisplayCallback = _updateDisplayCallback;
         this.bestSolution = null;
         this.bestScore = Infinity;
+
+        // annealing uses these strategies:
+        // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
+        // 2. adaptive cooling: if improving rapidly, cool faster. if stuck, heat up
+        // annealing default values
+        this.numStarts = 10; // number of multi-starts
+        this.maxIterations = 1000; // max iterations per each anneal
+        this.reheatCounter = 100; // max failed to improve iterations before reheating
+        this.initialTemp = 10000;
+        this.minTemp = 0.1; // temperature to stop annealing at
+        this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
+        this.reheatingBoost = 1.5; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
+        this.displayInterval = 50; // how often to update the display with a new solution
     }
 
     async run() {
@@ -29,12 +26,12 @@ class Anneal {
         // == multi-start phase == //
         topLabel = "Multi-start phase: Finding Initial Solution";
         const multiStartPromises = [];
-        for (let start = 0; start < this.options.numStarts; start++) {
+        for (let start = 0; start < this.numStarts; start++) {
             // -- configure the annealing process for multi-starts -- //
             // give each start lower initial temperature and faster cooling
             let multiConfig = {
-                initialTemp: this.options.initialTemp * (1 - start / this.options.numStarts),
-                initialCoolingRate: this.options.initialCoolingRate / 2
+                initialTemp: this.initialTemp * (1 - start / this.numStarts),
+                initialCoolingRate: this.initialCoolingRate * 0.75
             };
 
             // create new solution with random layout. shallow copy allows unique positions for the same shapes
@@ -56,26 +53,33 @@ class Anneal {
         topLabel = "Refinement phase: Annealing Solution";
         // -- configure the annealing process for refinement -- //
         let refineConfig = {
-            initialTemp: this.options.initialTemp / (this.options.numStarts * 2), // lower starting temp for refinement
+            initialTemp: this.initialTemp * 0.1, // lower starting temp for refinement
             initialCoolingRate: 0.99, // slower cooling
-            // maxIterations: this.options.maxIterations
-            // reheatCounter: this.options.reheatCounter * 5 // wait longer before reheat
         }
 
         let refinedSolution = await this.anneal(bestStartSolution, refineConfig);
         console.log("Refine phase complete. Score:", refinedSolution.score);
 
-        // todo: while score is not 0, keep refining (reset to best or pick second best, etc)
+        // if solution is not valid (overlapping or floating shapes), continue to refine
+        while (refinedSolution.valid == false) {
+            console.log("additional refining...")
+            let refineConfig = {
+                initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
+                initialCoolingRate: 0.99, // slower cooling
+            }
+            refinedSolution = await this.anneal(bestStartSolution, refineConfig);
+        }
+
         return refinedSolution;
     }
 
     async anneal(_initialSolution, _config = {}) {
         // set default config values
         let config = {
-            initialTemp: this.options.initialTemp,
-            initialCoolingRate: this.options.initialCoolingRate,
-            maxIterations: this.options.maxIterations,
-            reheatCounter: this.options.reheatCounter,
+            initialTemp: this.initialTemp,
+            initialCoolingRate: this.initialCoolingRate,
+            maxIterations: this.maxIterations,
+            reheatCounter: this.reheatCounter,
             ..._config // override defaults with any provided values
         }
         let temperature = config.initialTemp;
@@ -94,7 +98,7 @@ class Anneal {
         let totalIterations = 0;
         for (let iteration = 0; iteration < maxIterations; iteration++) {
             // generate a neighboring solution
-            const movementRange = this.calcMovementRange(temperature);
+            const movementRange = this.calcMovementRange(temperature, config.initialTemp);
             const neighbor = currentSolution.createNeighbor(movementRange);
 
             // calculate the energy difference between current and neighbor solutions
@@ -126,19 +130,19 @@ class Anneal {
                 // adaptive cooling: if stuck, reheat the system
                 // - increasing the temperature causes more exploration, helping to escape a local minima
                 // increase temperature, but don't exceed initial temp
-                temperature = Math.min(temperature * this.options.reheatingBoost, config.initialTemp);
+                temperature = Math.min(temperature * this.reheatingBoost, config.initialTemp);
                 // reset cooling rate and counter
                 coolingRate = config.initialCoolingRate;
                 iterationsSinceImprovement = 0;
             }
 
             // update display at specified intervals
-            if (iteration % this.options.displayInterval === 0) {
+            if (iteration % this.displayInterval === 0) {
                 this.updateDisplayCallback(currentSolution, iteration, temperature);
             }
 
             // stop early if the temperature drops below the minimum 
-            if (temperature < this.options.minTemp) break;
+            if (temperature < this.minTemp) break;
 
             // add a small delay to prevent blocking the main thread
             await new Promise(resolve => setTimeout(resolve, 0));
@@ -162,13 +166,13 @@ class Anneal {
         return Math.exp(-energyDelta / temperature) > Math.random(); // sometimes accept worse solutions
     }
 
-    calcMovementRange(temp) {
+    calcMovementRange(currentTemp, initialTemp) {
         // how far a shape can move based on the current temperature
         // - higher temperature allows more max movement
         // - lower temperature allows less max movement
         const maxRange = 5;
         const minRange = 1;
-        const normalizedTemp = (temp - this.options.minTemp) / (this.options.initialTemp - this.options.minTemp);
+        const normalizedTemp = (currentTemp - this.minTemp) / (initialTemp - this.minTemp);
         return Math.floor(normalizedTemp * (maxRange - minRange) + minRange);
     }
 }

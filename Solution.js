@@ -2,10 +2,14 @@ class Solution {
     constructor(_shapes) {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy the layout
-        this.eightThreshold = 0.05; //0.07; // ratio limit for anneal scores of 8
-        this.score;
         this.squareSize;
         this.buffer; // left & bottom buffer when displaying
+        this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
+        this.overlappingCount;
+        this.clusterPenalty;
+        this.totalBottomLift;
+        this.score;
+        this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
     }
 
     exampleSolution() {
@@ -145,7 +149,7 @@ class Solution {
             totalArea += (shapeHeight * shapeWidth);
         }
         // give extra space and find the closest rectangle that can hold that area
-        let layoutArea = totalArea * 1.5;
+        let layoutArea = totalArea * 2;
         let width = Math.ceil(Math.sqrt(layoutArea));
         let height = Math.ceil(layoutArea / width);
 
@@ -263,19 +267,17 @@ class Solution {
     calcScore() {
         // the objective function in simulated annealing
 
+        // calculate annealing scores and find squares with overlapping shapes
         this.score = 0; // reset the score
-        let num8Scores = 0; // reset the number of squares with a anneal score of 8
-        let totalSquares = 0; // total number of squares in the layout
-        let overlappingSquares = 0; // number of squares containing overlapping shapes
-
-        // count all the empty squares in the layout
+        this.overlappingCount = 0; // number of squares containing overlapping shapes
+        let totalSquares = 0;
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
-                totalSquares++; // the total number of squares
+                totalSquares++;
 
-                // the number of overlapping squares
+                // the number squares with overlapping shapes
                 if (this.layout[y][x].shapes.length > 1) {
-                    overlappingSquares += this.layout[y][x].shapes.length - 1;
+                    this.overlappingCount += this.layout[y][x].shapes.length - 1;
                 }
 
                 // the number with an anneal score of 8 (no adjacent empty spots) and calc ratio
@@ -296,16 +298,47 @@ class Solution {
                     }
                     // assign the score
                     this.layout[y][x].annealScore = annealScore;
-                    // calculate the number of with a score of 8
+                }
+            }
+        }
+
+        // find the cluster penalties, ie. squares touching squares of the same value (above a limit)
+        // add up all anneal scores
+        this.clusterPenalty = 0;
+        let totalAnnealScore = 0;
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                let annealScore = this.layout[y][x].annealScore;
+                totalAnnealScore += annealScore;
+
+                if (annealScore >= this.clusterLimit) {
+                    // look at all the squares surrounding this one and count the number's that are the same 
+                    let checkCount = 0;
+                    // check the 8 possible adjacent squares
+                    for (let localY = Math.max(0, y - 1); localY <= Math.min(y + 1, this.layout.length - 1); localY++) {
+                        for (let localX = Math.max(0, x - 1); localX <= Math.min(x + 1, this.layout[0].length - 1); localX++) {
+                            // don't count the square itself
+                            if (localX !== x || localY !== y) {
+                                // count if the adjacent square is the same score
+                                if (this.layout[localY][localX].annealScore == annealScore) {
+                                    // skew larger clustered scores as worse
+                                    this.clusterPenalty += Math.pow(3, (annealScore - this.clusterLimit));
+                                }
+                                checkCount++; // used to see how many out-of-bounds (how many skipped)
+                            }
+                        }
+                    }
+                    // Add any out-of-bound (skipped) squares if the score is 8
                     if (annealScore == 8) {
-                        num8Scores++;
+                        this.clusterPenalty += (8 - checkCount);
                     }
                 }
             }
         }
 
+        // add penalty for bottom row shapes floating above the bottom row
+        // (bottom row shapes must touch the bottom of the case, ie. no float)
         let rawBottomShapes = [];
-
         // loop through each column to find the first shape from the bottom up
         for (let col = 0; col < this.layout[0].length; col++) {
             for (let row = 0; row < this.layout.length; row++) {
@@ -335,27 +368,37 @@ class Solution {
                 }
             }
         }
+        // filter out which shapes bottom's are not occluded by another shape
         let bottomShapes = rawBottomShapes.filter(shape => shape.numSeen === shape.bottomWidth);
 
         // calculate the height off the ground of each bottom shape
-        let totalBottomLift = 0;
+        this.totalBottomLift = 0;
         for (let i = 0; i < bottomShapes.length; i++) {
             let yValue = bottomShapes[i].shape.posY;
-            totalBottomLift += yValue;
+            this.totalBottomLift += yValue;
         }
 
-        // add penalties and bonuses to the scores
-        if ((num8Scores / totalSquares) < this.eightThreshold) {
-            num8Scores = 0;
+        // adjust penalties
+        if (this.totalBottomLift > 0) {
+            this.totalBottomLift *= Math.pow(this.shapes.length, 3);
         }
-        if (totalBottomLift > 0) {
-            totalBottomLift = 100;
+        if (this.overlappingCount > 0) {
+            this.overlappingCount *= Math.pow(this.shapes.length, 3);
         }
-        if (overlappingSquares > 0) {
-            overlappingSquares = overlappingSquares * this.layout.length
-        }
+        totalAnnealScore *= 0.025;
+        totalSquares *= 0.05;
 
-        this.score = overlappingSquares + num8Scores + totalBottomLift;
+        // check if solution is valid
+        if (this.totalBottomLift == 0 && this.overlappingCount == 0) {
+            this.valid = true;
+        }
+        // calc the "squareness" of the result
+        let w = this.layout[0].length
+        let h = this.layout.length
+        let whRatio = (Math.max(w, h) / Math.min(w, h)) - 1;
+        let squareness = Math.pow((whRatio * this.shapes.length), 2) * 2;
+
+        this.score = Math.floor(this.overlappingCount + this.clusterPenalty + this.totalBottomLift + squareness + totalSquares + totalAnnealScore);
     }
 
     createNeighbor(_maxShift) {
