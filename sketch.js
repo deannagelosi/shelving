@@ -11,7 +11,7 @@ let topLabel = "";
 
 // diagnostic toggles
 let useExampleSolution = false;
-let enableCellular = false;
+let enableCellular = true;
 let devMode = true;
 let numGrow = 0;
 
@@ -117,8 +117,10 @@ function keyPressed() {
         } else if (key === 'a') {
             // todo: remove this or move to dev mode
             // advance one growth at a time
-            numGrow++
-            displayResult();
+            if (devMode) {
+                numGrow++
+                displayResult();
+            }
         }
     }
 }

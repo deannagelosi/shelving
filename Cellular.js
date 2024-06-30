@@ -9,7 +9,8 @@ class Cellular {
         this.squareSize = _solution.squareSize; // size of each square in the layout
         this.buffer = this.squareSize; // left & bottom buffer when displaying
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
-        this.scoreRecursion = 3; // how many extra steps to look ahead when calculating opportunity score
+        this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
+        this.numAlive;
     }
 
     createTerrain() {
@@ -93,8 +94,8 @@ class Cellular {
         }
     }
 
-    showTerrain(_devMode) {
-        if (_devMode) {
+    showTerrain() {
+        if (devMode) {
             // display the design space
             fill(75); // dark grey
             strokeWeight(0);
@@ -210,8 +211,18 @@ class Cellular {
     growCells(numGrow) {
         // grow alive cells until no more cells are alive
 
-        for (let i = 0; i < numGrow; i++) {
+        if (devMode) {
+            // grow one at a time on keypress
+            for (let i = 0; i < numGrow; i++) {
+                this.growOnce();
+            }
+            
+        } else {
+            // grow till all cells dead
             this.growOnce();
+            while (this.numAlive > 0) {
+                this.growOnce();
+            }
         }
     }
 
@@ -386,6 +397,18 @@ class Cellular {
             }
         }
         // end of y loop
+
+        // count number of alive cells
+        this.numAlive = 0;
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (let cell of this.cellSpace[y][x]) {
+                    if (cell.alive === true) {
+                        this.numAlive++;
+                    }
+                }
+            }
+        }
     }
 
     mergeStrains(_cells) {
