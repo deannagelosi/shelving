@@ -1,4 +1,5 @@
 jsconfig.json
 libraries/
 .DS_Store
-/bugs
+bugs/
+.vscode/
