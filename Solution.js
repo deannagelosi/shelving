@@ -403,9 +403,9 @@ class Solution {
 
     createNeighbor(_maxShift) {
         // create a new solution that's a neighbor to the current solution
-        // max shift (movement) amount is based on temperature
+        // - max shift (movement) amount is based on temperature
 
-        // make a shallow copy of shapes; ie new posX and posY, but same shape data
+        // make a shallow copy of shapes (gives new posX and posY, but uses same shape data)
         let shapesCopy = this.shapes.map(shape => ({ ...shape }));
         let newSolution = new Solution(shapesCopy);
 
@@ -413,40 +413,64 @@ class Solution {
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
         let selectedShape = newSolution.shapes[shapeIndex];
 
-        // pick a randomly to shift the shape or swap with another shape
+        // can move side to side, up or down, and diagonal
+        // pick which a randomly movement option to perform
         let randOption = Math.floor(Math.random() * 9) + 1;
-        if (randOption == 1 || randOption == 2) {
-            selectedShape.posX -= _maxShift; // shift x-value smaller
-
-        } else if (randOption == 3 || randOption == 4) {
-            selectedShape.posX += _maxShift; // shift x-value bigger
-
-        } else if (randOption == 5 || randOption == 6) {
-            selectedShape.posY -= _maxShift; // shift y-value smaller
-
-        } else if (randOption == 7 || randOption == 8) {
-            selectedShape.posY += _maxShift; // shift y-value bigger
-
+        switch (randOption) {
+            case 1: // left
+                selectedShape.posX -= _maxShift;
+                break;
+            case 2: // up-left
+                selectedShape.posX -= _maxShift;
+                selectedShape.posY += _maxShift;
+                break;
+            case 3: // up
+                selectedShape.posY += _maxShift;
+                break;
+            case 4: // up-right
+                selectedShape.posX += _maxShift;
+                selectedShape.posY += _maxShift;
+                break;
+            case 5: // right
+                selectedShape.posX += _maxShift;
+                break;
+            case 6: // down-right
+                selectedShape.posX += _maxShift;
+                selectedShape.posY -= _maxShift;
+                break;
+            case 7: // down
+                selectedShape.posY -= _maxShift;
+                break;
+            case 8: // down-left
+                selectedShape.posX -= _maxShift;
+                selectedShape.posY -= _maxShift;
+                break;
+            case 9: // swap position with another random shape
+                // choose second shape for swap
+                let shapeIndex2;
+                do { // keep selecting until it's a different shape
+                    shapeIndex2 = Math.floor(Math.random() * this.shapes.length);
+                } while (shapeIndex2 === shapeIndex);
+                let selectedShape2 = newSolution.shapes[shapeIndex2];
+                let tempX = selectedShape.posX;
+                let tempY = selectedShape.posY;
+                selectedShape.posX = selectedShape2.posX;
+                selectedShape.posY = selectedShape2.posY;
+                selectedShape2.posX = tempX;
+                selectedShape2.posY = tempY;
+                break;
         }
-        else if (randOption == 9) { // pick two shapes and swap their positions
-            // choose second shape for swap
-            let shapeIndex2 = Math.floor(Math.random() * this.shapes.length);
-            let selectedShape2 = newSolution.shapes[shapeIndex2];
 
-            let tempX = selectedShape.posX;
-            let tempY = selectedShape.posY;
-            selectedShape.posX = selectedShape2.posX;
-            selectedShape.posY = selectedShape2.posY;
-            selectedShape2.posX = tempX;
-            selectedShape2.posY = tempY;
-        }
+        // if shape shifted negative x or y, move all shapes over that amount
+        // - sets the shape to 0 while moving everyone relative to that change
+        if (selectedShape.posX < 0 || selectedShape.posY < 0) {
+            let adjustX = selectedShape.posX < 0 ? Math.abs(selectedShape.posX) : 0;
+            let adjustY = selectedShape.posY < 0 ? Math.abs(selectedShape.posY) : 0;
 
-        // check if the new position is within bounds (not negative)
-        if (selectedShape.posX < 0) {
-            selectedShape.posX = 0;
-        }
-        if (selectedShape.posY < 0) {
-            selectedShape.posY = 0;
+            for (let shape of newSolution.shapes) {
+                shape.posX += adjustX;
+                shape.posY += adjustY;
+            }
         }
 
         // calculate the score of the new solution
