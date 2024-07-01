@@ -105,12 +105,13 @@ function displayResult() {
 
 function keyPressed() {
     if (!inputMode) {
-        if (key === 's' || key === 'S') {
-            // save current case as SVG
-            newCase.buildLaserSVG();
-            newCase.displaySVGExport();
-            newCase.saveSVGExport();
-        } else if (key === 'a') {
+        // if (key === 's' || key === 'S') {
+        //     // save current case as SVG
+        //     newCase.buildLaserSVG();
+        //     newCase.displaySVGExport();
+        //     newCase.saveSVGExport();
+        // } else 
+        if (key === 'g') {
             // advance one growth at a time in dev mode
             if (devMode) {
                 numGrow++

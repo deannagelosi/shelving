@@ -174,7 +174,7 @@ class Solution {
 
             let posData = {
                 shapes: [],
-                isShape: false,
+                isShape: [],
                 annealScore: 0,
                 terrainValue: 0
             };
@@ -212,7 +212,7 @@ class Solution {
 
                         // mark if occupied by a shape or the shape's boundary
                         let shapeInBounds = y < shape.data.shape.length && x < shape.data.shape[0].length;
-                        this.layout[shape.posY + y][shape.posX + x + 1].isShape = shapeInBounds && shape.data.shape[y][x];
+                        this.layout[shape.posY + y][shape.posX + x + 1].isShape.push(shapeInBounds && shape.data.shape[y][x]);
                     }
                 }
             }
@@ -527,16 +527,35 @@ class Solution {
 
                 // draw each layout square
                 if (this.layout[y][x].shapes.length == 0) {
-                    fill(bkrdColor); // white (empty)
+                    fill(bkrdColor); // (empty)
                 } else if (this.layout[y][x].shapes.length == 1) {
-                    // fill square pink if it's occupied by the boundary shape
-                    fill(boundaryColor); // pink (boundary)
-                    if (this.layout[y][x].isShape) {
-                        // square is occupied by the shape
+
+                    // fill square different color if it's occupied by the boundary shape
+                    fill(boundaryColor); // (boundary)
+
+                    if (this.layout[y][x].isShape.some(s => s === true)) {
+                        // square is occupied by a shape
                         fill(shapeColor);
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
-                    fill(collisionColor);  // collision
+                    if (y == 0 && x == 14) {
+                        console.log(this.layout[y][x])
+                    }
+                    // color in collision 
+                    // if devMode, color shape and boundary collisions
+                    // if not devMode, only color collisions with shapes
+                    if (!devMode && this.layout[y][x].isShape.filter(s => s === true).length >= 2) {
+                        fill(collisionColor);  // collision
+                    }
+                    else if (!devMode && this.layout[y][x].isShape.some(s => s === true)) {
+                        fill(shapeColor);
+                    }
+                    else if (devMode) {
+                        fill(collisionColor);  // collision
+                    } else {
+
+                        fill(bkrdColor); // (empty)
+                    }
                 }
 
                 let rectX = (x * this.squareSize) + this.buffer;

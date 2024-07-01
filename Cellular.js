@@ -9,7 +9,7 @@ class Cellular {
         this.squareSize = _solution.squareSize; // size of each square in the layout
         this.buffer = this.squareSize; // left & bottom buffer when displaying
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
-        this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
+        this.scoreRecursion = 3; // how many extra steps to look ahead when calculating opportunity score
         this.numAlive;
     }
 
