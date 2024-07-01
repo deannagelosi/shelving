@@ -9,7 +9,7 @@ class UI {
         this.inputGridWidth = (this.inputCols * this.inputSquareSize);
         this.inputGrid = [];
         // Initialize the stack for square selection history
-        this.selectionHistory = [];
+        // this.selectionHistory = [];
         // Track shape titles displaying to hide later
 
         // layout variables
@@ -42,25 +42,27 @@ class UI {
         // depthInput.position(this.lrPadding + 50, height + 60);
         // depthInput.attribute('size', '8');
 
-        // Create the UNDO button
-        let undoButton = createButton('UNDO');
-        undoButton.position(titleInput.x + titleInput.width + 10, height + 20);
-        undoButton.mousePressed(() => this.undoLastSelection());
-
+        // // Create the UNDO button
+        // let undoButton = createButton('UNDO');
+        // undoButton.position(titleInput.x + titleInput.width + 10, height + 20);
+        // undoButton.mousePressed(() => this.undoLastSelection());
+        
         // Create the SAVE button
         let saveButton = createButton('SAVE');
-        saveButton.position(undoButton.x + saveButton.width + 10, height + 20);
+        // saveButton.position(undoButton.x + saveButton.width + 10, height + 20);
+        saveButton.position(titleInput.x + titleInput.width + 10, height + 20);
         saveButton.mousePressed(() => this.saveShape());
 
         // Create the NEXT button
-        let nextButton = createButton('NEXT');
+        let nextButton = createButton('ANNEAL');
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        nextButton.position(saveButton.x + nextButton.width + 10, height + 20);
+        // nextButton.position(saveButton.x + nextButton.width + 10, height + 20);
+        nextButton.position((width / 2) - 20, height + 20);
         nextButton.mousePressed(() => this.nextToAnneal());
 
         // Create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
-        exampleButton.position(nextButton.x + exampleButton.width + 10, height + 20);
+        exampleButton.position(nextButton.x + exampleButton.width + 95, height + 20);
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
         // Create a container for shape titles
@@ -85,7 +87,7 @@ class UI {
             // depthLabel,
             // depthInput,
             // buttons
-            undoButton,
+            // undoButton,
             saveButton,
             nextButton,
             exampleButton,
@@ -94,7 +96,7 @@ class UI {
     }
 
     initAnnealUI() {
-        let reannealButton = createButton('Re-anneal');
+        let reannealButton = createButton('RE-ANNEAL');
         reannealButton.position((width / 2) - 20, height + 20);
         reannealButton.mousePressed(() => this.reAnneal());
         reannealButton.hide(); // Initially hidden
@@ -163,20 +165,20 @@ class UI {
                 }
                 this.drawInputGrid();
 
-                    // Save the selection to history stack
-                    this.selectionHistory.push({ x: gridX, y: gridY });
-                }
+                // Save the selection to history stack
+                // this.selectionHistory.push({ x: gridX, y: gridY });
+                // }
             }
         }
     }
 
-    undoLastSelection() {
-        if (this.selectionHistory.length > 0) {
-            const lastSelection = this.selectionHistory.pop();
-            this.inputGrid[lastSelection.y][lastSelection.x] = false;
-            this.drawInputGrid();
-        }
-    }
+    // undoLastSelection() {
+    //     if (this.selectionHistory.length > 0) {
+    //         const lastSelection = this.selectionHistory.pop();
+    //         this.inputGrid[lastSelection.y][lastSelection.x] = false;
+    //         this.drawInputGrid();
+    //     }
+    // }
 
     saveShape() {
         // check if the shape is valid before saving
@@ -255,6 +257,7 @@ class UI {
 
         this.resetCanvas();
         this.inputUIElements.nextButton.removeAttribute('disabled');
+        this.inputUIElements.exampleButton.attribute('disabled', ''); // until 2 shapes are saved
     }
 
     // input grid control functions
