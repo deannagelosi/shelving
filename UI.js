@@ -3,8 +3,8 @@ class UI {
         // input control variables
         // User input grid size
         this.inputRows = 15;
-        this.inputCols = 15;
-        this.inputSquareSize = 35;
+        this.inputCols = this.inputRows;
+        this.inputSquareSize = Math.floor(Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1));
         this.inputGridHeight = (this.inputRows * this.inputSquareSize);
         this.inputGridWidth = (this.inputCols * this.inputSquareSize);
         this.inputGrid = [];
@@ -13,8 +13,8 @@ class UI {
         // Track shape titles displaying to hide later
 
         // layout variables
-        this.tbPadding = 50; // top bottom
-        this.lrPadding = 25; // left right
+        this.tbPadding = this.inputSquareSize; // top bottom
+        this.lrPadding = this.inputSquareSize / 2; // left right
 
         // stores the labels, inputs, and buttons for the screens
         this.inputUIElements = {};
@@ -35,12 +35,12 @@ class UI {
         titleInput.position(this.lrPadding + 40, height + 20);
         titleInput.attribute('size', '20');
 
-        // Create the depth input field
-        let depthLabel = createP('Depth:');
-        depthLabel.position(this.lrPadding, height + 45);
-        let depthInput = createInput('');
-        depthInput.position(this.lrPadding + 50, height + 60);
-        depthInput.attribute('size', '8');
+        // // Create the depth input field
+        // let depthLabel = createP('Depth:');
+        // depthLabel.position(this.lrPadding, height + 45);
+        // let depthInput = createInput('');
+        // depthInput.position(this.lrPadding + 50, height + 60);
+        // depthInput.attribute('size', '8');
 
         // Create the UNDO button
         let undoButton = createButton('UNDO');
@@ -63,29 +63,57 @@ class UI {
         exampleButton.position(nextButton.x + exampleButton.width + 10, height + 20);
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
+        // Create a container for shape titles
+        let shapeTitleContainer = createDiv('');
+        shapeTitleContainer.id('shapeTitleContainer');
+
+        // Position it below the buttons
+        let buttonBottom = saveButton.y + saveButton.height;
+        shapeTitleContainer.position(this.lrPadding, buttonBottom + 10);
+
+        // Set dimensions and style
+        shapeTitleContainer.style('height', '60px');
+        shapeTitleContainer.style('width', `${(this.inputCols * (this.inputSquareSize - 1))}px`);
+        shapeTitleContainer.style('overflow-y', 'scroll');
+        shapeTitleContainer.style('border', '1px solid #ccc');
+
         // store elements to manage
         this.inputUIElements = {
             // input fields and labels
             titleLabel,
             titleInput,
-            depthLabel,
-            depthInput,
+            // depthLabel,
+            // depthInput,
             // buttons
             undoButton,
             saveButton,
             nextButton,
-            exampleButton
+            exampleButton,
+            shapeTitleContainer
         }
     }
 
     initAnnealUI() {
         let reannealButton = createButton('Re-anneal');
-        reannealButton.position(25, height + 20);
+        reannealButton.position((width / 2) - 20, height + 20);
         reannealButton.mousePressed(() => this.reAnneal());
         reannealButton.hide(); // Initially hidden
 
+        // info text
+        let diagnosticText = createP("(toggle 'd' key for diagnostics)");
+        diagnosticText.position((width / 2) - 80, height + 40);
+        diagnosticText.style('color', '#A9A9A9'); // text color light grey
+        diagnosticText.hide();
+
+        let growthText = createP("(press 'g' to grow cells)");
+        growthText.position(width / 2 - 55, height + 60);
+        growthText.style('color', '#A9A9A9'); // text color light grey
+        growthText.hide();
+
         this.annealUIElements = {
-            reannealButton
+            reannealButton,
+            diagnosticText,
+            growthText
         };
     }
 
@@ -99,7 +127,13 @@ class UI {
     }
 
     showAnnealUI() {
+        console.log("ac: ", annealingComplete, " dm: ", devMode)
         Object.values(this.annealUIElements).forEach(element => element.show());
+
+        this.annealUIElements.growthText.hide();
+        if (annealingComplete && devMode) {
+            this.annealUIElements.growthText.show();
+        }
     }
 
     hideAnnealUI() {
@@ -149,14 +183,15 @@ class UI {
                 titleValue = `shape-${shapes.length + 1}`;
             }
 
-            let depthValue = this.inputUIElements.depthInput.value();
-            if (depthValue === '') { // no depth entered by user
-                console.error('no depth entered');
-            }
+            // let depthValue = this.inputUIElements.depthInput.value();
+            // if (depthValue === '') { // no depth entered by user
+            //     console.error('no depth entered');
+            // }
 
             // save the shape
             let newShape = new Shape(titleValue);
-            newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
+            // newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
+            newShape.saveUserInput([...this.inputGrid], 5); // save a copy of the input grid
             shapes.push(newShape);
             // console log the json
             console.log(JSON.stringify(shapes));
@@ -189,8 +224,8 @@ class UI {
         }
 
         // 2. change to the next user screen (annealing)
-        // Set inputMode to false
-        inputMode = false;
+        // Switch away from the input screen
+        inputScreen = false;
         // Hide all UI elements
         this.hideInputUI();
         // hide titles of shapes on screen
@@ -221,7 +256,7 @@ class UI {
     resetCanvas() {
         background(255);
         this.inputUIElements.titleInput.value('');
-        this.inputUIElements.depthInput.value('');
+        // this.inputUIElements.depthInput.value('');
         this.resetInputGrid();
         this.drawInputGrid();
         this.displayShapeTitles();
@@ -257,12 +292,17 @@ class UI {
     displayShapeTitles() {
         this.clearShapeTitles();
 
-        let startY = this.inputUIElements.titleInput.y + 75;
-        for (let i = 0; i < shapes.length; i++) {
-            let titleIndex = shapes.length - i - 1; // list shapes most recent first
-            let shapeTitle = createP(`${shapes[titleIndex].title}`);
-            shapeTitle.position(50, startY + (i * 25));
-            this.shapeTitleElements.push(shapeTitle); // Store the element
+        let row = createDiv('');
+        row.parent(this.inputUIElements.shapeTitleContainer);
+        row.style('display', 'flex');
+        row.style('flex-wrap', 'wrap');
+
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            let shapeTitle = createP(`${shapes[i].title}`);
+            shapeTitle.parent(row);
+            shapeTitle.style('margin', '5px 10px 5px 0');
+            shapeTitle.style('white-space', 'nowrap');
+            this.shapeTitleElements.push(shapeTitle);
         }
     }
 

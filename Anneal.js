@@ -1,8 +1,14 @@
 class Anneal {
-    constructor(_updateDisplayCallback) {
+    constructor(_updateDisplayCallback, _ui) {
         this.updateDisplayCallback = _updateDisplayCallback;
+        this.ui = _ui; // ui manager
         this.bestSolution = null;
         this.bestScore = Infinity;
+        this.multiStartSolutions = []; // stores running async anneals
+        this.refinedSolution = null; // stores running async anneals
+        this.abortAnnealing = false;
+        // bind reanneal function to reanneal button
+        this.ui.annealUIElements.reannealButton.mousePressed(() => this.reAnneal());
 
         // annealing uses these strategies:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -22,9 +28,12 @@ class Anneal {
         // run the annealing process
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
+        this.abortAnnealing = false;
+        this.ui.showAnnealUI();
 
         // == multi-start phase == //
-        const multiStartPromises = [];
+        this.multiStartSolutions = [];
+        this.refinedSolution = null;
         for (let start = 0; start < this.numStarts; start++) {
             // -- configure the annealing process for multi-starts -- //
             // give each start lower initial temperature and faster cooling
@@ -37,11 +46,14 @@ class Anneal {
             let initialSolution = new Solution(shapesPos.map(shape => ({ ...shape })));
             initialSolution.randomLayout()
             // start concurrent anneals
-            multiStartPromises.push(this.anneal(initialSolution, multiConfig));
+            this.multiStartSolutions.push(this.anneal(initialSolution, multiConfig));
         }
 
         // wait for all multi-starts to complete (anneal concurrently)
-        const results = await Promise.all(multiStartPromises);
+        const results = await Promise.all(this.multiStartSolutions);
+        if (this.abortAnnealing) {
+            return await annealing.run();
+        }
         console.log("Multi-start results: ", results.map(s => s.score).join(', '));
 
         // find the best solution from all multi-starts
@@ -55,20 +67,26 @@ class Anneal {
             initialCoolingRate: 0.99, // slower cooling
         }
 
-        let refinedSolution = await this.anneal(bestStartSolution, refineConfig);
-        console.log("Refine phase complete. Score:", refinedSolution.score);
+        this.refinedSolution = await this.anneal(bestStartSolution, refineConfig);
+        if (this.abortAnnealing) {
+            return await annealing.run();
+        }
+        console.log("Refine phase complete. Score:", this.refinedSolution.score);
 
         // if solution is not valid (overlapping or floating shapes), continue to refine
-        while (refinedSolution.valid == false) {
+        while (this.refinedSolution.valid == false) {
             console.log("additional refining...")
             let refineConfig = {
                 initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
                 initialCoolingRate: 0.99, // slower cooling
             }
-            refinedSolution = await this.anneal(bestStartSolution, refineConfig);
+            this.refinedSolution = await this.anneal(bestStartSolution, refineConfig);
+            if (this.abortAnnealing) {
+                return await annealing.run();
+            }
         }
 
-        return refinedSolution;
+        return this.refinedSolution;
     }
 
     async anneal(_initialSolution, _config = {}) {
@@ -95,6 +113,7 @@ class Anneal {
         // main annealing loop
         let totalIterations = 0;
         for (let iteration = 0; iteration < maxIterations; iteration++) {
+            if (this.abortAnnealing) { return null; }
             // generate a neighboring solution
             const movementRange = this.calcMovementRange(temperature, config.initialTemp);
             const neighbor = currentSolution.createNeighbor(movementRange);
@@ -172,5 +191,13 @@ class Anneal {
         const minRange = 1;
         const normalizedTemp = (currentTemp - this.minTemp) / (initialTemp - this.minTemp);
         return Math.floor(normalizedTemp * (maxRange - minRange) + minRange);
+    }
+
+    // handler for button that controls restart
+    async reAnneal() {
+        console.log("abort clicked")
+        // set abort flag for anneal()
+        this.abortAnnealing = true;
+        // run() waits for async jobs to cancel then restarts
     }
 }

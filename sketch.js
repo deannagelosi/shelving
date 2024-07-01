@@ -5,7 +5,7 @@ let shapesPos = [];
 let annealing;
 let newCase;
 let ui;
-let inputMode = true; // don't modify. used for screen switching
+let inputScreen = true; // don't modify. used for screen switching
 let annealingComplete = false;
 let currentSolution;
 
@@ -23,13 +23,13 @@ function preload() {
 function setup() {
     createCanvas(canvasWidth, canvasHeight);
 
-    if (inputMode == true) {
+    if (inputScreen == true) {
         ui = new UI(); // setup buttons and input fields
     }
 }
 
 function draw() {
-    if (inputMode) {
+    if (inputScreen) {
         // display the input grid
         ui.drawInputGrid();
         noLoop(); // don't loop input screen
@@ -50,13 +50,16 @@ function draw() {
 }
 
 async function startAnnealing() {
-    let options = {}; // blank uses default options
-    annealing = new Anneal(updateDisplay, options);
+    annealingComplete = false;
+    annealing = new Anneal(updateDisplay, ui);
 
     let solution = await annealing.run();
     currentSolution = solution; // save for displayResult
-    displayResult();
     annealingComplete = true;
+    displayResult();
+
+    // rebind re-anneal to restart annealing
+    ui.annealUIElements.reannealButton.mousePressed(() => this.startAnnealing());
 
     console.log("Annealing complete. Score: ", solution.score);
     noLoop();
@@ -78,6 +81,10 @@ function displayResult() {
         clear();
         background(255);
         currentSolution.showLayout();
+
+        if (annealingComplete && devMode) {
+            ui.annealUIElements.growthText.show();
+        }
 
         if (!enableCellular) {
             // display annealing scores if not showing cellular scores
@@ -101,7 +108,7 @@ function displayResult() {
 }
 
 function keyPressed() {
-    if (!inputMode) {
+    if (!inputScreen) {
         // if (key === 's' || key === 'S') {
         //     // save current case as SVG
         //     newCase.buildLaserSVG();
@@ -118,6 +125,9 @@ function keyPressed() {
             // toggle dev mode on and off
             devMode = !devMode;
 
+            // update text
+            ui.showAnnealUI();
+
             if (devMode == true) {
                 numGrow = 0;
             }
@@ -130,13 +140,13 @@ function keyPressed() {
 }
 
 function mousePressed() {
-    if (inputMode) {
+    if (inputScreen) {
         ui.selectInputSquare(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
-    if (inputMode) {
+    if (inputScreen) {
         ui.selectInputSquare(mouseX, mouseY);
     }
 }
