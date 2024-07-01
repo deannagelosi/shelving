@@ -107,11 +107,13 @@ class Cellular {
 
             for (let x = 0; x < this.layoutWidth; x++) {
                 for (let y = 0; y < this.layoutHeight; y++) {
-                    // calc text position, finding y from bottom up
-                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
-                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                    // display the terrain value
-                    text(this.layout[y][x].terrainValue, rectX, rectY);
+                    if (this.layout[y][x].terrainValue != this.maxTerrain) {
+                        // calc text position, finding y from bottom up
+                        let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
+                        let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                        // display the terrain value
+                        text(this.layout[y][x].terrainValue, rectX, rectY);
+                    }
                 }
             }
         }
@@ -216,7 +218,6 @@ class Cellular {
             for (let i = 0; i < numGrow; i++) {
                 this.growOnce();
             }
-            
         } else {
             // grow till all cells dead
             this.growOnce();
@@ -523,17 +524,89 @@ class Cellular {
         for (let y = 0; y < this.cellSpace.length; y++) {
             for (let x = 0; x < this.cellSpace[y].length; x++) {
                 for (let cell of this.cellSpace[y][x]) {
-                    let cellColor = this.strainColor(cell.strain);
-                    if (!cell.alive) {
-                        cellColor = lerpColor(cellColor, color(0, 0, 0), 0.4)
+                    // if (!cell.alive) {
+                    //     cellColor = lerpColor(cellColor, color(0, 0, 0), 0.4)
+                    // }
+                    if (cell.alive) {
+                        let cellColor = this.strainColor(cell.strain);
+                        fill(cellColor);
+                        noStroke();
+                        let dotX = (x * this.squareSize) + this.buffer;
+                        let dotY = (canvasHeight - this.buffer) - (y * this.squareSize);
+                        circle(dotX, dotY, 10);
                     }
-                    fill(cellColor);
-                    noStroke();
-                    let dotX = (x * this.squareSize) + this.buffer;
-                    let dotY = (canvasHeight - this.buffer) - (y * this.squareSize);
-                    circle(dotX, dotY, 10);
                 }
             }
+        }
+    }
+
+    showCellLines() {
+        // loop through the cellSpace grid and add any neighboring cells of the same strain as pairs
+        // use these pairs to draw all of the lines. store pairs in a Set to de-duplicate pairs.
+        // set for deduplicating lines as they are found
+        const lineSet = new Set();
+
+        // loop through all positions in cellSpace
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                // check if there are cells at this position
+                if (this.cellSpace[y][x].length > 0) {
+                    // loop through all cells at this position
+                    for (let cell of this.cellSpace[y][x]) {
+                        // directions to check: right, up, left, down
+                        const sides = [
+                            { dir: "left", y: 0, x: -1 },
+                            { dir: "up", y: 1, x: 0 },
+                            { dir: "right", y: 0, x: 1 },
+                            { dir: "left", y: -1, x: 0 }
+                        ]
+                        for (let side of sides) {
+                            let newY = y + side.y;
+                            let newX = x + side.x;
+
+                            // check if the new position is within bounds
+                            if (this.cellSpaceInBounds(newY, newX)) {
+                                // check if there's a cell with the same strain in the new position
+                                let matchingCell = this.cellSpace[newY][newX].find(c => c.strain === cell.strain);
+
+                                if (matchingCell) {
+                                    // to avoid duplicates create a string with the information
+                                    // use min and max to always put the smaller coordinate first
+                                    let lineKey = [
+                                        Math.min(y, newY),
+                                        Math.min(x, newX),
+                                        Math.max(y, newY),
+                                        Math.max(x, newX),
+                                        cell.strain
+                                    ].join(',');
+
+                                    // when added to a Set, strings are skipped if they already exist
+                                    lineSet.add(lineKey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // draw all unique lines
+        for (let lineKey of lineSet) {
+            let [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
+
+            // calculate canvas coordinates
+            let startX = (x1 * this.squareSize) + this.buffer;
+            let startY = (canvasHeight - this.buffer) - (y1 * this.squareSize);
+            let endX = (x2 * this.squareSize) + this.buffer;
+            let endY = (canvasHeight - this.buffer) - (y2 * this.squareSize);
+
+            // set line color based on strain
+            let lineColor = this.strainColor(strain);
+            stroke(lineColor);
+            strokeWeight(4);  // adjust line thickness as needed
+
+            // draw the line
+            line(startX, startY, endX, endY);
         }
     }
 

@@ -101,6 +101,7 @@ function displayResult() {
 
             // display cells and terrain (cellular scores)
             newCase.cellular.showTerrain();
+            newCase.cellular.showCellLines();
             newCase.cellular.showCells();
         }
     }
