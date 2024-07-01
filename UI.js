@@ -1,0 +1,275 @@
+class UI {
+    constructor() {
+        // input control variables
+        // User input grid size
+        this.inputRows = 15;
+        this.inputCols = 15;
+        this.inputSquareSize = 35;
+        this.inputGridHeight = (this.inputRows * this.inputSquareSize);
+        this.inputGridWidth = (this.inputCols * this.inputSquareSize);
+        this.inputGrid = [];
+        // Initialize the stack for square selection history
+        this.selectionHistory = [];
+        // Track shape titles displaying to hide later
+
+        // layout variables
+        this.tbPadding = 50; // top bottom
+        this.lrPadding = 25; // left right
+
+        // stores the labels, inputs, and buttons for the screens
+        this.inputUIElements = {};
+        this.shapeTitleElements = [];
+        this.annealUIElements = {};
+
+        // setup ui elements
+        this.initInputUI()
+        this.initAnnealUI();
+        this.resetInputGrid();
+    }
+
+    initInputUI() {
+        // Create the title input field
+        let titleLabel = createP('Title:');
+        titleLabel.position(this.lrPadding, height + 5);
+        let titleInput = createInput('');
+        titleInput.position(this.lrPadding + 40, height + 20);
+        titleInput.attribute('size', '20');
+
+        // Create the depth input field
+        let depthLabel = createP('Depth:');
+        depthLabel.position(this.lrPadding, height + 45);
+        let depthInput = createInput('');
+        depthInput.position(this.lrPadding + 50, height + 60);
+        depthInput.attribute('size', '8');
+
+        // Create the UNDO button
+        let undoButton = createButton('UNDO');
+        undoButton.position(titleInput.x + titleInput.width + 10, height + 20);
+        undoButton.mousePressed(() => this.undoLastSelection());
+
+        // Create the SAVE button
+        let saveButton = createButton('SAVE');
+        saveButton.position(undoButton.x + saveButton.width + 10, height + 20);
+        saveButton.mousePressed(() => this.saveShape());
+
+        // Create the NEXT button
+        let nextButton = createButton('NEXT');
+        nextButton.attribute('disabled', ''); // until 2 shapes are saved
+        nextButton.position(saveButton.x + nextButton.width + 10, height + 20);
+        nextButton.mousePressed(() => this.nextToAnneal());
+
+        // Create the LOAD EXAMPLE button
+        let exampleButton = createButton('LOAD EXAMPLE');
+        exampleButton.position(nextButton.x + exampleButton.width + 10, height + 20);
+        exampleButton.mousePressed(() => this.loadExampleShapes());
+
+        // store elements to manage
+        this.inputUIElements = {
+            // input fields and labels
+            titleLabel,
+            titleInput,
+            depthLabel,
+            depthInput,
+            // buttons
+            undoButton,
+            saveButton,
+            nextButton,
+            exampleButton
+        }
+    }
+
+    initAnnealUI() {
+        let reannealButton = createButton('Re-anneal');
+        reannealButton.position(25, height + 20);
+        reannealButton.mousePressed(() => this.reAnneal());
+        reannealButton.hide(); // Initially hidden
+
+        this.annealUIElements = {
+            reannealButton
+        };
+    }
+
+    // show and hide screens functions
+    showInputUI() {
+        Object.values(this.inputUIElements).forEach(element => element.show());
+    }
+
+    hideInputUI() {
+        Object.values(this.inputUIElements).forEach(element => element.hide());
+    }
+
+    showAnnealUI() {
+        Object.values(this.annealUIElements).forEach(element => element.show());
+    }
+
+    hideAnnealUI() {
+        Object.values(this.annealUIElements).forEach(element => element.hide());
+    }
+
+    // button handlers
+    reAnneal() {
+
+    }
+
+    selectInputSquare(mouseX, mouseY) {
+        let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
+        let yValid = mouseY >= this.tbPadding && mouseY <= this.inputGridHeight + this.tbPadding;
+        if (xValid && yValid) {
+
+            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputSquareSize); // Column
+            let gridY = Math.floor((this.inputGridHeight + this.tbPadding - mouseY) / this.inputSquareSize); // Row
+
+            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+                if (!this.inputGrid[gridY][gridX]) {
+                    this.inputGrid[gridY][gridX] = true;
+                    this.drawInputGrid();
+
+                    // Save the selection to history stack
+                    this.selectionHistory.push({ x: gridX, y: gridY });
+                }
+            }
+        }
+    }
+
+    undoLastSelection() {
+        if (this.selectionHistory.length > 0) {
+            const lastSelection = this.selectionHistory.pop();
+            this.inputGrid[lastSelection.y][lastSelection.x] = false;
+            this.drawInputGrid();
+        }
+    }
+
+    saveShape() {
+        // check if the shape is valid before saving
+        // check if the bottom has at least 1 clicked inout square
+        if (this.inputGrid[0].includes(true)) {
+            // find the shape title
+            let titleValue = this.inputUIElements.titleInput.value();
+            if (titleValue === '') { // no title entered by user
+                titleValue = `shape-${shapes.length + 1}`;
+            }
+
+            let depthValue = this.inputUIElements.depthInput.value();
+            if (depthValue === '') { // no depth entered by user
+                console.error('no depth entered');
+            }
+
+            // save the shape
+            let newShape = new Shape(titleValue);
+            newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
+            shapes.push(newShape);
+            // console log the json
+            console.log(JSON.stringify(shapes));
+
+            // Reset active shape and UI
+            this.resetCanvas();
+
+            // Enable the NEXT button if 2 shapes have been saved
+            if (shapes.length > 1) {
+                this.inputUIElements.nextButton.removeAttribute('disabled');
+            }
+        } else {
+            alert('Shape must have an input square selected on the bottom row.');
+        }
+    }
+
+    nextToAnneal() {
+        // 1. prep the inputted shapes for annealing the first solution
+        // - wrap user inputted shapes with extra position
+        // - gives each solution unique position data, while sharing the same shape data
+        shapesPos = [];
+        for (let i = 0; i < shapes.length; i++) {
+            let shapeData = {
+                data: shapes[i],
+                // pos is bottom left corner of the shape, including overhangs
+                posX: 0,
+                posY: 0,
+            };
+            shapesPos.push(shapeData);
+        }
+
+        // 2. change to the next user screen (annealing)
+        // Set inputMode to false
+        inputMode = false;
+        // Hide all UI elements
+        this.hideInputUI();
+        // hide titles of shapes on screen
+        this.clearShapeTitles();
+
+        // loop to load the new screen
+        loop();
+    }
+
+    loadExampleShapes() {
+        // loop preloaded data and populate shapes array
+        shapes = [];
+        for (let key in shapeData) {
+            if (shapeData.hasOwnProperty(key)) {
+                let inputShape = shapeData[key];
+                // create shape
+                let newShape = new Shape(inputShape.title);
+                newShape.saveUserInput(inputShape.inputGrid, parseInt(inputShape.shapeDepth));
+                shapes.push(newShape);
+            }
+        }
+
+        this.resetCanvas();
+        this.inputUIElements.nextButton.removeAttribute('disabled');
+    }
+
+    // input grid control functions
+    resetCanvas() {
+        background(255);
+        this.inputUIElements.titleInput.value('');
+        this.inputUIElements.depthInput.value('');
+        this.resetInputGrid();
+        this.drawInputGrid();
+        this.displayShapeTitles();
+    }
+
+    resetInputGrid() {
+        for (let i = 0; i < this.inputRows; i++) {
+            this.inputGrid[i] = [];
+            for (let j = 0; j < this.inputCols; j++) {
+                this.inputGrid[i][j] = false;
+            }
+        }
+    }
+
+    drawInputGrid() {
+        for (let x = 0; x < this.inputRows; x++) {
+            for (let y = 0; y < this.inputCols; y++) {
+                // draw input square
+                if (this.inputGrid[y][x]) {
+                    fill(0); // Fill black if the rect is clicked
+                } else {
+                    fill(255); // Fill white
+                }
+
+                let rectX = x * this.inputSquareSize
+                let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize); // draw from bottom up
+
+                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputSquareSize, this.inputSquareSize);
+            }
+        }
+    }
+
+    displayShapeTitles() {
+        this.clearShapeTitles();
+
+        let startY = this.inputUIElements.titleInput.y + 75;
+        for (let i = 0; i < shapes.length; i++) {
+            let titleIndex = shapes.length - i - 1; // list shapes most recent first
+            let shapeTitle = createP(`${shapes[titleIndex].title}`);
+            shapeTitle.position(50, startY + (i * 25));
+            this.shapeTitleElements.push(shapeTitle); // Store the element
+        }
+    }
+
+    clearShapeTitles() {
+        for (let element of this.shapeTitleElements) {
+            element.remove(); // Remove the element from the screen
+        }
+        this.shapeTitleElements = []; // Clear the array
+    }
+}

@@ -4,6 +4,7 @@ let shapes = [];
 let shapesPos = [];
 let annealing;
 let newCase;
+let ui;
 let inputMode = true; // don't modify. used for screen switching
 let annealingComplete = false;
 let currentSolution;
@@ -23,14 +24,14 @@ function setup() {
     createCanvas(canvasWidth, canvasHeight);
 
     if (inputMode == true) {
-        shapeInput = new ShapeInput(); // setup buttons and input fields
+        ui = new UI(); // setup buttons and input fields
     }
 }
 
 function draw() {
     if (inputMode) {
         // display the input grid
-        shapeInput.drawInputGrid();
+        ui.drawInputGrid();
         noLoop(); // don't loop input screen
 
     } else if (!annealing) {
@@ -130,12 +131,12 @@ function keyPressed() {
 
 function mousePressed() {
     if (inputMode) {
-        shapeInput.selectInputSquare(mouseX, mouseY);
+        ui.selectInputSquare(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
     if (inputMode) {
-        shapeInput.selectInputSquare(mouseX, mouseY);
+        ui.selectInputSquare(mouseX, mouseY);
     }
 }
