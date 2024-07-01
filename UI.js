@@ -145,7 +145,7 @@ class UI {
 
     }
 
-    selectInputSquare(mouseX, mouseY) {
+    selectInputSquare(mouseX, mouseY, blockSelect = false) {
         let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
         let yValid = mouseY >= this.tbPadding && mouseY <= this.inputGridHeight + this.tbPadding;
         if (xValid && yValid) {
@@ -154,9 +154,14 @@ class UI {
             let gridY = Math.floor((this.inputGridHeight + this.tbPadding - mouseY) / this.inputSquareSize); // Row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                if (!this.inputGrid[gridY][gridX]) {
+                if (blockSelect) {
+                    // used when dragging mouse
                     this.inputGrid[gridY][gridX] = true;
-                    this.drawInputGrid();
+                } else {
+                    // used when clicking mouse
+                    this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
+                }
+                this.drawInputGrid();
 
                     // Save the selection to history stack
                     this.selectionHistory.push({ x: gridX, y: gridY });

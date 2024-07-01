@@ -147,6 +147,6 @@ function mousePressed() {
 
 function mouseDragged() {
     if (inputScreen) {
-        ui.selectInputSquare(mouseX, mouseY);
+        ui.selectInputSquare(mouseX, mouseY, true);
     }
 }
