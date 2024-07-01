@@ -1,5 +1,5 @@
-let canvasWidth = 625;
-let canvasHeight = 625;
+let canvasWidth = 700;
+let canvasHeight = 700;
 let shapes = [];
 let shapesPos = [];
 let annealing;
@@ -7,7 +7,6 @@ let newCase;
 let inputMode = true; // don't modify. used for screen switching
 let annealingComplete = false;
 let currentSolution;
-let topLabel = "";
 
 // diagnostic toggles
 let useExampleSolution = false;
@@ -70,9 +69,6 @@ function updateDisplay(currentSolution, iteration, temperature) {
     // show shapes, grid, and annealing scores
     currentSolution.showLayout()
     currentSolution.showScores();
-
-    textAlign(LEFT);
-    text(topLabel, 10, 10);
 }
 
 function displayResult() {

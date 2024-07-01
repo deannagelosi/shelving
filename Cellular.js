@@ -7,9 +7,11 @@ class Cellular {
         this.layoutWidth = this.layout[0].length;
         this.shapes = _solution.shapes; // array of shapes and their positions
         this.squareSize = _solution.squareSize; // size of each square in the layout
-        this.buffer = this.squareSize; // left & bottom buffer when displaying
+        this.buffer = _solution.buffer; // left & bottom buffer when displaying
+        this.yPadding = _solution.yPadding;
+        this.xPadding = _solution.xPadding;
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
-        this.scoreRecursion = 3; // how many extra steps to look ahead when calculating opportunity score
+        this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
         this.numAlive;
     }
 
@@ -109,8 +111,8 @@ class Cellular {
                 for (let y = 0; y < this.layoutHeight; y++) {
                     if (this.layout[y][x].terrainValue != this.maxTerrain) {
                         // calc text position, finding y from bottom up
-                        let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
-                        let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
                         // display the terrain value
                         text(this.layout[y][x].terrainValue, rectX, rectY);
                     }
@@ -531,8 +533,8 @@ class Cellular {
                         let cellColor = this.strainColor(cell.strain);
                         fill(cellColor);
                         noStroke();
-                        let dotX = (x * this.squareSize) + this.buffer;
-                        let dotY = (canvasHeight - this.buffer) - (y * this.squareSize);
+                        let dotX = (x * this.squareSize) + this.buffer + this.xPadding;
+                        let dotY = ((canvasHeight - this.yPadding) - this.buffer) - (y * this.squareSize);
                         circle(dotX, dotY, 12);
                     }
                 }
@@ -595,10 +597,10 @@ class Cellular {
             let [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
 
             // calculate canvas coordinates
-            let startX = (x1 * this.squareSize) + this.buffer;
-            let startY = (canvasHeight - this.buffer) - (y1 * this.squareSize);
-            let endX = (x2 * this.squareSize) + this.buffer;
-            let endY = (canvasHeight - this.buffer) - (y2 * this.squareSize);
+            let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
+            let startY = ((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize);
+            let endX = (x2 * this.squareSize) + this.buffer + this.xPadding;
+            let endY = ((canvasHeight - this.yPadding) - this.buffer) - (y2 * this.squareSize);
 
             // set line color based on strain
             let lineColor;

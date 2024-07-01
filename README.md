@@ -121,6 +121,16 @@ Step 3: Choose a Remaining Direction
 Notes:
 
 - grow till no alive cells
-- see other dead cells like low paths in opp scoring
-- set out of bounds to mirror terrain level / path score next to it, not just 1
 - test diff recurse levels nad stop when # of total boards isn't improving
+
+Annealing:
+
+- have refine while loop keep going as long as score is improving
+- add diagonal moves
+
+Know Bugs:
+
+- bottom of shape used to detect bottom row float uses shape width, not actual bottoms
+  - 1. look at how bottoms are found in Cellular makeInitialCells() using overhangShift()
+  - 2. look at how bottoms are found in Solution calcScore(), roughly line 344
+  - 3. use overhandShift() version in Solution to see when a shape actual bottom is the lowest and un-occluded, not the width

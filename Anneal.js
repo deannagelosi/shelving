@@ -14,7 +14,7 @@ class Anneal {
         this.initialTemp = 10000;
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
-        this.reheatingBoost = 1.5; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
+        this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
         this.displayInterval = 50; // how often to update the display with a new solution
     }
 
@@ -24,7 +24,6 @@ class Anneal {
         // - refinement phase: long anneal the best solution to improve it further
 
         // == multi-start phase == //
-        topLabel = "Multi-start phase: Finding Initial Solution";
         const multiStartPromises = [];
         for (let start = 0; start < this.numStarts; start++) {
             // -- configure the annealing process for multi-starts -- //
@@ -50,7 +49,6 @@ class Anneal {
         console.log("Best solution:", bestStartSolution.score);
 
         // == refinement phase == //
-        topLabel = "Refinement phase: Annealing Solution";
         // -- configure the annealing process for refinement -- //
         let refineConfig = {
             initialTemp: this.initialTemp * 0.1, // lower starting temp for refinement
@@ -85,7 +83,7 @@ class Anneal {
         let temperature = config.initialTemp;
         let coolingRate = config.initialCoolingRate;
         let maxIterations = config.maxIterations;
-        console.log("cooling:", coolingRate, "initTemp: ", config.initialTemp, "max:", maxIterations, "reheat count:", config.reheatCounter);
+        // console.log("cooling:", coolingRate, "initTemp: ", config.initialTemp, "max:", maxIterations, "reheat count:", config.reheatCounter);
 
         // initialize the annealing process with the given solution and parameters
         let currentSolution = _initialSolution;

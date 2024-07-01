@@ -3,7 +3,9 @@ class Solution {
         this.shapes = _shapes; // shapes with position data
         this.layout = [[]]; // 2D array of shapes that occupy the layout
         this.squareSize;
-        this.buffer; // left & bottom buffer when displaying
+        this.buffer; // buffer makes room for line numbers in dev mode
+        this.xPadding; // padding centers the solution in the canvas
+        this.yPadding;
         this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
         this.score;
         this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
@@ -249,10 +251,17 @@ class Solution {
         }
 
         // update squareSize for this layout
-        let squareHeight = canvasHeight / this.layout.length - 1; // -1 makes room for buffer
-        let squareWidth = canvasWidth / this.layout[0].length - 1; // -1 makes room for buffer
+        let squareHeight = canvasHeight / this.layout.length - 2; // -2 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / this.layout[0].length - 2; // -2 makes room for left/right buffer
         this.squareSize = Math.min(squareHeight, squareWidth);
+
+        // buffer makes room for the line numbers in dev mode
+        // padding centers the solution in the canvas
         this.buffer = this.squareSize;
+        let layoutHeight = this.layout.length;
+        let layoutWidth = this.layout[0].length;
+        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.squareSize;
+        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.squareSize;
 
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
@@ -510,8 +519,8 @@ class Solution {
                 // display column number
                 strokeWeight(0);
                 fill(x % 5 === 0 ? "pink" : 100);
-                let textX = (x * this.squareSize) + this.buffer + txtXOffset;
-                let textY = (canvasHeight - this.squareSize) + txtYOffset;
+                let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+                let textY = ((canvasHeight - this.yPadding) - this.squareSize) + txtYOffset;
                 text(x, textX, textY);
             }
 
@@ -520,8 +529,8 @@ class Solution {
                     // display row number
                     strokeWeight(0);
                     fill(y % 5 === 0 ? "pink" : 100);
-                    let textX = txtXOffset;
-                    let textY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                    let textX = this.xPadding + txtXOffset;
+                    let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
                     text(y, textX, textY);
                 }
 
@@ -538,12 +547,9 @@ class Solution {
                         fill(shapeColor);
                     }
                 } else if (this.layout[y][x].shapes.length > 1) {
-                    if (y == 0 && x == 14) {
-                        console.log(this.layout[y][x])
-                    }
-                    // color in collision 
-                    // if devMode, color shape and boundary collisions
-                    // if not devMode, only color collisions with shapes
+                    // color on collision 
+                    // - if devMode, color shape and boundary collisions
+                    // - if not devMode, only color collisions with shapes
                     if (!devMode && this.layout[y][x].isShape.filter(s => s === true).length >= 2) {
                         fill(collisionColor);  // collision
                     }
@@ -558,8 +564,10 @@ class Solution {
                     }
                 }
 
-                let rectX = (x * this.squareSize) + this.buffer;
-                let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+                // buffer makes room for the line numbers in dev mode
+                // padding centers the solution in the canvas
+                let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+                let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
 
                 stroke(lineColor);
                 strokeWeight(0.75);
@@ -585,8 +593,8 @@ class Solution {
             for (let x = 0; x < designWidth; x++) {
                 for (let y = 0; y < designHeight; y++) {
                     // find position for score or shape title[0] text, finding y from bottom up
-                    let rectX = (x * this.squareSize) + this.buffer + txtXOffset;
-                    let rectY = (canvasHeight - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                    let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+                    let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
 
                     if (devMode) {
 
