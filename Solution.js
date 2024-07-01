@@ -491,7 +491,7 @@ class Solution {
         } else if (!devMode) {
             lineColor = "rgb(198, 198, 197)";
             bkrdColor = "rgb(229, 229, 229)";
-            boundaryColor = "rgb(209, 209, 209)";
+            boundaryColor = bkrdColor; // old: "rgb(209, 209, 209)";
             shapeColor = "grey";
             collisionColor = "rgb(135, 160, 103)"
         }
@@ -575,7 +575,7 @@ class Solution {
                             // display the anneal score if its empty of shapes
                             text(this.layout[y][x].annealScore, rectX, rectY);
 
-                        } 
+                        }
                         // else if (this.layout[y][x].annealScore == 0 && this.layout[y][x].shapes.length > 0) {
                         //     // display the first char of the shape title if there is a shape
                         //     let shapeID = this.layout[y][x].shapes[0].data.title[0]

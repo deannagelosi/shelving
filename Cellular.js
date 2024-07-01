@@ -533,7 +533,7 @@ class Cellular {
                         noStroke();
                         let dotX = (x * this.squareSize) + this.buffer;
                         let dotY = (canvasHeight - this.buffer) - (y * this.squareSize);
-                        circle(dotX, dotY, 10);
+                        circle(dotX, dotY, 12);
                     }
                 }
             }
@@ -601,9 +601,15 @@ class Cellular {
             let endY = (canvasHeight - this.buffer) - (y2 * this.squareSize);
 
             // set line color based on strain
-            let lineColor = this.strainColor(strain);
+            let lineColor;
+            if (devMode) {
+                lineColor = this.strainColor(strain);
+
+            } else {
+                lineColor = "rgb(175, 141, 117)";
+            }
             stroke(lineColor);
-            strokeWeight(4);  // adjust line thickness as needed
+            strokeWeight(5);  // adjust line thickness as needed
 
             // draw the line
             line(startX, startY, endX, endY);

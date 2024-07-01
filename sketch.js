@@ -12,7 +12,7 @@ let topLabel = "";
 // diagnostic toggles
 let useExampleSolution = false;
 let enableCellular = true;
-let devMode = true;
+let devMode = false;
 let numGrow = 0;
 
 function preload() {
@@ -47,11 +47,6 @@ function draw() {
             startAnnealing();
         }
     }
-    // else if (!annealingComplete) {
-    //     // annealing is in progress, update display if needed
-    //     background(220);
-    //     text("Annealing in progress...", width/2, height/2);
-    // }
 }
 
 async function startAnnealing() {
@@ -116,10 +111,20 @@ function keyPressed() {
             newCase.displaySVGExport();
             newCase.saveSVGExport();
         } else if (key === 'a') {
-            // todo: remove this or move to dev mode
-            // advance one growth at a time
+            // advance one growth at a time in dev mode
             if (devMode) {
                 numGrow++
+                displayResult();
+            }
+        } else if (key === 'd') {
+            // toggle dev mode on and off
+            devMode = !devMode;
+
+            if (devMode == true) {
+                numGrow = 0;
+            }
+
+            if (annealingComplete) {
                 displayResult();
             }
         }
