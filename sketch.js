@@ -8,6 +8,7 @@ let ui;
 let inputScreen = true; // don't modify. used for screen switching
 let annealingComplete = false;
 let currentSolution;
+let isMousePressed = false;
 
 // diagnostic toggles
 let useExampleSolution = false;
@@ -140,13 +141,18 @@ function keyPressed() {
 }
 
 function mousePressed() {
+    isMousePressed = true;
     if (inputScreen) {
         ui.selectInputSquare(mouseX, mouseY);
     }
 }
 
+function mouseReleased() {
+    isMousePressed = false;
+}
+
 function mouseDragged() {
-    if (inputScreen) {
+    if (inputScreen && isMousePressed) {
         ui.selectInputSquare(mouseX, mouseY, true);
     }
 }

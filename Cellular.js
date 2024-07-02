@@ -384,9 +384,13 @@ class Cellular {
                                 } else if (growingRight && rightValid) {
                                     newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
                                     continue;
+                                } else {
+                                    console.error("Unable to break tie in growth at x: ", x, " y: ", y);
+                                    // pick the first option
+                                    newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                                    continue;
                                 }
 
-                                console.error("Unable to break tie in growth at x: ", x, " y: ", y);
                             }
                         }
                         console.error("Error growing at x: ", x, " y: ", y, " with parentCell: ", parentCell, " and options: ", options);

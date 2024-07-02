@@ -12,6 +12,10 @@ class UI {
         // this.selectionHistory = [];
         // Track shape titles displaying to hide later
 
+        // manage debounce
+        this.lastClickTime = 0;
+        this.clickDelay = 200; // milliseconds
+
         // layout variables
         this.tbPadding = this.inputSquareSize; // top bottom
         this.lrPadding = this.inputSquareSize / 2; // left right
@@ -46,7 +50,7 @@ class UI {
         // let undoButton = createButton('UNDO');
         // undoButton.position(titleInput.x + titleInput.width + 10, height + 20);
         // undoButton.mousePressed(() => this.undoLastSelection());
-        
+
         // Create the SAVE button
         let saveButton = createButton('SAVE');
         // saveButton.position(undoButton.x + saveButton.width + 10, height + 20);
@@ -129,7 +133,6 @@ class UI {
     }
 
     showAnnealUI() {
-        console.log("ac: ", annealingComplete, " dm: ", devMode)
         Object.values(this.annealUIElements).forEach(element => element.show());
 
         this.annealUIElements.growthText.hide();
@@ -151,23 +154,22 @@ class UI {
         let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
         let yValid = mouseY >= this.tbPadding && mouseY <= this.inputGridHeight + this.tbPadding;
         if (xValid && yValid) {
-
             let gridX = Math.floor((mouseX - this.lrPadding) / this.inputSquareSize); // Column
             let gridY = Math.floor((this.inputGridHeight + this.tbPadding - mouseY) / this.inputSquareSize); // Row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                if (blockSelect) {
-                    // used when dragging mouse
-                    this.inputGrid[gridY][gridX] = true;
-                } else {
-                    // used when clicking mouse
-                    this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
+                let currentTime = millis();
+                if (blockSelect || (currentTime - this.lastClickTime > this.clickDelay)) {
+                    if (blockSelect) {
+                        // used when dragging mouse
+                        this.inputGrid[gridY][gridX] = true;
+                    } else {
+                        // used when clicking mouse
+                        this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
+                        this.lastClickTime = currentTime;
+                    }
+                    this.drawInputGrid();
                 }
-                this.drawInputGrid();
-
-                // Save the selection to history stack
-                // this.selectionHistory.push({ x: gridX, y: gridY });
-                // }
             }
         }
     }
@@ -213,6 +215,7 @@ class UI {
         } else {
             alert('Shape must have an input square selected on the bottom row.');
         }
+        isMousePressed = false;
     }
 
     nextToAnneal() {
@@ -238,7 +241,7 @@ class UI {
         // hide titles of shapes on screen
         this.clearShapeTitles();
 
-        // loop to load the new screen
+        isMousePressed = false;
         loop();
     }
 
@@ -254,6 +257,10 @@ class UI {
                 shapes.push(newShape);
             }
         }
+
+        setTimeout(() => {
+            isMousePressed = false;
+        }, this.clickDelay / 2); // Delay in milliseconds
 
         this.resetCanvas();
         this.inputUIElements.nextButton.removeAttribute('disabled');
