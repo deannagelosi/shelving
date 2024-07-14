@@ -627,7 +627,7 @@ class Cellular {
         // for shapes with overhang, find the bottom corner of the shape
         // posX is the x-coordinate of the leftmost cell of the shape in the full layout
         let posX = shape.posX;
-        let bottomRow = shape.data.boundaryShape[0];
+        let bottomRow = shape.data.bufferShape[0];
 
         let leftShift = 0;
         while (bottomRow[leftShift] != true) {

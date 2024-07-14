@@ -143,8 +143,8 @@ class Solution {
 
         let totalArea = 0;
         for (let i = 0; i < this.shapes.length; i++) {
-            let shapeHeight = this.shapes[i].data.boundaryHeight
-            let shapeWidth = this.shapes[i].data.boundaryWidth;
+            let shapeHeight = this.shapes[i].data.bufferHeight
+            let shapeWidth = this.shapes[i].data.bufferWidth;
             totalArea += (shapeHeight * shapeWidth);
         }
         // give extra space and find the closest rectangle that can hold that area
@@ -181,11 +181,11 @@ class Solution {
                 terrainValue: 0
             };
 
-            for (let y = 0; y < shape.data.boundaryHeight; y++) { // loop the boundary shape height and width
-                for (let x = 0; x < shape.data.boundaryWidth; x++) {
+            for (let y = 0; y < shape.data.bufferHeight; y++) { // loop the boundary shape height and width
+                for (let x = 0; x < shape.data.bufferWidth; x++) {
 
                     // placing shapes, and growing the layout if shapes are placed outside of initial bounds
-                    if (shape.data.boundaryShape[y][x]) {
+                    if (shape.data.bufferShape[y][x]) {
 
                         // grow the layout to fit the shape
                         let xInBounds = shape.posX + x + 1 < this.layout[0].length;
@@ -214,7 +214,7 @@ class Solution {
 
                         // mark if occupied by a shape or the shape's boundary
                         let shapeInBounds = y < shape.data.shape.length && x < shape.data.shape[0].length;
-                        this.layout[shape.posY + y][shape.posX + x + 1].isShape.push(shapeInBounds && shape.data.shape[y][x]);
+                        this.layout[shape.posY + y][shape.posX + x].isShape.push(shapeInBounds && shape.data.shape[y][x]);
                     }
                 }
             }
@@ -350,7 +350,7 @@ class Solution {
         let totalBottomEmptyRow = 0; // sum of anneal scores on all full empty rows under shapes
         for (let shape of this.shapes) {
             let bottomY = shape.posY;
-            let bottomWidth = shape.data.boundaryShape[0].filter(Boolean).length;
+            let bottomWidth = shape.data.bufferShape[0].filter(Boolean).length;
             let isBottomShape = true; // stays true if shape has no shapes under it
             let shapeBottomEmptyRowScore = 0;
 
