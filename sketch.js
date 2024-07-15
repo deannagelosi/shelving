@@ -17,8 +17,15 @@ let devMode = false;
 let numGrow = 0;
 
 function preload() {
-    // shapeData = loadJSON('data/cardboard.json');
-    shapeData = loadJSON('data/sunny-shapes.json');
+    // load the example shape data
+    loadData('data/sunny-shapes.json').then(json => {
+        shapeData = json;
+    });
+}
+
+async function loadData(url) {
+    const response = await fetch(url);
+    return await response.json();
 }
 
 function setup() {

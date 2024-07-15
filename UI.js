@@ -2,7 +2,8 @@ class UI {
     constructor() {
         // input control variables
         // User input grid size
-        this.inputRows = 15;
+        let maxInputInches = 10;
+        this.inputRows = maxInputInches * 4; // 0.25" squares input fidelity
         this.inputCols = this.inputRows;
         this.inputSquareSize = Math.floor(Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1));
         this.inputGridHeight = (this.inputRows * this.inputSquareSize);
@@ -174,14 +175,6 @@ class UI {
         }
     }
 
-    // undoLastSelection() {
-    //     if (this.selectionHistory.length > 0) {
-    //         const lastSelection = this.selectionHistory.pop();
-    //         this.inputGrid[lastSelection.y][lastSelection.x] = false;
-    //         this.drawInputGrid();
-    //     }
-    // }
-
     saveShape() {
         // check if the shape is valid before saving
         // check if the bottom has at least 1 clicked inout square
@@ -203,7 +196,6 @@ class UI {
             newShape.saveUserInput([...this.inputGrid], 5); // save a copy of the input grid
             shapes.push(newShape);
             // console log the json
-            console.log(JSON.stringify(shapes));
 
             // Reset active shape and UI
             this.resetCanvas();
@@ -248,16 +240,14 @@ class UI {
     loadExampleShapes() {
         // loop preloaded data and populate shapes array
         shapes = [];
-        for (let key in shapeData) {
-            if (shapeData.hasOwnProperty(key)) {
-                let inputShape = shapeData[key];
-                // create shape
-                let newShape = new Shape(inputShape.title);
-                newShape.saveUserInput(inputShape.inputGrid, parseInt(inputShape.shapeDepth));
-                shapes.push(newShape);
-            }
+        for (let shape of shapeData) {
+            // create new shape from saved data
+            let newShape = new Shape(shape.title);
+            newShape.saveUserInput(shape.inputGrid, parseInt(shape.shapeDepth));
+            shapes.push(newShape);
         }
 
+        // disable button press to prevent drag selection being left on
         setTimeout(() => {
             isMousePressed = false;
         }, this.clickDelay / 2); // Delay in milliseconds
