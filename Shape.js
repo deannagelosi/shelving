@@ -5,9 +5,9 @@ class Shape {
 
         // shape grids are stored as 2D arrays of booleans
         // - occupied squares as true, unoccupied as false
-        this.shape = [[]]; // twice the width and height as the rounded up shape
-        this.roundedUpShape = [[]]; // half the width and height as the shape
-        this.bufferShape = [[]]; // rounded + one extra square on right and top
+        this.shape = [[]]; // a trimmed version of the input grid
+        this.lowPolyShape = [[]]; // 1/4th the width and height as shape, scaled to 1/4th the resolution
+        this.bufferShape = [[]]; // low poly + one extra square on right and top
         this.bufferHeight;
         this.bufferWidth;
 
@@ -47,34 +47,58 @@ class Shape {
             }
         }
 
-        // create the rounded up shape - map it to a lower resolution grid
-        // - ie. a 2x2 grid to a 1x1 grid. if any square is true, the whole 2x2 grid is true
-        this.roundedUpShape = [];
-        this.roundedUpShape = this.shape;
-        // todo: implement 2x resolution input grids
-        // for (let y = 0; y < this.shape.length; y += 2) {
-        //     let newRow = [];
-        //     for (let x = 0; x < this.shape[y].length; x += 2) {
-        //         let isTrue = false;
-        //         for (let i = 0; i < 2; i++) {
-        //             for (let j = 0; j < 2; j++) {
-        //                 if (this.shape[y + i][x + j] == true) {
-        //                     isTrue = true;
-        //                 }
-        //             }
-        //         }
-        //         newRow.push(isTrue);
-        //     }
-        //     this.roundedUpShape.push(newRow);
-        // }
+        // create the low poly shape - scale the shape down to 1/4th the resolution
+        // - first pad the shape with false squares to make it divisible by 4
+        let paddedShape = [];
+        const width = this.shape[0].length;
+        const height = this.shape.length;
+        const paddedWidth = Math.ceil(width / 4) * 4;
+        const paddedHeight = Math.ceil(height / 4) * 4;
+        const paddingLeft = Math.floor((paddedWidth - width) / 2);
+        const paddingRight = paddedWidth - width - paddingLeft;
+        const paddingBottom = paddedHeight - height;
 
+        // pad the shape on the left and right
+        this.shape.forEach(row => {
+            const newRow = new Array(paddingLeft).fill(false)
+                .concat(row)
+                .concat(new Array(paddingRight).fill(false));
+            paddedShape.push(newRow);
+        });
+        // pad the shape on the top
+        for (let i = 0; i < paddingBottom; i++) {
+            paddedShape.push(new Array(paddedWidth).fill(false));
+        }
+        // reduce the resolution by 4x
+        this.lowPolyShape = [];
+        const lowPolyHeight = Math.floor(paddedShape.length / 4);
+        const lowPolyWidth = Math.floor(paddedShape[0].length / 4);
+        for (let y = 0; y < lowPolyHeight; y++) {
+            const row = [];
+            for (let x = 0; x < lowPolyWidth; x++) {
+                let filledCells = 0;
+                for (let dy = 0; dy < 4; dy++) {
+                    for (let dx = 0; dx < 4; dx++) {
+                        if (paddedShape[y * 4 + dy][x * 4 + dx]) {
+                            filledCells++;
+                        }
+                    }
+                }
+                if (filledCells > 0) {
+                    row.push(true);
+                } else {
+                    row.push(false);
+                }
+            }
+            this.lowPolyShape.push(row);
+        }
 
         // create the buffer shape - add 1 square to right and top edges of rounded up shape
         // 1. make buffer shape larger by 1 on x and y to make room
         // 2. set any voids and under hang squares as true and add trues to the right and top edges
         this.bufferShape = [];
-        for (let y = 0; y < this.roundedUpShape.length; y++) {
-            let newRow = [...this.roundedUpShape[y]];
+        for (let y = 0; y < this.lowPolyShape.length; y++) {
+            let newRow = [...this.lowPolyShape[y]];
             newRow.push(false); // add extra space on the right
             let firstTrue = newRow.indexOf(true);
             let lastTrue = newRow.lastIndexOf(true);
