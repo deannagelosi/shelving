@@ -29,7 +29,8 @@ async function loadData(url) {
 }
 
 function setup() {
-    createCanvas(canvasWidth, canvasHeight);
+    let canvasElement = createCanvas(canvasWidth, canvasHeight);
+    canvasElement.parent('canvas-container');
 
     if (inputScreen == true) {
         ui = new UI(); // setup buttons and input fields

@@ -1,32 +1,71 @@
-html, body {
+* {
+  /* border: 1px solid red; */
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
-canvas {
-  display: block;
+.main-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-#ui-container {
-  position: absolute;
-  top: 0;
-  left: 0;
+#canvas-container {
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ui-container {
   padding: 10px;
   box-sizing: border-box;
 }
 
-#input-container, #anneal-container {
+.input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
 }
 
-#input-container > *, #anneal-container > * {
+.anneal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   margin-bottom: 10px;
+  width: 100%;
+}
+
+.input-element,
+.anneal-element {
+  margin-bottom: 10px;
+  margin: 5px;
+}
+
+button.input-element {
+  padding: 5px 10px;
 }
 
 #shapeTitleContainer {
   background-color: #f0f0f0;
-  padding: 5px;
+  height: 60px;
+  width: 100%;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+  max-width: 600px;
 }
 
 #shapeTitleContainer p {

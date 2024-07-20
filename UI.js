@@ -26,69 +26,70 @@ class UI {
         this.shapeTitleElements = [];
         this.annealUIElements = {};
 
-        // Create and store reference to the main container
-        this.mainContainer = select('#ui-container');
-        if (!this.mainContainer) {
-            this.mainContainer = createDiv();
-            this.mainContainer.id('ui-container');
+        // Update mainContainer reference
+        this.mainContainer = select('#main-container');
+
+        // Update uiContainer reference
+        this.uiContainer = select('#ui-container');
+        if (!this.uiContainer) {
+            this.uiContainer = createDiv();
+            this.uiContainer.id('ui-container');
         }
 
-        // Create sub-containers
+        // Create screen containers inside uiContainer
         this.inputContainer = createDiv();
-        this.inputContainer.parent(this.mainContainer);
+        this.inputContainer.parent(this.uiContainer);
         this.inputContainer.id('input-container');
 
         this.annealContainer = createDiv();
-        this.annealContainer.parent(this.mainContainer);
+        this.annealContainer.parent(this.uiContainer);
         this.annealContainer.id('anneal-container');
 
-        // move UI elements into main container
-        this.initInputUI()
+        // Add classes to containers
+        this.mainContainer.addClass('main-container');
+        this.uiContainer.addClass('ui-container');
+        this.inputContainer.addClass('input-container');
+        this.annealContainer.addClass('anneal-container');
+
+        // Initialize UI elements
+        this.initInputUI();
         this.initAnnealUI();
         this.resetInputGrid();
     }
 
     initInputUI() {
+        // Create a new div for input fields and buttons
+        let buttonRow = createDiv();
+        buttonRow.parent(this.inputContainer);
+        buttonRow.addClass('button-row');
+
         // Create the title input field
         let titleLabel = createP('Title:');
-        titleLabel.parent(this.inputContainer);
+        titleLabel.parent(buttonRow).addClass('input-label');
         let titleInput = createInput('');
-        titleInput.parent(this.inputContainer);
+        titleInput.parent(buttonRow).addClass('input-element');
         titleInput.attribute('size', '20');
-
-        // // Create the depth input field
-        // let depthLabel = createP('Depth:');
-        // depthLabel.position(this.lrPadding, height + 45);
-        // let depthInput = createInput('');
-        // depthInput.position(this.lrPadding + 50, height + 60);
-        // depthInput.attribute('size', '8');
 
         // Create the SAVE button
         let saveButton = createButton('SAVE');
-        saveButton.parent(this.inputContainer);
+        saveButton.parent(buttonRow).addClass('input-element');
         saveButton.mousePressed(() => this.saveShape());
 
         // Create the NEXT button
         let nextButton = createButton('ANNEAL');
-        nextButton.parent(this.inputContainer);
+        nextButton.parent(buttonRow).addClass('input-element');
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
         nextButton.mousePressed(() => this.nextToAnneal());
 
         // Create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
-        exampleButton.parent(this.inputContainer);
+        exampleButton.parent(buttonRow).addClass('input-element');
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
         // Create a container for shape titles
         let shapeTitleContainer = createDiv('');
-        shapeTitleContainer.parent(this.inputContainer);
+        shapeTitleContainer.parent(this.inputContainer).addClass('input-element');
         shapeTitleContainer.id('shapeTitleContainer');
-
-        // Set dimensions and style
-        shapeTitleContainer.style('height', '60px');
-        shapeTitleContainer.style('width', `${(this.inputCols * (this.inputSquareSize - 1))}px`);
-        shapeTitleContainer.style('overflow-y', 'scroll');
-        shapeTitleContainer.style('border', '1px solid #ccc');
 
         // store elements to manage
         this.inputUIElements = {
@@ -99,20 +100,27 @@ class UI {
             exampleButton,
             shapeTitleContainer
         }
+
+        // to do: re-enable depth input
+        // // Create the depth input field
+        // let depthLabel = createP('Depth:');
+        // depthLabel.position(this.lrPadding, height + 45);
+        // let depthInput = createInput('');
+        // depthInput.position(this.lrPadding + 50, height + 60);
+        // depthInput.attribute('size', '8');
     }
 
     initAnnealUI() {
         let reannealButton = createButton('RE-ANNEAL');
-        reannealButton.parent(this.annealContainer);
-        // reannealButton.mousePressed(() => this.reAnneal());
+        reannealButton.parent(this.annealContainer).addClass('anneal-element');
 
         // info text
         let diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        diagnosticText.parent(this.annealContainer);
+        diagnosticText.parent(this.annealContainer).addClass('anneal-element');
         diagnosticText.style('color', '#A9A9A9'); // text color light grey
 
         let growthText = createP("(press 'g' to grow cells)");
-        growthText.parent(this.annealContainer);
+        growthText.parent(this.annealContainer).addClass('anneal-element');
         growthText.style('color', '#A9A9A9'); // text color light grey
 
         this.annealUIElements = {
