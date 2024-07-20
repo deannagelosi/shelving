@@ -92,7 +92,7 @@ function displayResult() {
         currentSolution.showLayout();
 
         if (annealingComplete && devMode) {
-            ui.annealUIElements.growthText.show();
+            ui.annealUIElements.growthText.removeClass('hidden');
         }
 
         if (!enableCellular) {

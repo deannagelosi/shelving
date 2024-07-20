@@ -135,30 +135,25 @@ class UI {
 
     // show and hide screens functions
     showInputContainer() {
-        this.inputContainer.show();
+        this.inputContainer.removeClass('hidden');
     }
 
     hideInputContainer() {
-        this.inputContainer.hide();
+        this.inputContainer.addClass('hidden');
     }
 
     showAnnealContainer() {
-        this.annealContainer.show();
+        this.annealContainer.removeClass('hidden');
 
-        this.annealUIElements.growthText.hide();
+        this.annealUIElements.growthText.addClass('hidden');
         if (annealingComplete && devMode) {
-            this.annealUIElements.growthText.show();
+            this.annealUIElements.growthText.removeClass('hidden');
         }
     }
 
     hideAnnealContainer() {
-        this.annealContainer.hide();
+        this.annealContainer.addClass('hidden');
     }
-
-    // button handlers
-    // reAnneal() {
-    //     // function is binded to this in anneal.js
-    // }
 
     selectInputSquare(mouseX, mouseY, blockSelect = false) {
         let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
