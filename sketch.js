@@ -134,7 +134,7 @@ function keyPressed() {
             devMode = !devMode;
 
             // update text
-            ui.showAnnealUI();
+            ui.showAnnealContainer();
 
             if (devMode == true) {
                 numGrow = 0;

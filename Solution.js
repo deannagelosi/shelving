@@ -564,9 +564,17 @@ class Solution {
                     }
                 }
 
+
+                let rectX;
+                // if (this.layout[y][x].isShape.some(s => s === true)) {
+                //     // add half a square to the x
+                //     rectX = (x * this.squareSize) + this.buffer + this.xPadding + (this.squareSize / 2);
+                // } else {
+                // }
+                rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+
                 // buffer makes room for the line numbers in dev mode
                 // padding centers the solution in the canvas
-                let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
                 let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
 
                 stroke(lineColor);

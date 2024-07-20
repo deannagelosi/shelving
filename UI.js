@@ -26,7 +26,23 @@ class UI {
         this.shapeTitleElements = [];
         this.annealUIElements = {};
 
-        // setup ui elements
+        // Create and store reference to the main container
+        this.mainContainer = select('#ui-container');
+        if (!this.mainContainer) {
+            this.mainContainer = createDiv();
+            this.mainContainer.id('ui-container');
+        }
+
+        // Create sub-containers
+        this.inputContainer = createDiv();
+        this.inputContainer.parent(this.mainContainer);
+        this.inputContainer.id('input-container');
+
+        this.annealContainer = createDiv();
+        this.annealContainer.parent(this.mainContainer);
+        this.annealContainer.id('anneal-container');
+
+        // move UI elements into main container
         this.initInputUI()
         this.initAnnealUI();
         this.resetInputGrid();
@@ -35,9 +51,9 @@ class UI {
     initInputUI() {
         // Create the title input field
         let titleLabel = createP('Title:');
-        titleLabel.position(this.lrPadding, height + 5);
+        titleLabel.parent(this.inputContainer);
         let titleInput = createInput('');
-        titleInput.position(this.lrPadding + 40, height + 20);
+        titleInput.parent(this.inputContainer);
         titleInput.attribute('size', '20');
 
         // // Create the depth input field
@@ -47,36 +63,26 @@ class UI {
         // depthInput.position(this.lrPadding + 50, height + 60);
         // depthInput.attribute('size', '8');
 
-        // // Create the UNDO button
-        // let undoButton = createButton('UNDO');
-        // undoButton.position(titleInput.x + titleInput.width + 10, height + 20);
-        // undoButton.mousePressed(() => this.undoLastSelection());
-
         // Create the SAVE button
         let saveButton = createButton('SAVE');
-        // saveButton.position(undoButton.x + saveButton.width + 10, height + 20);
-        saveButton.position(titleInput.x + titleInput.width + 10, height + 20);
+        saveButton.parent(this.inputContainer);
         saveButton.mousePressed(() => this.saveShape());
 
         // Create the NEXT button
         let nextButton = createButton('ANNEAL');
+        nextButton.parent(this.inputContainer);
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        // nextButton.position(saveButton.x + nextButton.width + 10, height + 20);
-        nextButton.position((width / 2) - 20, height + 20);
         nextButton.mousePressed(() => this.nextToAnneal());
 
         // Create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
-        exampleButton.position(nextButton.x + exampleButton.width + 95, height + 20);
+        exampleButton.parent(this.inputContainer);
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
         // Create a container for shape titles
         let shapeTitleContainer = createDiv('');
+        shapeTitleContainer.parent(this.inputContainer);
         shapeTitleContainer.id('shapeTitleContainer');
-
-        // Position it below the buttons
-        let buttonBottom = saveButton.y + saveButton.height;
-        shapeTitleContainer.position(this.lrPadding, buttonBottom + 10);
 
         // Set dimensions and style
         shapeTitleContainer.style('height', '60px');
@@ -86,13 +92,8 @@ class UI {
 
         // store elements to manage
         this.inputUIElements = {
-            // input fields and labels
             titleLabel,
             titleInput,
-            // depthLabel,
-            // depthInput,
-            // buttons
-            // undoButton,
             saveButton,
             nextButton,
             exampleButton,
@@ -102,39 +103,39 @@ class UI {
 
     initAnnealUI() {
         let reannealButton = createButton('RE-ANNEAL');
-        reannealButton.position((width / 2) - 20, height + 20);
-        reannealButton.mousePressed(() => this.reAnneal());
-        reannealButton.hide(); // Initially hidden
+        reannealButton.parent(this.annealContainer);
+        // reannealButton.mousePressed(() => this.reAnneal());
 
         // info text
         let diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        diagnosticText.position((width / 2) - 80, height + 40);
+        diagnosticText.parent(this.annealContainer);
         diagnosticText.style('color', '#A9A9A9'); // text color light grey
-        diagnosticText.hide();
 
         let growthText = createP("(press 'g' to grow cells)");
-        growthText.position(width / 2 - 55, height + 60);
+        growthText.parent(this.annealContainer);
         growthText.style('color', '#A9A9A9'); // text color light grey
-        growthText.hide();
 
         this.annealUIElements = {
             reannealButton,
             diagnosticText,
             growthText
         };
+
+        // initially hide the anneal container
+        this.hideAnnealContainer();
     }
 
     // show and hide screens functions
-    showInputUI() {
-        Object.values(this.inputUIElements).forEach(element => element.show());
+    showInputContainer() {
+        this.inputContainer.show();
     }
 
-    hideInputUI() {
-        Object.values(this.inputUIElements).forEach(element => element.hide());
+    hideInputContainer() {
+        this.inputContainer.hide();
     }
 
-    showAnnealUI() {
-        Object.values(this.annealUIElements).forEach(element => element.show());
+    showAnnealContainer() {
+        this.annealContainer.show();
 
         this.annealUIElements.growthText.hide();
         if (annealingComplete && devMode) {
@@ -142,14 +143,14 @@ class UI {
         }
     }
 
-    hideAnnealUI() {
-        Object.values(this.annealUIElements).forEach(element => element.hide());
+    hideAnnealContainer() {
+        this.annealContainer.hide();
     }
 
     // button handlers
-    reAnneal() {
-
-    }
+    // reAnneal() {
+    //     // function is binded to this in anneal.js
+    // }
 
     selectInputSquare(mouseX, mouseY, blockSelect = false) {
         let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
@@ -229,9 +230,8 @@ class UI {
         // Switch away from the input screen
         inputScreen = false;
         // Hide all UI elements
-        this.hideInputUI();
-        // hide titles of shapes on screen
-        this.clearShapeTitles();
+        this.hideInputContainer();
+        this.showAnnealContainer();
 
         isMousePressed = false;
         loop();
@@ -295,7 +295,11 @@ class UI {
     }
 
     displayShapeTitles() {
-        this.clearShapeTitles();
+        // clear any existing shapes
+        for (let element of this.shapeTitleElements) {
+            element.remove(); // Remove the element from the screen
+        }
+        this.shapeTitleElements = []; // Clear the array
 
         let row = createDiv('');
         row.parent(this.inputUIElements.shapeTitleContainer);
@@ -309,12 +313,5 @@ class UI {
             shapeTitle.style('white-space', 'nowrap');
             this.shapeTitleElements.push(shapeTitle);
         }
-    }
-
-    clearShapeTitles() {
-        for (let element of this.shapeTitleElements) {
-            element.remove(); // Remove the element from the screen
-        }
-        this.shapeTitleElements = []; // Clear the array
     }
 }

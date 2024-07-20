@@ -5,7 +5,23 @@ html, body {
 
 canvas {
   display: block;
-  /* border: 1px solid #000; */
+}
+
+#ui-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#input-container, #anneal-container {
+  width: 100%;
+}
+
+#input-container > *, #anneal-container > * {
+  margin-bottom: 10px;
 }
 
 #shapeTitleContainer {

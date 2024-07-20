@@ -29,7 +29,6 @@ class Anneal {
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
         this.abortAnnealing = false;
-        this.ui.showAnnealUI();
 
         // == multi-start phase == //
         this.multiStartSolutions = [];
