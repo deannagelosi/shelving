@@ -67,28 +67,28 @@ class UI {
         let titleLabel = createP('Title:');
         titleLabel.parent(buttonRow).addClass('input-label');
         let titleInput = createInput('');
-        titleInput.parent(buttonRow).addClass('input-element');
+        titleInput.parent(buttonRow).addClass('input-field');
         titleInput.attribute('size', '20');
 
         // Create the SAVE button
         let saveButton = createButton('SAVE');
-        saveButton.parent(buttonRow).addClass('input-element');
+        saveButton.parent(buttonRow).addClass('button');
         saveButton.mousePressed(() => this.saveShape());
 
         // Create the NEXT button
         let nextButton = createButton('ANNEAL');
-        nextButton.parent(buttonRow).addClass('input-element');
+        nextButton.parent(buttonRow).addClass('button');
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
         nextButton.mousePressed(() => this.nextToAnneal());
 
         // Create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
-        exampleButton.parent(buttonRow).addClass('input-element');
+        exampleButton.parent(buttonRow).addClass('button');
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
         // Create a container for shape titles
         let shapeTitleContainer = createDiv('');
-        shapeTitleContainer.parent(this.inputContainer).addClass('input-element');
+        shapeTitleContainer.parent(this.inputContainer).addClass('shape-title-container');
         shapeTitleContainer.id('shapeTitleContainer');
 
         // store elements to manage
@@ -112,15 +112,15 @@ class UI {
 
     initAnnealUI() {
         let reannealButton = createButton('RE-ANNEAL');
-        reannealButton.parent(this.annealContainer).addClass('anneal-element');
+        reannealButton.parent(this.annealContainer).addClass('button');
 
         // info text
         let diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        diagnosticText.parent(this.annealContainer).addClass('anneal-element');
+        diagnosticText.parent(this.annealContainer).addClass('info-text');
         diagnosticText.style('color', '#A9A9A9'); // text color light grey
 
         let growthText = createP("(press 'g' to grow cells)");
-        growthText.parent(this.annealContainer).addClass('anneal-element');
+        growthText.parent(this.annealContainer).addClass('info-text');
         growthText.style('color', '#A9A9A9'); // text color light grey
 
         this.annealUIElements = {
