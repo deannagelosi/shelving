@@ -1,0 +1,14 @@
+#anneal-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.info-text {
+    font-style: italic;
+    color: #A9A9A9;
+    margin: 5px 0;
+}

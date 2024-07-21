@@ -1,0 +1,48 @@
+#input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.input-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-label {
+    font-weight: bold;
+    margin: 5px;
+}
+
+.input-field {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+#shape-title-container {
+    display: flex;
+    flex-wrap: wrap;
+    background-color: #f0f0f0;
+    padding: 10px;
+    width: 100%;
+    min-height: 30px;
+    max-width: 600px;
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+#shape-title-container p.shape-title {
+    margin: 5px 10px 5px 0;
+    white-space: nowrap;
+    font-size: 14px;
+}
