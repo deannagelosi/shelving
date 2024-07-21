@@ -1,4 +1,4 @@
-class AnnealUI {
+class DesignUI {
     constructor() {
         //== setup dom elements
         // retrieve reference to ui container div
@@ -7,10 +7,10 @@ class AnnealUI {
         this.annealContainer = createDiv().parent(this.uiContainer).id('anneal-container');
 
         // initialize UI elements
-        this.initAnnealUI();
+        this.initDesignUI();
     }
 
-    initAnnealUI() {
+    initDesignUI() {
         let reannealButton = createButton('RE-ANNEAL');
         reannealButton.parent(this.annealContainer).addClass('button');
         // re-anneal button gets it's handler function in Anneal.js
@@ -22,7 +22,7 @@ class AnnealUI {
         let growthText = createP("(press 'g' to grow cells)");
         growthText.parent(this.annealContainer).addClass('info-text');
 
-        this.annealUIElements = {
+        this.designUIElements = {
             reannealButton,
             diagnosticText,
             growthText
@@ -35,9 +35,9 @@ class AnnealUI {
     show() {
         this.annealContainer.removeClass('hidden');
 
-        this.annealUIElements.growthText.addClass('hidden');
+        this.designUIElements.growthText.addClass('hidden');
         if (annealingComplete && devMode) {
-            this.annealUIElements.growthText.removeClass('hidden');
+            this.designUIElements.growthText.removeClass('hidden');
         }
     }
 

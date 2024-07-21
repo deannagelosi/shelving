@@ -5,7 +5,7 @@ let shapesPos = [];
 let annealing;
 let newCase;
 let inputUI;
-let annealUI;
+let designUI;
 let isInputScreen; // controls active screen (inout or anneal)
 let annealingComplete = false;
 let currentSolution;
@@ -35,7 +35,7 @@ function setup() {
 
     // setup ui elements for both screens
     inputUI = new InputUI();
-    annealUI = new AnnealUI();
+    designUI = new DesignUI();
 
     // start on input screen
     isInputScreen = true;
@@ -52,7 +52,7 @@ function draw() {
     } else {
         // switch to annealing screen
         inputUI.hide();
-        annealUI.show();
+        designUI.show();
         if (!annealing) {
             // annealing has not started yet
             // display example solution or start annealing
@@ -76,7 +76,7 @@ function draw() {
 
 async function startAnnealing() {
     annealingComplete = false;
-    annealing = new Anneal(updateDisplay, annealUI);
+    annealing = new Anneal(updateDisplay, designUI);
 
     let solution = await annealing.run();
     currentSolution = solution; // save for displayResult
@@ -84,8 +84,7 @@ async function startAnnealing() {
     displayResult();
 
     // rebind re-anneal to restart annealing
-    // ui.annealUIElements.reannealButton.mousePressed(() => this.startAnnealing());
-    annealUI.bindReannealButton(() => startAnnealing());
+    designUI.designUIElements.reannealButton.mousePressed(() => this.startAnnealing());
 
     console.log("Annealing complete. Score: ", solution.score);
 }
@@ -107,9 +106,8 @@ function displayResult() {
         background(255);
         currentSolution.showLayout();
 
-        if (annealingComplete && devMode) {
-            ui.annealUIElements.growthText.removeClass('hidden');
-        }
+        // update growth text if dev mode on and annealing complete
+        designUI.show();
 
         if (!enableCellular) {
             // display annealing scores if not showing cellular scores
@@ -133,7 +131,7 @@ function displayResult() {
 }
 
 function keyPressed() {
-    if (!inputScreen) {
+    if (!isInputScreen) {
         // if (key === 's' || key === 'S') {
         //     // save current case as SVG
         //     newCase.buildLaserSVG();
@@ -150,8 +148,8 @@ function keyPressed() {
             // toggle dev mode on and off
             devMode = !devMode;
 
-            // update text
-            ui.showAnnealUI();
+            // update growth text if dev mode on and annealing complete
+            designUI.show();
 
             if (devMode == true) {
                 numGrow = 0;

@@ -8,7 +8,7 @@ class Anneal {
         this.refinedSolution = null; // stores running async anneals
         this.abortAnnealing = false;
         // bind reanneal function to reanneal button
-        this.ui.annealUIElements.reannealButton.mousePressed(() => this.reAnneal());
+        this.ui.designUIElements.reannealButton.mousePressed(() => this.reAnneal());
 
         // annealing uses these strategies:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
