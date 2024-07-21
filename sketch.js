@@ -4,8 +4,9 @@ let shapes = [];
 let shapesPos = [];
 let annealing;
 let newCase;
-let ui;
-let inputScreen = true; // don't modify. used for screen switching
+let inputUI;
+let annealUI;
+let isInputScreen; // controls active screen (inout or anneal)
 let annealingComplete = false;
 let currentSolution;
 let isMousePressed = false;
@@ -32,33 +33,50 @@ function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-container');
 
-    ui = new UI(); // setup buttons and input fields
+    // setup ui elements for both screens
+    inputUI = new InputUI();
+    annealUI = new AnnealUI();
+
+    // start on input screen
+    isInputScreen = true;
 }
 
 function draw() {
-    if (inputScreen) {
-        // display the input grid
-        ui.drawInputGrid();
-        noLoop(); // don't loop input screen
+    if (isInputScreen) {
+        // display the input screen 
+        inputUI.show();
+        // setup the input grid
+        inputUI.drawInputGrid();
+        noLoop();
 
-    } else if (!annealing) {
-        if (useExampleSolution) {
-            // load the example solution and don't anneal
-            let solution = new Solution(shapesPos);
-            solution.exampleSolution();
-            currentSolution = solution; // save for displayResult
-            displayResult();
-            noLoop();
-        } else {
-            // run the annealing process
-            startAnnealing();
+    } else {
+        // switch to annealing screen
+        inputUI.hide();
+        annealUI.show();
+        if (!annealing) {
+            // annealing has not started yet
+            // display example solution or start annealing
+            if (useExampleSolution) {
+                // load the example solution and don't anneal
+                let solution = new Solution(shapesPos);
+                solution.exampleSolution();
+                currentSolution = solution; // save for displayResult
+                displayResult();
+                noLoop();
+            } else {
+                // run the annealing process
+                startAnnealing();
+                noLoop();
+            }
         }
     }
+
+    noLoop();
 }
 
 async function startAnnealing() {
     annealingComplete = false;
-    annealing = new Anneal(updateDisplay, ui);
+    annealing = new Anneal(updateDisplay, annealUI);
 
     let solution = await annealing.run();
     currentSolution = solution; // save for displayResult
@@ -66,13 +84,13 @@ async function startAnnealing() {
     displayResult();
 
     // rebind re-anneal to restart annealing
-    ui.annealUIElements.reannealButton.mousePressed(() => this.startAnnealing());
+    // ui.annealUIElements.reannealButton.mousePressed(() => this.startAnnealing());
+    annealUI.bindReannealButton(() => startAnnealing());
 
     console.log("Annealing complete. Score: ", solution.score);
-    noLoop();
 }
 
-function updateDisplay(currentSolution, iteration, temperature) {
+function updateDisplay(currentSolution) {
     // passed as a callback to the annealing process so it can update the display
 
     clear();
@@ -148,8 +166,8 @@ function keyPressed() {
 
 function mousePressed() {
     isMousePressed = true;
-    if (inputScreen) {
-        ui.selectInputSquare(mouseX, mouseY);
+    if (isInputScreen) {
+        inputUI.selectInputSquare(mouseX, mouseY);
     }
 }
 
@@ -158,7 +176,7 @@ function mouseReleased() {
 }
 
 function mouseDragged() {
-    if (inputScreen && isMousePressed) {
-        ui.selectInputSquare(mouseX, mouseY, true);
+    if (isInputScreen && isMousePressed) {
+        inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }

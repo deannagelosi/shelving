@@ -1,11 +1,10 @@
-class UI {
+class InputUI {
     constructor() {
         //== state variables
         // input grid values
         this.inputGrid = [];
         // dom elements and shape titles
         this.inputUIElements = {};
-        this.annealUIElements = {};
         this.shapeTitleElements = [];
 
         //== input grid variables
@@ -30,13 +29,11 @@ class UI {
         //== setup dom elements
         // retrieve reference to ui container div
         this.uiContainer = select('#ui-container');
-        // setup input and anneal ui element containers
+        // setup input  ui element containers
         this.inputContainer = createDiv().parent(this.uiContainer).id('input-container');
-        this.annealContainer = createDiv().parent(this.uiContainer).id('anneal-container');
 
         // initialize UI elements
         this.initInputUI();
-        this.initAnnealUI();
         this.resetInputGrid();
     }
 
@@ -64,7 +61,7 @@ class UI {
         let nextButton = createButton('ANNEAL');
         nextButton.parent(inputButtonRow).addClass('button');
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        nextButton.mousePressed(() => this.nextToAnneal());
+        nextButton.mousePressed(() => this.nextScreen());
 
         // create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
@@ -85,6 +82,9 @@ class UI {
             shapeTitleContainer
         }
 
+        // initially hide the input container
+        this.hide();
+
         // to do: re-enable depth input
         // // Create the depth input field
         // let depthLabel = createP('Depth:');
@@ -94,47 +94,12 @@ class UI {
         // depthInput.attribute('size', '8');
     }
 
-    initAnnealUI() {
-        let reannealButton = createButton('RE-ANNEAL');
-        reannealButton.parent(this.annealContainer).addClass('button');
-        // re-anneal button gets it's handler function in Anneal.js
-
-        // info text
-        let diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        diagnosticText.parent(this.annealContainer).addClass('info-text');
-
-        let growthText = createP("(press 'g' to grow cells)");
-        growthText.parent(this.annealContainer).addClass('info-text');
-
-        this.annealUIElements = {
-            reannealButton,
-            diagnosticText,
-            growthText
-        };
-
-        // Initially hide the anneal container
-        this.hideAnnealUI();
-    }
-
-    showInputUI() {
+    show() {
         this.inputContainer.removeClass('hidden');
     }
 
-    hideInputUI() {
+    hide() {
         this.inputContainer.addClass('hidden');
-    }
-
-    showAnnealUI() {
-        this.annealContainer.removeClass('hidden');
-
-        this.annealUIElements.growthText.addClass('hidden');
-        if (annealingComplete && devMode) {
-            this.annealUIElements.growthText.removeClass('hidden');
-        }
-    }
-
-    hideAnnealUI() {
-        this.annealContainer.addClass('hidden');
     }
 
     selectInputSquare(mouseX, mouseY, blockSelect = false) {
@@ -199,7 +164,7 @@ class UI {
         isMousePressed = false;
     }
 
-    nextToAnneal() {
+    nextScreen() {
         // 1. prep the inputted shapes for annealing the first solution
         // - wrap user inputted shapes with extra position
         // - gives each solution unique position data, while sharing the same shape data
@@ -217,11 +182,7 @@ class UI {
 
         // 2. change to the next user screen (annealing)
         // Switch away from the input screen
-        inputScreen = false;
-        // swap visible UI elements
-        this.hideInputUI();
-        this.showAnnealUI();
-
+        isInputScreen = false;
         isMousePressed = false;
         loop();
     }
