@@ -4,6 +4,7 @@ class InputUI {
         this.inputGrid = [];
         this.objectImage = null;
         this.pixelBuffer = null;
+        this.maskThreshold = 0.5;
         // dom elements and shape titles
         this.headerElements = {};
         this.inputUIElements = {};
@@ -48,21 +49,38 @@ class InputUI {
         this.headerElements.instructions = createElement('p', 'Upload an image to begin');
         this.headerElements.instructions.parent(headerDiv);
 
+        // Create a new container for interactive elements
+        const interactiveContainer = createDiv();
+        interactiveContainer.id('interactive-container');
+        interactiveContainer.parent(headerDiv);
+
         // Create and append the button element
         this.headerElements.uploadButton = createButton('Upload');
         this.headerElements.uploadButton.id('upload-button');
-        this.headerElements.uploadButton.parent(headerDiv);
+        this.headerElements.uploadButton.parent(interactiveContainer);
         this.headerElements.uploadButton.mousePressed(() => this.handleImageUpload());
+
+        // Create a vertical divider
+        const divider = createDiv();
+        divider.class('vertical-divider');
+        divider.parent(interactiveContainer);
+
+        // Create and append the slider
+        this.headerElements.thresholdSlider = createSlider(0, 1, this.maskThreshold, 0.01);
+        this.headerElements.thresholdSlider.id('threshold-slider');
+        this.headerElements.thresholdSlider.parent(interactiveContainer);
+        this.headerElements.thresholdSlider.input(() => this.handleThresholdChange());
+
+        // Create and append the clear button
+        this.headerElements.clearButton = createButton('Clear');
+        this.headerElements.clearButton.id('clear-button');
+        this.headerElements.clearButton.parent(interactiveContainer);
+        this.headerElements.clearButton.mousePressed(() => this.clearGrid());
     }
 
     initInputUI() {
         //== setup the input grid
-        for (let y = 0; y < this.inputRows; y++) {
-            this.inputGrid[y] = [];
-            for (let x = 0; x < this.inputCols; x++) {
-                this.inputGrid[y][x] = false;
-            }
-        }
+        this.resetInputGrid();
 
         //== setup ui elements for input screen
         // create input fields and buttons row div
@@ -155,13 +173,30 @@ class InputUI {
     }
 
     //== button handlers
+    handleThresholdChange() {
+        // set mask to slider value
+        this.maskThreshold = this.headerElements.thresholdSlider.value();
+        this.createImageMask();
+        this.drawInputGrid();
+    }
+
+    clearGrid() {
+        this.resetCanvas();
+        this.objectImage = null;
+        this.pixelBuffer = null;
+        this.drawInputGrid();
+    }
+
     handleImageUpload() {
         const input = createFileInput((file) => {
             if (file.type === 'image') {
                 loadImage(file.data, (img) => {
+                    // setup image
                     this.objectImage = img;
                     this.resizeBackgroundImage();
-                    this.getImageMask();
+                    this.setPixelBuffer();
+                    this.createImageMask();
+                    // update the input grid display
                     this.drawInputGrid();
                 });
             } else {
@@ -246,12 +281,7 @@ class InputUI {
     }
 
     //== input grid display methods
-    resetCanvas() {
-        background(255);
-        this.inputUIElements.titleInput.value('');
-        this.objectImage = null;
-        // todo: this.inputUIElements.depthInput.value('');
-
+    resetInputGrid() {
         // reset the input grid to all false (no selected squares)
         for (let y = 0; y < this.inputRows; y++) {
             this.inputGrid[y] = [];
@@ -259,11 +289,20 @@ class InputUI {
                 this.inputGrid[y][x] = false;
             }
         }
+    }
+
+    resetCanvas() {
+        background(255);
+        this.inputUIElements.titleInput.value('');
+        this.objectImage = null;
+        // todo: this.inputUIElements.depthInput.value('');
+
+        this.resetInputGrid();
         this.drawInputGrid();
         this.displayShapeTitles();
     }
 
-    getImageMask() {
+    setPixelBuffer() {
         if (this.objectImage) {
             // Create a mask for the input grid from the image
             // threshold is a value between 0 and 1
@@ -276,15 +315,20 @@ class InputUI {
 
             this.pixelBuffer.image(this.objectImage, centerImage, 0);
             this.pixelBuffer.loadPixels();
+        }
+    }
 
+    createImageMask() {
+        if (this.objectImage && this.pixelBuffer.pixels) {
             // loop the gird and find the mask value for each square
-            let maskThreshold = 0.5;
             for (let y = 0; y < this.inputRows; y++) {
                 this.inputGrid[y] = [];
                 for (let x = 0; x < this.inputCols; x++) {
-                    this.inputGrid[y][x] = this.getAverageSquareBW(y, x, maskThreshold);
+                    this.inputGrid[y][x] = this.getAverageSquareBW(y, x, this.maskThreshold);
                 }
             }
+        } else {
+            console.error('No image or pixel buffer to create mask');
         }
     }
 
@@ -353,11 +397,6 @@ class InputUI {
     }
 
     getAverageSquareBW(_y, _x, _threshold) {
-        if (!this.pixelBuffer || !this.pixelBuffer.pixels) {
-            console.error('pixelBuffer or its pixels are null or undefined');
-            return false;
-        }
-
         const bufferWidth = this.pixelBuffer.width;
         const bufferHeight = this.pixelBuffer.height;
 
