@@ -1,9 +1,10 @@
 class InputUI {
     constructor() {
         //== state variables
-        // input grid values
         this.inputGrid = [];
+        this.backgroundImage = null;
         // dom elements and shape titles
+        this.headerElements = {};
         this.inputUIElements = {};
         this.shapeTitleElements = [];
 
@@ -25,7 +26,6 @@ class InputUI {
         this.lastClickTime = 0;
         this.clickDelay = 200; // milliseconds
 
-
         //== setup dom elements
         // retrieve reference to ui container div
         this.uiContainer = select('#ui-container');
@@ -33,7 +33,27 @@ class InputUI {
         this.inputContainer = createDiv().parent(this.uiContainer).id('input-container');
 
         // initialize UI elements
+        this.createHeaderElements();
         this.initInputUI();
+    }
+
+    createHeaderElements() {
+        // Select the existing header div
+        const headerDiv = select('#header');
+
+        // Create and append the h1 element
+        this.headerElements.title = createElement('h1', 'Generative Shelving');
+        this.headerElements.title.parent(headerDiv);
+
+        // Create and append the p element
+        this.headerElements.instructions = createElement('p', 'Upload an image to begin');
+        this.headerElements.instructions.parent(headerDiv);
+
+        // Create and append the button element
+        this.headerElements.uploadButton = createButton('Upload');
+        this.headerElements.uploadButton.id('upload-button');
+        this.headerElements.uploadButton.parent(headerDiv);
+        this.headerElements.uploadButton.mousePressed(() => this.handleImageUpload());
     }
 
     initInputUI() {
@@ -136,6 +156,22 @@ class InputUI {
     }
 
     //== button handlers
+    handleImageUpload() {
+        const input = createFileInput((file) => {
+            if (file.type === 'image') {
+                loadImage(file.data, (img) => {
+                    this.backgroundImage = img;
+                    this.resizeBackgroundImage();
+                    this.drawInputGrid();
+                });
+            } else {
+                console.error('Please upload an image file');
+            }
+        });
+        input.hide(); // Hide the default file input
+        input.elt.click(); // Trigger the file dialog
+    }
+
     saveShape() {
         // // check if the shape is valid before saving
         // // check if the bottom has at least 1 clicked input square
@@ -219,6 +255,7 @@ class InputUI {
     resetCanvas() {
         background(255);
         this.inputUIElements.titleInput.value('');
+        this.backgroundImage = null;
         // todo: this.inputUIElements.depthInput.value('');
 
         // reset the input grid to all false (no selected squares)
@@ -228,25 +265,36 @@ class InputUI {
                 this.inputGrid[y][x] = false;
             }
         }
-
         this.drawInputGrid();
         this.displayShapeTitles();
     }
 
     drawInputGrid() {
+        // show image
+        if (this.backgroundImage) {
+            let topX = this.sidePadding + (this.inputGridWidth - this.backgroundImage.width) / 2;
+            let topY = this.sidePadding;
+            image(this.backgroundImage, topX, topY, this.backgroundImage.width, this.backgroundImage.height);
+        }
+
+        // draw grid
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
                 // draw input square
+                let rectX = x * this.inputSquareSize;
+                let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize);
+
+                // Fill selected squares
                 if (this.inputGrid[y][x]) {
-                    fill(0); // Fill black if the rect is clicked
+                    // semi-transparent black squares for selected
+                    fill(0, 128);
+                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
                 } else {
-                    fill(255); // Fill white
+                    // transparent squares for unselected
+                    stroke(0);
+                    noFill();
+                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
                 }
-
-                let rectX = x * this.inputSquareSize
-                let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize); // draw from bottom up
-
-                rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
             }
         }
     }
@@ -268,5 +316,15 @@ class InputUI {
             element.remove();
         }
         this.shapeTitleElements = [];
+    }
+
+    //== image handling
+    resizeBackgroundImage() {
+        if (this.backgroundImage) {
+            const aspectRatio = this.inputGridHeight / this.backgroundImage.height;
+            const newHeight = this.inputGridHeight;
+            const newWidth = this.backgroundImage.width * aspectRatio;
+            this.backgroundImage.resize(newWidth, newHeight);
+        }
     }
 }

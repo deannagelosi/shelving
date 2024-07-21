@@ -1,3 +1,31 @@
+#header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#header h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+#header p {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+#upload-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#upload-button:hover {
+    background-color: #45a049;
+}
+
 #input-container {
     display: flex;
     flex-direction: column;
