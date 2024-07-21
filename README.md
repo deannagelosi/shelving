@@ -1,136 +1,43 @@
-# todo
+# Uniquely Shaped Spaces: 3D Shelving Generator
 
-## This Week's Deliverables
+Creates efficient and visually interesting layouts for irregularly shaped objects
 
-- Sunday Morning
-  - laser cutting boards
-    - joint position
-    - joint types
+## Project Overview
 
+Uniquely Shaped Spaces is a 3D shelving generator that uses Simulated Annealing and Cellular Automata algorithms to optimize the placement of irregularly shaped objects.
 
-  - most basic UI improvements
-    - diagnostic off
-    - side bar: added shapes
-      - change ShapeInput to class that manages all shapes
-      - create Shape data objects with shape positions
-    - toggle to generate layouts
-    - export laser cut SVG button
-  - continue 3D printing shapes
-    - make a couple OOFs for laser cutting
+## Key Features
 
-### Import and Export
+- **Simulated Annealing**: Optimizes the placement of irregular objects on a grid
+- **Cellular Automata**: Generates dynamic shelving between objects
+- **p5.js**: Utilizes p5.js canvas for rendering and interaction
 
-- **turn on input objects**
-- **export and import solution**
-- click a input square a second time to deselect it
-- save objects for future use
+## Object Representation
 
-### Generation
+Objects are represented as grid-based outlines with padding, allowing for flexible and efficient storage arrangements.
 
-#### Automata
+## Simulated Annealing Process
 
-- when growing vertically, find the center of zero-scores like in case 1
-- detect and fix "C" paths, ie when 3 walls in a square (at least partially parallel with yourself)
+## Cellular Automata Process
 
-#### Annealing
+Cellular Automata is used to grow shelving between objects
 
-- **center of mass: another scoring mechanism**
-  - add weight to Shape class
-- score for clusters of numbers, not just 8s
-- steadily raise temperature if can't solve
-- random 1/6th option is move a shape to a new random position?
-- score on "spread out-ness" so it tends to move towards each other rather than away, weight heavier when temp is high
-- grid-based, non-rectangular perimeters
-  - doesn't change in size (v1)
+1. **Setup Phase**
+   - Precalculate all path scores and store in an array
+   - Initialize cells with growth options: Left, Up, and Right
+   - Each cell retrieves scores for potential growth paths
 
-### UI Design
+2. **Step 1: Merge and Die Rules**
+   - Merging occurs when two alive cells meet or pass by each other
+   - An alive cell dies when it meets a dead cell (simulating crowding)
 
-- **expand canvas for entire UI**
-- toggles
-  - **turn off numbers**
-  - turn off boarders
-  - all black boards, merged / segmented boards
-- grid paper colors
-- select from list of objects
-- overall design
-- buttons
-  - reanneal
-  - **import solution**
-  - **export solution**
-  - export SVG of grid
+3. **Step 2: Eliminate Invalid Options**
+   - Prevent backtracking
+   - Avoid growing through existing shapes
+   - Respect boundary constraints
 
-### README
-
-- outcast objects, but important!
-- thought process of collecting objects, exploring combinations
-- make 30 cases digital designs
-- top 5, render in location
-
-## Fabrication Test (Thursday, 4/25): Fabrication Features
-
-- detect joints (L, X, T)
-- export to SVG
-
-## Early Summer Stretch Features
-
-- unnecessary turns
-- organic shaped perimeters
-  - how to create? in p5? or in a library?
-- perimeters that scale
-- freeze shapes in layout
-- add option for empty spaces to fill later
-- hang on wall (center of gravity is ignored) vs flat on table (requires flat bottoms)
-
-## Runtime Notes
-
-- example boolean (sketch.js)
-- show boards boolean (Case.js)
-- example coords (Solution.js)
-
-## Cellular Automata Rules
-
-- Precalculate all path scores, store in an array
-
-Cells have 3 options for growth: Left, Up, or Right
-
-Setup Phase:
-
-- Start with left, up, and right set to True
-- Cell retrieve score of path for left, up, and right
-
-Step 1: Merge and Die Rules
-
-- If two alive cells meet, they merge
-- If two alive cells pass by each other, they merge
-- If an alive cell meets a dead cell, it dies (crowded)
-
-Step 2: Eliminate Options
-
-- Can't backtrack
-- Can't grow through a shape
-- Can't go out of bounds
-
-Step 3: Choose a Remaining Direction
-
-- if only one option remains, take it
-- A cell is attracted to a dead cell of a different strain (prevents parallel paths)
-- Cells like easy paths (low values)
-- Cells avoid change (growing in new directions)
-- If still multiple valid options, log error and die
-
-Notes:
-
-- grow till no alive cells
-- test diff recurse levels nad stop when # of total boards isn't improving
-
-Annealing:
-
-- have refine while loop keep going as long as score is improving
-- add diagonal moves
-
-Know Bugs:
-
-- bottom of shape used to detect bottom row float uses shape width, not actual bottoms
-  - 1. look at how bottoms are found in Cellular makeInitialCells() using overhangShift()
-  - 2. look at how bottoms are found in Solution calcScore(), roughly line 344
-  - 3. use overhandShift() version in Solution to see when a shape actual bottom is the lowest and un-occluded, not the width
+4. **Step 3: Choose Growth Direction**
+   - If only one valid option remains, select it
+   - Cells are attracted to dead cells of a different strain (prevents parallel paths)
+   - Preference given to easy paths (low values)
+   - Cells tend to maintain their current growth direction
