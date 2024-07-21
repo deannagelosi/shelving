@@ -32,9 +32,7 @@ function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-container');
 
-    if (inputScreen == true) {
-        ui = new UI(); // setup buttons and input fields
-    }
+    ui = new UI(); // setup buttons and input fields
 }
 
 function draw() {
@@ -135,7 +133,7 @@ function keyPressed() {
             devMode = !devMode;
 
             // update text
-            ui.showAnnealContainer();
+            ui.showAnnealUI();
 
             if (devMode == true) {
                 numGrow = 0;

@@ -1,95 +1,79 @@
 class UI {
     constructor() {
-        // input control variables
-        // User input grid size
-        let maxInputInches = 10;
-        this.inputRows = maxInputInches * 4; // 0.25" squares input fidelity
+        //== state variables
+        // input grid values
+        this.inputGrid = [];
+        // dom elements and shape titles
+        this.inputUIElements = {};
+        this.annealUIElements = {};
+        this.shapeTitleElements = [];
+
+        //== input grid variables
+        this.maxInputInches = 8;
+        this.gridInchSize = 0.25; // each square is 0.25 inches
+        this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
-        this.inputSquareSize = Math.floor(Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1));
+
+        // calc input grid size
+        this.inputSquareSize = Math.min(canvasWidth, canvasHeight) / this.inputRows;
+        this.sidePadding = this.inputSquareSize / 2;
+        // shrink input squares to fit padding on all sides
+        this.inputSquareSize = (canvasWidth - this.sidePadding * 2) / this.inputRows;
         this.inputGridHeight = (this.inputRows * this.inputSquareSize);
         this.inputGridWidth = (this.inputCols * this.inputSquareSize);
-        this.inputGrid = [];
-        // Initialize the stack for square selection history
-        // this.selectionHistory = [];
-        // Track shape titles displaying to hide later
 
-        // manage debounce
+        //== mouse click delay (debounce)
         this.lastClickTime = 0;
         this.clickDelay = 200; // milliseconds
 
-        // layout variables
-        this.tbPadding = this.inputSquareSize; // top bottom
-        this.lrPadding = this.inputSquareSize / 2; // left right
 
-        // stores the labels, inputs, and buttons for the screens
-        this.inputUIElements = {};
-        this.shapeTitleElements = [];
-        this.annealUIElements = {};
-
-        // Update mainContainer reference
-        this.mainContainer = select('#main-container');
-
-        // Update uiContainer reference
+        //== setup dom elements
+        // retrieve reference to ui container div
         this.uiContainer = select('#ui-container');
-        if (!this.uiContainer) {
-            this.uiContainer = createDiv();
-            this.uiContainer.id('ui-container');
-        }
+        // setup input and anneal ui element containers
+        this.inputContainer = createDiv().parent(this.uiContainer).id('input-container');
+        this.annealContainer = createDiv().parent(this.uiContainer).id('anneal-container');
 
-        // Create screen containers inside uiContainer
-        this.inputContainer = createDiv();
-        this.inputContainer.parent(this.uiContainer);
-        this.inputContainer.id('input-container');
-
-        this.annealContainer = createDiv();
-        this.annealContainer.parent(this.uiContainer);
-        this.annealContainer.id('anneal-container');
-
-        // Add classes to containers
-        this.mainContainer.addClass('main-container');
-        this.uiContainer.addClass('ui-container');
-        this.inputContainer.addClass('input-container');
-        this.annealContainer.addClass('anneal-container');
-
-        // Initialize UI elements
+        // initialize UI elements
         this.initInputUI();
         this.initAnnealUI();
         this.resetInputGrid();
     }
 
     initInputUI() {
-        // Create a new div for input fields and buttons
-        let buttonRow = createDiv();
-        buttonRow.parent(this.inputContainer);
-        buttonRow.addClass('button-row');
+        // setup ui elements for input screen
 
-        // Create the title input field
+        // create input fields and buttons row div
+        let inputButtonRow = createDiv();
+        inputButtonRow.parent(this.inputContainer);
+        inputButtonRow.addClass('input-button-row');
+
+        // create the title input field
         let titleLabel = createP('Title:');
-        titleLabel.parent(buttonRow).addClass('input-label');
+        titleLabel.parent(inputButtonRow).addClass('input-label');
         let titleInput = createInput('');
-        titleInput.parent(buttonRow).addClass('input-field');
+        titleInput.parent(inputButtonRow).addClass('input-field');
         titleInput.attribute('size', '20');
 
-        // Create the SAVE button
+        // create the SAVE button
         let saveButton = createButton('SAVE');
-        saveButton.parent(buttonRow).addClass('button');
+        saveButton.parent(inputButtonRow).addClass('button');
         saveButton.mousePressed(() => this.saveShape());
 
-        // Create the NEXT button
+        // create the NEXT button
         let nextButton = createButton('ANNEAL');
-        nextButton.parent(buttonRow).addClass('button');
+        nextButton.parent(inputButtonRow).addClass('button');
         nextButton.attribute('disabled', ''); // until 2 shapes are saved
         nextButton.mousePressed(() => this.nextToAnneal());
 
-        // Create the LOAD EXAMPLE button
+        // create the LOAD EXAMPLE button
         let exampleButton = createButton('LOAD EXAMPLE');
-        exampleButton.parent(buttonRow).addClass('button');
+        exampleButton.parent(inputButtonRow).addClass('button');
         exampleButton.mousePressed(() => this.loadExampleShapes());
 
-        // Create a container for shape titles
+        // create a container for shape titles
         let shapeTitleContainer = createDiv('');
-        shapeTitleContainer.parent(this.inputContainer).addClass('shape-title-container');
-        shapeTitleContainer.id('shapeTitleContainer');
+        shapeTitleContainer.parent(this.inputContainer).id('shape-title-container');
 
         // store elements to manage
         this.inputUIElements = {
@@ -113,15 +97,14 @@ class UI {
     initAnnealUI() {
         let reannealButton = createButton('RE-ANNEAL');
         reannealButton.parent(this.annealContainer).addClass('button');
+        // re-anneal button gets it's handler function in Anneal.js
 
         // info text
         let diagnosticText = createP("(toggle 'd' key for diagnostics)");
         diagnosticText.parent(this.annealContainer).addClass('info-text');
-        diagnosticText.style('color', '#A9A9A9'); // text color light grey
 
         let growthText = createP("(press 'g' to grow cells)");
         growthText.parent(this.annealContainer).addClass('info-text');
-        growthText.style('color', '#A9A9A9'); // text color light grey
 
         this.annealUIElements = {
             reannealButton,
@@ -129,20 +112,19 @@ class UI {
             growthText
         };
 
-        // initially hide the anneal container
-        this.hideAnnealContainer();
+        // Initially hide the anneal container
+        this.hideAnnealUI();
     }
 
-    // show and hide screens functions
-    showInputContainer() {
+    showInputUI() {
         this.inputContainer.removeClass('hidden');
     }
 
-    hideInputContainer() {
+    hideInputUI() {
         this.inputContainer.addClass('hidden');
     }
 
-    showAnnealContainer() {
+    showAnnealUI() {
         this.annealContainer.removeClass('hidden');
 
         this.annealUIElements.growthText.addClass('hidden');
@@ -151,16 +133,18 @@ class UI {
         }
     }
 
-    hideAnnealContainer() {
+    hideAnnealUI() {
         this.annealContainer.addClass('hidden');
     }
 
     selectInputSquare(mouseX, mouseY, blockSelect = false) {
-        let xValid = mouseX >= this.lrPadding && mouseX <= this.inputGridWidth + this.lrPadding;
-        let yValid = mouseY >= this.tbPadding && mouseY <= this.inputGridHeight + this.tbPadding;
+        // check if mouse click is within input grid
+        // factor in padding on all sides
+        let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
+        let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
         if (xValid && yValid) {
-            let gridX = Math.floor((mouseX - this.lrPadding) / this.inputSquareSize); // Column
-            let gridY = Math.floor((this.inputGridHeight + this.tbPadding - mouseY) / this.inputSquareSize); // Row
+            let gridX = Math.floor((mouseX - this.sidePadding) / this.inputSquareSize); // column
+            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.inputSquareSize); // row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 let currentTime = millis();
@@ -180,37 +164,38 @@ class UI {
     }
 
     saveShape() {
-        // check if the shape is valid before saving
-        // check if the bottom has at least 1 clicked inout square
-        if (this.inputGrid[0].includes(true)) {
-            // find the shape title
-            let titleValue = this.inputUIElements.titleInput.value();
-            if (titleValue === '') { // no title entered by user
-                titleValue = `shape-${shapes.length + 1}`;
-            }
+        // // check if the shape is valid before saving
+        // // check if the bottom has at least 1 clicked input square
+        // if (this.inputGrid[0].includes(true)) {
 
-            // let depthValue = this.inputUIElements.depthInput.value();
-            // if (depthValue === '') { // no depth entered by user
-            //     console.error('no depth entered');
-            // }
-
-            // save the shape
-            let newShape = new Shape(titleValue);
-            // newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
-            newShape.saveUserInput([...this.inputGrid], 5); // save a copy of the input grid
-            shapes.push(newShape);
-            // console log the json
-
-            // Reset active shape and UI
-            this.resetCanvas();
-
-            // Enable the NEXT button if 2 shapes have been saved
-            if (shapes.length > 1) {
-                this.inputUIElements.nextButton.removeAttribute('disabled');
-            }
-        } else {
-            alert('Shape must have an input square selected on the bottom row.');
+        // find the shape title
+        let titleValue = this.inputUIElements.titleInput.value();
+        if (titleValue === '') { // no title entered by user
+            titleValue = `shape-${shapes.length + 1}`;
         }
+
+        // let depthValue = this.inputUIElements.depthInput.value();
+        // if (depthValue === '') { // no depth entered by user
+        //     console.error('no depth entered');
+        // }
+
+        // save the shape
+        let newShape = new Shape(titleValue);
+        // todo: replace hardcoded depth value (5) with user inputted depth
+        // newShape.saveUserInput([...this.inputGrid], depthValue); // save a copy of the input grid
+        newShape.saveUserInput([...this.inputGrid], 5); // save a copy of the input grid
+        shapes.push(newShape);
+
+        // Reset active shape and UI
+        this.resetCanvas();
+
+        // Enable the NEXT button if 2 shapes have been saved
+        if (shapes.length > 1) {
+            this.inputUIElements.nextButton.removeAttribute('disabled');
+        }
+        // } else {
+        //     alert('Shape must have an input square selected on the bottom row.');
+        // }
         isMousePressed = false;
     }
 
@@ -228,13 +213,14 @@ class UI {
             };
             shapesPos.push(shapeData);
         }
+        this.clearShapeTitles();
 
         // 2. change to the next user screen (annealing)
         // Switch away from the input screen
         inputScreen = false;
-        // Hide all UI elements
-        this.hideInputContainer();
-        this.showAnnealContainer();
+        // swap visible UI elements
+        this.hideInputUI();
+        this.showAnnealUI();
 
         isMousePressed = false;
         loop();
@@ -264,7 +250,7 @@ class UI {
     resetCanvas() {
         background(255);
         this.inputUIElements.titleInput.value('');
-        // this.inputUIElements.depthInput.value('');
+        // todo: this.inputUIElements.depthInput.value('');
         this.resetInputGrid();
         this.drawInputGrid();
         this.displayShapeTitles();
@@ -292,29 +278,27 @@ class UI {
                 let rectX = x * this.inputSquareSize
                 let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize); // draw from bottom up
 
-                rect(this.lrPadding + rectX, this.tbPadding + rectY, this.inputSquareSize, this.inputSquareSize);
+                rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
             }
         }
     }
 
     displayShapeTitles() {
-        // clear any existing shapes
-        for (let element of this.shapeTitleElements) {
-            element.remove(); // Remove the element from the screen
-        }
-        this.shapeTitleElements = []; // Clear the array
+        this.clearShapeTitles();
 
-        let row = createDiv('');
-        row.parent(this.inputUIElements.shapeTitleContainer);
-        row.style('display', 'flex');
-        row.style('flex-wrap', 'wrap');
+        let titleContainer = this.inputUIElements.shapeTitleContainer
 
         for (let i = shapes.length - 1; i >= 0; i--) {
-            let shapeTitle = createP(`${shapes[i].title}`);
-            shapeTitle.parent(row);
-            shapeTitle.style('margin', '5px 10px 5px 0');
-            shapeTitle.style('white-space', 'nowrap');
+            let shapeTitle = createP(`${shapes[i].title}`).addClass('shape-title');
+            shapeTitle.parent(titleContainer);
             this.shapeTitleElements.push(shapeTitle);
         }
+    }
+
+    clearShapeTitles() {
+        for (let element of this.shapeTitleElements) {
+            element.remove();
+        }
+        this.shapeTitleElements = [];
     }
 }

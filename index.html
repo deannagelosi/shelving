@@ -7,17 +7,22 @@
     <script src="https://unpkg.com/p5.js-svg@1.5.1"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="utf-8" />
-
 </head>
 
 <body>
-    <div id="main-container">
-        <div id="canvas-container"></div>
-        <div id="ui-container"></div>
+    <div id="app">
+        <div id="header"></div>
 
-        <div id="svgContainer" style="position: absolute; top: 0; left: 0;"></div>
+        <div id="left-side-container"></div>
+
+        <div id="content-container">
+            <div id="canvas-container"></div>
+            <div id="ui-container"></div>
+        </div>
+
+        <div id="right-side-container"></div>
     </div>
-  
+
     <script src="UI.js"></script>
     <script src="Shape.js"></script>
     <script src="Solution.js"></script>
@@ -26,6 +31,6 @@
     <script src="Case.js"></script>
     <script src="Board.js"></script>
     <script src="sketch.js"></script>
-    </body>
+</body>
 
 </html>
