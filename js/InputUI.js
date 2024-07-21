@@ -2,7 +2,8 @@ class InputUI {
     constructor() {
         //== state variables
         this.inputGrid = [];
-        this.backgroundImage = null;
+        this.objectImage = null;
+        this.pixelBuffer = null;
         // dom elements and shape titles
         this.headerElements = {};
         this.inputUIElements = {};
@@ -15,12 +16,10 @@ class InputUI {
         this.inputCols = this.inputRows;
 
         // calc input grid size
-        this.inputSquareSize = Math.min(canvasWidth, canvasHeight) / this.inputRows;
-        this.sidePadding = this.inputSquareSize / 2;
-        // shrink input squares to fit padding on all sides
-        this.inputSquareSize = (canvasWidth - this.sidePadding * 2) / this.inputRows;
-        this.inputGridHeight = (this.inputRows * this.inputSquareSize);
-        this.inputGridWidth = (this.inputCols * this.inputSquareSize);
+        this.squareSize = Math.round((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
+        this.inputGridHeight = (this.inputRows * this.squareSize);
+        this.inputGridWidth = (this.inputCols * this.squareSize);
+        this.sidePadding = Math.max(canvasWidth - this.inputGridWidth, canvasHeight - this.inputGridHeight) / 2;
 
         //== mouse click delay (debounce)
         this.lastClickTime = 0;
@@ -135,8 +134,8 @@ class InputUI {
         let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
         let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
         if (xValid && yValid) {
-            let gridX = Math.floor((mouseX - this.sidePadding) / this.inputSquareSize); // column
-            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.inputSquareSize); // row
+            let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
+            let gridY = Math.floor((mouseY - this.sidePadding) / this.squareSize); // row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 let currentTime = millis();
@@ -160,23 +159,20 @@ class InputUI {
         const input = createFileInput((file) => {
             if (file.type === 'image') {
                 loadImage(file.data, (img) => {
-                    this.backgroundImage = img;
+                    this.objectImage = img;
                     this.resizeBackgroundImage();
+                    this.getImageMask();
                     this.drawInputGrid();
                 });
             } else {
                 console.error('Please upload an image file');
             }
         });
-        input.hide(); // Hide the default file input
-        input.elt.click(); // Trigger the file dialog
+        input.hide(); // hide default file input
+        input.elt.click(); // open  file dialog on click
     }
 
     saveShape() {
-        // // check if the shape is valid before saving
-        // // check if the bottom has at least 1 clicked input square
-        // if (this.inputGrid[0].includes(true)) {
-
         // find the shape title
         let titleValue = this.inputUIElements.titleInput.value();
         if (titleValue === '') { // no title entered by user
@@ -202,9 +198,7 @@ class InputUI {
         if (shapes.length > 1) {
             this.inputUIElements.nextButton.removeAttribute('disabled');
         }
-        // } else {
-        //     alert('Shape must have an input square selected on the bottom row.');
-        // }
+
         isMousePressed = false;
     }
 
@@ -255,7 +249,7 @@ class InputUI {
     resetCanvas() {
         background(255);
         this.inputUIElements.titleInput.value('');
-        this.backgroundImage = null;
+        this.objectImage = null;
         // todo: this.inputUIElements.depthInput.value('');
 
         // reset the input grid to all false (no selected squares)
@@ -269,31 +263,59 @@ class InputUI {
         this.displayShapeTitles();
     }
 
+    getImageMask() {
+        if (this.objectImage) {
+            // Create a mask for the input grid from the image
+            // threshold is a value between 0 and 1
+
+            // add image to the pixel buffer
+            let centerImage = (this.inputGridWidth - this.objectImage.width) / 2;
+            this.pixelBuffer = createGraphics(this.inputGridWidth, this.inputGridHeight);
+            this.pixelBuffer.pixelDensity(1);
+            this.pixelBuffer.background(255);
+
+            this.pixelBuffer.image(this.objectImage, centerImage, 0);
+            this.pixelBuffer.loadPixels();
+
+            // loop the gird and find the mask value for each square
+            let maskThreshold = 0.5;
+            for (let y = 0; y < this.inputRows; y++) {
+                this.inputGrid[y] = [];
+                for (let x = 0; x < this.inputCols; x++) {
+                    this.inputGrid[y][x] = this.getAverageSquareBW(y, x, maskThreshold);
+                }
+            }
+        }
+    }
+
     drawInputGrid() {
-        // show image
-        if (this.backgroundImage) {
-            let topX = this.sidePadding + (this.inputGridWidth - this.backgroundImage.width) / 2;
+        background(255);
+
+        if (this.objectImage) {
+            // add image to the canvas
+            let topX = this.sidePadding + (this.inputGridWidth - this.objectImage.width) / 2;
             let topY = this.sidePadding;
-            image(this.backgroundImage, topX, topY, this.backgroundImage.width, this.backgroundImage.height);
+            image(this.objectImage, topX, topY);
         }
 
         // draw grid
         for (let x = 0; x < this.inputRows; x++) {
             for (let y = 0; y < this.inputCols; y++) {
                 // draw input square
-                let rectX = x * this.inputSquareSize;
-                let rectY = (this.inputGridHeight - this.inputSquareSize) - (y * this.inputSquareSize);
+                let rectX = x * this.squareSize;
+                // let rectY = (this.inputGridHeight - this.squareSize) - (y * this.squareSize);
+                let rectY = (y * this.squareSize);
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
                     // semi-transparent black squares for selected
                     fill(0, 128);
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
+                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
                     stroke(0);
                     noFill();
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.inputSquareSize, this.inputSquareSize);
+                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
                 }
             }
         }
@@ -320,11 +342,60 @@ class InputUI {
 
     //== image handling
     resizeBackgroundImage() {
-        if (this.backgroundImage) {
-            const aspectRatio = this.inputGridHeight / this.backgroundImage.height;
+        if (this.objectImage) {
+            const aspectRatio = this.inputGridHeight / this.objectImage.height;
             const newHeight = this.inputGridHeight;
-            const newWidth = this.backgroundImage.width * aspectRatio;
-            this.backgroundImage.resize(newWidth, newHeight);
+            const newWidth = this.objectImage.width * aspectRatio;
+            // const newHeight = this.inputGridHeight;
+            // const newWidth = this.inputGridWidth;
+            this.objectImage.resize(newWidth, newHeight);
         }
+    }
+
+
+
+    getAverageSquareBW(_y, _x, _threshold) {
+        if (!this.pixelBuffer || !this.pixelBuffer.pixels) {
+            console.error('pixelBuffer or its pixels are null or undefined');
+            return false;
+        }
+
+        const bufferWidth = this.pixelBuffer.width;
+        const bufferHeight = this.pixelBuffer.height;
+
+        // Calculate the starting and ending positions of the square
+        const startX = Math.floor((_x * this.squareSize / this.inputGridWidth) * bufferWidth);
+        const startY = Math.floor((_y * this.squareSize / this.inputGridHeight) * bufferHeight);
+        const endX = Math.min(startX + this.squareSize, bufferWidth);
+        const endY = Math.min(startY + this.squareSize, bufferHeight);
+
+        let totalBrightness = 0;
+        let pixelCount = 0;
+
+        // Loop through all pixels in the square
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const index = (y * bufferWidth + x) * 4;
+
+                if (index < 0 || index >= this.pixelBuffer.pixels.length - 3) {
+                    continue;
+                }
+
+                const r = this.pixelBuffer.pixels[index];
+                const g = this.pixelBuffer.pixels[index + 1];
+                const b = this.pixelBuffer.pixels[index + 2];
+
+                const brightness = (r + g + b) / 3;
+                totalBrightness += brightness;
+                pixelCount++;
+            }
+        }
+
+        if (pixelCount === 0) {
+            return false;
+        }
+
+        const averageBrightness = totalBrightness / pixelCount;
+        return averageBrightness < (255 * _threshold);
     }
 }
