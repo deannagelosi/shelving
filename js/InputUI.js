@@ -352,8 +352,6 @@ class InputUI {
         }
     }
 
-
-
     getAverageSquareBW(_y, _x, _threshold) {
         if (!this.pixelBuffer || !this.pixelBuffer.pixels) {
             console.error('pixelBuffer or its pixels are null or undefined');
@@ -363,16 +361,17 @@ class InputUI {
         const bufferWidth = this.pixelBuffer.width;
         const bufferHeight = this.pixelBuffer.height;
 
-        // Calculate the starting and ending positions of the square
+        // calculate the start and end corners of the square
         const startX = Math.floor((_x * this.squareSize / this.inputGridWidth) * bufferWidth);
         const startY = Math.floor((_y * this.squareSize / this.inputGridHeight) * bufferHeight);
         const endX = Math.min(startX + this.squareSize, bufferWidth);
         const endY = Math.min(startY + this.squareSize, bufferHeight);
 
-        let totalBrightness = 0;
+        let minBrightness = 255;  // start with max possible brightness
         let pixelCount = 0;
 
-        // Loop through all pixels in the square
+        // loop through all pixels in the square
+        // look for the darkest pixel (occupied)
         for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
                 const index = (y * bufferWidth + x) * 4;
@@ -386,7 +385,7 @@ class InputUI {
                 const b = this.pixelBuffer.pixels[index + 2];
 
                 const brightness = (r + g + b) / 3;
-                totalBrightness += brightness;
+                minBrightness = Math.min(minBrightness, brightness);  // update minimum brightness
                 pixelCount++;
             }
         }
@@ -395,7 +394,9 @@ class InputUI {
             return false;
         }
 
-        const averageBrightness = totalBrightness / pixelCount;
-        return averageBrightness < (255 * _threshold);
+        // threshold determines how dark a pixel needs to be to be considered occupied
+        // lower threshold makes it less sensitive to slight darkness, higher more sensitive
+        const darknessThreshold = 255 * (_threshold);
+        return minBrightness < darknessThreshold;
     }
 }
