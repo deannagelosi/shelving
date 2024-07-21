@@ -34,12 +34,18 @@ class InputUI {
 
         // initialize UI elements
         this.initInputUI();
-        this.resetInputGrid();
     }
 
     initInputUI() {
-        // setup ui elements for input screen
+        //== setup the input grid
+        for (let y = 0; y < this.inputRows; y++) {
+            this.inputGrid[y] = [];
+            for (let x = 0; x < this.inputCols; x++) {
+                this.inputGrid[y][x] = false;
+            }
+        }
 
+        //== setup ui elements for input screen
         // create input fields and buttons row div
         let inputButtonRow = createDiv();
         inputButtonRow.parent(this.inputContainer);
@@ -102,6 +108,7 @@ class InputUI {
         this.inputContainer.addClass('hidden');
     }
 
+    //== mouse event handler
     selectInputSquare(mouseX, mouseY, blockSelect = false) {
         // check if mouse click is within input grid
         // factor in padding on all sides
@@ -128,6 +135,7 @@ class InputUI {
         }
     }
 
+    //== button handlers
     saveShape() {
         // // check if the shape is valid before saving
         // // check if the bottom has at least 1 clicked input square
@@ -207,23 +215,22 @@ class InputUI {
         this.inputUIElements.exampleButton.attribute('disabled', ''); // until 2 shapes are saved
     }
 
-    // input grid control functions
+    //== input grid display methods
     resetCanvas() {
         background(255);
         this.inputUIElements.titleInput.value('');
         // todo: this.inputUIElements.depthInput.value('');
-        this.resetInputGrid();
-        this.drawInputGrid();
-        this.displayShapeTitles();
-    }
 
-    resetInputGrid() {
-        for (let i = 0; i < this.inputRows; i++) {
-            this.inputGrid[i] = [];
-            for (let j = 0; j < this.inputCols; j++) {
-                this.inputGrid[i][j] = false;
+        // reset the input grid to all false (no selected squares)
+        for (let y = 0; y < this.inputRows; y++) {
+            this.inputGrid[y] = [];
+            for (let x = 0; x < this.inputCols; x++) {
+                this.inputGrid[y][x] = false;
             }
         }
+
+        this.drawInputGrid();
+        this.displayShapeTitles();
     }
 
     drawInputGrid() {
