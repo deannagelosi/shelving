@@ -38,13 +38,9 @@ class InputUI {
         // Select the existing header div
         const headerDiv = select('#header');
 
-        // Create and append the h1 element
-        this.headerElements.title = createElement('h1', 'Generative Shelving');
-        this.headerElements.title.parent(headerDiv);
-
-        // Create a new container for interactive elements
+        // Create a container for image upload and threshold slider
         const interactiveContainer = createDiv();
-        interactiveContainer.id('interactive-container');
+        interactiveContainer.id('image-controls');
         interactiveContainer.parent(headerDiv);
 
         // Create and append the p element
@@ -78,6 +74,12 @@ class InputUI {
 
     initInputUI() {
         //== setup dom elements
+        // hide setup side bars
+        select('#left-container').addClass('invisible');
+        this.bodyElements.rightSideBar = select('#right-container');
+        this.bodyElements.rightSideList = select('#right-container .sidebar-list');
+        this.bodyElements.rightSideList.addClass('titles');
+
         // retrieve reference to ui container div
         this.uiContainer = select('#ui-container');
         this.inputContainer = createDiv().parent(this.uiContainer).id('input-container');
@@ -111,14 +113,10 @@ class InputUI {
         this.bodyElements.nextButton.mousePressed(() => this.nextScreen());
 
         // create the LOAD SAVED SHAPES button
-        this.bodyElements.loadButton = createButton('Load Saved Shapes');
+        this.bodyElements.loadButton = createButton('Load');
         this.bodyElements.loadButton.parent(this.bodyElements.inputButtonRow);
         this.bodyElements.loadButton.addClass('button green-button');
         this.bodyElements.loadButton.mousePressed(() => this.loadSavedShapes());
-
-        // create a container for shape titles
-        this.bodyElements.shapeTitleContainer = createDiv('');
-        this.bodyElements.shapeTitleContainer.parent(this.inputContainer).id('shape-title-container');
 
         // initially hide the input container
         this.hide();
@@ -359,7 +357,7 @@ class InputUI {
     displayShapeTitles() {
         this.clearShapeTitles();
 
-        let titleContainer = this.bodyElements.shapeTitleContainer
+        let titleContainer = this.bodyElements.rightSideList
 
         for (let i = shapes.length - 1; i >= 0; i--) {
             let shapeTitle = createP(`${shapes[i].title}`).addClass('shape-title');

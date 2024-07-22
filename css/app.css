@@ -19,6 +19,7 @@ body {
 
 #main-container {
   display: flex;
+  width: auto;
   margin: 0 auto;
 }
 
@@ -57,7 +58,7 @@ div.sidebar-top {
 div.sidebar-list {
   flex-grow: 1;
   padding: 10px;
-  overflow-y: auto;
+  overflow-y: scroll;
   border: #c0c0c0 1px solid;
   background-color: #fefefe;
 }
@@ -100,5 +101,19 @@ div.sidebar-buttons {
 }
 
 .hidden {
+  /* hidden and doesn't take up space */
   display: none !important;
+}
+
+.invisible {
+  /* hidden but still takes up space */
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 1085px) {
+  .invisible{
+    /* stop taking up space when screen is smaller */
+    width: 0 !important;
+  }
 }
