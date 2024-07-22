@@ -1,9 +1,12 @@
 #header {
+    background-color: #f0f0f0;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    padding: 10px;
+    width: 100%;
 }
 
 #header h1 {
@@ -19,32 +22,6 @@
 #threshold-slider {
     width: 200px;
     margin: 0 15px;
-}
-
-#clear-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    background-color: #f44336;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-#clear-button:hover {
-    background-color: #d32f2f;
-}
-
-#upload-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-#upload-button:hover {
-    background-color: #45a049;
 }
 
 #input-container {
@@ -102,30 +79,16 @@
     justify-content: center;
     width: 100%;
     margin-top: 10px;
-  }
-  
-  .vertical-divider {
+}
+
+.vertical-divider {
     width: 1px;
     height: 30px;
     background-color: #ccc;
     margin: 0 15px;
-  }
-  
-  #threshold-slider {
+}
+
+#threshold-slider {
     width: 200px;
     margin: 0 15px;
-  }
-  
-  #clear-button {
-    padding: 8px 15px;
-    background-color: #f44336;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  #clear-button:hover {
-    background-color: #d32f2f;
-  }
+}

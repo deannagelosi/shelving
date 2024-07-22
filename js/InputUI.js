@@ -49,11 +49,12 @@ class InputUI {
 
         // Create and append the p element
         this.headerElements.instructions = createElement('p', 'Upload an image to begin');
+        this.headerElements.instructions.style('margin', '5px');
         this.headerElements.instructions.parent(interactiveContainer);
 
         // Create and append the button element
         this.headerElements.uploadButton = createButton('Upload');
-        this.headerElements.uploadButton.id('upload-button');
+        this.headerElements.uploadButton.addClass('button green-button');
         this.headerElements.uploadButton.parent(interactiveContainer);
         this.headerElements.uploadButton.mousePressed(() => this.handleImageUpload());
 
@@ -70,7 +71,7 @@ class InputUI {
 
         // Create and append the clear button
         this.headerElements.clearButton = createButton('Clear');
-        this.headerElements.clearButton.id('clear-button');
+        this.headerElements.clearButton.addClass('button red-button');
         this.headerElements.clearButton.parent(interactiveContainer);
         this.headerElements.clearButton.mousePressed(() => this.clearGrid());
     }
@@ -89,25 +90,30 @@ class InputUI {
 
         // create the title input field
         this.bodyElements.titleLabel = createP('Title:');
-        this.bodyElements.titleLabel.parent(this.bodyElements.inputButtonRow).addClass('input-label');
+        this.bodyElements.titleLabel.parent(this.bodyElements.inputButtonRow);
+        this.bodyElements.titleLabel.addClass('input-label');
         this.bodyElements.titleInput = createInput('');
-        this.bodyElements.titleInput.parent(this.bodyElements.inputButtonRow).addClass('input-field');
+        this.bodyElements.titleInput.parent(this.bodyElements.inputButtonRow);
+        this.bodyElements.titleInput.addClass('input-field');
         this.bodyElements.titleInput.attribute('size', '20');
 
         // create the SAVE button
-        this.bodyElements.saveButton = createButton('SAVE');
-        this.bodyElements.saveButton.parent(this.bodyElements.inputButtonRow).addClass('button');
+        this.bodyElements.saveButton = createButton('Save');
+        this.bodyElements.saveButton.parent(this.bodyElements.inputButtonRow);
+        this.bodyElements.saveButton.addClass('button green-button');
         this.bodyElements.saveButton.mousePressed(() => this.saveShape());
 
         // create the NEXT button
-        this.bodyElements.nextButton = createButton('ANNEAL');
-        this.bodyElements.nextButton.parent(this.bodyElements.inputButtonRow).addClass('button');
+        this.bodyElements.nextButton = createButton('Next');
+        this.bodyElements.nextButton.parent(this.bodyElements.inputButtonRow);
+        this.bodyElements.nextButton.addClass('button green-button');
         this.bodyElements.nextButton.attribute('disabled', ''); // until 2 shapes are saved
         this.bodyElements.nextButton.mousePressed(() => this.nextScreen());
 
         // create the LOAD SAVED SHAPES button
-        this.bodyElements.loadButton = createButton('LOAD SAVED SHAPES');
-        this.bodyElements.loadButton.parent(this.bodyElements.inputButtonRow).addClass('button');
+        this.bodyElements.loadButton = createButton('Load Saved Shapes');
+        this.bodyElements.loadButton.parent(this.bodyElements.inputButtonRow);
+        this.bodyElements.loadButton.addClass('button green-button');
         this.bodyElements.loadButton.mousePressed(() => this.loadSavedShapes());
 
         // create a container for shape titles

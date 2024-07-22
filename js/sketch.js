@@ -1,5 +1,5 @@
-let canvasWidth = 700;
-let canvasHeight = 700;
+let canvasWidth = 650;
+let canvasHeight = 650;
 let shapes = [];
 let shapesPos = [];
 let annealing;
