@@ -9,7 +9,7 @@ class CaseExport {
         this.bedHeight = 28; // 28
         this.pixelRes = 100; // pixels per inch
         this.graphic = createGraphics(45 * this.pixelRes, 60 * this.pixelRes, SVG);
-        this.maxDepth = 0;
+        this.max = 0;
         this.boardThickness = 0.25;
         this.vertKerf = 0.02; // kerf for vertical cuts
         this.cutWidth = this.boardThickness - this.vertKerf;
@@ -21,16 +21,6 @@ class CaseExport {
         this.beds = [[...this.bedRows], [...this.bedRows]];
     }
 
-    calcDepth() {
-        // access shapeCase to loop all horizontal and vertical boards
-        // shapeCase.horizontalBoards and shapeCase.verticalBoards
-        for (let i = 0; i < shapes.length; i++) {
-            if (this.maxDepth < shapes[i].shapeDepth) {
-                this.maxDepth = shapes[i].shapeDepth;
-            }
-        }
-        this.maxDepth += 1; // add buffer for depth
-    }
 
     printBed() {
         // print the bed
@@ -62,7 +52,7 @@ class CaseExport {
 
     generateRects(_boards) {
         // use graphicsBuffer to draw the rectangles
-        let rectHeight = this.maxDepth;
+        let rectHeight = this.max;
 
         //== Print Boards ==//
         // sort the boards by length
@@ -178,7 +168,6 @@ class CaseExport {
 
 //     // export case as svg
 //     let caseExport = new CaseExport();
-//     caseExport.calcDepth();
 //     caseExport.layoutRects();
 //     caseExport.printBed();
 //     // caseExport.displayExport()

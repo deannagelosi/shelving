@@ -263,7 +263,6 @@ class Case {
         console.log(this.boards);
 
         this.detectJoints(); // add joinery (points of interest) to boards
-        this.calcDepth(); // max shape depth becomes case depth
 
         // draw all the boards, labels, and POIs (joinery)
         this.drawBoards();
@@ -393,17 +392,6 @@ class Case {
                 }
             }
         }
-    }
-
-    calcDepth() {
-        // access shapeCase to loop all horizontal and vertical boards
-        // shapeCase.horizontalBoards and shapeCase.verticalBoards
-        for (let i = 0; i < shapes.length; i++) {
-            if (this.maxDepth < shapes[i].shapeDepth) {
-                this.maxDepth = shapes[i].shapeDepth;
-            }
-        }
-        this.maxDepth += 1; // add buffer for depth
     }
 
     displaySVGExport() {

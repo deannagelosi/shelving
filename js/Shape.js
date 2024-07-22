@@ -1,5 +1,5 @@
 class Shape {
-    constructor(_title) {
+    constructor() {
         // 2D array of booleans for the user input grid
         this.inputGrid = [[]];
 
@@ -10,16 +10,13 @@ class Shape {
         this.bufferShape = [[]]; // low poly + one extra square on right and top
         this.bufferHeight;
         this.bufferWidth;
-
-        this.title = _title;
-        this.shapeDepth;
-        this.weight;
+        this.title;
     }
 
-    saveUserInput(_inputGrid, _depthValue) {
+    saveUserInput(_title, _inputGrid) {
         // save the shape and create the rounded up and buffer shape arrays
+        this.title = _title;
         this.inputGrid = _inputGrid;
-        this.shapeDepth = _depthValue;
 
         // save the user shape by trimming empty rows and columns in the input grid
         this.shape = [];

@@ -17,18 +17,6 @@ let enableCellular = true;
 let devMode = false;
 let numGrow = 0;
 
-function preload() {
-    // load the example shape data
-    loadData('data/sunny-shapes.json').then(json => {
-        shapeData = json;
-    });
-}
-
-async function loadData(url) {
-    const response = await fetch(url);
-    return await response.json();
-}
-
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-container');
