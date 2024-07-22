@@ -63,7 +63,7 @@ class InputUI {
         divider.parent(interactiveContainer);
 
         // Create and append the slider
-        this.headerElements.thresholdSlider = createSlider(0, 1, this.maskThreshold, 0.01);
+        this.headerElements.thresholdSlider = createSlider(0.1, 0.65, this.maskThreshold, 0.005);
         this.headerElements.thresholdSlider.id('threshold-slider');
         this.headerElements.thresholdSlider.parent(interactiveContainer);
         this.headerElements.thresholdSlider.input(() => this.handleThresholdChange());
