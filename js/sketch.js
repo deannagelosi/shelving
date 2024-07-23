@@ -19,7 +19,7 @@ let numGrow = 0;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
-    canvasElement.parent('canvas-container');
+    canvasElement.parent('canvas-div');
 
     // setup ui elements for both screens
     inputUI = new InputUI();

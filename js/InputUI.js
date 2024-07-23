@@ -6,6 +6,7 @@ class InputUI {
         this.pixelBuffer = null;
         this.maskThreshold = 0.4;
         // dom elements and shape titles
+        this.htmlRef = {};
         this.html = {};
         this.shapeTitleElements = [];
 
@@ -29,111 +30,122 @@ class InputUI {
         this.resetInputGrid()
 
         //== initialize UI elements
+        this.initRefs();
         this.initHeaderUI();
         this.initInputUI();
     }
 
-    initHeaderUI() {
-        // Select the existing header div
-        const headerDiv = select('#header');
+    initRefs() {
+        // get references to parent dom elements
+        this.htmlRef.header = select('#header');
+        this.htmlRef.leftBar = select('#left-side-bar');
+        this.htmlRef.rightBar = select('#right-side-bar');
+        this.htmlRef.bottomDiv = select('#bottom-div');
+        this.htmlRef.rightSideTop = select('#right-side-bar .sidebar-top');
+        this.htmlRef.rightSideList = select('#right-side-bar .sidebar-list');
+        this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
+    }
 
-        // Create a container for image upload and threshold slider
-        const interactiveContainer = createDiv();
-        interactiveContainer.id('image-controls');
-        interactiveContainer.parent(headerDiv);
+    initHeaderUI() {
+        // Setup image upload and threshold slider
+        this.html.imageControls = createDiv();
+        this.html.imageControls.id('image-controls');
+        this.html.imageControls.parent(this.htmlRef.header);
 
         // Create and append the p element
         this.html.headerInstruct = createElement('p', 'Upload an image to begin');
         this.html.headerInstruct.style('margin', '5px');
-        this.html.headerInstruct.parent(interactiveContainer);
+        this.html.headerInstruct.parent(this.html.imageControls);
 
         // Create and append the button element
         this.html.headerUploadButton = createButton('Upload');
         this.html.headerUploadButton.addClass('button green-button');
-        this.html.headerUploadButton.parent(interactiveContainer);
+        this.html.headerUploadButton.parent(this.html.imageControls);
         this.html.headerUploadButton.mousePressed(() => this.handleImageUpload());
 
         // Create a vertical divider
         const divider = createDiv();
         divider.class('vertical-divider');
-        divider.parent(interactiveContainer);
+        divider.parent(this.html.imageControls);
 
         // Create and append the slider
         this.html.headerThresholdSlider = createSlider(0.15, 0.6, this.maskThreshold, 0.005);
         this.html.headerThresholdSlider.id('threshold-slider');
-        this.html.headerThresholdSlider.parent(interactiveContainer);
+        this.html.headerThresholdSlider.parent(this.html.imageControls);
         this.html.headerThresholdSlider.input(() => this.handleThresholdChange());
 
         // Create and append the clear button
         this.html.headerClearButton = createButton('Clear');
         this.html.headerClearButton.addClass('button red-button');
-        this.html.headerClearButton.parent(interactiveContainer);
+        this.html.headerClearButton.parent(this.html.imageControls);
         this.html.headerClearButton.mousePressed(() => this.clearGrid());
     }
 
     initInputUI() {
-        //== setup dom elements
-        // hide setup side bars
-        select('#left-container').addClass('hidden');
-        this.html.rightSideBar = select('#right-container');
-        this.html.rightSideList = select('#right-container .sidebar-list');
-        this.html.rightSideButtons = select('#right-container .sidebar-buttons');
-        this.html.rightSideList.addClass('titles');
-
-        // retrieve reference to ui container div
-        this.bottomContainer = select('#bottom-container');
-
         //== setup ui elements for input screen
         // create input fields and buttons row div
-        this.html.inputContainer = createDiv();
-        this.html.inputContainer.parent(this.bottomContainer);
-        this.html.inputContainer.id('input-container');
+        this.html.inputDiv = createDiv();
+        this.html.inputDiv.parent(this.htmlRef.bottomDiv);
+        this.html.inputDiv.id('input-div');
 
         // create the title input field
         this.html.titleLabel = createP('Title:');
-        this.html.titleLabel.parent(this.html.inputContainer);
+        this.html.titleLabel.parent(this.html.inputDiv);
         this.html.titleLabel.addClass('input-label');
         this.html.titleInput = createInput('');
-        this.html.titleInput.parent(this.html.inputContainer);
+        this.html.titleInput.parent(this.html.inputDiv);
         this.html.titleInput.addClass('input-field');
         this.html.titleInput.attribute('size', '20');
 
         // create the ADD button
         this.html.addButton = createButton('Add');
-        this.html.addButton.parent(this.html.inputContainer);
+        this.html.addButton.parent(this.html.inputDiv);
         this.html.addButton.addClass('button green-button');
         this.html.addButton.mousePressed(() => this.addShape());
-        
+
         // create the SAVE SHAPES button
         this.html.saveButton = createButton('Save');
-        this.html.saveButton.parent(this.html.rightSideButtons);
+        this.html.saveButton.parent(this.htmlRef.rightSideButtons);
         this.html.saveButton.addClass('button green-button');
         this.html.saveButton.attribute('disabled', ''); // until 2 shapes are saved
         this.html.saveButton.mousePressed(() => this.saveAllShapes());
 
         // create the LOAD SHAPES button
         this.html.loadButton = createButton('Load');
-        this.html.loadButton.parent(this.html.rightSideButtons);
+        this.html.loadButton.parent(this.htmlRef.rightSideButtons);
         this.html.loadButton.addClass('button green-button');
         this.html.loadButton.mousePressed(() => this.loadSavedShapes());
 
         // create the NEXT button
         this.html.nextButton = createButton('Next');
-        this.html.nextButton.parent(this.html.rightSideButtons);
+        this.html.nextButton.parent(this.htmlRef.rightSideButtons);
         this.html.nextButton.addClass('button green-button');
         this.html.nextButton.attribute('disabled', ''); // until 2 shapes are saved
         this.html.nextButton.mousePressed(() => this.nextScreen());
 
-        // initially hide the input container
+        // initially hide the input elements
         this.hide();
     }
 
     show() {
-        this.html.inputContainer.removeClass('hidden');
+        // toggle on the input screen divs
+        this.htmlRef.leftBar.addClass('hidden');
+        this.htmlRef.rightBar.removeClass('hidden');
+        this.htmlRef.bottomDiv.removeClass('hidden');
+
+        // remove hidden class from each element in this.html
+        Object.values(this.html).forEach(element => element.removeClass('hidden'));
+
     }
 
     hide() {
-        this.html.inputContainer.addClass('hidden');
+        // toggle off input screen divs
+        this.htmlRef.leftBar.addClass('hidden');
+        this.htmlRef.rightBar.addClass('hidden');
+        this.htmlRef.bottomDiv.addClass('hidden');
+
+        // add hidden class to each element in this.html
+        Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
     //== mouse event handler
@@ -362,11 +374,9 @@ class InputUI {
     displayShapeTitles() {
         this.clearShapeTitles();
 
-        let titleContainer = this.html.rightSideList
-
         for (let i = shapes.length - 1; i >= 0; i--) {
             let shapeTitle = createP(`${shapes[i].title}`).addClass('shape-title');
-            shapeTitle.parent(titleContainer);
+            shapeTitle.parent(this.htmlRef.rightSideList);
             this.shapeTitleElements.push(shapeTitle);
         }
     }
@@ -431,5 +441,10 @@ class InputUI {
         // lower threshold makes it less sensitive to slight darkness, higher more sensitive
         const darknessThreshold = 255 * (_threshold);
         return minBrightness < darknessThreshold;
+    }
+
+    //== helper functions
+    clearDiv(selector) {
+        select(selector).html('');
     }
 }

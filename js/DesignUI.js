@@ -9,10 +9,10 @@ class DesignUI {
     
     initDesignUI() {
         //== setup dom elements
-        // retrieve reference to ui container div
-        this.bottomUI = select('#bottom-container');
+        // retrieve reference to divs in index.html
+        this.bottomUI = select('#bottom-div');
         // setup anneal ui element containers
-        this.html.annealContainer = createDiv().id('anneal-container');
+        this.html.annealContainer = createDiv().id('anneal-div');
         this.html.annealContainer.parent(this.bottomUI);
 
         this.html.reannealButton = createButton('RE-ANNEAL');

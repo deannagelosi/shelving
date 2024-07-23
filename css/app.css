@@ -17,24 +17,24 @@ body {
   height: 100%;
 }
 
-#main-container {
+#main-div {
   display: flex;
   width: auto;
   margin: 0 auto;
 }
 
-#bottom-container {
+#bottom-div {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-#canvas-container {
+#canvas-div {
   margin: 20px;
 }
 
-div.side-bar-container {
+.side-bar {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -46,14 +46,14 @@ div.side-bar-container {
   box-sizing: border-box;
 }
 
-div.sidebar-top {
+.sidebar-top {
   padding: 10px;
   background-color: #f0f0f0;
   text-align: center;
   font-weight: bold;
 }
 
-div.sidebar-list {
+.sidebar-list {
   flex-grow: 1;
   padding: 10px;
   overflow-y: scroll;
@@ -61,7 +61,7 @@ div.sidebar-list {
   background-color: #fefefe;
 }
 
-div.sidebar-buttons {
+.sidebar-buttons {
   display: flex;
   flex-direction: row;
   padding: 10px 0px;
