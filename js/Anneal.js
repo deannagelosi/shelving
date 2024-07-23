@@ -8,7 +8,7 @@ class Anneal {
         this.refinedSolution = null; // stores running async anneals
         this.abortAnnealing = false;
         // bind reanneal function to reanneal button
-        this.ui.designUIElements.reannealButton.mousePressed(() => this.reAnneal());
+        this.ui.html.reannealButton.mousePressed(() => this.reAnneal());
 
         // annealing uses these strategies:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -53,11 +53,13 @@ class Anneal {
         if (this.abortAnnealing) {
             return await annealing.run();
         }
-        console.log("Multi-start results: ", results.map(s => s.score).join(', '));
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
-        console.log("Best solution:", bestStartSolution.score);
+        if (devMode) {
+            console.log("Multi-start results: ", results.map(s => s.score).join(', '));
+            console.log("Best solution:", bestStartSolution.score);
+        }
 
         // == refinement phase == //
         // -- configure the annealing process for refinement -- //
@@ -70,11 +72,11 @@ class Anneal {
         if (this.abortAnnealing) {
             return await annealing.run();
         }
-        console.log("Refine phase complete. Score:", this.refinedSolution.score);
+        if (devMode) console.log("Refine complete. Score:", this.refinedSolution.score);
 
         // if solution is not valid (overlapping or floating shapes), continue to refine
         while (this.refinedSolution.valid == false) {
-            console.log("additional refining...")
+            if (devMode) console.log("additional refining...")
             let refineConfig = {
                 initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
                 initialCoolingRate: 0.99, // slower cooling
@@ -142,7 +144,7 @@ class Anneal {
             temperature *= coolingRate;
 
             if (iterationsSinceImprovement > config.reheatCounter) {
-                console.log("Reheating...");
+                if (devMode ) console.log("Reheating...");
                 // adaptive cooling: if stuck, reheat the system
                 // - increasing the temperature causes more exploration, helping to escape a local minima
                 // increase temperature, but don't exceed initial temp
@@ -164,7 +166,10 @@ class Anneal {
             await new Promise(resolve => setTimeout(resolve, 0));
             totalIterations++;
         }
-        console.log("iterations completed:", Math.round((totalIterations / maxIterations) * 10000) / 100, "%");
+
+        if (devMode) {
+            console.log("iterations completed:", Math.round((totalIterations / maxIterations) * 10000) / 100, "%");
+        }
 
         // return the best solution found during this annealing process
         return bestSolution;

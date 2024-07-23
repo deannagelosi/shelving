@@ -264,7 +264,6 @@ class InputUI {
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
                 const shapeData = file.data;
-                console.log(shapeData);
                 // read the shapes in
                 shapes = [];
                 for (let shape of shapeData) {
