@@ -42,7 +42,12 @@
     border-radius: 3px;
 }
 
-.sidebar-list p.shape-title {
+.sidebar-list .shape-title {
+    display: flex;
+    flex-direction: row;
+}
+
+.shape-title p {
     margin: 5px 10px;
     white-space: nowrap;
     font-size: 14px;

@@ -373,10 +373,32 @@ class InputUI {
     displayShapeTitles() {
         this.clearShapeTitles();
 
-        for (let i = shapes.length - 1; i >= 0; i--) {
-            let shapeTitle = createP(`${shapes[i].title}`).addClass('shape-title');
-            shapeTitle.parent(this.htmlRef.rightSideList);
-            this.shapeTitleElements.push(shapeTitle);
+        for (let i = 0; i < shapes.length; i++) {
+            // create item row div
+            let titleRow = createDiv().addClass('shape-title');
+            titleRow.parent(this.htmlRef.rightSideList);
+            // create trash icon
+            let trashIcon = createImg('/img/trash.svg');
+            trashIcon.size(24, 24);
+            trashIcon.style('display', 'inline-block');
+            trashIcon.style('cursor', 'pointer');
+            trashIcon.style('margin-left', '5px');
+            trashIcon.parent(titleRow);
+
+            // create shape title
+            let shapeTitle = createP(`${shapes[i].title}`);
+            shapeTitle.attribute('data-index', i);
+            shapeTitle.parent(titleRow);
+            // save row for removal later
+            this.shapeTitleElements.push(titleRow);
+
+            // Add event listener to trash icon
+            trashIcon.mousePressed(() => {
+                let index = shapeTitle.attribute('data-index');
+                shapes.splice(index, 1);
+                //update displayed list
+                this.displayShapeTitles();
+            });
         }
     }
 
