@@ -79,11 +79,6 @@ body {
   transition: background-color 0.3s;
 }
 
-.button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
 .red-button {
   background-color: #f44336;
 }
@@ -98,6 +93,11 @@ body {
 
 .green-button:hover {
   background-color: #45a049;
+}
+
+.button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 .hidden {
