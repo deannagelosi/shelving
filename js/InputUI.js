@@ -226,17 +226,27 @@ class InputUI {
         // Reset active shape and UI
         this.resetCanvas();
 
-        // Enable the NEXT button if 2 shapes have been saved
-        if (shapes.length > 1) {
-            this.html.nextButton.removeAttribute('disabled');
+        // disable next button (until the user saves the changes)
+        this.html.nextButton.attribute('disabled', '');
+        // enable save button if there is more than one shape
+        if (shapes.length >= 1) {
+            this.html.saveButton.removeAttribute('disabled');
         }
 
         isMousePressed = false;
     }
 
-    nextScreen() {
-        // note: saveJSON(shapes, 'shapesData.json');
+    saveAllShapes() {
+        // save all shapes to a json
+        saveJSON(shapes, 'shapesData.json');
 
+        // Enable next button once shapes are saved and there are at least 2 shapes
+        if (shapes.length > 1) {
+            this.html.nextButton.removeAttribute('disabled');
+        }
+    }
+
+    nextScreen() {
         // 1. prep the inputted shapes for annealing the first solution
         // - wrap user inputted shapes with extra position
         // - gives each solution unique position data, while sharing the same shape data
@@ -272,12 +282,16 @@ class InputUI {
                     newShape.saveUserInput(shape.title, shape.inputGrid);
                     shapes.push(newShape);
                 }
-                // update the UI
+                // Reset active shape and UI
                 this.resetCanvas();
-                if (shapes.length > 1) {
-                    this.html.nextButton.removeAttribute('disabled');
 
+                // disable next button (until the user saves the changes)
+                this.html.nextButton.attribute('disabled', '');
+                // enable save button if there is more than one shape
+                if (shapes.length >= 1) {
+                    this.html.saveButton.removeAttribute('disabled');
                 }
+                isMousePressed = false;
             } else {
                 alert('Please select a .json file');
             }
@@ -392,12 +406,24 @@ class InputUI {
             // save row for removal later
             this.shapeTitleElements.push(titleRow);
 
-            // Add event listener to trash icon
+            // add event listener to trash icon
+            // removes a shape from the list
             trashIcon.mousePressed(() => {
                 let index = shapeTitle.attribute('data-index');
                 shapes.splice(index, 1);
+
                 //update displayed list
                 this.displayShapeTitles();
+
+                // disable next button (until the user saves the changes)
+                this.html.nextButton.attribute('disabled', '');
+
+                // toggle save button if there are any shapes to save
+                if (shapes.length >= 1) {
+                    this.html.saveButton.removeAttribute('disabled');
+                } else {
+                    this.html.saveButton.attribute('disabled', '');
+                }
             });
         }
     }
