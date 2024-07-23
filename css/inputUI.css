@@ -26,20 +26,8 @@
 
 #input-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.input-button-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 20px;
-    width: 100%;
 }
 
 .input-label {

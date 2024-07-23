@@ -23,7 +23,7 @@ body {
   margin: 0 auto;
 }
 
-#content-container {
+#bottom-container {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -35,14 +35,12 @@ body {
 }
 
 div.side-bar-container {
-  width: 200px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 650px;
+  height: 630px;
   background-color: #f0f0f0;
-  padding: 10px 0px;
-  margin-top: 20px;
+  margin-top: 30px;
   border: #c0c0c0 1px solid;
   border-radius: 3px;
   box-sizing: border-box;
@@ -64,7 +62,9 @@ div.sidebar-list {
 }
 
 div.sidebar-buttons {
-  padding: 10px;
+  display: flex;
+  flex-direction: row;
+  padding: 10px 0px;
   text-align: center;
 }
 
@@ -103,17 +103,4 @@ div.sidebar-buttons {
 .hidden {
   /* hidden and doesn't take up space */
   display: none !important;
-}
-
-.invisible {
-  /* hidden but still takes up space */
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-@media (max-width: 1085px) {
-  .invisible{
-    /* stop taking up space when screen is smaller */
-    width: 0 !important;
-  }
 }
