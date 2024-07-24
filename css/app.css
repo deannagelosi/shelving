@@ -96,8 +96,8 @@ body {
 }
 
 .button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+  background-color: #cccccc !important;
+  cursor: not-allowed !important;
 }
 
 .hidden {

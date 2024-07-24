@@ -19,11 +19,6 @@
     margin-bottom: 10px;
 }
 
-#threshold-slider {
-    width: 200px;
-    margin: 0 15px;
-}
-
 #input-div {
     display: flex;
     flex-direction: row;
@@ -68,7 +63,12 @@
     margin: 0 15px;
 }
 
-#threshold-slider {
+.slider {
     width: 200px;
     margin: 0 15px;
+}
+
+.slider:disabled {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
 }

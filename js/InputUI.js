@@ -1,10 +1,15 @@
 class InputUI {
     constructor() {
         //== state variables
+        // grid and image data
         this.inputGrid = [];
-        this.objectImage = null;
-        this.pixelBuffer = null;
-        this.maskThreshold = 0.4;
+        this.imgData = {}; // (image, mask, brightness data, etc)
+        // brightness slider variables
+        this.defaultBrightness = 1.2;
+        this.imgBrightness = this.defaultBrightness;
+        this.brightStepSize = 0.01;
+        this.brightMin = 0.8;
+        this.brightMax = 1.8;
         // dom elements and shape titles
         this.htmlRef = {};
         this.html = {};
@@ -39,6 +44,7 @@ class InputUI {
         this.hide();
     }
 
+    //== dom element setup methods
     getHtmlRefs() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
@@ -52,7 +58,7 @@ class InputUI {
 
     initHeaderUI() {
         //== setup ui elements for header
-        // Setup image upload and threshold slider
+        // Setup image upload and slider
         this.html.imageControls = createDiv();
         this.html.imageControls.id('image-controls');
         this.html.imageControls.parent(this.htmlRef.header);
@@ -74,16 +80,18 @@ class InputUI {
         divider.parent(this.html.imageControls);
 
         // Create and append the slider
-        this.html.headerThresholdSlider = createSlider(0.15, 0.6, this.maskThreshold, 0.005);
-        this.html.headerThresholdSlider.id('threshold-slider');
-        this.html.headerThresholdSlider.parent(this.html.imageControls);
-        this.html.headerThresholdSlider.input(() => this.handleThresholdChange());
+        this.html.headerSlider = createSlider(this.brightMin, this.brightMax, this.imgBrightness, this.brightStepSize);
+        this.html.headerSlider.addClass('slider');
+        this.html.headerSlider.parent(this.html.imageControls);
+        this.html.headerSlider.attribute('disabled', '');
+
+        this.html.headerSlider.input(() => this.handleSliderChange());
 
         // Create and append the clear button
         this.html.headerClearButton = createButton('Clear');
         this.html.headerClearButton.addClass('button red-button');
         this.html.headerClearButton.parent(this.html.imageControls);
-        this.html.headerClearButton.mousePressed(() => this.clearGrid());
+        this.html.headerClearButton.mousePressed(() => this.resetCanvas());
     }
 
     initBodyUI() {
@@ -132,6 +140,7 @@ class InputUI {
         this.html.nextButton.mousePressed(() => this.nextScreen());
     }
 
+    //== show/hide methods
     show() {
         // toggle on the input screen divs
         this.htmlRef.leftBar.addClass('hidden');
@@ -158,62 +167,58 @@ class InputUI {
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
-    //== mouse event handler
-    selectInputSquare(mouseX, mouseY, blockSelect = false) {
-        // check if mouse click is within input grid
-        // factor in padding on all sides
-        let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
-        let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
-        if (xValid && yValid) {
-            let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
-            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.squareSize); // row
-
-            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                let currentTime = millis();
-                if (blockSelect || (currentTime - this.lastClickTime > this.clickDelay)) {
-                    if (blockSelect) {
-                        // used when dragging mouse
-                        this.inputGrid[gridY][gridX] = true;
-                    } else {
-                        // used when clicking mouse
-                        this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
-                        this.lastClickTime = currentTime;
-                    }
-                    this.drawInputGrid();
-                }
-            }
-        }
-    }
-
     //== button handlers
-    handleThresholdChange() {
-        // set mask to slider value
-        this.maskThreshold = this.html.headerThresholdSlider.value();
-        this.createImageMask();
-        this.drawInputGrid();
-    }
+    async handleSliderChange() {
+        // get slider value
+        this.imgBrightness = this.html.headerSlider.value();
+        await this.adjustImgBrightness();
 
-    clearGrid() {
-        this.resetCanvas();
-        this.objectImage = null;
-        this.pixelBuffer = null;
+        // update the mask for the new brightness and redraw the display
+        await this.createImageMask();
         this.drawInputGrid();
     }
 
     handleImageUpload() {
         const input = createFileInput((file) => {
             if (file.type === 'image') {
-                loadImage(file.data, (img) => {
+                loadImage(file.data, async (img) => {
+                    // reset the canvas
+                    this.resetCanvas();
                     // setup image
-                    this.objectImage = img;
-                    this.resizeBackgroundImage();
-                    this.setPixelBuffer();
-                    this.createImageMask();
+                    this.imgData.img = img;
+                    await this.resizeImg();
+
+                    await this.adjustImgBrightness();
+                    await this.createImageMask();
                     // update the input grid display
+                    this.html.headerSlider.attribute('disabled', '');
                     this.drawInputGrid();
+
+                    // // pre-compute all brightness levels in the background
+                    // setTimeout(async () => {
+                    //     for (let brightness = this.brightMin; brightness <= this.brightMax; brightness += this.brightStepSize) {
+                    //         this.imgBrightness = brightness;
+                    //         await this.adjustImgBrightness();
+                    //         await this.createImageMask();
+                    //     }
+                    //     this.html.headerSlider.removeAttribute('disabled');
+                    // }, 0);
+
+
+                    // // switch back to default brightness
+                    // this.imgBrightness = this.defaultBrightness;
+                    // await this.adjustImgBrightness();
+                    // await this.createImageMask();
+                    // this.drawInputGrid();
+
+                    this.html.headerSlider.removeAttribute('disabled');
+
+
+                    // add file name as initial title
+                    this.html.titleInput.value(file.name.split('.')[0]);
                 });
             } else {
-                console.error('Please upload an image file');
+                alert('Select an image file to upload');
             }
         });
         input.hide(); // hide default file input
@@ -289,7 +294,7 @@ class InputUI {
 
                 isMousePressed = false;
             } else {
-                alert('Please select a .json file');
+                alert('Select a .json file to upload');
             }
 
         });
@@ -316,7 +321,20 @@ class InputUI {
         }
     }
 
-    //== input grid display methods
+    //== input grid and display methods
+    resetCanvas() {
+        background(255);
+        this.html.titleInput.value('');
+        this.imgData = {};
+        this.imgBrightness = this.defaultBrightness;
+        this.html.headerSlider.value(this.imgBrightness); // update the slider position
+        this.html.headerSlider.attribute('disabled', '');
+
+        this.resetInputGrid();
+        this.drawInputGrid();
+        this.displayShapeTitles();
+    }
+
     resetInputGrid() {
         // reset the input grid to all false (no selected squares)
         for (let y = 0; y < this.inputRows; y++) {
@@ -327,54 +345,14 @@ class InputUI {
         }
     }
 
-    resetCanvas() {
-        background(255);
-        this.html.titleInput.value('');
-        this.objectImage = null;
-
-        this.resetInputGrid();
-        this.drawInputGrid();
-        this.displayShapeTitles();
-    }
-
-    setPixelBuffer() {
-        if (this.objectImage) {
-            // Create a mask for the input grid from the image
-            // threshold is a value between 0 and 1
-
-            // add image to the pixel buffer
-            let centerImage = (this.inputGridWidth - this.objectImage.width) / 2;
-            this.pixelBuffer = createGraphics(this.inputGridWidth, this.inputGridHeight);
-            this.pixelBuffer.pixelDensity(1);
-            this.pixelBuffer.background(255);
-
-            this.pixelBuffer.image(this.objectImage, centerImage, 0);
-            this.pixelBuffer.loadPixels();
-        }
-    }
-
-    createImageMask() {
-        if (this.objectImage && this.pixelBuffer.pixels) {
-            // loop the gird and find the mask value for each square
-            for (let y = 0; y < this.inputRows; y++) {
-                this.inputGrid[y] = [];
-                for (let x = 0; x < this.inputCols; x++) {
-                    this.inputGrid[y][x] = this.getAverageSquareBW(y, x, this.maskThreshold);
-                }
-            }
-        } else {
-            console.error('No image or pixel buffer to create mask');
-        }
-    }
-
     drawInputGrid() {
         background(255);
 
-        if (this.objectImage) {
+        if (this.imgData.img) {
             // add image to the canvas
-            let topX = this.sidePadding + (this.inputGridWidth - this.objectImage.width) / 2;
+            let topX = this.sidePadding + (this.inputGridWidth - this.imgData.img.width) / 2;
             let topY = this.sidePadding;
-            image(this.objectImage, topX, topY);
+            image(this.imgData.img, topX, topY);
         }
 
         // draw grid
@@ -407,7 +385,7 @@ class InputUI {
             let titleRow = createDiv().addClass('shape-title');
             titleRow.parent(this.htmlRef.rightSideList);
             // create trash icon
-            let trashIcon = createImg('/img/trash.svg');
+            let trashIcon = createImg('/img/trash.svg', '🗑️'); // emoji backup if svg issue
             trashIcon.size(24, 24);
             trashIcon.style('display', 'inline-block');
             trashIcon.style('cursor', 'pointer');
@@ -450,21 +428,144 @@ class InputUI {
         this.shapeTitleElements = [];
     }
 
-    //== image handling
-    resizeBackgroundImage() {
-        if (this.objectImage) {
-            const aspectRatio = this.inputGridHeight / this.objectImage.height;
-            const newHeight = this.inputGridHeight;
-            const newWidth = this.objectImage.width * aspectRatio;
-            // const newHeight = this.inputGridHeight;
-            // const newWidth = this.inputGridWidth;
-            this.objectImage.resize(newWidth, newHeight);
+    //== mouse event handler
+    selectInputSquare(mouseX, mouseY, blockSelect = false) {
+        // check if mouse click is within input grid
+        // factor in padding on all sides
+        let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
+        let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
+        if (xValid && yValid) {
+            let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
+            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.squareSize); // row
+
+            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+                let currentTime = millis();
+                if (blockSelect || (currentTime - this.lastClickTime > this.clickDelay)) {
+                    if (blockSelect) {
+                        // used when dragging mouse
+                        this.inputGrid[gridY][gridX] = true;
+                    } else {
+                        // used when clicking mouse
+                        this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
+                        this.lastClickTime = currentTime;
+                    }
+                    this.drawInputGrid();
+                }
+            }
         }
     }
 
-    getAverageSquareBW(_y, _x, _threshold) {
-        const bufferWidth = this.pixelBuffer.width;
-        const bufferHeight = this.pixelBuffer.height;
+    //== image handling methods
+    async resizeImg() {
+        if (this.imgData.img) {
+            const aspectRatio = this.inputGridHeight / this.imgData.img.height;
+            const newHeight = this.inputGridHeight;
+            const newWidth = this.imgData.img.width * aspectRatio;
+            // const newHeight = this.inputGridHeight;
+            // const newWidth = this.inputGridWidth;
+            await this.imgData.img.resize(newWidth, newHeight);
+            this.imgData.original = await this.imgData.img.get();
+            await this.imgData.original.loadPixels();
+        }
+    }
+
+    async adjustImgBrightness() {
+        if (this.imgData.img && this.imgData.original) {
+            // load image pixels if not already loaded
+            if (!this.imgData.img.pixels || this.imgData.img.pixels.length === 0) {
+                await this.imgData.img.loadPixels();
+            }
+            if (!this.imgData.original.pixels || this.imgData.original.pixels.length === 0) {
+                await this.imgData.original.loadPixels();
+            }
+
+            if (this.imgData.brightData && this.imgData.brightData[this.imgBrightness]) {
+                // reuse stored image if brightness has been adjusted before
+                this.imgData['img'] = this.imgData.brightData[this.imgBrightness].objectImage;
+            } else {
+                // Create a new version of the image with adjusted brightness
+                let newImg = await this.imgData.img.get();
+                await newImg.loadPixels();
+
+                for (let y = 0; y < newImg.height; y++) {
+                    for (let x = 0; x < newImg.width; x++) {
+                        let index = (x + y * newImg.width) * 4;
+                        newImg.pixels[index] = min(255, this.imgData.original.pixels[index] * this.imgBrightness); // Red
+                        newImg.pixels[index + 1] = min(255, this.imgData.original.pixels[index + 1] * this.imgBrightness); // Green
+                        newImg.pixels[index + 2] = min(255, this.imgData.original.pixels[index + 2] * this.imgBrightness); // Blue
+                        // alpha channel unchanged
+                    }
+                }
+                await newImg.updatePixels();
+                this.imgData.img = newImg;
+
+                await this.setPixelBuffer();
+
+                // save adjusted results for future use
+                if (!this.imgData.brightData) this.imgData.brightData = {};
+                if (!this.imgData.brightData[this.imgBrightness]) this.imgData.brightData[this.imgBrightness] = {};
+                this.imgData.brightData[this.imgBrightness].objectImage = newImg;
+            }
+        }
+    }
+
+    async createImageMask() {
+        if (this.imgData.img) {
+            // check if an image mask for this brightness has already been created
+            if (this.imgData.brightData && this.imgData.brightData[this.imgBrightness] && this.imgData.brightData[this.imgBrightness].inputGrid) {
+                // reuse stored mask if it exists
+                this.inputGrid = this.imgData.brightData[this.imgBrightness].inputGrid;
+                return;
+            }
+
+            // ensure pixel buffer is setup (an offscreen rendering of just the image)
+            if (!this.imgData.maskBuffer) await this.setPixelBuffer();
+
+            // loop the gird and find the mask value for each square
+            let tempGrid = [];
+            for (let y = 0; y < this.inputRows; y++) {
+                tempGrid.push([]);
+                for (let x = 0; x < this.inputCols; x++) {
+                    tempGrid[y].push(this.getAverageSquareBW(y, x));
+                }
+            }
+            // flip the grid vertically (make 0,0 be bottom left. default is top left)
+            tempGrid.reverse();
+
+            // save the image mask for future use
+            if (!this.imgData.brightData) this.imgData.brightData = {};
+            if (!this.imgData.brightData[this.imgBrightness]) this.imgData.brightData[this.imgBrightness] = {};
+            this.imgData.brightData[this.imgBrightness].inputGrid = tempGrid;
+
+            // update the input grid
+            this.inputGrid = tempGrid.map(colArray => [...colArray]);
+        } else {
+            console.error('No image or pixel buffer to create mask');
+        }
+    }
+
+    async setPixelBuffer() {
+        if (this.imgData.img) {
+            // Create a mask for the input grid from the image
+
+            // setup offscreen buffer if not already created
+            if (!this.imgData.maskBuffer) {
+                this.imgData['maskBuffer'] = createGraphics(this.inputGridWidth, this.inputGridHeight);
+                await this.imgData.maskBuffer.pixelDensity(1);
+            }
+            // clear the buffer canvas
+            await this.imgData.maskBuffer.background(255);
+
+            // add image to the pixel buffer
+            let xBuffer = (this.inputGridWidth - this.imgData.img.width) / 2; // centers the image
+            await this.imgData.maskBuffer.image(this.imgData.img, xBuffer, 0);
+            await this.imgData.maskBuffer.loadPixels();
+        }
+    }
+
+    getAverageSquareBW(_y, _x) {
+        const bufferWidth = this.imgData.maskBuffer.width;
+        const bufferHeight = this.imgData.maskBuffer.height;
 
         // calculate the start and end corners of the square
         const startX = Math.floor((_x * this.squareSize / this.inputGridWidth) * bufferWidth);
@@ -481,13 +582,13 @@ class InputUI {
             for (let x = startX; x < endX; x++) {
                 const index = (y * bufferWidth + x) * 4;
 
-                if (index < 0 || index >= this.pixelBuffer.pixels.length - 3) {
+                if (index < 0 || index >= this.imgData.maskBuffer.pixels.length - 3) {
                     continue;
                 }
 
-                const r = this.pixelBuffer.pixels[index];
-                const g = this.pixelBuffer.pixels[index + 1];
-                const b = this.pixelBuffer.pixels[index + 2];
+                const r = this.imgData.maskBuffer.pixels[index];
+                const g = this.imgData.maskBuffer.pixels[index + 1];
+                const b = this.imgData.maskBuffer.pixels[index + 2];
 
                 const brightness = (r + g + b) / 3;
                 minBrightness = Math.min(minBrightness, brightness);  // update minimum brightness
@@ -499,14 +600,6 @@ class InputUI {
             return false;
         }
 
-        // threshold determines how dark a pixel needs to be to be considered occupied
-        // lower threshold makes it less sensitive to slight darkness, higher more sensitive
-        const darknessThreshold = 255 * (_threshold);
-        return minBrightness < darknessThreshold;
-    }
-
-    //== helper functions
-    clearDiv(selector) {
-        select(selector).html('');
+        return minBrightness < (255 * 0.5); // 50% threshold
     }
 }
