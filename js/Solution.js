@@ -138,9 +138,8 @@ class Solution {
         // annealing will optimize the layout from here
 
         // find the total area (in terms of number of grid squares) of all shapes
-        // - find the area of each shape (including their boundary buffer)
+        // - find the area of each shape + buffer
         // - sum up all the areas
-
         let totalArea = 0;
         for (let i = 0; i < this.shapes.length; i++) {
             let shapeHeight = this.shapes[i].data.bufferHeight
@@ -172,19 +171,21 @@ class Solution {
         // place data about shapes into the layout grid
         for (let i = 0; i < this.shapes.length; i++) {
             let shape = this.shapes[i];
-            // place shape boundary
 
+            // posData is stored in each layout grid square
             let posData = {
                 shapes: [],
-                isShape: [],
+                isShape: [], // a lowRes shape square 
+                isBuffer: [], // a buffer square for the shape
                 annealScore: 0,
                 terrainValue: 0
             };
 
-            for (let y = 0; y < shape.data.bufferHeight; y++) { // loop the boundary shape height and width
+            // loop shape's buffer height & width to place the full footprint in the layout
+            for (let y = 0; y < shape.data.bufferHeight; y++) {
                 for (let x = 0; x < shape.data.bufferWidth; x++) {
 
-                    // placing shapes, and growing the layout if shapes are placed outside of initial bounds
+                    // place shapes, growing layout if shapes placed out-of-bounds
                     if (shape.data.bufferShape[y][x]) {
 
                         // grow the layout to fit the shape
@@ -209,12 +210,20 @@ class Solution {
                             yInBounds = shape.posY + y < this.layout.length;
                         }
 
-                        // update occupancy in the layout
+                        // save the shape to the layout posData
                         this.layout[shape.posY + y][shape.posX + x].shapes.push(shape);
 
-                        // mark if occupied by a shape or the shape's boundary
-                        let shapeInBounds = y < shape.data.shape.length && x < shape.data.shape[0].length;
-                        this.layout[shape.posY + y][shape.posX + x].isShape.push(shapeInBounds && shape.data.shape[y][x]);
+                        // determine if square is occupied by the shape, or by it's buffer
+                        let lowResShapeInBounds = y < shape.data.lowResShape.length && x < shape.data.lowResShape[0].length;
+                        if (lowResShapeInBounds) {
+                            this.layout[shape.posY + y][shape.posX + x].isShape.push(shape.data.lowResShape[y][x]);
+                        }
+
+                        let bufferInBounds = y < shape.data.bufferShape.length && x < shape.data.bufferShape[0].length;
+                        if (bufferInBounds) {
+                            this.layout[shape.posY + y][shape.posX + x].isBuffer.push(shape.data.bufferShape[y][x]);
+                        }
+                        // this.layout[shape.posY + y][shape.posX + x].isBuffer.push(shapeInBounds && shape.data.bufferShape[y][x]);
                     }
                 }
             }
@@ -257,7 +266,7 @@ class Solution {
 
         // buffer makes room for the line numbers in dev mode
         // padding centers the solution in the canvas
-        this.buffer = this.squareSize;
+        this.buffer = this.squareSize * 1.5;
         let layoutHeight = this.layout.length;
         let layoutWidth = this.layout[0].length;
         this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.squareSize;
@@ -403,6 +412,7 @@ class Solution {
         let squareness = Math.pow((whRatio * this.shapes.length), 2) * 1.5;
 
         this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + squareness + spacePenalty);
+        // this.score = Math.floor(clusterPenalty + bottomPenalty + squareness + spacePenalty);
     }
 
     createNeighbor(_maxShift) {
@@ -485,136 +495,188 @@ class Solution {
     }
 
     showLayout() {
-        let lineColor;
-        let bkrdColor;
-        let boundaryColor;
-        let shapeColor;
-        let collisionColor;
-
+        let colors = {};
         if (devMode) {
-            lineColor = 0;
-            bkrdColor = 255;
-            boundaryColor = "rgb(255, 192, 203)";
-            shapeColor = "grey";
-            collisionColor = "red";
+            colors.lineColor = 0;
+            colors.bkrdColor = 255;
+            colors.bufferColor = "rgb(255, 192, 203)";
+            colors.lowResShapeColor = "rgba(140,140,140, 0.5)"; // grey at 50% opacity
+            colors.highResShapeColor = "rgba(102,102,102, 0.9)";
+            colors.collisionColor = "rgba(255, 0, 0, 0.5)"; // red at 50% opacity
         } else if (!devMode) {
-            lineColor = "rgb(198, 198, 197)";
-            bkrdColor = "rgb(229, 229, 229)";
-            boundaryColor = bkrdColor; // old: "rgb(209, 209, 209)";
-            shapeColor = "grey";
-            collisionColor = "rgb(135, 160, 103)"
+            colors.lineColor = "rgb(198, 198, 197)";
+            colors.bkrdColor = "rgb(229, 229, 229)";
+            colors.bufferColor = colors.bkrdColor;
+            colors.lowResShapeColor = colors.bkrdColor;
+            colors.highResShapeColor = "rgb(102,102,102)";
+            colors.collisionColor = "rgba(135, 160, 103, 0.5)"
         }
 
+        // draw the layout from the bottom layer up
+        this.showGridSquares(colors);
+
+        if (devMode) {
+            // show the side grid numbers
+            this.showGridNumbers();
+            // display low res grid buffer squares
+            this.showBuffer(colors);
+            // display low res shape squares
+            this.showLowResShapes(colors);
+        }
+        // show the high res shapes
+        this.showHighResShapes(colors);
+
+        // show the collision squares
+        this.showCollision(colors);
+    }
+
+    showGridSquares(colors) {
+        // only print the grid squares with background color
+        stroke(colors.lineColor);
+        strokeWeight(0.75);
+        fill(colors.bkrdColor);
+
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                // buffer makes room for the line numbers in dev mode
+                // padding centers the solution in the canvas
+                let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+                let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+                rect(rectX, rectY, this.squareSize, this.squareSize);
+            }
+        }
+
+    }
+
+    showGridNumbers() {
         textAlign(CENTER, CENTER);
         let txtXOffset = this.squareSize / 2;
         let txtYOffset = this.squareSize / 2;
         let txtSize = this.squareSize / 2;
         textSize(txtSize);
+        noStroke();
 
-        // display the solution grid
         let designHeight = this.layout.length;
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
-            if (devMode) {
-                // display column number
-                strokeWeight(0);
-                fill(x % 5 === 0 ? "pink" : 100);
-                let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-                let textY = ((canvasHeight - this.yPadding) - this.squareSize) + txtYOffset;
-                text(x, textX, textY);
-            }
+            // display column number
+            fill(x % 5 === 0 ? "pink" : 100);
+            let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+            let textY = ((canvasHeight - this.yPadding) - this.buffer) + txtYOffset;
+            text(x, textX, textY);
 
             for (let y = 0; y < designHeight; y++) {
-                if (devMode) {
-                    // display row number
-                    strokeWeight(0);
-                    fill(y % 5 === 0 ? "pink" : 100);
-                    let textX = this.xPadding + txtXOffset;
-                    let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                    text(y, textX, textY);
-                }
-
-                // draw each layout square
-                if (this.layout[y][x].shapes.length == 0) {
-                    fill(bkrdColor); // (empty)
-                } else if (this.layout[y][x].shapes.length == 1) {
-
-                    // fill square different color if it's occupied by the boundary shape
-                    fill(boundaryColor); // (boundary)
-
-                    if (this.layout[y][x].isShape.some(s => s === true)) {
-                        // square is occupied by a shape
-                        fill(shapeColor);
-                    }
-                } else if (this.layout[y][x].shapes.length > 1) {
-                    // color on collision 
-                    // - if devMode, color shape and boundary collisions
-                    // - if not devMode, only color collisions with shapes
-                    if (!devMode && this.layout[y][x].isShape.filter(s => s === true).length >= 2) {
-                        fill(collisionColor);  // collision
-                    }
-                    else if (!devMode && this.layout[y][x].isShape.some(s => s === true)) {
-                        fill(shapeColor);
-                    }
-                    else if (devMode) {
-                        fill(collisionColor);  // collision
-                    } else {
-
-                        fill(bkrdColor); // (empty)
-                    }
-                }
-
-
-                let rectX;
-                // if (this.layout[y][x].isShape.some(s => s === true)) {
-                //     // add half a square to the x
-                //     rectX = (x * this.squareSize) + this.buffer + this.xPadding + (this.squareSize / 2);
-                // } else {
-                // }
-                rectX = (x * this.squareSize) + this.buffer + this.xPadding;
-
-                // buffer makes room for the line numbers in dev mode
-                // padding centers the solution in the canvas
-                let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-
-                stroke(lineColor);
-                strokeWeight(0.75);
-                rect(rectX, rectY, this.squareSize, this.squareSize);
+                // display row number
+                fill(y % 5 === 0 ? "pink" : 100);
+                let textX = this.xPadding + this.squareSize/2 + txtXOffset;
+                let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                text(y, textX, textY);
             }
         }
-        this.showDetailedShapes();
     }
 
-    showDetailedShapes() {
+    showBuffer(colors) {
+        stroke(colors.lineColor);
+        strokeWeight(0.75);
+        fill(colors.bufferColor);
+
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                // only draw buffer squares
+                if (this.layout[y][x].shapes.length > 0) {
+                    // check if its a buffer square
+                    if (this.layout[y][x].isBuffer.some(s => s === true)) {
+                        // buffer makes room for the line numbers in dev mode
+                        // padding centers the solution in the canvas
+                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+                        rect(rectX, rectY, this.squareSize, this.squareSize);
+                    }
+                }
+            }
+        }
+    }
+
+    showLowResShapes(colors) {
+        noStroke();
+        fill(colors.lowResShapeColor);
+
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                // only draw low res shape squares
+                if (this.layout[y][x].shapes.length > 0) {
+                    // check it's a low res shape square
+                    if (this.layout[y][x].isShape.some(s => s === true)) {
+                        // buffer makes room for the line numbers in dev mode
+                        // padding centers the solution in the canvas
+                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+                        rect(rectX + (this.squareSize / 2), rectY, this.squareSize, this.squareSize);
+                    }
+                }
+            }
+        }
+    }
+
+    showHighResShapes(colors) {
+        //== show the high res shapes
+        noStroke();
+        fill(colors.highResShapeColor);
+
         // loop through shapes
         for (let i = 0; i < this.shapes.length; i++) {
             let startX = this.shapes[i].posX;
             let startY = this.shapes[i].posY;
             let smallSquare = this.squareSize / 4;
 
-
             // draw rectangle for each true square in the shape grid
             for (let y = 0; y < this.shapes[i].data.shape.length; y++) {
-
                 for (let x = 0; x < this.shapes[i].data.shape[y].length; x++) {
+                    // only draw high res shape squares
                     if (this.shapes[i].data.shape[y][x]) {
-                        fill("blue");
-                    } else {
-                        fill("transparent");
+
+                        // find its position on the canvas and draw the square
+                        let rectX = (startX * this.squareSize) + (x * smallSquare) + this.buffer + this.xPadding;
+                        let yOffset = ((canvasHeight - this.yPadding) - smallSquare - this.buffer);
+                        let yStart = (startY * this.squareSize);
+                        let yRect = (y * smallSquare);
+                        let rectY = yOffset - yStart - yRect;
+                        rect(rectX + (this.squareSize / 2), rectY, smallSquare, smallSquare);
                     }
-                    let rectX = (startX * this.squareSize) + (x * smallSquare) + this.buffer + this.xPadding;
-
-                    let yOffset = ((canvasHeight - this.yPadding) - smallSquare - this.buffer);
-                    let yStart = (startY * this.squareSize);
-                    let yRect = (y * smallSquare);
-
-                    let rectY = yOffset - yStart - yRect;
-
-                    // draw the shape
-                    stroke("black");
-                    strokeWeight(1);
-                    rect(rectX, rectY, smallSquare, smallSquare);
                 }
+            }
+        }
+    }
+
+    showCollision(colors) {
+        noStroke();
+        fill(colors.collisionColor);
+
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                // only draw collision squares
+                if (this.layout[y][x].shapes.length > 1) {
+                    // collision. rules:
+                    // - if devMode, collision for any overlap (buffer/buffer covers all since shape overlays buffer)
+                    // - if not devMode, collision only for shape/shape overlap (not shape/buffer, or buffer/buffer)
+                    let isCollision = false;
+                    if (devMode && this.layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
+                        // 2 or more buffers overlapping
+                        isCollision = true;
+                    } else if (this.layout[y][x].isShape.filter(s => s === true).length >= 2) {
+                        // 2 or more shapes overlapping
+                        isCollision = true;
+                    }
+
+                    if (isCollision) {
+                        // buffer makes room for the line numbers in dev mode
+                        // padding centers the solution in the canvas
+                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
+                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
+                        rect(rectX, rectY, this.squareSize, this.squareSize);
+                    }
+                }
+
             }
         }
     }
@@ -635,22 +697,12 @@ class Solution {
             let designWidth = this.layout[0].length;
             for (let x = 0; x < designWidth; x++) {
                 for (let y = 0; y < designHeight; y++) {
-                    // find position for score or shape title[0] text, finding y from bottom up
-                    let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-                    let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-
-                    if (devMode) {
-
-                        if (this.layout[y][x].annealScore > 0) {
-                            // display the anneal score if its empty of shapes
-                            text(this.layout[y][x].annealScore, rectX, rectY);
-
-                        }
-                        // else if (this.layout[y][x].annealScore == 0 && this.layout[y][x].shapes.length > 0) {
-                        //     // display the first char of the shape title if there is a shape
-                        //     let shapeID = this.layout[y][x].shapes[0].data.title[0]
-                        //     text(shapeID, rectX, rectY);
-                        // }
+                    // display the anneal score if its empty of shapes
+                    if (this.layout[y][x].annealScore > 0) {
+                        // find position for score or shape title[0] text, finding y from bottom up
+                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                        text(this.layout[y][x].annealScore, rectX, rectY);
                     }
                 }
             }

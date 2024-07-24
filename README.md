@@ -34,7 +34,7 @@ Cellular Automata is used to grow shelving between objects
 3. **Step 2: Eliminate Invalid Options**
    - Prevent backtracking
    - Avoid growing through existing shapes
-   - Respect boundary constraints
+   - Respect boundary buffer constraints
 
 4. **Step 3: Choose Growth Direction**
    - If only one valid option remains, select it
