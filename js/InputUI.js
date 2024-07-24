@@ -141,6 +141,11 @@ class InputUI {
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
+        // temp for testing
+        // loadJSON('/examples/sunny-shapes-0.25.json', (shapeData) => {
+        //     this.loadShapesJson(shapeData);
+        //     this.nextScreen();
+        // });
     }
 
     hide() {
@@ -161,7 +166,7 @@ class InputUI {
         let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
         if (xValid && yValid) {
             let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
-            let gridY = Math.floor((mouseY - this.sidePadding) / this.squareSize); // row
+            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.squareSize); // row
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 let currentTime = millis();
@@ -377,8 +382,7 @@ class InputUI {
             for (let y = 0; y < this.inputCols; y++) {
                 // draw input square
                 let rectX = x * this.squareSize;
-                // let rectY = (this.inputGridHeight - this.squareSize) - (y * this.squareSize);
-                let rectY = (y * this.squareSize);
+                let rectY = (this.inputGridHeight - this.squareSize) - (y * this.squareSize);
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {

@@ -582,6 +582,41 @@ class Solution {
                 rect(rectX, rectY, this.squareSize, this.squareSize);
             }
         }
+        this.showDetailedShapes();
+    }
+
+    showDetailedShapes() {
+        // loop through shapes
+        for (let i = 0; i < this.shapes.length; i++) {
+            let startX = this.shapes[i].posX;
+            let startY = this.shapes[i].posY;
+            let smallSquare = this.squareSize / 4;
+
+
+            // draw rectangle for each true square in the shape grid
+            for (let y = 0; y < this.shapes[i].data.shape.length; y++) {
+
+                for (let x = 0; x < this.shapes[i].data.shape[y].length; x++) {
+                    if (this.shapes[i].data.shape[y][x]) {
+                        fill("blue");
+                    } else {
+                        fill("transparent");
+                    }
+                    let rectX = (startX * this.squareSize) + (x * smallSquare) + this.buffer + this.xPadding;
+
+                    let yOffset = ((canvasHeight - this.yPadding) - smallSquare - this.buffer);
+                    let yStart = (startY * this.squareSize);
+                    let yRect = (y * smallSquare);
+
+                    let rectY = yOffset - yStart - yRect;
+
+                    // draw the shape
+                    stroke("black");
+                    strokeWeight(1);
+                    rect(rectX, rectY, smallSquare, smallSquare);
+                }
+            }
+        }
     }
 
     showScores() {

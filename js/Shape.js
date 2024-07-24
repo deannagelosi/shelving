@@ -18,7 +18,8 @@ class Shape {
         this.title = _title;
         this.inputGrid = _inputGrid;
 
-        // save the user shape by trimming empty rows and columns in the input grid
+        //== create shape
+        // trimming empty rows and columns in the input grid
         this.shape = [];
         let leftIndex = this.inputGrid[0].length - 1;
         let rightIndex = 0;
@@ -44,7 +45,8 @@ class Shape {
             }
         }
 
-        // create the low poly shape - scale the shape down to 1/4th the resolution
+        //== create the low poly shape 
+        // - scale the shape down to 1/4th the resolution
         // - first pad the shape with false squares to make it divisible by 4
         let paddedShape = [];
         const width = this.shape[0].length;
@@ -90,7 +92,8 @@ class Shape {
             this.lowPolyShape.push(row);
         }
 
-        // create the buffer shape - add 1 square to right and top edges of rounded up shape
+        //== create the buffer shape 
+        // - add 1 square to right and top edges of rounded up shape
         // 1. make buffer shape larger by 1 on x and y to make room
         // 2. set any voids and under hang squares as true and add trues to the right and top edges
         this.bufferShape = [];
