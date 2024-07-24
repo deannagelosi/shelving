@@ -280,29 +280,35 @@ class InputUI {
             if (file.type === 'application' && file.subtype === 'json') {
                 const shapeData = file.data;
                 // read the shapes in
-                shapes = [];
-                for (let shape of shapeData) {
-                    // create new shape from saved data
-                    let newShape = new Shape();
-                    newShape.saveUserInput(shape.title, shape.inputGrid);
-                    shapes.push(newShape);
-                }
-                // Reset active shape and UI
-                this.resetCanvas();
+                this.loadShapesJson(shapeData);
 
-                // disable next button (until the user saves the changes)
-                this.html.nextButton.attribute('disabled', '');
-                // enable save button if there is more than one shape
-                if (shapes.length >= 1) {
-                    this.html.saveButton.removeAttribute('disabled');
-                }
                 isMousePressed = false;
             } else {
                 alert('Please select a .json file');
             }
+
         });
         input.hide(); // hide default file input
         input.elt.click(); // open file dialog on click
+    }
+
+    loadShapesJson(shapeData) {
+        shapes = [];
+        for (let shape of shapeData) {
+            // create new shape from saved data
+            let newShape = new Shape();
+            newShape.saveUserInput(shape.title, shape.inputGrid);
+            shapes.push(newShape);
+        }
+        // Reset active shape and UI
+        this.resetCanvas();
+
+        // disable next button (until the user saves the changes)
+        this.html.nextButton.attribute('disabled', '');
+        // enable save button if there is more than one shape
+        if (shapes.length >= 1) {
+            this.html.saveButton.removeAttribute('disabled');
+        }
     }
 
     //== input grid display methods
