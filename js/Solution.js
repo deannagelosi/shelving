@@ -260,17 +260,17 @@ class Solution {
         }
 
         // update squareSize for this layout
-        let squareHeight = canvasHeight / this.layout.length - 2; // -2 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / this.layout[0].length - 2; // -2 makes room for left/right buffer
+        let squareHeight = canvasHeight / this.layout.length - 3; // -3 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / this.layout[0].length - 3; // -3 makes room for left/right buffer
         this.squareSize = Math.min(squareHeight, squareWidth);
 
         // buffer makes room for the line numbers in dev mode
         // padding centers the solution in the canvas
-        this.buffer = this.squareSize * 1.5;
+        this.buffer = this.squareSize;
         let layoutHeight = this.layout.length;
         let layoutWidth = this.layout[0].length;
-        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.squareSize;
-        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.squareSize;
+        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
+        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.buffer;
 
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
@@ -568,7 +568,7 @@ class Solution {
             for (let y = 0; y < designHeight; y++) {
                 // display row number
                 fill(y % 5 === 0 ? "pink" : 100);
-                let textX = this.xPadding + this.squareSize/2 + txtXOffset;
+                let textX = this.xPadding + txtXOffset;
                 let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
                 text(y, textX, textY);
             }
