@@ -72,7 +72,7 @@ async function startAnnealing() {
     displayResult();
 
     // rebind re-anneal to restart annealing
-    designUI.html.reannealButton.mousePressed(() => this.startAnnealing());
+    designUI.html.regenButton.mousePressed(() => this.startAnnealing());
 
     console.log("Annealing complete. Score: ", solution.score);
 }

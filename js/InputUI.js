@@ -30,12 +30,16 @@ class InputUI {
         this.resetInputGrid()
 
         //== initialize UI elements
-        this.initRefs();
+        this.getHtmlRefs();
         this.initHeaderUI();
-        this.initInputUI();
+        this.initBodyUI();
+        this.initRightSideUI();
+
+        // initially hide the input elements
+        this.hide();
     }
 
-    initRefs() {
+    getHtmlRefs() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
         this.htmlRef.leftBar = select('#left-side-bar');
@@ -47,6 +51,7 @@ class InputUI {
     }
 
     initHeaderUI() {
+        //== setup ui elements for header
         // Setup image upload and threshold slider
         this.html.imageControls = createDiv();
         this.html.imageControls.id('image-controls');
@@ -81,8 +86,8 @@ class InputUI {
         this.html.headerClearButton.mousePressed(() => this.clearGrid());
     }
 
-    initInputUI() {
-        //== setup ui elements for input screen
+    initBodyUI() {
+        //== setup ui elements for body
         // create input fields and buttons row div
         this.html.inputDiv = createDiv();
         this.html.inputDiv.parent(this.htmlRef.bottomDiv);
@@ -102,7 +107,10 @@ class InputUI {
         this.html.addButton.parent(this.html.inputDiv);
         this.html.addButton.addClass('button green-button');
         this.html.addButton.mousePressed(() => this.addShape());
+    }
 
+    initRightSideUI() {
+        //== setup ui elements for side bar
         // create the SAVE SHAPES button
         this.html.saveButton = createButton('Save');
         this.html.saveButton.parent(this.htmlRef.rightSideButtons);
@@ -122,9 +130,6 @@ class InputUI {
         this.html.nextButton.addClass('button green-button');
         this.html.nextButton.attribute('disabled', ''); // until 2 shapes are saved
         this.html.nextButton.mousePressed(() => this.nextScreen());
-
-        // initially hide the input elements
-        this.hide();
     }
 
     show() {
