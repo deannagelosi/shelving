@@ -32,7 +32,7 @@ class DesignUI {
         this.html.designDiv.id('design-div');
 
         this.html.regenButton = createButton('Regenerate');
-        this.html.regenButton.parent(this.html.designDiv).addClass('button');
+        this.html.regenButton.parent(this.html.designDiv).addClass('green-button button');
 
         // info text
         this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
