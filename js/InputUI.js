@@ -8,6 +8,8 @@ class InputUI {
         this.htmlRef = {};
         this.html = {};
         this.shapeTitleElements = [];
+        // flags
+        this.isExporting = false;
 
         //== setup
         // ui variables
@@ -151,10 +153,10 @@ class InputUI {
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
-        // temp for testing
+        // // temp for testing
         // loadJSON('/examples/sunny-shapes-0.25.json', (shapeData) => {
         //     this.loadShapesJson(shapeData);
-        //     this.nextScreen();
+        //     // this.nextScreen();
         // });
     }
 
@@ -231,12 +233,44 @@ class InputUI {
     }
 
     saveAllShapes() {
-        // save all shapes to a json
-        saveJSON(this.shapes, 'shapesData.json');
+        // add full shapes array to saved anneals
+        if (this.isExporting) return; // block multiple clicks during export
 
-        // Enable next button once shapes are saved and there are at least 2 shapes
-        if (this.shapes.length > 1) {
-            this.html.nextButton.removeAttribute('disabled');
+        this.isExporting = true;
+        // remove unnecessary data 
+        this.shapes.forEach(shape => {
+            delete shape.data.inputGrid;
+        });
+
+        let exportData = {
+            savedAnneals: [],
+            allShapes: this.shapes
+        }
+
+        try {
+            const jsonData = JSON.stringify(exportData, null);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            // create temporary link element
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'shelving_data.json';
+
+            // append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            // clean up the URL
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Export failed:', error);
+        } finally {
+            this.isExporting = false;
+            // Enable next button once shapes are saved and there are at least 2 shapes
+            if (this.shapes.length > 1) {
+                this.html.nextButton.removeAttribute('disabled');
+            }
         }
     }
 
@@ -261,9 +295,9 @@ class InputUI {
         // user selects a json file
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
-                const shapeData = file.data;
+                const importedData = file.data;
                 // read the shapes in
-                this.loadShapesJson(shapeData);
+                this.loadShapesJson(importedData);
 
             } else {
                 alert('Select a .json file to upload');
@@ -274,13 +308,16 @@ class InputUI {
         input.elt.click(); // open file dialog on click
     }
 
-    loadShapesJson(shapeData) {
+    loadShapesJson(_importedData) {
+        // handle loading saved shapes from json file
+        let annealData = _importedData.savedAnneals;
+        let shapeData = _importedData.allShapes;
 
         let loadedShapes = [];
         for (let shape of shapeData) {
             // create new shape from saved data
             let newShape = new Shape();
-            newShape.saveUserInput(shape.data.title, shape.data.inputGrid);
+            newShape.saveUserInput(shape.data.title, shape.data.highResShape);
             loadedShapes.push(newShape);
         }
 

@@ -192,14 +192,20 @@ class DesignUI {
         this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
+        // add full shapes array to saved anneals
+        let exportData = {
+            savedAnneals: this.savedAnneals,
+            allShapes: allShapes
+        }
+
         try {
-            const jsonData = JSON.stringify(this.savedAnneals, null);
+            const jsonData = JSON.stringify(exportData, null);
             const blob = new Blob([jsonData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             // create temporary link element
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'saved_anneals.json';
+            link.download = 'shelving_data.json';
 
             // append to body, click, and remove
             document.body.appendChild(link);
@@ -220,9 +226,9 @@ class DesignUI {
         // user selects a json file
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
-                const annealData = file.data;
+                const importedData = file.data;
                 // read the shapes in
-                this.loadAnnealJson(annealData);
+                this.loadAnnealJson(importedData);
             } else {
                 alert('Select a .json file to upload');
             }
@@ -231,10 +237,13 @@ class DesignUI {
         input.elt.click(); // open file dialog on click
     }
 
-    loadAnnealJson(_annealData) {
+    loadAnnealJson(_importedData) {
         // handle loading saved anneals from json file
+        let annealData = _importedData.savedAnneals;
+        let shapesData = _importedData.allShapes;
+        
         let loadedAnneals = [];
-        for (let anneal of _annealData) {
+        for (let anneal of annealData) {
             // create new shape from saved data
             let enableSolution = new Solution(anneal.finalSolution.shapes);
             anneal.finalSolution = enableSolution; // add solution methods back
