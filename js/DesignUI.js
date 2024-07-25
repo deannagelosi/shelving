@@ -203,34 +203,38 @@ class DesignUI {
         this.clearSavedAnneals();
 
         for (let i = 0; i < this.savedAnneals.length; i++) {
-            // create item row div
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
             savedAnnealItem.parent(this.htmlRef.rightSideList);
-            // create trash icon
-            let trashIcon = createImg('/img/trash.svg', '🗑️'); // emoji backup if svg issue
-            trashIcon.size(24, 24);
-            trashIcon.style('display', 'inline-block');
-            trashIcon.style('cursor', 'pointer');
-            trashIcon.style('margin-left', '5px');
-            trashIcon.parent(savedAnnealItem);
 
-            // create shape title
-            let annealItem = createP(this.savedAnneals[i].title);
-            annealItem.attribute('data-index', i);
-            annealItem.parent(savedAnnealItem);
-            // save row for removal later
-            this.savedAnnealElements.push(savedAnnealItem);
+            let viewIcon = createImg('/img/view.svg', 'View')
+                .addClass('icon-button')
+                .size(24, 24)
+                .parent(savedAnnealItem);
+            viewIcon.mousePressed(() => this.viewSavedAnneal(i));
 
-            // add event listener to trash icon
-            // removes a shape from the list
+            let titleSpan = createSpan(this.savedAnneals[i].title)
+                .addClass('anneal-title')
+                .parent(savedAnnealItem);
+
+            let trashIcon = createImg('/img/trash.svg', 'Delete')
+                .addClass('icon-button')
+                .size(24, 24)
+                .parent(savedAnnealItem);
             trashIcon.mousePressed(() => {
-                let index = annealItem.attribute('data-index');
-                this.savedAnneals.splice(index, 1);
-
-                //update displayed list
-                this.displaySavedAnneals();
+                if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
+                    this.savedAnneals.splice(i, 1);
+                    this.displaySavedAnneals();
+                }
             });
+
+            this.savedAnnealElements.push(savedAnnealItem);
         }
+    }
+
+    viewSavedAnneal(index) {
+        // update to the selected solution
+        this.currentAnneal = this.savedAnneals[index];
+        this.displayResult();
     }
 
     clearSavedAnneals() {
