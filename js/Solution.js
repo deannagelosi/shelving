@@ -51,7 +51,6 @@ class Solution {
         let layoutWidth = this.layout[0].length;
         let squareHeight = canvasHeight / layoutHeight - 3; // -3 makes room for top/bottom buffer
         let squareWidth = canvasWidth / layoutWidth - 3; // -3 makes room for left/right buffer
-        
         this.squareSize = Math.min(squareHeight, squareWidth);
         this.buffer = this.squareSize;
         this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
@@ -405,17 +404,20 @@ class Solution {
             colors.collisionColor = "rgba(135, 160, 103, 0.5)"
         }
 
+        if (editMode) {
+            colors.bufferColor = "rgba(200,200,200, 0.5)";
+        }
+
         // draw the layout from the bottom layer up
         this.showGridSquares(colors);
 
-        if (devMode) {
-            // show the side grid numbers
-            this.showGridNumbers();
-            // display low res grid buffer squares
-            this.showBuffer(colors);
-            // display low res shape squares
-            this.showLowResShapes(colors);
-        }
+        // show the side grid numbers
+        if (devMode) this.showGridNumbers();
+        // display low res grid buffer squares
+        if (devMode || editMode) this.showBuffer(colors);
+        // display low res shape squares
+        if (devMode) this.showLowResShapes(colors);
+
         // show the high res shapes
         this.showHighResShapes(colors);
 

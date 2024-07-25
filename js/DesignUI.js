@@ -15,6 +15,7 @@ class DesignUI {
 
         //== initialize UI elements
         this.getHtmlRef();
+        this.initHeaderUI();
         this.initBodyUI();
         this.initRightSideUI();
 
@@ -87,6 +88,22 @@ class DesignUI {
         this.html.loadButton.mousePressed(() => this.handleImport());
     }
 
+    initHeaderUI() {
+        this.html.buttonContainer = createDiv();
+        this.html.buttonContainer.id('view-edit-container');
+        this.html.buttonContainer.parent(this.htmlRef.header);
+
+        this.html.viewButton = createButton('View');
+        this.html.viewButton.parent(this.html.buttonContainer);
+        this.html.viewButton.addClass('mode-button view-button active');
+        this.html.viewButton.mousePressed(() => this.setEditMode(false));
+
+        this.html.editButton = createButton('Edit');
+        this.html.editButton.parent(this.html.buttonContainer);
+        this.html.editButton.addClass('mode-button edit-button');
+        this.html.editButton.mousePressed(() => this.setEditMode(true));
+    }
+
     //== show/hide methods
     show() {
         // toggle on the input screen divs
@@ -119,6 +136,19 @@ class DesignUI {
     }
 
     //== button handlers
+    setEditMode(isEditMode) {
+        editMode = isEditMode;
+        if (isEditMode) {
+            this.html.viewButton.removeClass('active');
+            this.html.editButton.addClass('active');
+        } else {
+            this.html.viewButton.addClass('active');
+            this.html.editButton.removeClass('active');
+        }
+        // update the screen
+        this.displayResult();
+    }
+    
     async handleStartAnneal() {
         // disable shape selection changes while annealing
         this.shapeElements.forEach(element => {

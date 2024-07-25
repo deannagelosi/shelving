@@ -97,3 +97,40 @@
     margin: 0 15px;
     font-size: 14px;
 }
+
+#view-edit-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.mode-button {
+    font-size: 14px;
+    padding: 8px 20px;
+    margin: 0 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.mode-button:hover {
+    background-color: #e0e0e0;
+}
+
+.mode-button.active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+.mode-button.active:hover {
+    background-color: #45a049;
+}
+
+.mode-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -19,6 +19,7 @@ let isInputScreen; // switches screen (inout/design)
 // diagnostic toggles
 let enableCellular = true;
 let devMode = false;
+let editMode = false;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
