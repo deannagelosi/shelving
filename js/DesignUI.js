@@ -116,26 +116,23 @@ class DesignUI {
         let selectedShapes = allShapes.filter(shape => shape.enabled);
         let currentAnneal = new Anneal(selectedShapes, this);
 
-
         await currentAnneal.run();
+        // check if annealing completed or was aborted
+        if (currentAnneal.abortAnnealing && !currentAnneal.finalSolution) {
+            // annealing was aborted. re-start new annealing process
+            this.handleStartAnneal();
+        } else {
+            // annealing completed
+            // reset "regenerate" button back to "generate" (.run() changed it)
+            this.html.annealButton.html('Generate');
+            this.html.annealButton.mousePressed(() => this.handleStartAnneal());
 
-        // reset "regenerate" button back to "generate" (.run() changed it)
-        this.html.annealButton.html('Generate');
-        this.html.annealButton.mousePressed(() => this.handleStartAnneal());
+            this.currentSolution = currentAnneal.finalSolution;
 
-        this.currentSolution = currentAnneal.finalSolution;
+            console.log("Annealing complete: ", this.currentSolution.score);
 
-
-
-        console.log("Annealing complete: ", currentAnneal.finalSolution);
-
-
-        this.displayResult();
-
-        // // rebind re-anneal to restart annealing
-        // designUI.html.annealButton.mousePressed(() => this.startAnnealing());
-
-        // console.log("Annealing complete. Score: ", currentSolution.score);
+            this.displayResult();
+        }
     }
 
     handleSaveSolution() {

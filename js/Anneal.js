@@ -16,7 +16,6 @@ class Anneal {
 
         //== ui
         this.ui = _ui;
-
         this.saveButton = this.ui.html.saveButton;
         this.saveButton.attribute('disabled', ''); // until 2 shapes are saved
         this.saveButton.removeAttribute('disabled'); // until 2 shapes are saved
@@ -32,41 +31,32 @@ class Anneal {
     }
 
     async run() {
-        // reset state in case it's a re-run (re-anneal clicked)
-        this.multiStartsHistory = {};
-        this.solutionHistory = []; // stores final solution history (...multi-starts, refinement)
-        this.finalSolution = null;
-        this.abortAnnealing = false;
-
-        // while anneal is running reset button to "regenerate" mode
+        // == Setup == //
+        // while anneal is running change button to "regenerate" mode
         this.ui.html.annealButton.html('Regenerate');
         this.ui.html.annealButton.mousePressed(() => this.reAnneal());
 
-        // run the annealing process
+        // == Start Annealing Process == //
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
         let bestStartSolution = await this.multiStartPhase();
-
-        console.log("Multi best solution:", bestStartSolution);
-
-        // save annealing history so far
-        // - set bestStart's solution history as start of the final solution history
-        this.solutionHistory = [...this.multiStartsHistory[bestStartSolution.startID]];
-        this.multiStartsHistory = {}; // clear the multi-start history
+        if (this.abortAnnealing && !bestStartSolution) return; // re-anneal clicked
 
         let refinedSolution = await this.refinePhase(bestStartSolution);
+        if (this.abortAnnealing && !refinedSolution) return; // re-anneal clicked
 
-        if (this.abortAnnealing) {
-            // re-anneal was clicked, previous anneal was aborted
-            // restart the anneal process
-            this.run();
-        }
-
+        // == Annealing Complete == //
+        // anneal completed with out being stopped
         this.finalSolution = refinedSolution;
 
-        // if (devMode) 
-        console.log("refine solution:", refinedSolution);
-        console.log("Refine complete. Score:", this.finalSolution.score);
+        if (devMode) {
+            console.log("Refine complete. Score:", this.finalSolution.score);
+        }
+
+        // update final solution history with it's initial start history
+        let winningStartHistory = [...this.multiStartsHistory[bestStartSolution.startID]];
+        this.solutionHistory = [...winningStartHistory, ...this.solutionHistory];
+        this.multiStartsHistory = {}; // clear the multi-start history
     }
 
     async multiStartPhase() {
@@ -207,7 +197,7 @@ class Anneal {
             // update display at specified intervals
             if (iteration % this.displayInterval === 0) {
                 // only show the first (longest running) multi-start, then all refinements
-                if ((!config.multiStart) || (config.multiStart && config.startID === 0)) {
+                if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
                     this.ui.updateDisplayCallback(currentSolution);
                 }
             }
@@ -265,9 +255,7 @@ class Anneal {
 
     // handler for button that controls restart
     async reAnneal() {
-        console.log("abort clicked")
-        // set abort flag for anneal()
+        console.log("restart clicked")
         this.abortAnnealing = true;
-        // run() waits for async jobs to cancel then restarts
     }
 }
