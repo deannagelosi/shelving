@@ -2,6 +2,8 @@ class Cellular {
     constructor(_solution) {
         this.cellSpace = [[]]; // 2D array of intersections on the layout grid where cells live
         this.pathValues = [[]]; // 2D array of each path's (lines on the layout) height value
+
+        if (_solution.layout.length <= 1) _solution.makeLayout();
         this.layout = _solution.layout; // array of shapes in their annealed position
         this.layoutHeight = this.layout.length;
         this.layoutWidth = this.layout[0].length;

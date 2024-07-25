@@ -77,11 +77,11 @@ class DesignUI {
         this.html.exportButton.attribute('disabled', ''); // until one saved anneal
         this.html.exportButton.mousePressed(() => this.handleExport());
 
-        // // Import button
-        // this.html.loadButton = createButton('Import');
-        // this.html.loadButton.parent(this.htmlRef.rightSideButtons);
-        // this.html.loadButton.addClass('button green-button');
-        // this.html.loadButton.mousePressed(() => this.handleImport());
+        // Import button
+        this.html.loadButton = createButton('Import');
+        this.html.loadButton.parent(this.htmlRef.rightSideButtons);
+        this.html.loadButton.addClass('button green-button');
+        this.html.loadButton.mousePressed(() => this.handleImport());
     }
 
     //== show/hide methods
@@ -216,6 +216,51 @@ class DesignUI {
         }
     }
 
+    handleImport() {
+        // user selects a json file
+        const input = createFileInput((file) => {
+            if (file.type === 'application' && file.subtype === 'json') {
+                const annealData = file.data;
+                // read the shapes in
+                this.loadAnnealJson(annealData);
+            } else {
+                alert('Select a .json file to upload');
+            }
+        });
+        input.hide(); // hide default file input
+        input.elt.click(); // open file dialog on click
+    }
+
+    loadAnnealJson(_annealData) {
+        // handle loading saved anneals from json file
+        let loadedAnneals = [];
+        for (let anneal of _annealData) {
+            // create new shape from saved data
+            let enableSolution = new Solution(anneal.finalSolution.shapes);
+            anneal.finalSolution = enableSolution; // add solution methods back
+            loadedAnneals.push(anneal);
+        }
+        this.savedAnneals.push(...loadedAnneals);
+
+        // reset list of loaded anneals
+        if (this.savedAnneals.length >= 1) {
+            // each needs to be clicked twice to show up
+            for (let i = 0; i < this.savedAnneals.length; i++) {
+                this.viewSavedAnneal(i);
+            }
+            this.viewSavedAnneal(0);
+        }
+
+        // enable export button if all shapes are from the load files
+        if (this.savedAnneals.length == _annealData.length) {
+            // user loaded all current shapes, no export needed
+            this.html.exportButton.attribute('disabled', '');
+        } else {
+            // user loaded on top of existing anneals, export needed
+            this.html.exportButton.removeAttribute('disabled');
+        }
+    }
+
     //== display methods
     drawBlankGrid() {
         clear();
@@ -235,12 +280,6 @@ class DesignUI {
             bkrdColor: "rgb(229, 229, 229)"
         }
         emptySolution.showGridSquares(colors);
-    }
-
-    resetCanvas() {
-        background(255);
-
-        this.displaySavedAnneals();
     }
 
     updateDisplayCallback(_solution) {
@@ -317,6 +356,10 @@ class DesignUI {
                     // disable export button if no more saved anneals
                     if (this.savedAnneals.length === 0) {
                         this.html.exportButton.attribute('disabled', ''); // until one saved anneal
+                    }
+                    // enable export if there are saved anneals
+                    if (this.savedAnneals.length > 0) {
+                        this.html.exportButton.removeAttribute('disabled');
                     }
                     this.displaySavedAnneals();
                 }
