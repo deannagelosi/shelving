@@ -17,7 +17,6 @@ class DesignUI {
         this.getHtmlRef();
         this.initBodyUI();
         this.initRightSideUI();
-        this.initLeftSideUI();
 
         // initially hide the input elements
         this.hide();
@@ -88,17 +87,15 @@ class DesignUI {
         this.html.loadButton.mousePressed(() => this.handleImport());
     }
 
-    initLeftSideUI() {
-        // update top title
-        this.htmlRef.leftSideTop.html('Available Shapes');
-    }
-
     //== show/hide methods
     show() {
         // toggle on the input screen divs
         this.htmlRef.leftBar.removeClass('hidden');
         this.htmlRef.rightBar.removeClass('hidden');
         this.htmlRef.bottomDiv.removeClass('hidden');
+        // set titles
+        this.htmlRef.rightSideTop.html('Results');
+        this.htmlRef.leftSideTop.html('Shapes');
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));

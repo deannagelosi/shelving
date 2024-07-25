@@ -31,7 +31,7 @@ body {
 }
 
 #canvas-div {
-  margin: 20px;
+  margin: 10px;
 }
 
 .side-bar {
@@ -39,12 +39,19 @@ body {
   flex-direction: column;
   justify-content: space-between;
   height: 630px;
-  min-width: 200px;
   background-color: #f0f0f0;
   margin-top: 30px;
   border: #c0c0c0 1px solid;
   border-radius: 3px;
   box-sizing: border-box;
+}
+
+#left-side-bar {
+  min-width: 100px;
+}
+
+#right-side-bar {
+  min-width: 200px;
 }
 
 .sidebar-top {
@@ -67,6 +74,7 @@ body {
   flex-direction: row;
   padding: 10px 0px;
   text-align: center;
+  justify-content: center;
 }
 
 .button {

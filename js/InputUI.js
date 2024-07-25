@@ -149,6 +149,8 @@ class InputUI {
         this.htmlRef.leftBar.addClass('hidden');
         this.htmlRef.rightBar.removeClass('hidden');
         this.htmlRef.bottomDiv.removeClass('hidden');
+        // set titles
+        this.htmlRef.rightSideTop.html('Shapes');
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
