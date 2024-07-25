@@ -17,7 +17,6 @@ let designUI;
 //= flags
 let isInputScreen; // switches screen (inout/design)
 // diagnostic toggles
-let enableCellular = true;
 let devMode = false;
 let editMode = false;
 
@@ -47,6 +46,10 @@ function draw() {
         designUI.show();
         // setup the design grid
         designUI.drawBlankGrid();
+        // // test loading json data
+        // loadJSON('/examples/shelving_data_example.json', (importedData) => {
+        //     designUI.loadAnnealJson(importedData);
+        // });
         // setup shape list
         designUI.createShapeList();
 
@@ -77,6 +80,9 @@ function mousePressed() {
     if (isInputScreen) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
+    // else {
+    //     designUI.selectCellLine(mouseX, mouseY);
+    // }
 }
 
 function mouseDragged() {

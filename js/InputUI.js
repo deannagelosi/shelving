@@ -19,7 +19,7 @@ class InputUI {
         this.brightMin = 0.8;
         this.brightMax = 1.8;
         // input grid variables
-        this.maxInputInches = 10;
+        this.maxInputInches = 12;
         this.gridInchSize = 0.25; // each square is 0.25 inches
         this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
@@ -156,9 +156,9 @@ class InputUI {
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
         // // temp for testing
-        // loadJSON('/examples/sunny-shapes-0.25.json', (shapeData) => {
-        //     this.loadShapesJson(shapeData);
-        //     // this.nextScreen();
+        // loadJSON('/examples/shelving_data_example.json', (importedData) => {
+        //     this.loadShapesJson(importedData);
+        //     this.nextScreen();
         // });
     }
 

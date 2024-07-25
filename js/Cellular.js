@@ -2,6 +2,7 @@ class Cellular {
     constructor(_solution) {
         this.cellSpace = [[]]; // 2D array of intersections on the layout grid where cells live
         this.pathValues = [[]]; // 2D array of each path's (lines on the layout) height value
+        this.cellLines = new Set(); // holds the unique lines to draw
 
         if (_solution.layout.length <= 1) _solution.makeLayout();
         this.layout = _solution.layout; // array of shapes in their annealed position
@@ -552,7 +553,7 @@ class Cellular {
         // loop through the cellSpace grid and add any neighboring cells of the same strain as pairs
         // use these pairs to draw all of the lines. store pairs in a Set to de-duplicate pairs.
         // set for deduplicating lines as they are found
-        const lineSet = new Set();
+        this.cellLine = new Set();
 
         // loop through all positions in cellSpace
         for (let y = 0; y < this.cellSpace.length; y++) {
@@ -585,11 +586,13 @@ class Cellular {
                                         Math.min(x, newX),
                                         Math.max(y, newY),
                                         Math.max(x, newX),
-                                        cell.strain
+                                        cell.strain,
+                                        0, // 0: not user made, 1: user made
+                                        1  // 1: enabled, 0: disabled (by user)
                                     ].join(',');
 
                                     // when added to a Set, strings are skipped if they already exist
-                                    lineSet.add(lineKey);
+                                    this.cellLines.add(lineKey);
                                 }
                             }
                         }
@@ -599,8 +602,12 @@ class Cellular {
         }
 
         // draw all unique lines
-        for (let lineKey of lineSet) {
-            let [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
+        for (let lineKey of this.cellLines) {
+            let [y1, x1, y2, x2, strain, userMade, status] = lineKey.split(',').map(Number);
+    
+            if (status === 0) {
+                continue; // skip disabled lines
+            }
 
             // calculate canvas coordinates
             let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
@@ -612,12 +619,13 @@ class Cellular {
             let lineColor;
             if (devMode) {
                 lineColor = this.strainColor(strain);
-
+            } else if (userMade === 1) {
+                lineColor = "rgb(255, 0, 0)";
             } else {
                 lineColor = "rgb(175, 141, 117)";
             }
             stroke(lineColor);
-            strokeWeight(5);  // adjust line thickness as needed
+            strokeWeight(7);  // adjust line thickness as needed
 
             // draw the line
             line(startX, startY, endX, endY);
