@@ -1,24 +1,22 @@
 //= setup variables
-let canvasWidth = 650;
-let canvasHeight = 650;
+const canvasWidth = 650;
+const canvasHeight = 650;
 
 //= state variables
-let allShapes = []; // [{shapeData (reference), posX (int), posY (int)}]\
-let currentSolution; // current complete anneal solution
+let allShapes = []; // [{shapeData (reference), posX (int), posY (int)}]
+// let currentAnneal;
+// let currentSolution; // current complete anneal solution
+let savedSolutions = []; // array of saved solutions
 let numGrow = 0; // cell growth amount in dev mode
 
 //= class instances
-let annealing;
 let newCase;
 let inputUI;
 let designUI;
 
 //= flags
 let isInputScreen; // switches screen (inout/design)
-let annealingComplete = false;
-let isMousePressed = false;
 // diagnostic toggles
-let useExampleSolution = false;
 let enableCellular = true;
 let devMode = false;
 
@@ -46,128 +44,36 @@ function draw() {
         // switch to annealing screen
         inputUI.hide();
         designUI.show();
-        if (!annealing) {
-            // annealing has not started yet
-            // display example solution or start annealing
-            if (useExampleSolution) {
-                // load the example solution and don't anneal
-                let solution = new Solution(allShapes);
-                solution.exampleSolution();
-                currentSolution = solution; // save for displayResult
-                displayResult();
-                noLoop();
-            } else {
-                // run the annealing process
-                startAnnealing();
-                noLoop();
-            }
-        }
+
+        noLoop();
     }
-
-    noLoop();
-}
-
-async function startAnnealing() {
-    annealingComplete = false;
-    annealing = new Anneal(updateDisplay, designUI);
-
-    let solution = await annealing.run();
-    currentSolution = solution; // save for displayResult
-    annealingComplete = true;
-    displayResult();
-
-    // rebind re-anneal to restart annealing
-    designUI.html.regenButton.mousePressed(() => this.startAnnealing());
-
-    console.log("Annealing complete. Score: ", solution.score);
-}
-
-function updateDisplay(_solution) {
-    // passed as a callback to the annealing process so it can update the display
-
-    clear();
-    background(255);
-    // show shapes, grid, and annealing scores
-    _solution.showLayout()
-    _solution.showScores();
-}
-
-function displayResult() {
-    // show shapes and grid but not annealing scores
-    if (currentSolution) {
-        clear();
-        background(255);
-        currentSolution.showLayout();
-
-        // update growth text if dev mode on and annealing complete
-        designUI.show();
-
-        if (!enableCellular) {
-            // display annealing scores if not showing cellular scores
-            currentSolution.showScores();
-        }
-        else if (enableCellular) {
-            // setup case for cellular and boards
-            newCase = new Case(currentSolution);
-            newCase.cellular.createTerrain();
-            newCase.cellular.calcPathValues();
-            newCase.cellular.makeInitialCells();
-            newCase.cellular.growCells(numGrow);
-
-            // display cells and terrain (cellular scores)
-            newCase.cellular.showTerrain();
-            newCase.cellular.showCellLines();
-            newCase.cellular.showCells();
-        }
-    }
-
 }
 
 function keyPressed() {
     if (!isInputScreen) {
-        // if (key === 's' || key === 'S') {
-        //     // save current case as SVG
-        //     newCase.buildLaserSVG();
-        //     newCase.displaySVGExport();
-        //     newCase.saveSVGExport();
-        // } else 
         if (key === 'g') {
             // advance one growth at a time in dev mode
             if (devMode) {
                 numGrow++
-                displayResult();
+                designUI.displayResult();
             }
         } else if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
-
-            // update growth text if dev mode on and annealing complete
-            designUI.show();
-
-            if (devMode == true) {
-                numGrow = 0;
-            }
-
-            if (annealingComplete) {
-                displayResult();
-            }
+            numGrow = 0;
+            designUI.displayResult();
         }
     }
 }
 
 function mousePressed() {
-    isMousePressed = true;
     if (isInputScreen) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
 }
 
-function mouseReleased() {
-    isMousePressed = false;
-}
-
 function mouseDragged() {
-    if (isInputScreen && isMousePressed) {
+    if (isInputScreen) {
         inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }

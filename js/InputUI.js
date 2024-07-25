@@ -227,8 +227,6 @@ class InputUI {
         if (this.shapes.length >= 1) {
             this.html.saveButton.removeAttribute('disabled');
         }
-
-        isMousePressed = false;
     }
 
     saveAllShapes() {
@@ -250,7 +248,6 @@ class InputUI {
 
         // change to the next screen (design)
         isInputScreen = false;
-        isMousePressed = false;
         loop();
     }
 
@@ -262,7 +259,6 @@ class InputUI {
                 // read the shapes in
                 this.loadShapesJson(shapeData);
 
-                isMousePressed = false;
             } else {
                 alert('Select a .json file to upload');
             }
