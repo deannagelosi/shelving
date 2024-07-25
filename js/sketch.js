@@ -1,21 +1,26 @@
+//= setup variables
 let canvasWidth = 650;
 let canvasHeight = 650;
-let shapes = [];
-let shapesPos = [];
+
+//= state variables
+let allShapes = []; // [{shapeData (reference), posX (int), posY (int)}]\
+let currentSolution; // current complete anneal solution
+let numGrow = 0; // cell growth amount in dev mode
+
+//= class instances
 let annealing;
 let newCase;
 let inputUI;
 let designUI;
-let isInputScreen; // controls active screen (inout or anneal)
-let annealingComplete = false;
-let currentSolution;
-let isMousePressed = false;
 
+//= flags
+let isInputScreen; // switches screen (inout/design)
+let annealingComplete = false;
+let isMousePressed = false;
 // diagnostic toggles
 let useExampleSolution = false;
 let enableCellular = true;
 let devMode = false;
-let numGrow = 0;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -46,7 +51,7 @@ function draw() {
             // display example solution or start annealing
             if (useExampleSolution) {
                 // load the example solution and don't anneal
-                let solution = new Solution(shapesPos);
+                let solution = new Solution(allShapes);
                 solution.exampleSolution();
                 currentSolution = solution; // save for displayResult
                 displayResult();
@@ -77,14 +82,14 @@ async function startAnnealing() {
     console.log("Annealing complete. Score: ", solution.score);
 }
 
-function updateDisplay(currentSolution) {
+function updateDisplay(_solution) {
     // passed as a callback to the annealing process so it can update the display
 
     clear();
     background(255);
     // show shapes, grid, and annealing scores
-    currentSolution.showLayout()
-    currentSolution.showScores();
+    _solution.showLayout()
+    _solution.showScores();
 }
 
 function displayResult() {

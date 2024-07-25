@@ -1,26 +1,26 @@
 class InputUI {
     constructor() {
         //== state variables
-        // grid and image data
         this.inputGrid = [];
         this.imgData = {}; // (image, mask, brightness data, etc)
-        // brightness slider variables
-        this.defaultBrightness = 1.2;
-        this.imgBrightness = this.defaultBrightness;
-        this.brightStepSize = 0.01;
-        this.brightMin = 0.8;
-        this.brightMax = 1.8;
+        this.shapes = []; // array of new Shape objects
         // dom elements and shape titles
         this.htmlRef = {};
         this.html = {};
         this.shapeTitleElements = [];
 
-        //== input grid variables
+        //== setup
+        // ui variables
+        this.defaultBrightness = 1.2;
+        this.imgBrightness = this.defaultBrightness;
+        this.brightStepSize = 0.01;
+        this.brightMin = 0.8;
+        this.brightMax = 1.8;
+        // input grid variables
         this.maxInputInches = 10;
         this.gridInchSize = 0.25; // each square is 0.25 inches
         this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
-
         // calc input grid size
         this.squareSize = Math.round((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
         this.inputGridHeight = (this.inputRows * this.squareSize);
@@ -187,33 +187,13 @@ class InputUI {
                     // setup image
                     this.imgData.img = img;
                     await this.resizeImg();
-
                     await this.adjustImgBrightness();
                     await this.createImageMask();
                     // update the input grid display
                     this.html.headerSlider.attribute('disabled', '');
                     this.drawInputGrid();
-
-                    // // pre-compute all brightness levels in the background
-                    // setTimeout(async () => {
-                    //     for (let brightness = this.brightMin; brightness <= this.brightMax; brightness += this.brightStepSize) {
-                    //         this.imgBrightness = brightness;
-                    //         await this.adjustImgBrightness();
-                    //         await this.createImageMask();
-                    //     }
-                    //     this.html.headerSlider.removeAttribute('disabled');
-                    // }, 0);
-
-
-                    // // switch back to default brightness
-                    // this.imgBrightness = this.defaultBrightness;
-                    // await this.adjustImgBrightness();
-                    // await this.createImageMask();
-                    // this.drawInputGrid();
-
+                    // enable the brightness slider
                     this.html.headerSlider.removeAttribute('disabled');
-
-
                     // add file name as initial title
                     this.html.titleInput.value(file.name.split('.')[0]);
                 });
@@ -229,14 +209,14 @@ class InputUI {
         // find the shape title
         let titleValue = this.html.titleInput.value();
         if (titleValue === '') { // no title entered by user
-            titleValue = `shape-${shapes.length + 1}`;
+            titleValue = `shape-${this.shapes.length + 1}`;
         }
 
         // save the shape
         let newShape = new Shape();
         let gridCopy = this.inputGrid.map(colArray => [...colArray]);
         newShape.saveUserInput(titleValue, gridCopy); // save a copy of the input grid
-        shapes.push(newShape);
+        this.shapes.push(newShape);
 
         // Reset active shape and UI
         this.resetCanvas();
@@ -244,7 +224,7 @@ class InputUI {
         // disable next button (until the user saves the changes)
         this.html.nextButton.attribute('disabled', '');
         // enable save button if there is more than one shape
-        if (shapes.length >= 1) {
+        if (this.shapes.length >= 1) {
             this.html.saveButton.removeAttribute('disabled');
         }
 
@@ -256,29 +236,19 @@ class InputUI {
         saveJSON(shapes, 'shapesData.json');
 
         // Enable next button once shapes are saved and there are at least 2 shapes
-        if (shapes.length > 1) {
+        if (this.shapes.length > 1) {
             this.html.nextButton.removeAttribute('disabled');
         }
     }
 
     nextScreen() {
-        // 1. prep the inputted shapes for annealing the first solution
-        // - wrap user inputted shapes with extra position
-        // - gives each solution unique position data, while sharing the same shape data
-        shapesPos = [];
-        for (let i = 0; i < shapes.length; i++) {
-            let shapeData = {
-                data: shapes[i],
-                // pos is bottom left corner of the shape, including overhangs
-                posX: 0,
-                posY: 0,
-            };
-            shapesPos.push(shapeData);
-        }
+        // save the input shapes to the global shapes array
+        allShapes = this.shapes;
+        
+        // delete shape list dom elements
         this.clearShapeTitles();
 
-        // 2. change to the next user screen (annealing)
-        // Switch away from the input screen
+        // change to the next screen (design)
         isInputScreen = false;
         isMousePressed = false;
         loop();
@@ -303,20 +273,23 @@ class InputUI {
     }
 
     loadShapesJson(shapeData) {
-        shapes = [];
+
+        let loadedShapes = [];
         for (let shape of shapeData) {
             // create new shape from saved data
             let newShape = new Shape();
             newShape.saveUserInput(shape.title, shape.inputGrid);
-            shapes.push(newShape);
+            loadedShapes.push(newShape);
         }
+
+        this.shapes.push(...loadedShapes);
         // Reset active shape and UI
         this.resetCanvas();
 
         // disable next button (until the user saves the changes)
         this.html.nextButton.attribute('disabled', '');
         // enable save button if there is more than one shape
-        if (shapes.length >= 1) {
+        if (this.shapes.length >= 1) {
             this.html.saveButton.removeAttribute('disabled');
         }
     }
@@ -380,7 +353,7 @@ class InputUI {
     displayShapeTitles() {
         this.clearShapeTitles();
 
-        for (let i = 0; i < shapes.length; i++) {
+        for (let i = 0; i < this.shapes.length; i++) {
             // create item row div
             let titleRow = createDiv().addClass('shape-title');
             titleRow.parent(this.htmlRef.rightSideList);
@@ -393,7 +366,7 @@ class InputUI {
             trashIcon.parent(titleRow);
 
             // create shape title
-            let shapeTitle = createP(`${shapes[i].title}`);
+            let shapeTitle = createP(`${this.shapes[i].title}`);
             shapeTitle.attribute('data-index', i);
             shapeTitle.parent(titleRow);
             // save row for removal later
@@ -403,7 +376,7 @@ class InputUI {
             // removes a shape from the list
             trashIcon.mousePressed(() => {
                 let index = shapeTitle.attribute('data-index');
-                shapes.splice(index, 1);
+                this.shapes.splice(index, 1);
 
                 //update displayed list
                 this.displayShapeTitles();
@@ -412,7 +385,7 @@ class InputUI {
                 this.html.nextButton.attribute('disabled', '');
 
                 // toggle save button if there are any shapes to save
-                if (shapes.length >= 1) {
+                if (this.shapes.length >= 1) {
                     this.html.saveButton.removeAttribute('disabled');
                 } else {
                     this.html.saveButton.attribute('disabled', '');

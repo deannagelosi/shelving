@@ -7,6 +7,15 @@
     margin: 0 auto;
 }
 
+.button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px 0px;
+    text-align: center;
+    gap: 20px;
+}
+
 .info-text {
     font-style: italic;
     color: #A9A9A9;

@@ -42,7 +42,9 @@ class Anneal {
             };
 
             // create new solution with random layout. shallow copy allows unique positions for the same shapes
-            let initialSolution = new Solution(shapesPos.map(shape => ({ ...shape })));
+            // filter out only selected (enabled) shapes (filter returns a shallow copy)
+            let selectedShapes = allShapes.filter(shape => shape.enabled);
+            let initialSolution = new Solution(selectedShapes);
             initialSolution.randomLayout()
             // start concurrent anneals
             this.multiStartSolutions.push(this.anneal(initialSolution, multiConfig));

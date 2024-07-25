@@ -142,8 +142,8 @@ class Solution {
         // - sum up all the areas
         let totalArea = 0;
         for (let i = 0; i < this.shapes.length; i++) {
-            let shapeHeight = this.shapes[i].data.bufferHeight
-            let shapeWidth = this.shapes[i].data.bufferWidth;
+            let shapeHeight = this.shapes[i].data.bufferShape.length;
+            let shapeWidth = this.shapes[i].data.bufferShape[0].length;
             totalArea += (shapeHeight * shapeWidth);
         }
         // give extra space and find the closest rectangle that can hold that area
@@ -182,8 +182,8 @@ class Solution {
             };
 
             // loop shape's buffer height & width to place the full footprint in the layout
-            for (let y = 0; y < shape.data.bufferHeight; y++) {
-                for (let x = 0; x < shape.data.bufferWidth; x++) {
+            for (let y = 0; y < shape.data.bufferShape.length; y++) {
+                for (let x = 0; x < shape.data.bufferShape[y].length; x++) {
 
                     // place shapes, growing layout if shapes placed out-of-bounds
                     if (shape.data.bufferShape[y][x]) {
@@ -630,10 +630,10 @@ class Solution {
             let smallSquare = this.squareSize / 4;
 
             // draw rectangle for each true square in the shape grid
-            for (let y = 0; y < this.shapes[i].data.shape.length; y++) {
-                for (let x = 0; x < this.shapes[i].data.shape[y].length; x++) {
+            for (let y = 0; y < this.shapes[i].data.highResShape.length; y++) {
+                for (let x = 0; x < this.shapes[i].data.highResShape[y].length; x++) {
                     // only draw high res shape squares
-                    if (this.shapes[i].data.shape[y][x]) {
+                    if (this.shapes[i].data.highResShape[y][x]) {
 
                         // find its position on the canvas and draw the square
                         let rectX = (startX * this.squareSize) + (x * smallSquare) + this.buffer + this.xPadding;
