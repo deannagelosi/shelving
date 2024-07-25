@@ -24,23 +24,27 @@ class Anneal {
         this.multiStartsHistory = {};
         this.solutionHistory = []; // stores final solution history (...multi-starts, refinement)
         this.finalSolution = null;
-        this.abortAnnealing = false;
+        this.stopAnneal = false;
+        this.restartAnneal = false;
     }
 
     async run() {
         // == Setup == //
-        // while anneal is running change button to "regenerate" mode
+        // switch button modes:
+        // - 'generate' -> 'regenerate' mode
+        // - 'clear' -> 'stop + clear' mode
         this.ui.html.annealButton.html('Regenerate');
         this.ui.html.annealButton.mousePressed(() => this.reAnneal());
+        this.ui.html.clearButton.mousePressed(() => this.endAnneal());
 
         // == Start Annealing Process == //
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
         let bestStartSolution = await this.multiStartPhase();
-        if (this.abortAnnealing && !bestStartSolution) return; // re-anneal clicked
+        if (this.stopAnneal && !bestStartSolution) return; // re-anneal clicked
 
         let refinedSolution = await this.refinePhase(bestStartSolution);
-        if (this.abortAnnealing && !refinedSolution) return; // re-anneal clicked
+        if (this.stopAnneal && !refinedSolution) return; // re-anneal clicked
 
         // == Annealing Complete == //
         // anneal completed with out being stopped
@@ -80,7 +84,7 @@ class Anneal {
         // wait for all multi-starts to complete (anneal concurrently)
         let results = await Promise.all(this.multiStartSolutions);
 
-        if (this.abortAnnealing) return null; // re-anneal clicked
+        if (this.stopAnneal) return null; // re-anneal clicked
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
@@ -101,7 +105,7 @@ class Anneal {
         }
 
         let bestSolution = await this.anneal(_bestStartSolution, refineConfig);
-        if (this.abortAnnealing) return null // re-anneal clicked
+        if (this.stopAnneal) return null // re-anneal clicked
 
 
         // if solution is not valid (overlapping or floating shapes), continue to refine
@@ -115,7 +119,7 @@ class Anneal {
             if (devMode) console.log("additional refining...")
 
             bestSolution = await this.anneal(bestSolution, refineConfig);
-            if (this.abortAnnealing) return null // re-anneal clicked
+            if (this.stopAnneal) return null // re-anneal clicked
         }
 
         return bestSolution;
@@ -148,7 +152,7 @@ class Anneal {
         let totalIterations = 0;
         for (let iteration = 0; iteration < maxIterations; iteration++) {
             // if re-anneal button clicked, stop anneal so run() can restart outside of this function
-            if (this.abortAnnealing) return null;
+            if (this.stopAnneal) return null;
 
             // generate a neighboring solution
             let movementRange = this.calcMovementRange(temperature, config.initialTemp);
@@ -250,8 +254,17 @@ class Anneal {
     }
 
     // handler for button that controls restart
-    async reAnneal() {
+    reAnneal() {
         console.log("restart clicked")
-        this.abortAnnealing = true;
+        // stop flag noticed by async anneals, which terminate
+        this.stopAnneal = true;
+        // restart flag noticed by handleStartAnneal(), which calls new anneal
+        this.restartAnneal = true;
+    }
+
+    endAnneal() {
+        console.log("clear (stop) clicked")
+        // stop flag noticed by async anneals, which terminate
+        this.stopAnneal = true;
     }
 }

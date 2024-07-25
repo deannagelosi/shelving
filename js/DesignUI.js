@@ -42,14 +42,21 @@ class DesignUI {
         this.html.buttonRow.parent(this.html.designDiv);
         this.html.buttonRow.addClass('button-row');
 
+        // Generate button
         this.html.annealButton = createButton('Generate');
         this.html.annealButton.parent(this.html.buttonRow).addClass('green-button button');
         this.html.annealButton.mousePressed(() => this.handleStartAnneal());
 
+        // Save button
         this.html.saveButton = createButton('Save');
         this.html.saveButton.parent(this.html.buttonRow).addClass('green-button button');
         this.html.saveButton.attribute('disabled', ''); // until annealing is complete
         this.html.saveButton.mousePressed(() => this.handleSaveSolution());
+
+        // Clear + Stop button
+        this.html.clearButton = createButton('Clear');
+        this.html.clearButton.parent(this.html.buttonRow).addClass('red-button button');
+        this.html.clearButton.mousePressed(() => this.drawBlankGrid());
 
         // info text
         this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
@@ -124,21 +131,37 @@ class DesignUI {
 
         await newAnneal.run();
         // check if annealing completed or was aborted
-        if (newAnneal.abortAnnealing && !newAnneal.finalSolution) {
-            // annealing was aborted. re-start new annealing process
-            this.handleStartAnneal();
+        if (newAnneal.stopAnneal && !newAnneal.finalSolution) {
+            // user triggered a stop or restart
+            if (newAnneal.restartAnneal) {
+                // restart new annealing process
+                return this.handleStartAnneal();
+            } else {
+                // user stopped the annealing process
+                console.log("Annealing stopped.");
+                this.drawBlankGrid();
+                // switch buttons back:
+                // - 'regenerate' -> 'generate' mode
+                // - 'stop + clear' -> 'clear' mode
+                this.html.annealButton.html('Generate');
+                this.html.annealButton.mousePressed(() => this.handleStartAnneal());
+                this.html.clearButton.mousePressed(() => this.drawBlankGrid());
+            }
+
         } else {
             // annealing completed
-            // reset "regenerate" button back to "generate" (.run() changed it)
+            // switch buttons back:
+            // - 'regenerate' -> 'generate' mode
+            // - 'stop + clear' -> 'clear' mode
+            // - 'save' enabled
             this.html.annealButton.html('Generate');
             this.html.annealButton.mousePressed(() => this.handleStartAnneal());
-
-            this.currentAnneal = newAnneal;
-
-            console.log("Annealing complete: ", this.currentAnneal.finalSolution.score);
-
-            // enable the save button
+            this.html.clearButton.mousePressed(() => this.drawBlankGrid());
             this.html.saveButton.removeAttribute('disabled');
+
+            // save results
+            this.currentAnneal = newAnneal;
+            console.log("Annealing complete: ", this.currentAnneal.finalSolution.score);
 
             this.displayResult();
         }
@@ -160,6 +183,12 @@ class DesignUI {
     drawBlankGrid() {
         clear();
         background(255);
+
+        // reset ui to cleared initial state
+        this.currentAnneal = null;
+        this.currentViewedAnnealIndex = null;
+        this.displaySavedAnneals();
+        this.html.saveButton.attribute('disabled', '');
 
         // create empty solution and display grid only
         let emptySolution = new Solution();
