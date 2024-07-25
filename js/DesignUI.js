@@ -73,6 +73,32 @@ class DesignUI {
         // this.html.growthText.parent(this.html.designDiv).addClass('info-text');
     }
 
+    initHeaderUI() {
+        //== setup ui elements for header
+        // slider toggle
+        this.html.sliderDiv = createDiv();
+        this.html.sliderDiv.id('slider-div');
+        this.html.sliderDiv.parent(this.htmlRef.header);
+        this.html.sliderDiv.mousePressed(this.handleSlider.bind(this));
+
+        // Simple label
+        this.html.simpleLabel = createSpan('Simple');
+        this.html.simpleLabel.addClass('toggle-label');
+        this.html.simpleLabel.parent(this.html.sliderDiv);
+
+        // Create and append the slider
+        // min, max, default, step
+        this.html.toggleSlider = createSlider(0, 1, 0, 1);
+        this.html.toggleSlider.id('toggleSlider');
+        this.html.toggleSlider.addClass('toggle-slider');
+        this.html.toggleSlider.parent(this.html.sliderDiv);
+        
+        // Detail label
+        this.html.detailLabel = createSpan('Detail');
+        this.html.detailLabel.addClass('toggle-label');
+        this.html.detailLabel.parent(this.html.sliderDiv);
+    }
+
     initRightSideUI() {
         //== setup ui elements for side bar
         // Export button
@@ -87,22 +113,6 @@ class DesignUI {
         this.html.loadButton.parent(this.htmlRef.rightSideButtons);
         this.html.loadButton.addClass('button green-button');
         this.html.loadButton.mousePressed(() => this.handleImport());
-    }
-
-    initHeaderUI() {
-        this.html.buttonContainer = createDiv();
-        this.html.buttonContainer.id('view-edit-container');
-        this.html.buttonContainer.parent(this.htmlRef.header);
-
-        this.html.viewButton = createButton('View');
-        this.html.viewButton.parent(this.html.buttonContainer);
-        this.html.viewButton.addClass('mode-button view-button active');
-        this.html.viewButton.mousePressed(() => this.setEditMode(false));
-
-        this.html.editButton = createButton('Edit');
-        this.html.editButton.parent(this.html.buttonContainer);
-        this.html.editButton.addClass('mode-button edit-button');
-        this.html.editButton.mousePressed(() => this.setEditMode(true));
     }
 
     //== show/hide methods
@@ -137,6 +147,21 @@ class DesignUI {
     }
 
     //== button handlers
+    handleSlider() {
+        let toggle = this.html.toggleSlider;
+
+        // toggle the slider value
+        if (toggle.value() === 0) {
+            toggle.value(1);
+            editMode = true;
+        } else {
+            toggle.value(0);
+            editMode = false;
+        }
+        // update the screen
+        this.displayResult();
+    }
+
     setEditMode(isEditMode) {
         editMode = isEditMode;
         if (isEditMode) {
