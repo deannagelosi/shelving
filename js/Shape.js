@@ -23,12 +23,12 @@ class Shape {
 
     saveUserInput(_title, _inputGrid) {
         // save the shape and create the rounded up and buffer shape arrays
-        this.title = _title;
+        this.data.title = _title;
         this.data.inputGrid = _inputGrid;
 
         //== create shape
         // trimming empty rows and columns in the input grid
-        this.shapeTemp = [];
+        let shapeTemp = [];
         let leftIndex = this.data.inputGrid[0].length - 1;
         let rightIndex = 0;
         // find the farthest left and right indices of the shape
@@ -49,17 +49,17 @@ class Shape {
         for (let y = 0; y < this.data.inputGrid.length; y++) {
             if (this.data.inputGrid[y].includes(true)) {
                 let rowSlice = this.data.inputGrid[y].slice(leftIndex, rightIndex + 1);
-                this.shapeTemp.push(rowSlice);
+                shapeTemp.push(rowSlice);
             }
         }
         // pad the shape with extra columns to make evenly distribute across a divisible by 4 width
         this.data.highResShape = [];
-        const width = this.shapeTemp[0].length;
+        const width = shapeTemp[0].length;
         const paddedWidth = Math.ceil(width / 4) * 4;
         const paddingLeft = Math.floor((paddedWidth - width) / 2);
         const paddingRight = paddedWidth - width - paddingLeft;
         // add the shape, trimmed + padded left/right for 4 dividable
-        this.shapeTemp.forEach(row => {
+        shapeTemp.forEach(row => {
             const newRow = new Array(paddingLeft).fill(false)
                 .concat(row)
                 .concat(new Array(paddingRight).fill(false));

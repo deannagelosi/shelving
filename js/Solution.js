@@ -1,6 +1,7 @@
 class Solution {
-    constructor(_shapes) {
+    constructor(_shapes, _startID) {
         this.shapes = _shapes; // shapes with position data
+        this.startID = _startID; // the multi-start index this solution annealed from
         this.layout = [[]]; // 2D array of shapes that occupy the layout
         this.squareSize;
         this.buffer; // buffer makes room for line numbers in dev mode
@@ -9,7 +10,6 @@ class Solution {
         this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
         this.score;
         this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
-        this.startID; // the multi-start index this solution annealed from
     }
 
     randomLayout() {
@@ -118,7 +118,6 @@ class Solution {
                         if (bufferInBounds) {
                             this.layout[shape.posY + y][shape.posX + x].isBuffer.push(shape.data.bufferShape[y][x]);
                         }
-                        // this.layout[shape.posY + y][shape.posX + x].isBuffer.push(shapeInBounds && shape.data.bufferShape[y][x]);
                     }
                 }
             }
@@ -315,8 +314,7 @@ class Solution {
 
         // make a shallow copy of shapes (gives new posX and posY, but uses same shape data)
         let shapesCopy = this.shapes.map(shape => ({ ...shape }));
-        let newSolution = new Solution(shapesCopy);
-        newSolution.startID = this.startID;
+        let newSolution = new Solution(shapesCopy, this.startID);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);

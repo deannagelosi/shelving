@@ -12,7 +12,7 @@ class Anneal {
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 20; // how often to update the display with a new solution
+        this.displayInterval = 30; // how often to update the display with a new solution
 
         //== ui
         this.ui = _ui;
@@ -74,9 +74,8 @@ class Anneal {
             };
 
             // create new solution with random layout.
-            let initialSolution = new Solution(this.shapes);
+            let initialSolution = new Solution(this.shapes, startID);
             initialSolution.randomLayout();
-            initialSolution.startID = startID;
 
             // start concurrent anneals (pass which iteration number for multi-start)
             this.multiStartSolutions.push(this.anneal(initialSolution, multiConfig));
@@ -168,7 +167,6 @@ class Anneal {
                 if (currentSolution.score < bestSolution.score) {
                     // better solution found, save
                     bestSolution = currentSolution;
-                    this.saveSolutionHistory(bestSolution, config.multiStart);
                     iterationsSinceImprovement = 0;
 
                     // adaptive cooling: slightly increase cooling rate when a better solution is found
@@ -196,6 +194,8 @@ class Anneal {
 
             // update display at specified intervals
             if (iteration % this.displayInterval === 0) {
+                // this.saveSolutionHistory(bestSolution, config.multiStart);
+                this.saveSolutionHistory(currentSolution, config.multiStart);
                 // only show the first (longest running) multi-start, then all refinements
                 if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
                     this.ui.updateDisplayCallback(currentSolution);
@@ -242,14 +242,20 @@ class Anneal {
 
     saveSolutionHistory(_bestSolution, _multiStart) {
         // save the best solution to the solution history  
+
+        // only save the necessary data for the solution history
+        let solutionData = {
+            shapes: _bestSolution.shapes,
+            score: _bestSolution.score,
+        };
         if (_multiStart) {
             if (!this.multiStartsHistory[_bestSolution.startID]) {
                 this.multiStartsHistory[_bestSolution.startID] = [];
             }
-            this.multiStartsHistory[_bestSolution.startID].push(_bestSolution);
+            this.multiStartsHistory[_bestSolution.startID].push(solutionData);
         }
         else {
-            this.solutionHistory.push(_bestSolution);
+            this.solutionHistory.push(solutionData);
         }
     }
 

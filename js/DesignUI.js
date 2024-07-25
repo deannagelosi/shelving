@@ -9,6 +9,8 @@ class DesignUI {
         this.htmlRef = {};
         this.html = {};
         this.savedAnnealElements = [];
+        // flags
+        this.isExporting = false;
 
         //== initialize UI elements
         this.getHtmlRef();
@@ -67,24 +69,19 @@ class DesignUI {
     }
 
     initRightSideUI() {
-        // //== setup ui elements for side bar
-        // this.html.addButton = createButton('Add');
-        // this.html.addButton.parent(this.htmlRef.rightSideButtons);
-        // this.html.addButton.addClass('button green-button');
-        // this.html.addButton.attribute('disabled', ''); // until 2 shapes are saved
-        // this.html.addButton.mousePressed(() => this.saveAllShapes());
-
-        // // create the LOAD SHAPES button
-        // this.html.loadButton = createButton('Load');
-        // this.html.loadButton.parent(this.htmlRef.rightSideButtons);
-        // this.html.loadButton.addClass('button green-button');
-        // this.html.loadButton.mousePressed(() => this.loadSavedShapes());
-
-        // create the export button
+        //== setup ui elements for side bar
+        // Export button
         this.html.exportButton = createButton('Export');
         this.html.exportButton.parent(this.htmlRef.rightSideButtons);
         this.html.exportButton.addClass('button green-button');
+        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
         this.html.exportButton.mousePressed(() => this.handleExport());
+
+        // // Import button
+        // this.html.loadButton = createButton('Import');
+        // this.html.loadButton.parent(this.htmlRef.rightSideButtons);
+        // this.html.loadButton.addClass('button green-button');
+        // this.html.loadButton.mousePressed(() => this.handleImport());
     }
 
     //== show/hide methods
@@ -170,13 +167,53 @@ class DesignUI {
     handleSaveSolution() {
         // save the current solution to the global array
         this.totalSavedAnneals++;
-        this.currentAnneal.title = `solution-${this.totalSavedAnneals}`;
-        this.savedAnneals.push(this.currentAnneal);
+        // save only the necessary data for each anneal
+        let savedData = {
+            title: `solution-${this.totalSavedAnneals}`,
+            solutionHistory: this.currentAnneal.solutionHistory,
+            finalSolution: this.currentAnneal.finalSolution,
+        }
+        this.savedAnneals.push(savedData);
+
         this.currentViewedAnnealIndex = this.savedAnneals.length - 1;
         this.displaySavedAnneals();
 
-        // disable save until a new anneal or a change is made
+        // update buttons
+        // disable save until a new anneal or change is made
         this.html.saveButton.attribute('disabled', '');
+        // enable export button if disabled
+        this.html.exportButton.removeAttribute('disabled');
+    }
+
+    handleExport() {
+        if (this.isExporting) return; // block multiple clicks during export
+
+        this.isExporting = true;
+        this.html.exportButton.html('Saving...');
+        this.html.exportButton.attribute('disabled', '');
+
+        try {
+            const jsonData = JSON.stringify(this.savedAnneals, null);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            // create temporary link element
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'saved_anneals.json';
+
+            // append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            // clean up the URL
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Export failed:', error);
+        } finally {
+            this.isExporting = false;
+            this.html.exportButton.html('Export');
+        }
     }
 
     //== display methods
@@ -276,6 +313,10 @@ class DesignUI {
                     } else if (i < this.currentViewedAnnealIndex) {
                         // deleted one before currently viewed, move the index down
                         this.currentViewedAnnealIndex--;
+                    }
+                    // disable export button if no more saved anneals
+                    if (this.savedAnneals.length === 0) {
+                        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
                     }
                     this.displaySavedAnneals();
                 }

@@ -108,6 +108,7 @@ class InputUI {
         this.html.titleInput = createInput('');
         this.html.titleInput.parent(this.html.inputDiv);
         this.html.titleInput.addClass('input-field');
+        this.html.titleInput.id('title-input'); // form fields need unique ids
         this.html.titleInput.attribute('size', '20');
 
         // create the ADD button
@@ -231,7 +232,7 @@ class InputUI {
 
     saveAllShapes() {
         // save all shapes to a json
-        saveJSON(shapes, 'shapesData.json');
+        saveJSON(this.shapes, 'shapesData.json');
 
         // Enable next button once shapes are saved and there are at least 2 shapes
         if (this.shapes.length > 1) {
@@ -241,8 +242,13 @@ class InputUI {
 
     nextScreen() {
         // save the input shapes to the global shapes array
+        // remove unnecessary data 
+        this.shapes.forEach(shape => {
+            delete shape.data.inputGrid;
+        });
+
         allShapes = this.shapes;
-        
+
         // delete shape list dom elements
         this.clearShapeTitles();
 
@@ -274,7 +280,7 @@ class InputUI {
         for (let shape of shapeData) {
             // create new shape from saved data
             let newShape = new Shape();
-            newShape.saveUserInput(shape.title, shape.inputGrid);
+            newShape.saveUserInput(shape.data.title, shape.data.inputGrid);
             loadedShapes.push(newShape);
         }
 
@@ -282,8 +288,14 @@ class InputUI {
         // Reset active shape and UI
         this.resetCanvas();
 
-        // disable next button (until the user saves the changes)
-        this.html.nextButton.attribute('disabled', '');
+        // enable next button if all shapes are from the load files
+        if (this.shapes.length == loadedShapes.length) {
+            this.html.nextButton.removeAttribute('disabled');
+        } else {
+            // user loaded on top of existing shapes, save needed
+            this.html.nextButton.attribute('disabled', '');
+        }
+
         // enable save button if there is more than one shape
         if (this.shapes.length >= 1) {
             this.html.saveButton.removeAttribute('disabled');
@@ -362,7 +374,7 @@ class InputUI {
             trashIcon.parent(titleRow);
 
             // create shape title
-            let shapeTitle = createP(`${this.shapes[i].title}`);
+            let shapeTitle = createP(`${this.shapes[i].data.title}`);
             shapeTitle.attribute('data-index', i);
             shapeTitle.parent(titleRow);
             // save row for removal later
