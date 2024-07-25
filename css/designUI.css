@@ -22,6 +22,11 @@
     background-color: #e0e0e0;
 }
 
+.saved-anneal-item.highlighted {
+    background-color: #e6f3ff;
+    border: 1px solid #a8d1ff;
+}
+
 .saved-anneal-item .anneal-title {
     flex-grow: 1;
     margin: 0 15px;

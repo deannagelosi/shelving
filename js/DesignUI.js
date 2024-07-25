@@ -4,6 +4,7 @@ class DesignUI {
         this.currentAnneal;
         this.savedAnneals = [];
         this.totalSavedAnneals = 0;
+        this.currentViewedAnnealIndex = null;
         // dom elements
         this.htmlRef = {};
         this.html = {};
@@ -112,6 +113,8 @@ class DesignUI {
         //== start the annealing process
         this.currentAnneal = null;
         this.html.saveButton.attribute('disabled', '');
+        this.currentViewedAnnealIndex = null;
+        this.displaySavedAnneals();
 
         // find only selected (enabled) shapes
         // - filter() returns shallow copy of allShapes
@@ -146,6 +149,7 @@ class DesignUI {
         this.totalSavedAnneals++;
         this.currentAnneal.title = `solution-${this.totalSavedAnneals}`;
         this.savedAnneals.push(this.currentAnneal);
+        this.currentViewedAnnealIndex = this.savedAnneals.length - 1;
         this.displaySavedAnneals();
 
         // disable save until a new anneal or a change is made
@@ -204,6 +208,9 @@ class DesignUI {
 
         for (let i = 0; i < this.savedAnneals.length; i++) {
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
+            if (i === this.currentViewedAnnealIndex) {
+                savedAnnealItem.addClass('highlighted');
+            }
             savedAnnealItem.parent(this.htmlRef.rightSideList);
 
             let viewIcon = createImg('/img/view.svg', 'View')
@@ -223,6 +230,13 @@ class DesignUI {
             trashIcon.mousePressed(() => {
                 if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
                     this.savedAnneals.splice(i, 1);
+                    if (i === this.currentViewedAnnealIndex) {
+                        this.currentViewedAnnealIndex = null;
+                        // currently viewed anneal was deleted
+                    } else if (i < this.currentViewedAnnealIndex) {
+                        // deleted one before currently viewed, move the index down
+                        this.currentViewedAnnealIndex--;
+                    }
                     this.displaySavedAnneals();
                 }
             });
@@ -232,9 +246,11 @@ class DesignUI {
     }
 
     viewSavedAnneal(index) {
-        // update to the selected solution
+        // switch to viewing the selected saved anneal
+        this.currentViewedAnnealIndex = index;
         this.currentAnneal = this.savedAnneals[index];
         this.displayResult();
+        this.displaySavedAnneals();
     }
 
     clearSavedAnneals() {
