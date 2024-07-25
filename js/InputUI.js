@@ -405,7 +405,7 @@ class InputUI {
             let titleRow = createDiv().addClass('shape-title');
             titleRow.parent(this.htmlRef.rightSideList);
             // create trash icon
-            let trashIcon = createImg('/img/trash.svg', '🗑️'); // emoji backup if svg issue
+            let trashIcon = createImg('img/trash.svg', '🗑️'); // emoji backup if svg issue
             trashIcon.size(24, 24);
             trashIcon.style('display', 'inline-block');
             trashIcon.style('cursor', 'pointer');

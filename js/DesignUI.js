@@ -415,7 +415,7 @@ class DesignUI {
             }
             savedAnnealItem.parent(this.htmlRef.rightSideList);
 
-            let viewIcon = createImg('/img/view.svg', 'View')
+            let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
                 .size(24, 24)
                 .parent(savedAnnealItem);
@@ -425,7 +425,7 @@ class DesignUI {
                 .addClass('anneal-title')
                 .parent(savedAnnealItem);
 
-            let trashIcon = createImg('/img/trash.svg', 'Delete')
+            let trashIcon = createImg('img/trash.svg', 'Delete')
                 .addClass('icon-button')
                 .size(24, 24)
                 .parent(savedAnnealItem);
