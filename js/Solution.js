@@ -406,21 +406,21 @@ class Solution {
 
         if (editMode) {
             colors.bufferColor = "rgba(200,200,200, 0.5)";
+            colors.textColor = "rgb(255,255,255)";
         }
 
         // draw the layout from the bottom layer up
         this.showGridSquares(colors);
-
         // show the side grid numbers
         if (devMode) this.showGridNumbers();
         // display low res grid buffer squares
         if (devMode || editMode) this.showBuffer(colors);
         // display low res shape squares
         if (devMode) this.showLowResShapes(colors);
-
         // show the high res shapes
         this.showHighResShapes(colors);
-
+        // show the shape titles
+        if (editMode) this.showTitles(colors);
         // show the collision squares
         this.showCollision(colors);
     }
@@ -509,6 +509,27 @@ class Solution {
                     }
                 }
             }
+        }
+    }
+
+    showTitles(_colors) {
+        //== show the shape titles
+        noStroke();
+        for (let i = 0; i < this.shapes.length; i++) {
+            let shape = this.shapes[i];
+            let startX = shape.posX;
+            let startY = shape.posY;
+            let smallSquare = this.squareSize / 4;
+
+            let shapeWidth = shape.data.highResShape[0].length * smallSquare;
+            let shapeHeight = shape.data.highResShape.length * smallSquare;
+            let titleX = (startX * this.squareSize) + (this.squareSize / 2) + this.buffer + this.xPadding + (shapeWidth / 2);
+            let titleY = ((canvasHeight - this.yPadding) - this.buffer) - (startY * this.squareSize) - (shapeHeight / 2);
+
+            fill(_colors.textColor); 
+            textAlign(CENTER, CENTER);
+            textSize(min(this.squareSize / 2, 14));
+            text(shape.data.title, titleX, titleY);
         }
     }
 
