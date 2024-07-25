@@ -63,12 +63,12 @@ class DesignUI {
         this.html.clearButton.parent(this.html.buttonRow).addClass('red-button button');
         this.html.clearButton.mousePressed(() => this.drawBlankGrid());
 
-        // info text
-        this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        this.html.diagnosticText.parent(this.html.designDiv).addClass('info-text');
+        // // info text
+        // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
+        // this.html.diagnosticText.parent(this.html.designDiv).addClass('info-text');
 
-        this.html.growthText = createP("(press 'g' to grow cells)");
-        this.html.growthText.parent(this.html.designDiv).addClass('info-text');
+        // this.html.growthText = createP("(press 'g' to grow cells)");
+        // this.html.growthText.parent(this.html.designDiv).addClass('info-text');
     }
 
     initRightSideUI() {
@@ -100,12 +100,12 @@ class DesignUI {
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
-        this.html.growthText.addClass('hidden');
-        if (devMode) {
-            // show called in displayResult, not updateDisplayCallback
-            // only displayResult is called after annealing complete
-            this.html.growthText.removeClass('hidden');
-        }
+        // this.html.growthText.addClass('hidden');
+        // if (devMode) {
+        //     // show called in displayResult, not updateDisplayCallback
+        //     // only displayResult is called after annealing complete
+        //     this.html.growthText.removeClass('hidden');
+        // }
     }
 
     hide() {
@@ -135,6 +135,10 @@ class DesignUI {
         // - filter() returns shallow copy of allShapes
         // - shallow copy keeps shape specific data while allowing unique position data
         let selectedShapes = allShapes.filter(shape => shape.enabled);
+        if (selectedShapes.length < 2) {
+            alert('Select at least two shapes to generate');
+            return;
+        }
         let newAnneal = new Anneal(selectedShapes, this);
 
         await newAnneal.run();
@@ -183,6 +187,7 @@ class DesignUI {
             title: `solution-${this.totalSavedAnneals}`,
             solutionHistory: this.currentAnneal.solutionHistory,
             finalSolution: this.currentAnneal.finalSolution,
+            enabledShapes: allShapes.map(shape => shape.enabled)
         }
         this.savedAnneals.push(savedData);
 
@@ -425,6 +430,24 @@ class DesignUI {
         // switch to viewing the selected saved anneal
         this.currentViewedAnnealIndex = index;
         this.currentAnneal = this.savedAnneals[index];
+
+        // disable shape selection changes while viewing saved anneal
+        this.shapeElements.forEach(element => {
+            element.addClass('disabled');
+        });
+        // set which shapes are enabled for this saved solution
+        let enableShapes = this.currentAnneal.enabledShapes;
+        enableShapes.forEach((_enabled, i) => {
+            // set the enabled states for this saved solution
+            allShapes[i].enabled = _enabled;
+            if (_enabled) {
+                this.shapeElements[i].addClass('highlighted');
+            } else {
+                this.shapeElements[i].removeClass('highlighted');
+            }
+        });
+
+        // update display
         this.displayResult();
         this.displaySavedAnneals();
     }
