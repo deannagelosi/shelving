@@ -2,10 +2,12 @@ class DesignUI {
     constructor() {
         //== state variables
         this.currentAnneal;
-        this.currentSolution;
+        this.savedAnneals = [];
+        this.totalSavedAnneals = 0;
         // dom elements
         this.htmlRef = {};
         this.html = {};
+        this.savedAnnealElements = [];
 
         //== initialize UI elements
         this.getHtmlRef();
@@ -70,12 +72,11 @@ class DesignUI {
         // this.html.loadButton.addClass('button green-button');
         // this.html.loadButton.mousePressed(() => this.loadSavedShapes());
 
-        // // create the NEXT button
-        // this.html.nextButton = createButton('Next');
-        // this.html.nextButton.parent(this.htmlRef.rightSideButtons);
-        // this.html.nextButton.addClass('button green-button');
-        // this.html.nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        // this.html.nextButton.mousePressed(() => this.nextScreen());
+        // create the export button
+        this.html.exportButton = createButton('Export');
+        this.html.exportButton.parent(this.htmlRef.rightSideButtons);
+        this.html.exportButton.addClass('button green-button');
+        this.html.exportButton.mousePressed(() => this.handleExport());
     }
 
     //== show/hide methods
@@ -109,16 +110,18 @@ class DesignUI {
     //== button handlers
     async handleStartAnneal() {
         //== start the annealing process
+        this.currentAnneal = null;
+        this.html.saveButton.attribute('disabled', '');
 
         // find only selected (enabled) shapes
         // - filter() returns shallow copy of allShapes
         // - shallow copy keeps shape specific data while allowing unique position data
         let selectedShapes = allShapes.filter(shape => shape.enabled);
-        let currentAnneal = new Anneal(selectedShapes, this);
+        let newAnneal = new Anneal(selectedShapes, this);
 
-        await currentAnneal.run();
+        await newAnneal.run();
         // check if annealing completed or was aborted
-        if (currentAnneal.abortAnnealing && !currentAnneal.finalSolution) {
+        if (newAnneal.abortAnnealing && !newAnneal.finalSolution) {
             // annealing was aborted. re-start new annealing process
             this.handleStartAnneal();
         } else {
@@ -127,9 +130,12 @@ class DesignUI {
             this.html.annealButton.html('Generate');
             this.html.annealButton.mousePressed(() => this.handleStartAnneal());
 
-            this.currentSolution = currentAnneal.finalSolution;
+            this.currentAnneal = newAnneal;
 
-            console.log("Annealing complete: ", this.currentSolution.score);
+            console.log("Annealing complete: ", this.currentAnneal.finalSolution.score);
+
+            // enable the save button
+            this.html.saveButton.removeAttribute('disabled');
 
             this.displayResult();
         }
@@ -137,10 +143,22 @@ class DesignUI {
 
     handleSaveSolution() {
         // save the current solution to the global array
-        allSolutions.push(currentSolution);
+        this.totalSavedAnneals++;
+        this.currentAnneal.title = `solution-${this.totalSavedAnneals}`;
+        this.savedAnneals.push(this.currentAnneal);
+        this.displaySavedAnneals();
+
+        // disable save until a new anneal or a change is made
+        this.html.saveButton.attribute('disabled', '');
     }
 
     //== display methods
+    resetCanvas() {
+        background(255);
+
+        this.displaySavedAnneals();
+    }
+
     updateDisplayCallback(_solution) {
         // passed as a callback to the annealing process so it can update the display
 
@@ -153,21 +171,21 @@ class DesignUI {
 
     displayResult() {
         // show shapes and grid but not annealing scores
-        if (this.currentSolution) {
+        if (this.currentAnneal && this.currentAnneal.finalSolution) {
             clear();
             background(255);
-            this.currentSolution.showLayout();
+            this.currentAnneal.finalSolution.showLayout();
 
             // update growth text if dev mode on and annealing complete
             this.show();
 
             if (!enableCellular) {
                 // display annealing scores if not showing cellular scores
-                this.currentSolution.showScores();
+                this.currentAnneal.finalSolution.showScores();
             }
             else if (enableCellular) {
                 // setup case for cellular and boards
-                newCase = new Case(this.currentSolution);
+                newCase = new Case(this.currentAnneal.finalSolution);
                 newCase.cellular.createTerrain();
                 newCase.cellular.calcPathValues();
                 newCase.cellular.makeInitialCells();
@@ -179,5 +197,46 @@ class DesignUI {
                 newCase.cellular.showCells();
             }
         }
+    }
+
+    displaySavedAnneals() {
+        this.clearSavedAnneals();
+
+        for (let i = 0; i < this.savedAnneals.length; i++) {
+            // create item row div
+            let savedAnnealItem = createDiv().addClass('saved-anneal-item');
+            savedAnnealItem.parent(this.htmlRef.rightSideList);
+            // create trash icon
+            let trashIcon = createImg('/img/trash.svg', '🗑️'); // emoji backup if svg issue
+            trashIcon.size(24, 24);
+            trashIcon.style('display', 'inline-block');
+            trashIcon.style('cursor', 'pointer');
+            trashIcon.style('margin-left', '5px');
+            trashIcon.parent(savedAnnealItem);
+
+            // create shape title
+            let annealItem = createP(this.savedAnneals[i].title);
+            annealItem.attribute('data-index', i);
+            annealItem.parent(savedAnnealItem);
+            // save row for removal later
+            this.savedAnnealElements.push(savedAnnealItem);
+
+            // add event listener to trash icon
+            // removes a shape from the list
+            trashIcon.mousePressed(() => {
+                let index = annealItem.attribute('data-index');
+                this.savedAnneals.splice(index, 1);
+
+                //update displayed list
+                this.displaySavedAnneals();
+            });
+        }
+    }
+
+    clearSavedAnneals() {
+        for (let element of this.savedAnnealElements) {
+            element.remove();
+        }
+        this.savedAnnealElements = [];
     }
 }

@@ -7,6 +7,17 @@
     margin: 0 auto;
 }
 
+.sidebar-list .saved-anneal-item {
+    display: flex;
+    flex-direction: row;
+}
+
+.saved-anneal-item p {
+    margin: 5px 10px;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
 .button-row {
     display: flex;
     flex-direction: row;

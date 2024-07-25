@@ -61,7 +61,9 @@ function keyPressed() {
             // toggle dev mode on and off
             devMode = !devMode;
             numGrow = 0;
-            designUI.displayResult();
+            if (designUI.currentAnneal && designUI.currentAnneal.finalSolution) {
+                designUI.displayResult();
+            }
         }
     }
 }

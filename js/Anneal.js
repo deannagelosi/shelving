@@ -12,14 +12,11 @@ class Anneal {
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 10; // how often to update the display with a new solution
+        this.displayInterval = 20; // how often to update the display with a new solution
 
         //== ui
         this.ui = _ui;
-        this.saveButton = this.ui.html.saveButton;
-        this.saveButton.attribute('disabled', ''); // until 2 shapes are saved
-        this.saveButton.removeAttribute('disabled'); // until 2 shapes are saved
-        this.statusTest = this.ui.html.statusText;
+        // this.statusText = this.ui.html.statusText;
 
         //== state variables
         this.shapes = _shapes;
@@ -87,7 +84,6 @@ class Anneal {
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
-        console.log("Best start solution: ", bestStartSolution.startID, bestStartSolution);
         if (devMode) {
             console.log("Multi-start results: ", results.map(s => s.score).join(', '));
             console.log("Best solution:", bestStartSolution.score);
