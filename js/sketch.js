@@ -44,6 +44,8 @@ function draw() {
         // switch to annealing screen
         inputUI.hide();
         designUI.show();
+        // setup the design grid
+        designUI.drawBlankGrid();
 
         noLoop();
     }

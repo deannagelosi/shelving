@@ -157,6 +157,20 @@ class DesignUI {
     }
 
     //== display methods
+    drawBlankGrid() {
+        clear();
+        background(255);
+
+        // create empty solution and display grid only
+        let emptySolution = new Solution();
+        emptySolution.makeBlankLayout(20);
+        let colors = {
+            lineColor: "rgb(198, 198, 197)",
+            bkrdColor: "rgb(229, 229, 229)"
+        }
+        emptySolution.showGridSquares(colors);
+    }
+
     resetCanvas() {
         background(255);
 
@@ -169,8 +183,8 @@ class DesignUI {
         clear();
         background(255);
         // show shapes, grid, and annealing scores
-        _solution.showLayout()
-        _solution.showScores();
+        _solution.showLayout();
+        _solution.showScores(); // anneal score when in progress
     }
 
     displayResult() {
@@ -183,11 +197,7 @@ class DesignUI {
             // update growth text if dev mode on and annealing complete
             this.show();
 
-            if (!enableCellular) {
-                // display annealing scores if not showing cellular scores
-                this.currentAnneal.finalSolution.showScores();
-            }
-            else if (enableCellular) {
+            if (enableCellular) {
                 // setup case for cellular and boards
                 newCase = new Case(this.currentAnneal.finalSolution);
                 newCase.cellular.createTerrain();
@@ -233,6 +243,7 @@ class DesignUI {
                     if (i === this.currentViewedAnnealIndex) {
                         this.currentViewedAnnealIndex = null;
                         // currently viewed anneal was deleted
+                        this.drawBlankGrid();
                     } else if (i < this.currentViewedAnnealIndex) {
                         // deleted one before currently viewed, move the index down
                         this.currentViewedAnnealIndex--;

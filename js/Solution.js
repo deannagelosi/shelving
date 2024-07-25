@@ -42,6 +42,22 @@ class Solution {
         this.calcScore();
     }
 
+    makeBlankLayout(_gridSize) {
+        // set default blank values needed to display just the grid
+
+        this.layout = new Array(_gridSize).fill(null).map(() => new Array(_gridSize).fill([]));
+
+        let layoutHeight = this.layout.length;
+        let layoutWidth = this.layout[0].length;
+        let squareHeight = canvasHeight / layoutHeight - 3; // -3 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / layoutWidth - 3; // -3 makes room for left/right buffer
+        
+        this.squareSize = Math.min(squareHeight, squareWidth);
+        this.buffer = this.squareSize;
+        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
+        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.buffer;
+    }
+
     makeLayout() {
         // create a 2D array to represent the layout design space
 
@@ -139,15 +155,14 @@ class Solution {
         }
 
         // update squareSize for this layout
-        let squareHeight = canvasHeight / this.layout.length - 3; // -3 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / this.layout[0].length - 3; // -3 makes room for left/right buffer
-        this.squareSize = Math.min(squareHeight, squareWidth);
-
-        // buffer makes room for the line numbers in dev mode
-        // padding centers the solution in the canvas
-        this.buffer = this.squareSize;
         let layoutHeight = this.layout.length;
         let layoutWidth = this.layout[0].length;
+        let squareHeight = canvasHeight / layoutHeight - 3; // -3 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / layoutWidth - 3; // -3 makes room for left/right buffer
+        this.squareSize = Math.min(squareHeight, squareWidth);
+        // buffer makes room for the line numbers in dev mode
+        this.buffer = this.squareSize;
+        // padding centers the solution in the canvas
         this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
         this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.buffer;
 
@@ -410,11 +425,11 @@ class Solution {
         this.showCollision(colors);
     }
 
-    showGridSquares(colors) {
+    showGridSquares(_colors) {
         // only print the grid squares with background color
-        stroke(colors.lineColor);
+        stroke(_colors.lineColor);
         strokeWeight(0.75);
-        fill(colors.bkrdColor);
+        fill(_colors.bkrdColor);
 
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -425,7 +440,6 @@ class Solution {
                 rect(rectX, rectY, this.squareSize, this.squareSize);
             }
         }
-
     }
 
     showGridNumbers() {
@@ -455,10 +469,10 @@ class Solution {
         }
     }
 
-    showBuffer(colors) {
-        stroke(colors.lineColor);
+    showBuffer(_colors) {
+        stroke(_colors.lineColor);
         strokeWeight(0.75);
-        fill(colors.bufferColor);
+        fill(_colors.bufferColor);
 
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -477,9 +491,9 @@ class Solution {
         }
     }
 
-    showLowResShapes(colors) {
+    showLowResShapes(_colors) {
         noStroke();
-        fill(colors.lowResShapeColor);
+        fill(_colors.lowResShapeColor);
 
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -498,10 +512,10 @@ class Solution {
         }
     }
 
-    showHighResShapes(colors) {
+    showHighResShapes(_colors) {
         //== show the high res shapes
         noStroke();
-        fill(colors.highResShapeColor);
+        fill(_colors.highResShapeColor);
 
         // loop through shapes
         for (let i = 0; i < this.shapes.length; i++) {
@@ -528,9 +542,9 @@ class Solution {
         }
     }
 
-    showCollision(colors) {
+    showCollision(_colors) {
         noStroke();
-        fill(colors.collisionColor);
+        fill(_colors.collisionColor);
 
         for (let y = 0; y < this.layout.length; y++) {
             for (let x = 0; x < this.layout[y].length; x++) {
@@ -564,7 +578,7 @@ class Solution {
     showScores() {
         if (devMode) {
             // display the design space grid
-            fill(50)
+            fill(100)
             stroke(50);
             strokeWeight(0.25);
             textAlign(CENTER, CENTER);
