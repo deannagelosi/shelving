@@ -289,14 +289,22 @@ class DesignUI {
         let annealData = _importedData.savedAnneals;
         let shapesData = _importedData.allShapes;
 
+        let maxSolutionNum = 0
         let loadedAnneals = [];
         for (let anneal of annealData) {
+            // find the largest anneal number (ex: 4 on 'solution-4')
+            let titleNumber = parseInt(anneal.title.split('-')[1]);
+            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+
             // create new shape from saved data
             let enableSolution = new Solution(anneal.finalSolution.shapes);
             anneal.finalSolution = enableSolution; // add solution methods back
             loadedAnneals.push(anneal);
         }
         this.savedAnneals.push(...loadedAnneals);
+
+        // set total saved anneals to the largest number found
+        this.totalSavedAnneals = maxSolutionNum;
 
         // reset list of loaded anneals
         if (this.savedAnneals.length >= 1) {
