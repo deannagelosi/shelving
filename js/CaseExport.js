@@ -1,3 +1,5 @@
+// todo: reference, delete later
+
 class CaseExport {
     // makes labels
     // makes svg
@@ -7,28 +9,18 @@ class CaseExport {
         this.bedHeight = 28; // 28
         this.pixelRes = 100; // pixels per inch
         this.graphic = createGraphics(45 * this.pixelRes, 60 * this.pixelRes, SVG);
-        this.maxDepth = 0;
+        this.max = 0;
         this.boardThickness = 0.25;
         this.vertKerf = 0.02; // kerf for vertical cuts
         this.cutWidth = this.boardThickness - this.vertKerf;
         this.boardLengthAdjust = this.boardThickness;
-        this.lengthMod = 2; // cells are 0.5 inches, so multiply by 2 to get length in inches
+        this.lengthMod = 2; // layout squares are 0.5 inches, so multiply by 2 to get length in inches
         this.printGap = 0.25 * this.pixelRes; // gap between printed boards
 
         this.bedRows = [0, 0, 0, 0, 0]; // 5 rows
         this.beds = [[...this.bedRows], [...this.bedRows]];
     }
 
-    calcDepth() {
-        // access shapeCase to loop all horizontal and vertical boards
-        // shapeCase.horizontalBoards and shapeCase.verticalBoards
-        for (let i = 0; i < shapes.length; i++) {
-            if (this.maxDepth < shapes[i].shapeDepth) {
-                this.maxDepth = shapes[i].shapeDepth;
-            }
-        }
-        this.maxDepth += 1; // add buffer for depth
-    }
 
     printBed() {
         // print the bed
@@ -60,7 +52,7 @@ class CaseExport {
 
     generateRects(_boards) {
         // use graphicsBuffer to draw the rectangles
-        let rectHeight = this.maxDepth;
+        let rectHeight = this.max;
 
         //== Print Boards ==//
         // sort the boards by length
@@ -100,7 +92,6 @@ class CaseExport {
             // t-joint slots
             currBoard.poi.tJoints.forEach((tJoint) => {
                 this.graphic.noFill();
-                // divide by 2 because cells are 0.5 inches and T-Joints are number of cells
                 let tJointX = rectTopLeftX + ((tJoint / this.lengthMod) * this.pixelRes);
                 // tJointX += (this.cutWidth * this.pixelRes) / 2; // center the slot
                 let tJointY = rectTopLeftY + (1 * this.pixelRes);
@@ -169,3 +160,17 @@ class CaseExport {
         image(this.graphic, 0, 0);
     }
 }
+
+// function keyPressed() {
+//   if (key === 's' || key === 'S') {
+//     // build the joints
+//     shapeCase.addJoints();
+
+//     // export case as svg
+//     let caseExport = new CaseExport();
+//     caseExport.layoutRects();
+//     caseExport.printBed();
+//     // caseExport.displayExport()
+//     caseExport.graphic.save("caseBoards.svg")
+//   }
+// }

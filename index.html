@@ -1,21 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <title>Uniquely Shaped Spaces</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
     <script src="https://unpkg.com/p5.js-svg@1.5.1"></script>
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="css/app.css">
+    <link rel="stylesheet" type="text/css" href="css/inputUI.css">
+    <link rel="stylesheet" type="text/css" href="css/designUI.css">
     <meta charset="utf-8" />
+</head>
 
-  </head>
-  <body>
-    <main>
-    </main>
-    <script src="CaseExport.js"></script>
-    <script src="Board.js"></script>
-    <script src="Shape.js"></script>
-    <script src="ShapeInput.js"></script>
-    <script src="Case.js"></script>
-    <script src="sketch.js"></script>
-  </body>
+<body>
+    <div id="app">
+        <div id="header">
+            <h1>Generative Shelving</h1>
+        </div>
+
+        <div id="main-div">
+            <div id="left-side-bar" class="side-bar">
+                <div class="sidebar-top"></div>
+                <div class="sidebar-list"></div>
+                <div class="sidebar-buttons"></div>
+            </div>
+
+            <div id="canvas-div"></div>
+
+            <div id="right-side-bar" class="side-bar">
+                <div class="sidebar-top"></div>
+                <div class="sidebar-list"></div>
+                <div class="sidebar-buttons"></div>
+            </div>
+        </div>
+        <div id="bottom-div"></div>
+    </div>
+
+    <script src="js/InputUI.js"></script>
+    <script src="js/DesignUI.js"></script>
+    <script src="js/Shape.js"></script>
+    <script src="js/Solution.js"></script>
+    <script src="js/Anneal.js"></script>
+    <script src="js/Cellular.js"></script>
+    <script src="js/Case.js"></script>
+    <script src="js/Board.js"></script>
+    <script src="js/sketch.js"></script>
+</body>
+
 </html>

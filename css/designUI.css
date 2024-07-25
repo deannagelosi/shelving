@@ -1,0 +1,136 @@
+#design-div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.saved-anneal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    border: 1px solid #d6d6d6;
+}
+
+.saved-anneal-item:hover {
+    background-color: #e0e0e0;
+}
+
+.saved-anneal-item.highlighted {
+    background-color: #e6f3ff;
+    border: 1px solid #a8d1ff;
+}
+
+.saved-anneal-item .anneal-title {
+    flex-grow: 1;
+    margin: 0 15px;
+    font-size: 14px;
+}
+
+.icon-button {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.icon-button:hover {
+    border-color: #999;
+    background-color: #f5f5f5;
+}
+
+.button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px 0px;
+    text-align: center;
+    gap: 20px;
+}
+
+.info-text {
+    font-style: italic;
+    color: #A9A9A9;
+    margin: 5px 0;
+}
+
+.shape-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    border: 1px solid #d6d6d6;
+    cursor: pointer;
+}
+
+.shape-item:hover {
+    background-color: #e0e0e0;
+}
+
+.shape-item.highlighted {
+    background-color: #e6f3ff;
+    border: 1px solid #a8d1ff;
+}
+
+.shape-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.shape-item .shape-title {
+    flex-grow: 1;
+    margin: 0 15px;
+    font-size: 14px;
+}
+
+#view-edit-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.mode-button {
+    font-size: 14px;
+    padding: 8px 20px;
+    margin: 0 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.mode-button:hover {
+    background-color: #e0e0e0;
+}
+
+.mode-button.active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+.mode-button.active:hover {
+    background-color: #45a049;
+}
+
+.mode-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
