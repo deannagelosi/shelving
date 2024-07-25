@@ -46,6 +46,8 @@ function draw() {
         designUI.show();
         // setup the design grid
         designUI.drawBlankGrid();
+        // setup shape list
+        designUI.createShapeList();
 
         noLoop();
     }

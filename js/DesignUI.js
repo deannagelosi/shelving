@@ -9,6 +9,7 @@ class DesignUI {
         this.htmlRef = {};
         this.html = {};
         this.savedAnnealElements = [];
+        this.shapeElements = [];
         // flags
         this.isExporting = false;
 
@@ -16,6 +17,7 @@ class DesignUI {
         this.getHtmlRef();
         this.initBodyUI();
         this.initRightSideUI();
+        this.initLeftSideUI();
 
         // initially hide the input elements
         this.hide();
@@ -28,6 +30,8 @@ class DesignUI {
         this.htmlRef.leftBar = select('#left-side-bar');
         this.htmlRef.rightBar = select('#right-side-bar');
         this.htmlRef.bottomDiv = select('#bottom-div');
+        this.htmlRef.leftSideTop = select('#left-side-bar .sidebar-top');
+        this.htmlRef.leftSideList = select('#left-side-bar .sidebar-list');
         this.htmlRef.rightSideTop = select('#right-side-bar .sidebar-top');
         this.htmlRef.rightSideList = select('#right-side-bar .sidebar-list');
         this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
@@ -84,6 +88,11 @@ class DesignUI {
         this.html.loadButton.mousePressed(() => this.handleImport());
     }
 
+    initLeftSideUI() {
+        // update top title
+        this.htmlRef.leftSideTop.html('Available Shapes');
+    }
+
     //== show/hide methods
     show() {
         // toggle on the input screen divs
@@ -114,6 +123,11 @@ class DesignUI {
 
     //== button handlers
     async handleStartAnneal() {
+        // disable shape selection changes while annealing
+        this.shapeElements.forEach(element => {
+            element.addClass('disabled');
+        });
+
         //== start the annealing process
         this.currentAnneal = null;
         this.html.saveButton.attribute('disabled', '');
@@ -241,7 +255,7 @@ class DesignUI {
         // handle loading saved anneals from json file
         let annealData = _importedData.savedAnneals;
         let shapesData = _importedData.allShapes;
-        
+
         let loadedAnneals = [];
         for (let anneal of annealData) {
             // create new shape from saved data
@@ -261,7 +275,7 @@ class DesignUI {
         }
 
         // enable export button if all shapes are from the load files
-        if (this.savedAnneals.length == _annealData.length) {
+        if (this.savedAnneals.length == annealData.length) {
             // user loaded all current shapes, no export needed
             this.html.exportButton.attribute('disabled', '');
         } else {
@@ -280,6 +294,11 @@ class DesignUI {
         this.currentViewedAnnealIndex = null;
         this.displaySavedAnneals();
         this.html.saveButton.attribute('disabled', '');
+
+        // enable shape selection
+        this.shapeElements.forEach(element => {
+            element.removeClass('disabled');
+        });
 
         // create empty solution and display grid only
         let emptySolution = new Solution();
@@ -325,6 +344,33 @@ class DesignUI {
                 newCase.cellular.showCells();
             }
         }
+    }
+
+    createShapeList() {
+        // create list of shapes to select from
+        allShapes.forEach((shape, index) => {
+            let shapeItem = createDiv().addClass('shape-item');
+            shapeItem.parent(this.htmlRef.leftSideList);
+
+            let titleSpan = createSpan(shape.data.title)
+                .addClass('shape-title')
+                .parent(shapeItem);
+
+            // start with all enabled
+            allShapes[index].enabled = true;
+            shapeItem.addClass('highlighted');
+
+            shapeItem.mousePressed(() => this.toggleShapeSelection(index));
+
+            this.shapeElements.push(shapeItem);
+        });
+    }
+
+    toggleShapeSelection(index) {
+        if (this.shapeElements[index].hasClass('disabled')) return;
+
+        allShapes[index].enabled = !allShapes[index].enabled;
+        this.shapeElements[index].toggleClass('highlighted');
     }
 
     displaySavedAnneals() {
