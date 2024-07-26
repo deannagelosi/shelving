@@ -19,7 +19,7 @@ class InputUI {
         this.brightMin = 0.8;
         this.brightMax = 1.8;
         // input grid variables
-        this.maxInputInches = 12;
+        this.maxInputInches = 9;
         this.gridInchSize = 0.25; // each square is 0.25 inches
         this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
