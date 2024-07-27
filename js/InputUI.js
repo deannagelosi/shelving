@@ -10,6 +10,7 @@ class InputUI {
         this.shapeTitleElements = [];
         // flags
         this.isExporting = false;
+        this.eraseMode = "first";
 
         //== setup
         // ui variables
@@ -118,25 +119,26 @@ class InputUI {
     initBodyUI() {
         //== setup ui elements for body
         // create input fields and buttons row div
-        this.html.inputDiv = createDiv();
-        this.html.inputDiv.parent(this.htmlRef.bottomDiv);
-        this.html.inputDiv.id('input-div');
+        this.html.inputDiv = createDiv()
+            .parent(this.htmlRef.bottomDiv)
+            .id('input-div');
 
         // create the title input field
-        this.html.titleLabel = createP('Title:');
-        this.html.titleLabel.parent(this.html.inputDiv);
-        this.html.titleLabel.addClass('input-label');
-        this.html.titleInput = createInput('');
-        this.html.titleInput.parent(this.html.inputDiv);
-        this.html.titleInput.addClass('input-field');
-        this.html.titleInput.id('title-input'); // form fields need unique ids
-        this.html.titleInput.attribute('size', '20');
+        this.html.titleLabel = createP('Title:')
+            .parent(this.html.inputDiv)
+            .addClass('input-label');
+
+        this.html.titleInput = createInput('')
+            .parent(this.html.inputDiv)
+            .addClass('input-field')
+            .id('title-input') // form fields need unique ids
+            .attribute('size', '20');
 
         // create the ADD button
-        this.html.addButton = createButton('Add');
-        this.html.addButton.parent(this.html.inputDiv);
-        this.html.addButton.addClass('button green-button');
-        this.html.addButton.mousePressed(() => this.addShape());
+        this.html.addButton = createButton('Add')
+            .parent(this.html.inputDiv)
+            .addClass('button green-button')
+            .mousePressed(() => this.addShape());
     }
 
     initRightSideUI() {
@@ -234,7 +236,7 @@ class InputUI {
 
     addShape() {
         // find the shape title
-        let titleValue = this.html.titleInput.value();
+        let titleValue = this.html.titleInput.value().trim();
         if (titleValue === '') { // no title entered by user
             titleValue = `shape-${this.shapes.length + 1}`;
         }
@@ -529,7 +531,7 @@ class InputUI {
     }
 
     //== mouse event handler
-    selectInputSquare(mouseX, mouseY, blockSelect = false) {
+    selectInputSquare(mouseX, mouseY, isDragging = false) {
         // check if mouse click is within input grid
         // factor in padding on all sides
         let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
@@ -540,10 +542,14 @@ class InputUI {
 
             if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
                 let currentTime = millis();
-                if (blockSelect || (currentTime - this.lastClickTime > this.clickDelay)) {
-                    if (blockSelect) {
-                        // used when dragging mouse
-                        this.inputGrid[gridY][gridX] = true;
+                if (isDragging || (currentTime - this.lastClickTime > this.clickDelay)) {
+                    if (isDragging) {
+                        // check if need to initialize erase mode
+                        if (this.eraseMode === "first") {
+                            this.eraseMode = !this.inputGrid[gridY][gridX];
+                        }
+                        // set the square based on the current erase mode
+                        this.inputGrid[gridY][gridX] = !this.eraseMode;
                     } else {
                         // used when clicking mouse
                         this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];

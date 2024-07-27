@@ -38,9 +38,9 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 630px;
+  height: 590px;
   background-color: #f0f0f0;
-  margin-top: 30px;
+  margin-top: 40px;
   border: #c0c0c0 1px solid;
   border-radius: 3px;
   box-sizing: border-box;
@@ -75,6 +75,7 @@ body {
   padding: 10px 0px;
   text-align: center;
   justify-content: center;
+  min-height: 30px;
 }
 
 .button {

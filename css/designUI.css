@@ -149,8 +149,9 @@
 
 .toggle-slider {
     width: 40px;
-    appearance: none;
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     height: 20px;
     /* background: #ccc; */
     background: #c7c7c7;
