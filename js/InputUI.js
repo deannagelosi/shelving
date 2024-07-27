@@ -371,6 +371,7 @@ class InputUI {
         this.html.gridSizeInput.value(newSize);
         this.maxInputInches = newSize;
         this.updateGridSize();
+        this.resetCanvas();
     }
 
     //== input grid and display methods
@@ -407,23 +408,53 @@ class InputUI {
             image(this.imgData.img, topX, topY);
         }
 
+        const yOffset = canvasHeight - this.sidePadding - this.squareSize;
+        const xOffset = this.sidePadding;
+
         // draw grid
-        for (let x = 0; x < this.inputRows; x++) {
-            for (let y = 0; y < this.inputCols; y++) {
+        for (let y = 0; y < this.inputRows; y++) {
+            for (let x = 0; x < this.inputCols; x++) {
                 // draw input square
-                let rectX = x * this.squareSize;
-                let rectY = (this.inputGridHeight - this.squareSize) - (y * this.squareSize);
+                const rectY = yOffset - (y * this.squareSize);
+                const rectX = xOffset + (x * this.squareSize);
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
                     // semi-transparent black squares for selected
+                    stroke("rgba(204,204,204, 0.25)");
                     fill(0, 128);
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
+                    rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
-                    stroke(0);
+                    stroke("rgb(204,204,204)");
                     noFill();
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
+                    rect(rectX, rectY, this.squareSize, this.squareSize);
+                }
+            }
+        }
+
+        // draw inch marker lines
+        stroke(0);
+        for (let y = 0; y < this.inputRows + 1; y++) {
+            // draw a line for every 4th y value
+            if (y % 4 === 0) {
+                line(
+                    xOffset, // startX
+                    yOffset - (y * this.squareSize) + this.squareSize,  // startY
+                    xOffset + this.inputGridWidth, // endX
+                    yOffset - (y * this.squareSize) + this.squareSize// endY
+                );
+            }
+
+            for (let x = 0; x < this.inputCols + 1; x++) {
+                // draw a line for every 4th x value
+                if (x % 4 === 0) {
+                    line(
+                        xOffset + (x * this.squareSize), // startX
+                        yOffset + this.squareSize,  // startY
+                        xOffset + (x * this.squareSize), // endX
+                        yOffset - this.inputGridHeight + this.squareSize// endY
+                    );
                 }
             }
         }
@@ -484,10 +515,13 @@ class InputUI {
         // Recalculate grid-related variables
         this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
-        this.squareSize = Math.round((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
+        this.squareSize = Math.floor((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
         this.inputGridHeight = (this.inputRows * this.squareSize);
         this.inputGridWidth = (this.inputCols * this.squareSize);
-        this.sidePadding = Math.max(canvasWidth - this.inputGridWidth, canvasHeight - this.inputGridHeight) / 2;
+
+        this.xSidePadding = (canvasWidth - this.inputGridWidth) / 2;
+        this.ySidePadding = (canvasHeight - this.inputGridHeight) / 2;
+        this.sidePadding = Math.max(this.xSidePadding, this.ySidePadding);
 
         // Reset and redraw the input grid
         this.resetInputGrid();
