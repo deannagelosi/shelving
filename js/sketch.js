@@ -88,3 +88,9 @@ function mouseDragged() {
         inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }
+
+function mouseReleased() {
+    if (isInputScreen) {
+        inputUI.eraseMode = "first";
+    }
+}

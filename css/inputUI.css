@@ -79,8 +79,6 @@
     width: 40px;
     text-align: center;
     margin: 0 5px;
-    -webkit-appearance: none;
-    -moz-appearance: textfield;
 }
 
 .grid-size-control input[type="number"]::-webkit-outer-spin-button,
@@ -97,7 +95,6 @@
     padding: 0;
     margin: 0 2px;
 }
-
 
 /* Slider control styles */
 .slider-control {
