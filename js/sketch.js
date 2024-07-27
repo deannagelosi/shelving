@@ -36,10 +36,8 @@ function draw() {
     if (isInputScreen) {
         // display the input screen 
         inputUI.show();
-        // setup the input grid
-        inputUI.drawInputGrid();
-        noLoop();
 
+        noLoop();
     } else {
         // switch to annealing screen
         inputUI.hide();
