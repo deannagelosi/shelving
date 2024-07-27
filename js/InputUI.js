@@ -19,22 +19,19 @@ class InputUI {
         this.brightMin = 0.8;
         this.brightMax = 1.8;
         // input grid variables
-        this.maxInputInches = 9;
+        this.maxInputInches = 9; // default grid size in inches
         this.gridInchSize = 0.25; // each square is 0.25 inches
-        this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
-        this.inputCols = this.inputRows;
+        this.inputRows;
+        this.inputCols;
         // calc input grid size
-        this.squareSize = Math.round((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
-        this.inputGridHeight = (this.inputRows * this.squareSize);
-        this.inputGridWidth = (this.inputCols * this.squareSize);
-        this.sidePadding = Math.max(canvasWidth - this.inputGridWidth, canvasHeight - this.inputGridHeight) / 2;
+        this.squareSize;
+        this.inputGridHeight;
+        this.inputGridWidth;
+        this.sidePadding;
 
         //== mouse click delay (debounce)
         this.lastClickTime = 0;
         this.clickDelay = 200; // milliseconds
-
-        //== setup input grid
-        this.resetInputGrid()
 
         //== initialize UI elements
         this.getHtmlRefs();
@@ -61,39 +58,61 @@ class InputUI {
     initHeaderUI() {
         //== setup ui elements for header
         // Setup image upload and slider
-        this.html.imageControls = createDiv();
-        this.html.imageControls.id('image-controls');
-        this.html.imageControls.parent(this.htmlRef.header);
+        this.html.imageControls = createDiv()
+            .id('image-controls')
+            .parent(this.htmlRef.header);
 
-        // Create and append the p element
-        this.html.headerInstruct = createElement('p', 'Upload an image to begin');
-        this.html.headerInstruct.style('margin', '5px');
-        this.html.headerInstruct.parent(this.html.imageControls);
+        // Grid size selector
+        let gridSizeDiv = createDiv()
+            .class('grid-size-control')
+            .parent(this.html.imageControls);
 
-        // Create and append the button element
-        this.html.headerUploadButton = createButton('Upload');
-        this.html.headerUploadButton.addClass('button green-button');
-        this.html.headerUploadButton.parent(this.html.imageControls);
-        this.html.headerUploadButton.mousePressed(() => this.handleImageUpload());
+        // label
+        this.html.gridLabel = createSpan('Grid size (in): ')
+            .parent(gridSizeDiv);
+        // grid size input
+        this.html.gridSizeInput = createInput(String(this.maxInputInches), 'number')
+            .attribute('min', '1')
+            .attribute('max', '12')
+            .parent(gridSizeDiv)
+            .input(() => this.adjustGridSize());
 
         // Create a vertical divider
-        const divider = createDiv();
-        divider.class('vertical-divider');
-        divider.parent(this.html.imageControls);
+        this.html.dividerLeft = createDiv()
+            .class('vertical-divider')
+            .parent(this.html.imageControls);
 
-        // Create and append the slider
-        this.html.headerSlider = createSlider(this.brightMin, this.brightMax, this.imgBrightness, this.brightStepSize);
-        this.html.headerSlider.addClass('slider');
-        this.html.headerSlider.parent(this.html.imageControls);
-        this.html.headerSlider.attribute('disabled', '');
+        // Create upload button
+        this.html.headerUploadButton = createButton('Upload image')
+            .addClass('button green-button')
+            .parent(this.html.imageControls)
+            .mousePressed(() => this.handleImageUpload());
 
-        this.html.headerSlider.input(() => this.handleSliderChange());
+        // Create a vertical divider
+        this.html.dividerRight = createDiv()
+            .class('vertical-divider')
+            .parent(this.html.imageControls);
+
+        // Create brightness slider
+        this.html.sliderDiv = createDiv()
+            .class('slider-control')
+            .parent(this.html.imageControls);
+        this.html.fillBox = createDiv()
+            .class('slider-icon filled')
+            .parent(this.html.sliderDiv);
+        this.html.headerSlider = createSlider(this.brightMin, this.brightMax, this.imgBrightness, this.brightStepSize)
+            .addClass('slider')
+            .parent(this.html.sliderDiv)
+            .input(() => this.handleSliderChange());
+        this.html.emptyBox = createDiv()
+            .class('slider-icon empty')
+            .parent(this.html.sliderDiv);
 
         // Create and append the clear button
-        this.html.headerClearButton = createButton('Clear');
-        this.html.headerClearButton.addClass('button red-button');
-        this.html.headerClearButton.parent(this.html.imageControls);
-        this.html.headerClearButton.mousePressed(() => this.resetCanvas());
+        this.html.headerClearButton = createButton('Clear')
+            .addClass('button red-button')
+            .parent(this.html.imageControls)
+            .mousePressed(() => this.resetCanvas());
     }
 
     initBodyUI() {
@@ -154,6 +173,9 @@ class InputUI {
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+
+        // setup and draw the input grid
+        this.updateGridSize();
 
         // // temp for testing
         // loadJSON('/examples/shelving_data_example.json', (importedData) => {
@@ -341,6 +363,17 @@ class InputUI {
         }
     }
 
+    adjustGridSize() {
+        // adjust the grid size in inches
+        const newValue = parseInt(this.html.gridSizeInput.value())
+
+        let newSize = constrain(newValue, 1, 12);
+        this.html.gridSizeInput.value(newSize);
+        this.maxInputInches = newSize;
+        this.updateGridSize();
+        this.resetCanvas();
+    }
+
     //== input grid and display methods
     resetCanvas() {
         background(255);
@@ -375,23 +408,53 @@ class InputUI {
             image(this.imgData.img, topX, topY);
         }
 
+        const yOffset = canvasHeight - this.sidePadding - this.squareSize;
+        const xOffset = this.sidePadding;
+
         // draw grid
-        for (let x = 0; x < this.inputRows; x++) {
-            for (let y = 0; y < this.inputCols; y++) {
+        for (let y = 0; y < this.inputRows; y++) {
+            for (let x = 0; x < this.inputCols; x++) {
                 // draw input square
-                let rectX = x * this.squareSize;
-                let rectY = (this.inputGridHeight - this.squareSize) - (y * this.squareSize);
+                const rectY = yOffset - (y * this.squareSize);
+                const rectX = xOffset + (x * this.squareSize);
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
                     // semi-transparent black squares for selected
+                    stroke("rgba(204,204,204, 0.25)");
                     fill(0, 128);
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
+                    rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
-                    stroke(0);
+                    stroke("rgb(204,204,204)");
                     noFill();
-                    rect(this.sidePadding + rectX, this.sidePadding + rectY, this.squareSize, this.squareSize);
+                    rect(rectX, rectY, this.squareSize, this.squareSize);
+                }
+            }
+        }
+
+        // draw inch marker lines
+        stroke(0);
+        for (let y = 0; y < this.inputRows + 1; y++) {
+            // draw a line for every 4th y value
+            if (y % 4 === 0) {
+                line(
+                    xOffset, // startX
+                    yOffset - (y * this.squareSize) + this.squareSize,  // startY
+                    xOffset + this.inputGridWidth, // endX
+                    yOffset - (y * this.squareSize) + this.squareSize// endY
+                );
+            }
+
+            for (let x = 0; x < this.inputCols + 1; x++) {
+                // draw a line for every 4th x value
+                if (x % 4 === 0) {
+                    line(
+                        xOffset + (x * this.squareSize), // startX
+                        yOffset + this.squareSize,  // startY
+                        xOffset + (x * this.squareSize), // endX
+                        yOffset - this.inputGridHeight + this.squareSize// endY
+                    );
                 }
             }
         }
@@ -446,6 +509,23 @@ class InputUI {
             element.remove();
         }
         this.shapeTitleElements = [];
+    }
+
+    updateGridSize() {
+        // Recalculate grid-related variables
+        this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
+        this.inputCols = this.inputRows;
+        this.squareSize = Math.floor((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
+        this.inputGridHeight = (this.inputRows * this.squareSize);
+        this.inputGridWidth = (this.inputCols * this.squareSize);
+
+        this.xSidePadding = (canvasWidth - this.inputGridWidth) / 2;
+        this.ySidePadding = (canvasHeight - this.inputGridHeight) / 2;
+        this.sidePadding = Math.max(this.xSidePadding, this.ySidePadding);
+
+        // Reset and redraw the input grid
+        this.resetInputGrid();
+        this.drawInputGrid();
     }
 
     //== mouse event handler
