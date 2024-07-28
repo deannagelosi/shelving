@@ -3,7 +3,7 @@ class InputUI {
         //== state variables
         this.inputGrid = [];
         this.imgData = {}; // (image, mask, brightness data, etc)
-        this.shapes = []; // array of new Shape objects
+        this.shapes = []; // array of Shape objects [{data (reference), posX (int), posY (int)}]
         // dom elements and shape titles
         this.htmlRef = {};
         this.html = {};
@@ -84,7 +84,7 @@ class InputUI {
             .parent(this.html.imageControls);
 
         // Create upload button
-        this.html.headerUpimportButton = createButton('Upload image')
+        this.html.headerUploadButton = createButton('Upload image')
             .addClass('button green-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.handleImageUpload());
@@ -143,18 +143,18 @@ class InputUI {
 
     initRightSideUI() {
         //== setup ui elements for side bar
+        // create the IMPORT SHAPES button
+        this.html.importButton = createButton('Import')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button green-button')
+            .mousePressed(() => this.handleImport());
+
         // create the EXPORT SHAPES button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button green-button')
             .attribute('disabled', '') // until 2 shapes are saved
-            .mousePressed(() => this.exportAllShapes());
-
-        // create the IMPORT SHAPES button
-        this.html.importButton = createButton('Import')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button green-button')
-            .mousePressed(() => this.importShapes());
+            .mousePressed(() => this.exportShapes());
 
         // create the NEXT button
         this.html.nextButton = createButton('Next')
@@ -181,7 +181,7 @@ class InputUI {
 
         // // temp for testing
         // loadJSON('/examples/shelving_data_example.json', (importedData) => {
-        //     this.loadShapesJson(importedData);
+        //     this.loadJsonData(importedData);
         //     this.nextScreen();
         // });
     }
@@ -234,7 +234,7 @@ class InputUI {
         input.elt.click(); // open  file dialog on click
     }
 
-saveShape() {
+    saveShape() {
         // find the shape title
         let titleValue = this.html.titleInput.value().trim();
         if (titleValue === '') { // no title entered by user
@@ -258,7 +258,7 @@ saveShape() {
         }
     }
 
-    exportAllShapes() {
+    exportShapes() {
         // add full shapes array to saved anneals
         if (this.isExporting) return; // block multiple clicks during export
 
@@ -301,44 +301,46 @@ saveShape() {
     }
 
     nextScreen() {
-        // save the input shapes to the global shapes array
-        // remove unnecessary data 
-        this.shapes.forEach(shape => {
-            delete shape.data.inputGrid;
-        });
-
-        allShapes = this.shapes;
-
         // delete shape list dom elements
         this.clearShapeTitles();
 
         // change to the next screen (design)
         isInputScreen = false;
+
+        // setup list of solutions if loaded
+        if (designUI.savedAnneals.length > 0) {
+            // loop saved anneals once so they render correctly
+            for (let i = 0; i < designUI.savedAnneals.length; i++) {
+                designUI.viewSavedAnneal(i);
+            }
+            designUI.viewSavedAnneal(0);
+        }
+
         loop();
     }
 
-    importShapes() {
+
+    handleImport() {
         // user selects a json file
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
                 const importedData = file.data;
                 // read the shapes in
-                this.loadShapesJson(importedData);
-
+                this.loadJsonData(importedData);
             } else {
                 alert('Select a .json file to upload');
             }
-
         });
         input.hide(); // hide default file input
         input.elt.click(); // open file dialog on click
     }
 
-    loadShapesJson(_importedData) {
-        // handle loading saved shapes from json file
-        let annealData = _importedData.savedAnneals;
+    loadJsonData(_importedData) {
+        // handles loading saved shapes from json file
         let shapeData = _importedData.allShapes;
+        let annealData = _importedData.savedAnneals;
 
+        //== process shape data
         let loadedShapes = [];
         for (let shape of shapeData) {
             // create new shape from saved data
@@ -346,11 +348,26 @@ saveShape() {
             newShape.saveUserInput(shape.data.title, shape.data.highResShape);
             loadedShapes.push(newShape);
         }
-
+        // add shapes
         this.shapes.push(...loadedShapes);
-        // Reset active shape and UI
-        this.resetCanvas();
 
+        //== process anneal data
+        let maxSolutionNum = 0
+        let loadedAnneals = [];
+        for (let anneal of annealData) {
+            // find the largest anneal number (ex: 4 on 'solution-4')
+            let titleNumber = parseInt(anneal.title.split('-')[1]);
+            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+            // create new shape from saved data to add solution methods back
+            anneal.finalSolution = new Solution(anneal.finalSolution.shapes);
+            loadedAnneals.push(anneal);
+        }
+        // add anneals and the highest solution number
+        designUI.savedAnneals.push(...loadedAnneals);
+        designUI.totalSavedAnneals = maxSolutionNum;
+
+        //== update UI
+        this.resetCanvas();
         // enable next button if all shapes are from the load files
         if (this.shapes.length == loadedShapes.length) {
             this.html.nextButton.removeAttribute('disabled');
@@ -359,7 +376,7 @@ saveShape() {
             this.html.nextButton.attribute('disabled', '');
         }
 
-        // enable save button if there is more than one shape
+        // enable export button if there is more than one shape
         if (this.shapes.length >= 1) {
             this.html.exportButton.removeAttribute('disabled');
         }

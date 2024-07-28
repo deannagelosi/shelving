@@ -3,16 +3,12 @@ const canvasWidth = 650;
 const canvasHeight = 650;
 
 //= state variables
-let allShapes = []; // [{shapeData (reference), posX (int), posY (int)}]
-// let currentAnneal;
-// let currentSolution; // current complete anneal solution
-let savedSolutions = []; // array of saved solutions
 let numGrow = 0; // cell growth amount in dev mode
 
 //= class instances
-let newCase;
 let inputUI;
 let designUI;
+let newCase;
 
 //= flags
 let isInputScreen; // switches screen (inout/design)
@@ -41,15 +37,16 @@ function draw() {
     } else {
         // switch to annealing screen
         inputUI.hide();
-        designUI.show();
-        // setup the design grid
-        designUI.drawBlankGrid();
+
         // // test loading json data
         // loadJSON('/examples/shelving_data_example.json', (importedData) => {
         //     designUI.loadAnnealJson(importedData);
         // });
-        // setup shape list
-        designUI.createShapeList();
+
+        designUI.show();
+
+        // setup the design grid
+        designUI.drawBlankGrid();
 
         noLoop();
     }
