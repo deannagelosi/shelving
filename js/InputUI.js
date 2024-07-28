@@ -84,7 +84,7 @@ class InputUI {
             .parent(this.html.imageControls);
 
         // Create upload button
-        this.html.headerUploadButton = createButton('Upload image')
+        this.html.headerUpimportButton = createButton('Upload image')
             .addClass('button green-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.handleImageUpload());
@@ -134,34 +134,34 @@ class InputUI {
             .id('title-input') // form fields need unique ids
             .attribute('size', '20');
 
-        // create the ADD button
-        this.html.addButton = createButton('Add')
+        // create the SAVE button
+        this.html.saveButton = createButton('Save')
             .parent(this.html.inputDiv)
             .addClass('button green-button')
-            .mousePressed(() => this.addShape());
+            .mousePressed(() => this.saveShape());
     }
 
     initRightSideUI() {
         //== setup ui elements for side bar
-        // create the SAVE SHAPES button
-        this.html.saveButton = createButton('Save');
-        this.html.saveButton.parent(this.htmlRef.rightSideButtons);
-        this.html.saveButton.addClass('button green-button');
-        this.html.saveButton.attribute('disabled', ''); // until 2 shapes are saved
-        this.html.saveButton.mousePressed(() => this.saveAllShapes());
+        // create the EXPORT SHAPES button
+        this.html.exportButton = createButton('Export')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button green-button')
+            .attribute('disabled', '') // until 2 shapes are saved
+            .mousePressed(() => this.exportAllShapes());
 
-        // create the LOAD SHAPES button
-        this.html.loadButton = createButton('Load');
-        this.html.loadButton.parent(this.htmlRef.rightSideButtons);
-        this.html.loadButton.addClass('button green-button');
-        this.html.loadButton.mousePressed(() => this.loadSavedShapes());
+        // create the IMPORT SHAPES button
+        this.html.importButton = createButton('Import')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button green-button')
+            .mousePressed(() => this.importShapes());
 
         // create the NEXT button
-        this.html.nextButton = createButton('Next');
-        this.html.nextButton.parent(this.htmlRef.rightSideButtons);
-        this.html.nextButton.addClass('button green-button');
-        this.html.nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        this.html.nextButton.mousePressed(() => this.nextScreen());
+        this.html.nextButton = createButton('Next')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button green-button')
+            .attribute('disabled', '') // until 2 shapes are saved
+            .mousePressed(() => this.nextScreen());
     }
 
     //== show/hide methods
@@ -234,7 +234,7 @@ class InputUI {
         input.elt.click(); // open  file dialog on click
     }
 
-    addShape() {
+saveShape() {
         // find the shape title
         let titleValue = this.html.titleInput.value().trim();
         if (titleValue === '') { // no title entered by user
@@ -254,11 +254,11 @@ class InputUI {
         this.html.nextButton.attribute('disabled', '');
         // enable save button if there is more than one shape
         if (this.shapes.length >= 1) {
-            this.html.saveButton.removeAttribute('disabled');
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
-    saveAllShapes() {
+    exportAllShapes() {
         // add full shapes array to saved anneals
         if (this.isExporting) return; // block multiple clicks during export
 
@@ -317,7 +317,7 @@ class InputUI {
         loop();
     }
 
-    loadSavedShapes() {
+    importShapes() {
         // user selects a json file
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
@@ -361,7 +361,7 @@ class InputUI {
 
         // enable save button if there is more than one shape
         if (this.shapes.length >= 1) {
-            this.html.saveButton.removeAttribute('disabled');
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
@@ -498,9 +498,9 @@ class InputUI {
 
                 // toggle save button if there are any shapes to save
                 if (this.shapes.length >= 1) {
-                    this.html.saveButton.removeAttribute('disabled');
+                    this.html.exportButton.removeAttribute('disabled');
                 } else {
-                    this.html.saveButton.attribute('disabled', '');
+                    this.html.exportButton.attribute('disabled', '');
                 }
             });
         }
