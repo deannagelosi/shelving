@@ -140,6 +140,19 @@ class Shape {
         }
     }
 
+    exportShape() {
+        // return copy of shape with only export json
+        return {
+            data: {
+                highResShape: this.data.highResShape,
+                title: this.data.title
+            },
+            posX: this.posX,
+            posY: this.posY,
+            enabled: this.enabled
+        };
+    }
+
     // Function to set values to true between two indices
     setTrueBetween(array, startIndex, endIndex) {
         for (let i = startIndex; i <= endIndex; i++) {

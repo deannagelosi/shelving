@@ -86,6 +86,24 @@ function mouseReleased() {
     }
 }
 
+function saveJSONFile(_exportData) {
+    // used by InputUI and DesignUI to save export data
+    const jsonData = JSON.stringify(_exportData, null);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    // create temporary link element
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'shelving_data.json';
+
+    // append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // clean up the URL
+    URL.revokeObjectURL(url);
+}
+
 // prevent page reloads unless confirmed
 window.onbeforeunload = function (e) {
     e.preventDefault();

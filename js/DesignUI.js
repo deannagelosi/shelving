@@ -263,39 +263,22 @@ class DesignUI {
         this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
-        // make a copy of shapes that only includes the data we need
-        // - data.highResShape, data.title, enabled
-        let shapesCopy = inputUI.shapes.map(shape => {
-            return {
-                data: {
-                    highResShape: shape.data.highResShape,
-                    title: shape.data.title
-                },
-                enabled: shape.enabled
-            };
+        // get a copy of shapes with only the data needed
+        let shapesCopy = inputUI.shapes.map(shape => shape.exportShape());
+
+        // make a copy of saved anneals with only the data needed
+        let annealsCopy = this.savedAnneals.map(anneal => {
+            return { ...anneal, finalSolution: anneal.finalSolution.exportSolution() }
         });
 
-        // add full shapes array to saved anneals
+        // create export object
         let exportData = {
-            savedAnneals: this.savedAnneals,
+            savedAnneals: annealsCopy,
             allShapes: shapesCopy
         }
 
         try {
-            const jsonData = JSON.stringify(exportData, null);
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            // create temporary link element
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'shelving_data.json';
-
-            // append to body, click, and remove
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            // clean up the URL
-            URL.revokeObjectURL(url);
+            saveJSONFile(exportData);
 
         } catch (error) {
             console.error('Export failed:', error);
@@ -304,7 +287,6 @@ class DesignUI {
             this.html.exportButton.html('Export');
         }
     }
-
 
     //== display methods
     drawBlankGrid() {
