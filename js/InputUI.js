@@ -263,14 +263,24 @@ class InputUI {
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        // remove unnecessary data 
-        this.shapes.forEach(shape => {
-            delete shape.data.inputGrid;
+        this.html.exportButton.html('Saving...');
+        this.html.exportButton.attribute('disabled', '');
+
+        // make a copy of shapes that only includes the data we need
+        // - data.highResShape, data.title, enabled
+        let shapesCopy = this.shapes.map(shape => {
+            return {
+                data: {
+                    highResShape: shape.data.highResShape,
+                    title: shape.data.title
+                },
+                enabled: shape.enabled
+            };
         });
 
         let exportData = {
             savedAnneals: [],
-            allShapes: this.shapes
+            allShapes: shapesCopy
         }
 
         try {
@@ -293,6 +303,7 @@ class InputUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
+            this.html.exportButton.html('Export');
             // Enable next button once shapes are saved and there are at least 2 shapes
             if (this.shapes.length > 1) {
                 this.html.nextButton.removeAttribute('disabled');
@@ -306,6 +317,12 @@ class InputUI {
 
         // change to the next screen (design)
         isInputScreen = false;
+
+        // setup the list of shapes
+        this.shapes.forEach((shape, index) => {
+            // start with all enabled
+            this.shapes[index].enabled = true;
+        });
 
         // setup list of solutions if loaded
         if (designUI.savedAnneals.length > 0) {

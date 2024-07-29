@@ -38,75 +38,75 @@ class DesignUI {
         this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
     }
 
-    initBodyUI() {
-        //== setup dom elements
-        // setup anneal ui element containers
-        this.html.designDiv = createDiv();
-        this.html.designDiv.parent(this.htmlRef.bottomDiv);
-        this.html.designDiv.id('design-div');
-
-        this.html.buttonRow = createDiv();
-        this.html.buttonRow.parent(this.html.designDiv);
-        this.html.buttonRow.addClass('button-row');
-
-        // Generate button
-        this.html.annealButton = createButton('Generate');
-        this.html.annealButton.parent(this.html.buttonRow).addClass('green-button button');
-        this.html.annealButton.mousePressed(() => this.handleStartAnneal());
-
-        // Save button
-        this.html.saveButton = createButton('Save');
-        this.html.saveButton.parent(this.html.buttonRow).addClass('green-button button');
-        this.html.saveButton.attribute('disabled', ''); // until annealing is complete
-        this.html.saveButton.mousePressed(() => this.handleSaveSolution());
-
-        // Clear + Stop button
-        this.html.clearButton = createButton('Clear');
-        this.html.clearButton.parent(this.html.buttonRow).addClass('red-button button');
-        this.html.clearButton.mousePressed(() => this.drawBlankGrid());
-
-        // // info text
-        // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        // this.html.diagnosticText.parent(this.html.designDiv).addClass('info-text');
-
-        // this.html.growthText = createP("(press 'g' to grow cells)");
-        // this.html.growthText.parent(this.html.designDiv).addClass('info-text');
-    }
-
     initHeaderUI() {
         //== setup ui elements for header
         // slider toggle
-        this.html.sliderDiv = createDiv();
-        this.html.sliderDiv.id('slider-div');
-        this.html.sliderDiv.parent(this.htmlRef.header);
-        this.html.sliderDiv.mousePressed(this.handleSlider.bind(this));
+        this.html.sliderDiv = createDiv()
+            .id('slider-div')
+            .parent(this.htmlRef.header)
+            .mousePressed(this.handleSlider.bind(this));
 
         // Simple label
-        this.html.simpleLabel = createSpan('Simple');
-        this.html.simpleLabel.addClass('toggle-label');
-        this.html.simpleLabel.parent(this.html.sliderDiv);
+        this.html.simpleLabel = createSpan('Simple')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
 
         // Create and append the slider
         // min, max, default, step
-        this.html.toggleSlider = createSlider(0, 1, 0, 1);
-        this.html.toggleSlider.id('toggleSlider');
-        this.html.toggleSlider.addClass('toggle-slider');
-        this.html.toggleSlider.parent(this.html.sliderDiv);
+        this.html.toggleSlider = createSlider(0, 1, 0, 1)
+            .id('toggleSlider')
+            .addClass('toggle-slider')
+            .parent(this.html.sliderDiv);
 
         // Detail label
-        this.html.detailLabel = createSpan('Detail');
-        this.html.detailLabel.addClass('toggle-label');
-        this.html.detailLabel.parent(this.html.sliderDiv);
+        this.html.detailLabel = createSpan('Detail')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
+    }
+
+    initBodyUI() {
+        //== setup dom elements
+        // setup anneal ui element containers
+        this.html.designDiv = createDiv()
+            .parent(this.htmlRef.bottomDiv)
+            .id('design-div');
+
+        this.html.buttonRow = createDiv()
+            .parent(this.html.designDiv)
+            .addClass('button-row');
+
+        // Generate button
+        this.html.annealButton = createButton('Generate')
+            .parent(this.html.buttonRow).addClass('green-button button')
+            .mousePressed(() => this.handleStartAnneal());
+
+        // Save button
+        this.html.saveButton = createButton('Save')
+            .parent(this.html.buttonRow).addClass('green-button button')
+            .attribute('disabled', '') // until annealing is complete
+            .mousePressed(() => this.handleSaveSolution());
+
+        // Clear + Stop button
+        this.html.clearButton = createButton('Clear')
+            .parent(this.html.buttonRow).addClass('red-button button')
+            .mousePressed(() => this.drawBlankGrid());
+
+        // // info text
+        // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)")
+        //     .parent(this.html.designDiv).addClass('info-text');
+
+        // this.html.growthText = createP("(press 'g' to grow cells)")
+        //     .parent(this.html.designDiv).addClass('info-text');
     }
 
     initRightSideUI() {
         //== setup ui elements for side bar
         // Export button
-        this.html.exportButton = createButton('Export');
-        this.html.exportButton.parent(this.htmlRef.rightSideButtons);
-        this.html.exportButton.addClass('button green-button');
-        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
-        this.html.exportButton.mousePressed(() => this.handleExport());
+        this.html.exportButton = createButton('Export')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button green-button')
+            .attribute('disabled', '') // until one saved anneal
+            .mousePressed(() => this.handleExport());
     }
 
     //== show/hide methods
@@ -176,9 +176,8 @@ class DesignUI {
         });
 
         //== start the annealing process
-        this.currentAnneal = null;
-        this.html.saveButton.attribute('disabled', '');
         this.viewSavedAnneal(null)
+        this.html.saveButton.attribute('disabled', '');
 
         // check if each shape has all it's grid data
         for (let shape of inputUI.shapes) {
@@ -263,17 +262,22 @@ class DesignUI {
         this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
-        // delete unnecessary data 
-        inputUI.shapes.forEach(shape => {
-            delete shape.data.inputGrid;
-            delete shape.data.lowResShape;
-            delete shape.data.bufferShape;
+        // make a copy of shapes that only includes the data we need
+        // - data.highResShape, data.title, enabled
+        let shapesCopy = inputUI.shapes.map(shape => {
+            return {
+                data: {
+                    highResShape: shape.data.highResShape,
+                    title: shape.data.title
+                },
+                enabled: shape.enabled
+            };
         });
 
         // add full shapes array to saved anneals
         let exportData = {
             savedAnneals: this.savedAnneals,
-            allShapes: inputUI.shapes
+            allShapes: shapesCopy
         }
 
         try {
@@ -369,18 +373,14 @@ class DesignUI {
         // create list of shapes to select from
         this.clearShapeList();
         inputUI.shapes.forEach((shape, index) => {
-            let shapeItem = createDiv().addClass('shape-item');
-            shapeItem.parent(this.htmlRef.leftSideList);
+            let shapeItem = createDiv()
+                .parent(this.htmlRef.leftSideList)
+                .addClass(shape.enabled ? 'shape-item highlighted' : 'shape-item')
+                .mousePressed(() => this.toggleShapeSelection(index));
 
-            let titleSpan = createSpan(shape.data.title)
+            createSpan(shape.data.title)
                 .addClass('shape-title')
                 .parent(shapeItem);
-
-            // start with all enabled
-            inputUI.shapes[index].enabled = true;
-            shapeItem.addClass('highlighted');
-
-            shapeItem.mousePressed(() => this.toggleShapeSelection(index));
 
             this.shapeElements.push(shapeItem);
         });
