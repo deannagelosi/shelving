@@ -266,17 +266,8 @@ class InputUI {
         this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
-        // make a copy of shapes that only includes the data we need
-        // - data.highResShape, data.title, enabled
-        let shapesCopy = this.shapes.map(shape => {
-            return {
-                data: {
-                    highResShape: shape.data.highResShape,
-                    title: shape.data.title
-                },
-                enabled: shape.enabled
-            };
-        });
+        // get a copy of shapes that only includes the data needed
+        let shapesCopy = this.shapes.map(shape => shape.exportShape);
 
         let exportData = {
             savedAnneals: [],
@@ -284,20 +275,7 @@ class InputUI {
         }
 
         try {
-            const jsonData = JSON.stringify(exportData, null);
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            // create temporary link element
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'shelving_data.json';
-
-            // append to body, click, and remove
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            // clean up the URL
-            URL.revokeObjectURL(url);
+            saveJSONFile(exportData);
 
         } catch (error) {
             console.error('Export failed:', error);
@@ -335,7 +313,6 @@ class InputUI {
 
         loop();
     }
-
 
     handleImport() {
         // user selects a json file
@@ -376,7 +353,19 @@ class InputUI {
             let titleNumber = parseInt(anneal.title.split('-')[1]);
             maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
             // create new shape from saved data to add solution methods back
-            anneal.finalSolution = new Solution(anneal.finalSolution.shapes);
+            // initialize solution's shapes
+            let initShapes = []
+            for (let shape of anneal.finalSolution.shapes) {
+                let newShape = new Shape();
+                newShape.saveUserInput(shape.data.title, shape.data.highResShape);
+                newShape.posX = shape.posX;
+                newShape.posY = shape.posY;
+                newShape.enabled = shape.enabled;
+                initShapes.push(newShape);
+            }
+            // initialize solution
+            anneal.finalSolution = new Solution(initShapes);
+            
             loadedAnneals.push(anneal);
         }
         // add anneals and the highest solution number

@@ -621,6 +621,31 @@ class Solution {
         }
     }
 
+    exportShapes() {
+        // makes a copy of shapes without extra data
+        return this.shapes.map(shape => {
+            return {
+                data: {
+                    highResShape: shape.data.highResShape,
+                    title: shape.data.title
+                },
+                posX: shape.posX,
+                posY: shape.posY,
+                enabled: shape.enabled
+            };
+        });
+    }
+
+    exportSolution() {
+        // makes a copy of the solution without extra data
+        return {
+            shapes: this.exportShapes(),
+            startID: this.startID,
+            score: this.score,
+            valid: this.valid
+        };
+    }
+
     // helper functions
     layoutInBounds(coordY, coordX) {
         // check if the grid is in bounds
