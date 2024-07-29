@@ -38,81 +38,75 @@ class DesignUI {
         this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
     }
 
-    initBodyUI() {
-        //== setup dom elements
-        // setup anneal ui element containers
-        this.html.designDiv = createDiv();
-        this.html.designDiv.parent(this.htmlRef.bottomDiv);
-        this.html.designDiv.id('design-div');
-
-        this.html.buttonRow = createDiv();
-        this.html.buttonRow.parent(this.html.designDiv);
-        this.html.buttonRow.addClass('button-row');
-
-        // Generate button
-        this.html.annealButton = createButton('Generate');
-        this.html.annealButton.parent(this.html.buttonRow).addClass('green-button button');
-        this.html.annealButton.mousePressed(() => this.handleStartAnneal());
-
-        // Save button
-        this.html.saveButton = createButton('Save');
-        this.html.saveButton.parent(this.html.buttonRow).addClass('green-button button');
-        this.html.saveButton.attribute('disabled', ''); // until annealing is complete
-        this.html.saveButton.mousePressed(() => this.handleSaveSolution());
-
-        // Clear + Stop button
-        this.html.clearButton = createButton('Clear');
-        this.html.clearButton.parent(this.html.buttonRow).addClass('red-button button');
-        this.html.clearButton.mousePressed(() => this.drawBlankGrid());
-
-        // // info text
-        // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)");
-        // this.html.diagnosticText.parent(this.html.designDiv).addClass('info-text');
-
-        // this.html.growthText = createP("(press 'g' to grow cells)");
-        // this.html.growthText.parent(this.html.designDiv).addClass('info-text');
-    }
-
     initHeaderUI() {
         //== setup ui elements for header
         // slider toggle
-        this.html.sliderDiv = createDiv();
-        this.html.sliderDiv.id('slider-div');
-        this.html.sliderDiv.parent(this.htmlRef.header);
-        this.html.sliderDiv.mousePressed(this.handleSlider.bind(this));
+        this.html.sliderDiv = createDiv()
+            .id('slider-div')
+            .parent(this.htmlRef.header)
+            .mousePressed(this.handleSlider.bind(this));
 
         // Simple label
-        this.html.simpleLabel = createSpan('Simple');
-        this.html.simpleLabel.addClass('toggle-label');
-        this.html.simpleLabel.parent(this.html.sliderDiv);
+        this.html.simpleLabel = createSpan('Simple')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
 
         // Create and append the slider
         // min, max, default, step
-        this.html.toggleSlider = createSlider(0, 1, 0, 1);
-        this.html.toggleSlider.id('toggleSlider');
-        this.html.toggleSlider.addClass('toggle-slider');
-        this.html.toggleSlider.parent(this.html.sliderDiv);
-        
+        this.html.toggleSlider = createSlider(0, 1, 0, 1)
+            .id('toggleSlider')
+            .addClass('toggle-slider')
+            .parent(this.html.sliderDiv);
+
         // Detail label
-        this.html.detailLabel = createSpan('Detail');
-        this.html.detailLabel.addClass('toggle-label');
-        this.html.detailLabel.parent(this.html.sliderDiv);
+        this.html.detailLabel = createSpan('Detail')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
+    }
+
+    initBodyUI() {
+        //== setup dom elements
+        // setup anneal ui element containers
+        this.html.designDiv = createDiv()
+            .parent(this.htmlRef.bottomDiv)
+            .id('design-div');
+
+        this.html.buttonRow = createDiv()
+            .parent(this.html.designDiv)
+            .addClass('button-row');
+
+        // Generate button
+        this.html.annealButton = createButton('Generate')
+            .parent(this.html.buttonRow).addClass('primary-button button')
+            .mousePressed(() => this.handleStartAnneal());
+
+        // Save button
+        this.html.saveButton = createButton('Save')
+            .parent(this.html.buttonRow).addClass('primary-button button')
+            .attribute('disabled', '') // until annealing is complete
+            .mousePressed(() => this.handleSaveSolution());
+
+        // Clear + Stop button
+        this.html.clearButton = createButton('Clear')
+            .parent(this.html.buttonRow).addClass('secondary-button button')
+            .mousePressed(() => this.drawBlankGrid());
+
+        // // info text
+        // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)")
+        //     .parent(this.html.designDiv).addClass('info-text');
+
+        // this.html.growthText = createP("(press 'g' to grow cells)")
+        //     .parent(this.html.designDiv).addClass('info-text');
     }
 
     initRightSideUI() {
         //== setup ui elements for side bar
         // Export button
-        this.html.exportButton = createButton('Export');
-        this.html.exportButton.parent(this.htmlRef.rightSideButtons);
-        this.html.exportButton.addClass('button green-button');
-        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
-        this.html.exportButton.mousePressed(() => this.handleExport());
-
-        // Import button
-        this.html.loadButton = createButton('Import');
-        this.html.loadButton.parent(this.htmlRef.rightSideButtons);
-        this.html.loadButton.addClass('button green-button');
-        this.html.loadButton.mousePressed(() => this.handleImport());
+        this.html.exportButton = createButton('Export')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .attribute('disabled', '') // until one saved anneal
+            .mousePressed(() => this.handleExport());
     }
 
     //== show/hide methods
@@ -182,15 +176,21 @@ class DesignUI {
         });
 
         //== start the annealing process
-        this.currentAnneal = null;
+        this.viewSavedAnneal(null)
         this.html.saveButton.attribute('disabled', '');
-        this.currentViewedAnnealIndex = null;
-        this.displaySavedAnneals();
+
+        // check if each shape has all it's grid data
+        for (let shape of inputUI.shapes) {
+            if (!shape.data.lowResShape || !shape.data.bufferShape) {
+                // if missing, generate it
+                shape.saveUserInput(shape.data.title, shape.data.highResShape);
+            }
+        }
 
         // find only selected (enabled) shapes
-        // - filter() returns shallow copy of allShapes
+        // - filter() returns shallow copy of all shapes
         // - shallow copy keeps shape specific data while allowing unique position data
-        let selectedShapes = allShapes.filter(shape => shape.enabled);
+        let selectedShapes = inputUI.shapes.filter(shape => shape.enabled);
         if (selectedShapes.length < 2) {
             alert('Select at least two shapes to generate');
             return;
@@ -236,19 +236,17 @@ class DesignUI {
     }
 
     handleSaveSolution() {
-        // save the current solution to the global array
+        // save the current solution to the array
         this.totalSavedAnneals++;
         // save only the necessary data for each anneal
         let savedData = {
             title: `solution-${this.totalSavedAnneals}`,
             solutionHistory: this.currentAnneal.solutionHistory,
             finalSolution: this.currentAnneal.finalSolution,
-            enabledShapes: allShapes.map(shape => shape.enabled)
+            enabledShapes: inputUI.shapes.map(shape => shape.enabled)
         }
         this.savedAnneals.push(savedData);
-
-        this.currentViewedAnnealIndex = this.savedAnneals.length - 1;
-        this.displaySavedAnneals();
+        this.viewSavedAnneal(this.savedAnneals.length - 1);
 
         // update buttons
         // disable save until a new anneal or change is made
@@ -264,10 +262,22 @@ class DesignUI {
         this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
+        // make a copy of shapes that only includes the data we need
+        // - data.highResShape, data.title, enabled
+        let shapesCopy = inputUI.shapes.map(shape => {
+            return {
+                data: {
+                    highResShape: shape.data.highResShape,
+                    title: shape.data.title
+                },
+                enabled: shape.enabled
+            };
+        });
+
         // add full shapes array to saved anneals
         let exportData = {
             savedAnneals: this.savedAnneals,
-            allShapes: allShapes
+            allShapes: shapesCopy
         }
 
         try {
@@ -294,61 +304,6 @@ class DesignUI {
         }
     }
 
-    handleImport() {
-        // user selects a json file
-        const input = createFileInput((file) => {
-            if (file.type === 'application' && file.subtype === 'json') {
-                const importedData = file.data;
-                // read the shapes in
-                this.loadAnnealJson(importedData);
-            } else {
-                alert('Select a .json file to upload');
-            }
-        });
-        input.hide(); // hide default file input
-        input.elt.click(); // open file dialog on click
-    }
-
-    loadAnnealJson(_importedData) {
-        // handle loading saved anneals from json file
-        let annealData = _importedData.savedAnneals;
-        let shapesData = _importedData.allShapes;
-
-        let maxSolutionNum = 0
-        let loadedAnneals = [];
-        for (let anneal of annealData) {
-            // find the largest anneal number (ex: 4 on 'solution-4')
-            let titleNumber = parseInt(anneal.title.split('-')[1]);
-            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
-
-            // create new shape from saved data
-            let enableSolution = new Solution(anneal.finalSolution.shapes);
-            anneal.finalSolution = enableSolution; // add solution methods back
-            loadedAnneals.push(anneal);
-        }
-        this.savedAnneals.push(...loadedAnneals);
-
-        // set total saved anneals to the largest number found
-        this.totalSavedAnneals = maxSolutionNum;
-
-        // reset list of loaded anneals
-        if (this.savedAnneals.length >= 1) {
-            // each needs to be clicked twice to show up
-            for (let i = 0; i < this.savedAnneals.length; i++) {
-                this.viewSavedAnneal(i);
-            }
-            this.viewSavedAnneal(0);
-        }
-
-        // enable export button if all shapes are from the load files
-        if (this.savedAnneals.length == annealData.length) {
-            // user loaded all current shapes, no export needed
-            this.html.exportButton.attribute('disabled', '');
-        } else {
-            // user loaded on top of existing anneals, export needed
-            this.html.exportButton.removeAttribute('disabled');
-        }
-    }
 
     //== display methods
     drawBlankGrid() {
@@ -356,9 +311,12 @@ class DesignUI {
         background(255);
 
         // reset ui to cleared initial state
+        // show anneal list
         this.currentAnneal = null;
         this.currentViewedAnnealIndex = null;
         this.displaySavedAnneals();
+        // show shapes list
+        this.createShapeList();
         this.html.saveButton.attribute('disabled', '');
 
         // enable shape selection
@@ -413,28 +371,32 @@ class DesignUI {
 
     createShapeList() {
         // create list of shapes to select from
-        allShapes.forEach((shape, index) => {
-            let shapeItem = createDiv().addClass('shape-item');
-            shapeItem.parent(this.htmlRef.leftSideList);
+        this.clearShapeList();
+        inputUI.shapes.forEach((shape, index) => {
+            let shapeItem = createDiv()
+                .parent(this.htmlRef.leftSideList)
+                .addClass(shape.enabled ? 'shape-item highlighted' : 'shape-item')
+                .mousePressed(() => this.toggleShapeSelection(index));
 
-            let titleSpan = createSpan(shape.data.title)
+            createSpan(shape.data.title)
                 .addClass('shape-title')
                 .parent(shapeItem);
-
-            // start with all enabled
-            allShapes[index].enabled = true;
-            shapeItem.addClass('highlighted');
-
-            shapeItem.mousePressed(() => this.toggleShapeSelection(index));
 
             this.shapeElements.push(shapeItem);
         });
     }
 
+    clearShapeList() {
+        for (let element of this.shapeElements) {
+            element.remove();
+        }
+        this.shapeElements = [];
+    }
+
     toggleShapeSelection(index) {
         if (this.shapeElements[index].hasClass('disabled')) return;
 
-        allShapes[index].enabled = !allShapes[index].enabled;
+        inputUI.shapes[index].enabled = !inputUI.shapes[index].enabled;
         this.shapeElements[index].toggleClass('highlighted');
     }
 
@@ -451,8 +413,8 @@ class DesignUI {
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
                 .size(24, 24)
-                .parent(savedAnnealItem);
-            viewIcon.mousePressed(() => this.viewSavedAnneal(i));
+                .parent(savedAnnealItem)
+                .mousePressed(() => this.viewSavedAnneal(i));
 
             let titleSpan = createSpan(this.savedAnneals[i].title)
                 .addClass('anneal-title')
@@ -461,40 +423,50 @@ class DesignUI {
             let trashIcon = createImg('img/trash.svg', 'Delete')
                 .addClass('icon-button')
                 .size(24, 24)
-                .parent(savedAnnealItem);
-            trashIcon.mousePressed(() => {
-                if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
-                    this.savedAnneals.splice(i, 1);
-                    if (i === this.currentViewedAnnealIndex) {
-                        this.currentViewedAnnealIndex = null;
-                        // currently viewed anneal was deleted
-                        this.drawBlankGrid();
-                    } else if (i < this.currentViewedAnnealIndex) {
-                        // deleted one before currently viewed, move the index down
-                        this.currentViewedAnnealIndex--;
+                .parent(savedAnnealItem)
+                .mousePressed(() => {
+                    if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
+                        this.savedAnneals.splice(i, 1);
+                        if (i === this.currentViewedAnnealIndex) {
+                            this.currentViewedAnnealIndex = null;
+                            // currently viewed anneal was deleted
+                            this.drawBlankGrid();
+                        } else if (i < this.currentViewedAnnealIndex) {
+                            // deleted one before currently viewed, move the index down
+                            this.currentViewedAnnealIndex--;
+                        }
+                        // disable export button if no more saved anneals
+                        if (this.savedAnneals.length === 0) {
+                            this.html.exportButton.attribute('disabled', ''); // until one saved anneal
+                        }
+                        // enable export if there are saved anneals
+                        if (this.savedAnneals.length > 0) {
+                            this.html.exportButton.removeAttribute('disabled');
+                        }
                     }
-                    // disable export button if no more saved anneals
-                    if (this.savedAnneals.length === 0) {
-                        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
-                    }
-                    // enable export if there are saved anneals
-                    if (this.savedAnneals.length > 0) {
-                        this.html.exportButton.removeAttribute('disabled');
-                    }
-                    this.displaySavedAnneals();
-                }
-            });
+                });
 
             this.savedAnnealElements.push(savedAnnealItem);
         }
     }
 
     viewSavedAnneal(index) {
-        // switch to viewing the selected saved anneal
+        if (index === null) {
+            // clear the viewed anneal
+            this.currentViewedAnnealIndex = null;
+            this.currentAnneal = null;
+            this.drawBlankGrid();
+            return;
+        }
+
+        // display selected saved anneal
         this.currentViewedAnnealIndex = index;
         this.currentAnneal = this.savedAnneals[index];
 
         // disable shape selection changes while viewing saved anneal
+        if (this.shapeElements.length === 0) {
+            this.createShapeList();
+        }
         this.shapeElements.forEach(element => {
             element.addClass('disabled');
         });
@@ -502,7 +474,7 @@ class DesignUI {
         let enableShapes = this.currentAnneal.enabledShapes;
         enableShapes.forEach((_enabled, i) => {
             // set the enabled states for this saved solution
-            allShapes[i].enabled = _enabled;
+            inputUI.shapes[i].enabled = _enabled;
             if (_enabled) {
                 this.shapeElements[i].addClass('highlighted');
             } else {

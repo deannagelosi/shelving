@@ -116,10 +116,10 @@
 .slider-icon {
     width: 12px;
     height: 12px;
-    border: 1px solid #666;
+    border: 1px solid #cccccc;
     margin: 0 5px;
 }
 
 .slider-icon.filled {
-    background-color: #666;
+    background-color: rgba(111, 0, 255, 0.5);
 }

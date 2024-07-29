@@ -3,7 +3,7 @@ class InputUI {
         //== state variables
         this.inputGrid = [];
         this.imgData = {}; // (image, mask, brightness data, etc)
-        this.shapes = []; // array of new Shape objects
+        this.shapes = []; // array of Shape objects [{data (reference), posX (int), posY (int)}]
         // dom elements and shape titles
         this.htmlRef = {};
         this.html = {};
@@ -85,7 +85,7 @@ class InputUI {
 
         // Create upload button
         this.html.headerUploadButton = createButton('Upload image')
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.handleImageUpload());
 
@@ -111,7 +111,7 @@ class InputUI {
 
         // Create and append the clear button
         this.html.headerClearButton = createButton('Clear')
-            .addClass('button red-button')
+            .addClass('button secondary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.resetCanvas());
     }
@@ -134,34 +134,34 @@ class InputUI {
             .id('title-input') // form fields need unique ids
             .attribute('size', '20');
 
-        // create the ADD button
-        this.html.addButton = createButton('Add')
+        // create the SAVE button
+        this.html.saveButton = createButton('Save')
             .parent(this.html.inputDiv)
-            .addClass('button green-button')
-            .mousePressed(() => this.addShape());
+            .addClass('button primary-button')
+            .mousePressed(() => this.saveShape());
     }
 
     initRightSideUI() {
         //== setup ui elements for side bar
-        // create the SAVE SHAPES button
-        this.html.saveButton = createButton('Save');
-        this.html.saveButton.parent(this.htmlRef.rightSideButtons);
-        this.html.saveButton.addClass('button green-button');
-        this.html.saveButton.attribute('disabled', ''); // until 2 shapes are saved
-        this.html.saveButton.mousePressed(() => this.saveAllShapes());
+        // create the IMPORT SHAPES button
+        this.html.importButton = createButton('Import')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .mousePressed(() => this.handleImport());
 
-        // create the LOAD SHAPES button
-        this.html.loadButton = createButton('Load');
-        this.html.loadButton.parent(this.htmlRef.rightSideButtons);
-        this.html.loadButton.addClass('button green-button');
-        this.html.loadButton.mousePressed(() => this.loadSavedShapes());
+        // create the EXPORT SHAPES button
+        this.html.exportButton = createButton('Export')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .attribute('disabled', '') // until 2 shapes are saved
+            .mousePressed(() => this.exportShapes());
 
         // create the NEXT button
-        this.html.nextButton = createButton('Next');
-        this.html.nextButton.parent(this.htmlRef.rightSideButtons);
-        this.html.nextButton.addClass('button green-button');
-        this.html.nextButton.attribute('disabled', ''); // until 2 shapes are saved
-        this.html.nextButton.mousePressed(() => this.nextScreen());
+        this.html.nextButton = createButton('Next')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .attribute('disabled', '') // until 2 shapes are saved
+            .mousePressed(() => this.nextScreen());
     }
 
     //== show/hide methods
@@ -179,9 +179,9 @@ class InputUI {
         // setup and draw the input grid
         this.updateGridSize();
 
-        // // temp for testing
-        // loadJSON('/examples/shelving_data_example.json', (importedData) => {
-        //     this.loadShapesJson(importedData);
+        // temp for testing
+        // loadJSON('/examples/ladder-bug.json', (importedData) => {
+        //     this.loadJsonData(importedData);
         //     this.nextScreen();
         // });
     }
@@ -234,7 +234,7 @@ class InputUI {
         input.elt.click(); // open  file dialog on click
     }
 
-    addShape() {
+    saveShape() {
         // find the shape title
         let titleValue = this.html.titleInput.value().trim();
         if (titleValue === '') { // no title entered by user
@@ -252,25 +252,35 @@ class InputUI {
 
         // disable next button (until the user saves the changes)
         this.html.nextButton.attribute('disabled', '');
-        // enable save button if there is more than one shape
+        // enable export button if there is more than one shape
         if (this.shapes.length >= 1) {
-            this.html.saveButton.removeAttribute('disabled');
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
-    saveAllShapes() {
+    exportShapes() {
         // add full shapes array to saved anneals
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        // remove unnecessary data 
-        this.shapes.forEach(shape => {
-            delete shape.data.inputGrid;
+        this.html.exportButton.html('Saving...');
+        this.html.exportButton.attribute('disabled', '');
+
+        // make a copy of shapes that only includes the data we need
+        // - data.highResShape, data.title, enabled
+        let shapesCopy = this.shapes.map(shape => {
+            return {
+                data: {
+                    highResShape: shape.data.highResShape,
+                    title: shape.data.title
+                },
+                enabled: shape.enabled
+            };
         });
 
         let exportData = {
             savedAnneals: [],
-            allShapes: this.shapes
+            allShapes: shapesCopy
         }
 
         try {
@@ -293,6 +303,7 @@ class InputUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
+            this.html.exportButton.html('Export');
             // Enable next button once shapes are saved and there are at least 2 shapes
             if (this.shapes.length > 1) {
                 this.html.nextButton.removeAttribute('disabled');
@@ -301,44 +312,52 @@ class InputUI {
     }
 
     nextScreen() {
-        // save the input shapes to the global shapes array
-        // remove unnecessary data 
-        this.shapes.forEach(shape => {
-            delete shape.data.inputGrid;
-        });
-
-        allShapes = this.shapes;
-
         // delete shape list dom elements
         this.clearShapeTitles();
 
         // change to the next screen (design)
         isInputScreen = false;
+
+        // setup the list of shapes
+        this.shapes.forEach((shape, index) => {
+            // start with all enabled
+            this.shapes[index].enabled = true;
+        });
+
+        // setup list of solutions if loaded
+        if (designUI.savedAnneals.length > 0) {
+            // loop saved anneals once so they render correctly
+            for (let i = 0; i < designUI.savedAnneals.length; i++) {
+                designUI.viewSavedAnneal(i);
+            }
+            designUI.viewSavedAnneal(0);
+        }
+
         loop();
     }
 
-    loadSavedShapes() {
+
+    handleImport() {
         // user selects a json file
         const input = createFileInput((file) => {
             if (file.type === 'application' && file.subtype === 'json') {
                 const importedData = file.data;
                 // read the shapes in
-                this.loadShapesJson(importedData);
-
+                this.loadJsonData(importedData);
             } else {
                 alert('Select a .json file to upload');
             }
-
         });
         input.hide(); // hide default file input
         input.elt.click(); // open file dialog on click
     }
 
-    loadShapesJson(_importedData) {
-        // handle loading saved shapes from json file
-        let annealData = _importedData.savedAnneals;
+    loadJsonData(_importedData) {
+        // handles loading saved shapes from json file
         let shapeData = _importedData.allShapes;
+        let annealData = _importedData.savedAnneals;
 
+        //== process shape data
         let loadedShapes = [];
         for (let shape of shapeData) {
             // create new shape from saved data
@@ -346,11 +365,26 @@ class InputUI {
             newShape.saveUserInput(shape.data.title, shape.data.highResShape);
             loadedShapes.push(newShape);
         }
-
+        // add shapes
         this.shapes.push(...loadedShapes);
-        // Reset active shape and UI
-        this.resetCanvas();
 
+        //== process anneal data
+        let maxSolutionNum = 0
+        let loadedAnneals = [];
+        for (let anneal of annealData) {
+            // find the largest anneal number (ex: 4 on 'solution-4')
+            let titleNumber = parseInt(anneal.title.split('-')[1]);
+            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+            // create new shape from saved data to add solution methods back
+            anneal.finalSolution = new Solution(anneal.finalSolution.shapes);
+            loadedAnneals.push(anneal);
+        }
+        // add anneals and the highest solution number
+        designUI.savedAnneals.push(...loadedAnneals);
+        designUI.totalSavedAnneals = maxSolutionNum;
+
+        //== update UI
+        this.resetCanvas();
         // enable next button if all shapes are from the load files
         if (this.shapes.length == loadedShapes.length) {
             this.html.nextButton.removeAttribute('disabled');
@@ -359,9 +393,9 @@ class InputUI {
             this.html.nextButton.attribute('disabled', '');
         }
 
-        // enable save button if there is more than one shape
-        if (this.shapes.length >= 1) {
-            this.html.saveButton.removeAttribute('disabled');
+        // enable export button if there is more than one shape
+        if (this.shapes.length != loadedShapes.length) {
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
@@ -422,9 +456,9 @@ class InputUI {
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
-                    // semi-transparent black squares for selected
+                    // semi-transparent color squares for selected
                     stroke("rgba(204,204,204, 0.25)");
-                    fill(0, 128);
+                    fill("rgba(111, 0, 255, 0.5)"); // purple
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
@@ -498,9 +532,9 @@ class InputUI {
 
                 // toggle save button if there are any shapes to save
                 if (this.shapes.length >= 1) {
-                    this.html.saveButton.removeAttribute('disabled');
+                    this.html.exportButton.removeAttribute('disabled');
                 } else {
-                    this.html.saveButton.attribute('disabled', '');
+                    this.html.exportButton.attribute('disabled', '');
                 }
             });
         }

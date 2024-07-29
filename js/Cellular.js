@@ -16,6 +16,7 @@ class Cellular {
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
         this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
         this.numAlive;
+        this.cellID = 0; // unique id for each cell
     }
 
     createTerrain() {
@@ -209,15 +210,19 @@ class Cellular {
 
             for (let j = 0; j < bottomLength; j++) {
                 // add a cell 
+                let y = shape.posY;
+                let x = shapeEnds[0] + j;
                 let isAlive = j == 0 || j == bottomLength - 1 ? true : false;
-                this.addCell(shape.posY, shapeEnds[0] + j, { strain: i + 1 }, isAlive);
+                this.addCell(y, x, { strain: i + 1 }, isAlive);
+                // mark just added cell as a 'bottom of shape' cell
+                // - since parent may not be the cell next to it, we note this to stop backtrack
+                this.cellSpace[y][x][this.cellSpace[y][x].length - 1].bottom = true;
             }
         }
     }
 
     growCells(numGrow) {
         // grow alive cells until no more cells are alive
-
         if (devMode) {
             // grow one at a time on keypress
             for (let i = 0; i < numGrow; i++) {
@@ -250,11 +255,12 @@ class Cellular {
                         this.mergeStrains(this.cellSpace[y][x]);
                         // remove all but one of the alive cells
                         this.cellSpace[y][x] = [this.cellSpace[y][x][0]];
+                        // cell marked to protect from crowded death
+                        this.cellSpace[y][x][0].merged = true;
 
                     } else if (numAlive == 1) {
                         // only one alive cell (parentCell) at this position
                         let parentCell = this.cellSpace[y][x].find(cell => cell.alive);
-
 
                         // setup options for directions of cell growth (left, up, or right)
                         let options = [
@@ -290,19 +296,23 @@ class Cellular {
                                 if (sideScore < currScore) {
                                     // side passing has a better score, kill the current cell
                                     parentCell.alive = false;
+                                    // passing cell marked to protect from crowded death
+                                    side.cells.forEach(cell => cell.merged = true);
 
                                 } else {
                                     // current cell is same or better, kill the passing cell
                                     side.cells.forEach(cell => cell.alive = false);
+                                    // cell marked to protect from crowded death
+                                    parentCell.merged = true;
                                 }
                             }
                         }
 
-                        // == Merge Rule 3: Crowded - alive cell encounters a dead cell of a different strain, dies
+                        // == Merge Rule 3: Crowded - alive cell encounters a dead cell and didn't just merge, dies
                         if (parentCell.alive && this.cellSpace[y][x].length > 1) {
                             // find any dead cell strains at the parentCell's position
                             let deadStrains = this.cellSpace[y][x].filter(cell => !cell.alive).map(cell => cell.strain);
-                            if (!deadStrains.includes(parentCell.strain)) {
+                            if (deadStrains.length > 0 && parentCell.merged != true) {
                                 parentCell.alive = false;
                             }
                         }
@@ -313,9 +323,24 @@ class Cellular {
                         // == End of Merge Rules, Begin Option Elimination Rules == //
                         for (let option of options) {
                             if (this.cellSpaceInBounds(option.y, option.x)) {
-                                // == Elimination Rule 1: Can't Backtrack - can't grow into a cell of the same strain
-                                if (this.cellSpace[option.y][option.x].some(cell => cell.strain == parentCell.strain)) {
+                                // == Elimination Rule 1: Can't Backtrack
+                                // 1. don't backtrack into parent cell:
+                                if (this.cellSpace[option.y][option.x].some(cell => cell.id === parentCell.parent.id)) {
                                     option.valid = false;
+                                }
+                                // 2. don't backtrack into parent cell when on bottom of shape:
+                                // - bottom of shape cells might not have the correct parent id
+                                // - determine by checking if its the same strain, and we are not moving up
+                                if (this.cellSpace[option.y][option.x].some(cell => cell.bottom === true && cell.strain === parentCell.strain && option.dir != "up")) {
+                                    option.valid = false;
+                                }
+                                // 3. don't backtrack right after a merge:
+                                // - merged cells can't rely on parent matching as that doesn't cover both directions
+                                // - instead any options containing the same strain are just invalid
+                                if (parentCell.merged) {
+                                    if (this.cellSpace[option.y][option.x].some(cell => cell.strain == parentCell.strain)) {
+                                        option.valid = false;
+                                    }
                                 }
 
                                 // == Elimination Rule 2: Can't Grow Through Shapes - a path at max terrain is blocked by a shape
@@ -399,14 +424,12 @@ class Cellular {
                         console.error("Error growing at x: ", x, " y: ", y, " with parentCell: ", parentCell, " and options: ", options);
                     }
                 }
-            }
-            // end of x loop
+            } // end of x loop
             // Found all new cells for the row. Add them and move to the next row
             for (let newCell of newCells) {
                 this.addCell(newCell.y, newCell.x, newCell.parentCell);
             }
-        }
-        // end of y loop
+        } // end of y loop
 
         // count number of alive cells
         this.numAlive = 0;
@@ -523,8 +546,10 @@ class Cellular {
         _parentCell.alive = false;
         // add a new child cell to the cell space
         this.cellSpace[_y][_x].push({
+            id: this.cellID++,
             strain: _parentCell.strain,
             alive: _alive,
+            parent: _parentCell
         });
     }
 
@@ -604,7 +629,7 @@ class Cellular {
         // draw all unique lines
         for (let lineKey of this.cellLines) {
             let [y1, x1, y2, x2, strain, userMade, status] = lineKey.split(',').map(Number);
-    
+
             if (status === 0) {
                 continue; // skip disabled lines
             }

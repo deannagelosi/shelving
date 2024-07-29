@@ -49,8 +49,8 @@ class Solution {
 
         let layoutHeight = this.layout.length;
         let layoutWidth = this.layout[0].length;
-        let squareHeight = canvasHeight / layoutHeight - 3; // -3 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / layoutWidth - 3; // -3 makes room for left/right buffer
+        let squareHeight = canvasHeight / (layoutHeight + 2); // + 2 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / (layoutWidth + 2); // + 2 makes room for left/right buffer
         this.squareSize = Math.min(squareHeight, squareWidth);
         this.buffer = this.squareSize;
         this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
@@ -155,8 +155,8 @@ class Solution {
         // update squareSize for this layout
         let layoutHeight = this.layout.length;
         let layoutWidth = this.layout[0].length;
-        let squareHeight = canvasHeight / layoutHeight - 3; // -3 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / layoutWidth - 3; // -3 makes room for left/right buffer
+        let squareHeight = canvasHeight / (layoutHeight + 2); // + # makes room for top/bottom buffer
+        let squareWidth = canvasWidth / (layoutWidth + 2); // + # makes room for left/right buffer
         this.squareSize = Math.min(squareHeight, squareWidth);
         // buffer makes room for the line numbers in dev mode
         this.buffer = this.squareSize;
@@ -387,40 +387,37 @@ class Solution {
     }
 
     showLayout() {
-        let colors = {};
+        let colors = {
+            lineColor: "rgb(198, 198, 197)",
+            bkrdColor: "rgb(229, 229, 229)",
+            bufferColor: "rgba(200,200,200, 0.5)",
+            lowResShapeColor: "rgb(229, 229, 229)",
+            highResShapeColor: "rgba(102,102,102, 0.9)",
+            collisionColor: "rgba(135, 160, 103, 0.5)",
+            textColor: "rgb(255,255,255)",
+            numColor: "rgb(102,102,102)"
+        };
+
         if (devMode) {
             colors.lineColor = 0;
             colors.bkrdColor = 255;
             colors.bufferColor = "rgb(255, 192, 203)";
             colors.lowResShapeColor = "rgba(140,140,140, 0.5)"; // grey at 50% opacity
-            colors.highResShapeColor = "rgba(102,102,102, 0.9)";
             colors.collisionColor = "rgba(255, 0, 0, 0.5)"; // red at 50% opacity
-        } else if (!devMode) {
-            colors.lineColor = "rgb(198, 198, 197)";
-            colors.bkrdColor = "rgb(229, 229, 229)";
-            colors.bufferColor = colors.bkrdColor;
-            colors.lowResShapeColor = colors.bkrdColor;
-            colors.highResShapeColor = "rgb(102,102,102)";
-            colors.collisionColor = "rgba(135, 160, 103, 0.5)"
-        }
-
-        if (editMode) {
-            colors.bufferColor = "rgba(200,200,200, 0.5)";
-            colors.textColor = "rgb(255,255,255)";
         }
 
         // draw the layout from the bottom layer up
         this.showGridSquares(colors);
         // show the side grid numbers
-        if (devMode) this.showGridNumbers();
+        if (editMode || devMode) this.showGridNumbers(colors);
         // display low res grid buffer squares
-        if (devMode || editMode) this.showBuffer(colors);
+        if (editMode || devMode) this.showBuffer(colors);
         // display low res shape squares
         if (devMode) this.showLowResShapes(colors);
         // show the high res shapes
         this.showHighResShapes(colors);
         // show the shape titles
-        if (editMode) this.showTitles(colors);
+        if (editMode || devMode) this.showTitles(colors);
         // show the collision squares
         this.showCollision(colors);
     }
@@ -442,11 +439,11 @@ class Solution {
         }
     }
 
-    showGridNumbers() {
+    showGridNumbers(_colors) {
         textAlign(CENTER, CENTER);
-        let txtXOffset = this.squareSize / 2;
-        let txtYOffset = this.squareSize / 2;
-        let txtSize = this.squareSize / 2;
+        let txtXOffset = this.squareSize / 2.5;
+        let txtYOffset = this.squareSize / 2.5;
+        let txtSize = this.squareSize / 2.5;
         textSize(txtSize);
         noStroke();
 
@@ -454,14 +451,14 @@ class Solution {
         let designWidth = this.layout[0].length;
         for (let x = 0; x < designWidth; x++) {
             // display column number
-            fill(x % 5 === 0 ? "pink" : 100);
+            fill(devMode && x % 5 === 0 ? "pink" : _colors.numColor);
             let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
             let textY = ((canvasHeight - this.yPadding) - this.buffer) + txtYOffset;
             text(x, textX, textY);
 
             for (let y = 0; y < designHeight; y++) {
                 // display row number
-                fill(y % 5 === 0 ? "pink" : 100);
+                fill(devMode && y % 5 === 0 ? "pink" : _colors.numColor);
                 let textX = this.xPadding + txtXOffset;
                 let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
                 text(y, textX, textY);
@@ -526,7 +523,7 @@ class Solution {
             let titleX = (startX * this.squareSize) + (this.squareSize / 2) + this.buffer + this.xPadding + (shapeWidth / 2);
             let titleY = ((canvasHeight - this.yPadding) - this.buffer) - (startY * this.squareSize) - (shapeHeight / 2);
 
-            fill(_colors.textColor); 
+            fill(_colors.textColor);
             textAlign(CENTER, CENTER);
             textSize(min(this.squareSize / 2, 14));
             text(shape.data.title, titleX, titleY);
