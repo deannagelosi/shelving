@@ -89,20 +89,25 @@ body {
   transition: background-color 0.3s;
 }
 
-.red-button {
-  background-color: #f44336;
+.secondary-button {
+  background-color: #4d4d4d;
+  /* background-color: #f44336; */
 }
 
-.red-button:hover {
-  background-color: #d32f2f;
+.secondary-button:hover {
+  background-color: #404040;
+  /* background-color: #d32f2f; */
 }
 
-.green-button {
-  background-color: #4CAF50;
+.primary-button {
+  /* background-color: #4CAF50; */
+  background-color: #3f50b5;
+
 }
 
-.green-button:hover {
-  background-color: #45a049;
+.primary-button:hover {
+  background-color: #32408C;
+  /* background-color: #45a049; */
 }
 
 .button:disabled {

@@ -77,18 +77,18 @@ class DesignUI {
 
         // Generate button
         this.html.annealButton = createButton('Generate')
-            .parent(this.html.buttonRow).addClass('green-button button')
+            .parent(this.html.buttonRow).addClass('primary-button button')
             .mousePressed(() => this.handleStartAnneal());
 
         // Save button
         this.html.saveButton = createButton('Save')
-            .parent(this.html.buttonRow).addClass('green-button button')
+            .parent(this.html.buttonRow).addClass('primary-button button')
             .attribute('disabled', '') // until annealing is complete
             .mousePressed(() => this.handleSaveSolution());
 
         // Clear + Stop button
         this.html.clearButton = createButton('Clear')
-            .parent(this.html.buttonRow).addClass('red-button button')
+            .parent(this.html.buttonRow).addClass('secondary-button button')
             .mousePressed(() => this.drawBlankGrid());
 
         // // info text
@@ -104,7 +104,7 @@ class DesignUI {
         // Export button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .attribute('disabled', '') // until one saved anneal
             .mousePressed(() => this.handleExport());
     }

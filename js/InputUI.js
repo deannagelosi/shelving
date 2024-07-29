@@ -85,7 +85,7 @@ class InputUI {
 
         // Create upload button
         this.html.headerUploadButton = createButton('Upload image')
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.handleImageUpload());
 
@@ -111,7 +111,7 @@ class InputUI {
 
         // Create and append the clear button
         this.html.headerClearButton = createButton('Clear')
-            .addClass('button red-button')
+            .addClass('button secondary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.resetCanvas());
     }
@@ -137,7 +137,7 @@ class InputUI {
         // create the SAVE button
         this.html.saveButton = createButton('Save')
             .parent(this.html.inputDiv)
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .mousePressed(() => this.saveShape());
     }
 
@@ -146,20 +146,20 @@ class InputUI {
         // create the IMPORT SHAPES button
         this.html.importButton = createButton('Import')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .mousePressed(() => this.handleImport());
 
         // create the EXPORT SHAPES button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .attribute('disabled', '') // until 2 shapes are saved
             .mousePressed(() => this.exportShapes());
 
         // create the NEXT button
         this.html.nextButton = createButton('Next')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button green-button')
+            .addClass('button primary-button')
             .attribute('disabled', '') // until 2 shapes are saved
             .mousePressed(() => this.nextScreen());
     }
@@ -456,9 +456,9 @@ class InputUI {
 
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
-                    // semi-transparent black squares for selected
+                    // semi-transparent color squares for selected
                     stroke("rgba(204,204,204, 0.25)");
-                    fill(0, 128);
+                    fill("rgba(111, 0, 255, 0.5)"); // purple
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
