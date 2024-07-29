@@ -179,8 +179,8 @@ class InputUI {
         // setup and draw the input grid
         this.updateGridSize();
 
-        // // temp for testing
-        // loadJSON('/examples/shelving_data_example.json', (importedData) => {
+        // temp for testing
+        // loadJSON('/examples/ladder-bug.json', (importedData) => {
         //     this.loadJsonData(importedData);
         //     this.nextScreen();
         // });
@@ -252,7 +252,7 @@ class InputUI {
 
         // disable next button (until the user saves the changes)
         this.html.nextButton.attribute('disabled', '');
-        // enable save button if there is more than one shape
+        // enable export button if there is more than one shape
         if (this.shapes.length >= 1) {
             this.html.exportButton.removeAttribute('disabled');
         }
@@ -394,7 +394,7 @@ class InputUI {
         }
 
         // enable export button if there is more than one shape
-        if (this.shapes.length >= 1) {
+        if (this.shapes.length != loadedShapes.length) {
             this.html.exportButton.removeAttribute('disabled');
         }
     }

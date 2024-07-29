@@ -413,8 +413,8 @@ class DesignUI {
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
                 .size(24, 24)
-                .parent(savedAnnealItem);
-            viewIcon.mousePressed(() => this.viewSavedAnneal(i));
+                .parent(savedAnnealItem)
+                .mousePressed(() => this.viewSavedAnneal(i));
 
             let titleSpan = createSpan(this.savedAnneals[i].title)
                 .addClass('anneal-title')
@@ -423,28 +423,28 @@ class DesignUI {
             let trashIcon = createImg('img/trash.svg', 'Delete')
                 .addClass('icon-button')
                 .size(24, 24)
-                .parent(savedAnnealItem);
-            trashIcon.mousePressed(() => {
-                if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
-                    this.savedAnneals.splice(i, 1);
-                    if (i === this.currentViewedAnnealIndex) {
-                        this.currentViewedAnnealIndex = null;
-                        // currently viewed anneal was deleted
-                        this.drawBlankGrid();
-                    } else if (i < this.currentViewedAnnealIndex) {
-                        // deleted one before currently viewed, move the index down
-                        this.currentViewedAnnealIndex--;
+                .parent(savedAnnealItem)
+                .mousePressed(() => {
+                    if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
+                        this.savedAnneals.splice(i, 1);
+                        if (i === this.currentViewedAnnealIndex) {
+                            this.currentViewedAnnealIndex = null;
+                            // currently viewed anneal was deleted
+                            this.drawBlankGrid();
+                        } else if (i < this.currentViewedAnnealIndex) {
+                            // deleted one before currently viewed, move the index down
+                            this.currentViewedAnnealIndex--;
+                        }
+                        // disable export button if no more saved anneals
+                        if (this.savedAnneals.length === 0) {
+                            this.html.exportButton.attribute('disabled', ''); // until one saved anneal
+                        }
+                        // enable export if there are saved anneals
+                        if (this.savedAnneals.length > 0) {
+                            this.html.exportButton.removeAttribute('disabled');
+                        }
                     }
-                    // disable export button if no more saved anneals
-                    if (this.savedAnneals.length === 0) {
-                        this.html.exportButton.attribute('disabled', ''); // until one saved anneal
-                    }
-                    // enable export if there are saved anneals
-                    if (this.savedAnneals.length > 0) {
-                        this.html.exportButton.removeAttribute('disabled');
-                    }
-                }
-            });
+                });
 
             this.savedAnnealElements.push(savedAnnealItem);
         }

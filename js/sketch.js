@@ -37,12 +37,6 @@ function draw() {
     } else {
         // switch to annealing screen
         inputUI.hide();
-
-        // // test loading json data
-        // loadJSON('/examples/shelving_data_example.json', (importedData) => {
-        //     designUI.loadAnnealJson(importedData);
-        // });
-
         designUI.show();
 
         // setup the design grid
@@ -91,3 +85,9 @@ function mouseReleased() {
         inputUI.eraseMode = "first";
     }
 }
+
+// prevent page reloads unless confirmed
+window.onbeforeunload = function (e) {
+    e.preventDefault();
+    e.returnValue = '';
+  };
