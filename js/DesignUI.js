@@ -174,9 +174,10 @@ class DesignUI {
         this.shapeElements.forEach(element => {
             element.addClass('disabled');
         });
+        // unselect solutions from list
+        this.viewSavedAnneal(null);
 
         //== start the annealing process
-        this.viewSavedAnneal(null)
         this.html.saveButton.attribute('disabled', '');
 
         // check if each shape has all it's grid data
@@ -312,9 +313,7 @@ class DesignUI {
 
         // reset ui to cleared initial state
         // show anneal list
-        this.currentAnneal = null;
-        this.currentViewedAnnealIndex = null;
-        this.displaySavedAnneals();
+        this.viewSavedAnneal(null);
         // show shapes list
         this.createShapeList();
         this.html.saveButton.attribute('disabled', '');
@@ -434,6 +433,7 @@ class DesignUI {
                         } else if (i < this.currentViewedAnnealIndex) {
                             // deleted one before currently viewed, move the index down
                             this.currentViewedAnnealIndex--;
+                            this.viewSavedAnneal(this.currentViewedAnnealIndex);
                         }
                         // disable export button if no more saved anneals
                         if (this.savedAnneals.length === 0) {
@@ -455,7 +455,7 @@ class DesignUI {
             // clear the viewed anneal
             this.currentViewedAnnealIndex = null;
             this.currentAnneal = null;
-            this.drawBlankGrid();
+            this.displaySavedAnneals();
             return;
         }
 
