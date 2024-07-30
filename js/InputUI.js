@@ -267,7 +267,7 @@ class InputUI {
         this.html.exportButton.attribute('disabled', '');
 
         // get a copy of shapes that only includes the data needed
-        let shapesCopy = this.shapes.map(shape => shape.exportShape);
+        let shapesCopy = this.shapes.map(shape => shape.exportShape());
 
         let exportData = {
             savedAnneals: [],
