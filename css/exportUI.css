@@ -1,0 +1,15 @@
+#export-div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.export-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 10px;
+}

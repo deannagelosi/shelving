@@ -48,6 +48,8 @@ class InputUI {
     getHtmlRefs() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
+        this.htmlRef.subheading = select('#subheading');
+        this.htmlRef.headerControls = select('#header-controls');
         this.htmlRef.leftBar = select('#left-side-bar');
         this.htmlRef.rightBar = select('#right-side-bar');
         this.htmlRef.bottomDiv = select('#bottom-div');
@@ -61,7 +63,7 @@ class InputUI {
         // Setup image upload and slider
         this.html.imageControls = createDiv()
             .id('image-controls')
-            .parent(this.htmlRef.header);
+            .parent(this.htmlRef.headerControls);
 
         // Grid size selector
         let gridSizeDiv = createDiv()
@@ -161,7 +163,7 @@ class InputUI {
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
             .attribute('disabled', '') // until at least 2 shapes
-            .mousePressed(() => this.handleNextButton());
+            .mousePressed(() => this.handleNext());
     }
 
     //== show/hide methods
@@ -172,6 +174,8 @@ class InputUI {
         this.htmlRef.bottomDiv.removeClass('hidden');
         // set titles
         this.htmlRef.rightSideTop.html('Shapes');
+        // Set subheading
+        this.htmlRef.subheading.html("Object Input");
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
@@ -180,10 +184,10 @@ class InputUI {
         // setup and draw the input grid
         this.updateGridSize();
 
-        // // temp for testing
+        // // temp auto-loading for testing
         // loadJSON('/examples/example-solutions.json', (importedData) => {
         //     this.loadJsonData(importedData);
-        //     this.handleNextButton();
+        //     this.handleNext();
         // });
     }
 
@@ -291,23 +295,23 @@ class InputUI {
         }
     }
 
-    handleNextButton() {
-        // delete shape list dom elements
+    handleNext() {
+        // clean up the input screen
         this.clearShapeTitles();
 
-        // setup the list of shapes
+        // setup for the design screen
+        // - setup the list of shapes
         this.shapes.forEach((shape, index) => {
             // start with all enabled
             this.shapes[index].enabled = true;
         });
-
-        // setup list of solutions if loaded
+        //  - setup list of solutions if loaded
         if (designUI.savedAnneals.length > 0) {
             // loop saved anneals once so they render correctly
             for (let i = 0; i < designUI.savedAnneals.length; i++) {
                 designUI.viewSavedAnneal(i);
             }
-            designUI.viewSavedAnneal(0);
+            designUI.viewSavedAnneal(null);
         }
 
         // change to design screen
@@ -374,6 +378,12 @@ class InputUI {
 
         //== update UI
         this.resetCanvas();
+        // toggle next button
+        if (this.shapes.length >= 2) {
+            this.html.nextButton.removeAttribute('disabled');
+        } else if (this.shapes.length < 2) {
+            this.html.nextButton.attribute('disabled', '');
+        }
     }
 
     adjustGridSize() {

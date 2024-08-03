@@ -8,6 +8,7 @@ let numGrow = 0; // cell growth amount in dev mode
 //= UI class instances
 let inputUI;
 let designUI;
+let exportUI;
 
 //= screens enum
 const ScreenState = {
@@ -27,6 +28,7 @@ function setup() {
     // setup ui elements for both screens
     inputUI = new InputUI();
     designUI = new DesignUI();
+    exportUI = new ExportUI();
 
     // start on input screen
     changeScreen(ScreenState.INPUT);
@@ -34,23 +36,27 @@ function setup() {
 
 function draw() {
     // check which screen to display
-
     switch (currentScreen) {
         case ScreenState.INPUT:
+            designUI.hide();
+            exportUI.hide();
             inputUI.show();
 
             noLoop();
             break;
         case ScreenState.DESIGN:
             inputUI.hide();
+            exportUI.hide();
             designUI.show();
-            designUI.drawBlankGrid();
 
             noLoop();
             break;
         case ScreenState.EXPORT:
-            console.log("Export Screen");
+            inputUI.hide();
+            designUI.hide();
+            exportUI.show();
 
+            noLoop();
             break;
     }
 }

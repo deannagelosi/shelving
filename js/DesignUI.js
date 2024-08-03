@@ -28,6 +28,8 @@ class DesignUI {
     getHtmlRef() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
+        this.htmlRef.subheading = select('#subheading');
+        this.htmlRef.headerControls = select('#header-controls');
         this.htmlRef.leftBar = select('#left-side-bar');
         this.htmlRef.rightBar = select('#right-side-bar');
         this.htmlRef.bottomDiv = select('#bottom-div');
@@ -43,7 +45,7 @@ class DesignUI {
         // slider toggle
         this.html.sliderDiv = createDiv()
             .id('slider-div')
-            .parent(this.htmlRef.header)
+            .parent(this.htmlRef.headerControls)
             .mousePressed(this.handleSlider.bind(this));
 
         // Simple label
@@ -100,13 +102,20 @@ class DesignUI {
     }
 
     initRightSideUI() {
-        //== setup ui elements for side bar
+        //== setup ui elements for right side bar
         // Export button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
             .attribute('disabled', '') // until one saved anneal
             .mousePressed(() => this.handleExport());
+
+        // Next button
+        this.html.nextButton = createButton('Next')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .attribute('disabled', '') // until one saved anneal
+            .mousePressed(() => this.handleNext());
     }
 
     //== show/hide methods
@@ -116,18 +125,28 @@ class DesignUI {
         this.htmlRef.rightBar.removeClass('hidden');
         this.htmlRef.bottomDiv.removeClass('hidden');
         // set titles
-        this.htmlRef.rightSideTop.html('Results');
         this.htmlRef.leftSideTop.html('Shapes');
+        this.htmlRef.rightSideTop.html('Results');
+        // Set subheading
+        this.htmlRef.subheading.html("Generate Layout");
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        this.html.exportButton.addClass('hidden'); // hide export button
 
+        this.drawBlankGrid();
         // this.html.growthText.addClass('hidden');
         // if (devMode) {
         //     // show called in displayResult, not updateDisplayCallback
         //     // only displayResult is called after annealing complete
         //     this.html.growthText.removeClass('hidden');
         // }
+
+        // // temp auto-loading for testing
+        // this.viewSavedAnneal(0);
+        // setTimeout(() => {
+        //     this.handleNext();
+        // }, 0);
     }
 
     hide() {
@@ -275,6 +294,19 @@ class DesignUI {
         }
     }
 
+    handleNext() {
+        // clean up the design screen
+        this.clearShapeList();
+        this.clearSavedAnneals();
+        
+        // setup for the export screen
+        clear();
+        background(255);
+
+        // change to export screen
+        changeScreen(ScreenState.EXPORT);
+    }
+
     //== display methods
     drawBlankGrid() {
         clear();
@@ -318,9 +350,6 @@ class DesignUI {
             clear();
             background(255);
             this.currentAnneal.finalSolution.showLayout();
-
-            // update growth text if dev mode on and annealing complete
-            this.show();
 
             // setup case for cellular and boards
             let cellular = new Cellular(this.currentAnneal.finalSolution);
@@ -423,6 +452,7 @@ class DesignUI {
             this.currentViewedAnnealIndex = null;
             this.currentAnneal = null;
             this.displaySavedAnneals();
+            this.html.nextButton.attribute('disabled', '');
             return;
         }
 
@@ -452,6 +482,7 @@ class DesignUI {
         // update display
         this.displayResult();
         this.displaySavedAnneals();
+        this.html.nextButton.removeAttribute('disabled');
     }
 
     clearSavedAnneals() {
