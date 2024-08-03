@@ -69,9 +69,6 @@ function mousePressed() {
     if (isInputScreen) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
-    // else {
-    //     designUI.selectCellLine(mouseX, mouseY);
-    // }
 }
 
 function mouseDragged() {
