@@ -62,7 +62,15 @@ function changeScreen(newScreen) {
 }
 
 function keyPressed() {
-    if (currentScreen == ScreenState.DESIGN) {
+    // Input screen key commands
+    if (currentScreen == ScreenState.INPUT) {
+        if (key === '~') {
+            // toggle export button visibility
+            inputUI.html.exportButton.toggleClass('hidden');
+        }
+    }
+    // Design screen key commands
+    else if (currentScreen == ScreenState.DESIGN) {
         if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
@@ -76,7 +84,14 @@ function keyPressed() {
             numGrow++
             designUI.displayResult();
         }
+        else if (key === '~') {
+            // toggle export button visibility
+            designUI.html.exportButton.toggleClass('hidden');
+        }
     }
+    // // Export screen key commands
+    // else if (currentScreen == ScreenState.EXPORT) {
+    // }
 }
 
 function mousePressed() {

@@ -146,21 +146,21 @@ class InputUI {
         // create the IMPORT SHAPES button
         this.html.importButton = createButton('Import')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
+            .addClass('button secondary-button')
             .mousePressed(() => this.handleImport());
 
         // create the EXPORT SHAPES button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until 2 shapes are saved
+            .attribute('disabled', '') // until at least 1 shape
             .mousePressed(() => this.exportShapes());
 
         // create the NEXT button
         this.html.nextButton = createButton('Next')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until 2 shapes are saved
+            .attribute('disabled', '') // until at least 2 shapes
             .mousePressed(() => this.handleNextButton());
     }
 
@@ -175,14 +175,15 @@ class InputUI {
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        this.html.exportButton.addClass('hidden'); // hide export button
 
         // setup and draw the input grid
         this.updateGridSize();
 
-        // temp for testing
-        // loadJSON('/examples/ladder-bug.json', (importedData) => {
+        // // temp for testing
+        // loadJSON('/examples/example-solutions.json', (importedData) => {
         //     this.loadJsonData(importedData);
-        //     this.nextScreen();
+        //     this.handleNextButton();
         // });
     }
 
@@ -250,11 +251,17 @@ class InputUI {
         // Reset active shape and UI
         this.resetCanvas();
 
-        // disable next button (until the user saves the changes)
-        this.html.nextButton.attribute('disabled', '');
-        // enable export button if there is more than one shape
+        // toggle export button
         if (this.shapes.length >= 1) {
             this.html.exportButton.removeAttribute('disabled');
+        } else if (this.shapes.length < 1) {
+            this.html.exportButton.attribute('disabled', '');
+        }
+        // toggle next button
+        if (this.shapes.length >= 2) {
+            this.html.nextButton.removeAttribute('disabled');
+        } else if (this.shapes.length < 2) {
+            this.html.nextButton.attribute('disabled', '');
         }
     }
 
@@ -263,7 +270,6 @@ class InputUI {
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
         // get a copy of shapes that only includes the data needed
@@ -281,11 +287,7 @@ class InputUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
-            this.html.exportButton.html('Export');
-            // Enable next button once shapes are saved and there are at least 2 shapes
-            if (this.shapes.length > 1) {
-                this.html.nextButton.removeAttribute('disabled');
-            }
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
@@ -372,18 +374,6 @@ class InputUI {
 
         //== update UI
         this.resetCanvas();
-        // enable next button if all shapes are from the load files
-        if (this.shapes.length == loadedShapes.length) {
-            this.html.nextButton.removeAttribute('disabled');
-        } else {
-            // user loaded on top of existing shapes, save needed
-            this.html.nextButton.attribute('disabled', '');
-        }
-
-        // enable export button if there is more than one shape
-        if (this.shapes.length != loadedShapes.length) {
-            this.html.exportButton.removeAttribute('disabled');
-        }
     }
 
     adjustGridSize() {
@@ -514,14 +504,17 @@ class InputUI {
                 //update displayed list
                 this.displayShapeTitles();
 
-                // disable next button (until the user saves the changes)
-                this.html.nextButton.attribute('disabled', '');
-
-                // toggle save button if there are any shapes to save
+                // toggle export button
                 if (this.shapes.length >= 1) {
                     this.html.exportButton.removeAttribute('disabled');
-                } else {
+                } else if (this.shapes.length < 1) {
                     this.html.exportButton.attribute('disabled', '');
+                }
+                // toggle next button
+                if (this.shapes.length >= 2) {
+                    this.html.nextButton.removeAttribute('disabled');
+                } else if (this.shapes.length < 2) {
+                    this.html.nextButton.attribute('disabled', '');
                 }
             });
         }
