@@ -9,11 +9,16 @@ let numGrow = 0; // cell growth amount in dev mode
 let inputUI;
 let designUI;
 
+//= screens enum
+const ScreenState = {
+    INPUT: 'input',
+    DESIGN: 'design',
+    EXPORT: 'export'
+};
+
 //= flags
-let isInputScreen; // switches screen (inout/design)
-// diagnostic toggles
+let detailView = false;
 let devMode = false;
-let editMode = false;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -24,36 +29,41 @@ function setup() {
     designUI = new DesignUI();
 
     // start on input screen
-    isInputScreen = true;
+    changeScreen(ScreenState.INPUT);
 }
 
 function draw() {
-    if (isInputScreen) {
-        // display the input screen 
-        inputUI.show();
+    // check which screen to display
 
-        noLoop();
-    } else {
-        // switch to annealing screen
-        inputUI.hide();
-        designUI.show();
+    switch (currentScreen) {
+        case ScreenState.INPUT:
+            inputUI.show();
 
-        // setup the design grid
-        designUI.drawBlankGrid();
+            noLoop();
+            break;
+        case ScreenState.DESIGN:
+            inputUI.hide();
+            designUI.show();
+            designUI.drawBlankGrid();
 
-        noLoop();
+            noLoop();
+            break;
+        case ScreenState.EXPORT:
+            console.log("Export Screen");
+
+            break;
     }
 }
 
+function changeScreen(newScreen) {
+    // Set the new screen and loop
+    currentScreen = newScreen;
+    loop();
+}
+
 function keyPressed() {
-    if (!isInputScreen) {
-        if (key === 'g') {
-            // advance one growth at a time in dev mode
-            if (devMode) {
-                numGrow++
-                designUI.displayResult();
-            }
-        } else if (key === 'd') {
+    if (currentScreen == ScreenState.DESIGN) {
+        if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
             numGrow = 0;
@@ -61,23 +71,28 @@ function keyPressed() {
                 designUI.displayResult();
             }
         }
+        else if (key === 'g' && devMode) {
+            // advance one growth at a time in dev mode
+            numGrow++
+            designUI.displayResult();
+        }
     }
 }
 
 function mousePressed() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }
 
 function mouseReleased() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.eraseMode = "first";
     }
 }

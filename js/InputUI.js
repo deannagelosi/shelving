@@ -161,7 +161,7 @@ class InputUI {
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
             .attribute('disabled', '') // until 2 shapes are saved
-            .mousePressed(() => this.nextScreen());
+            .mousePressed(() => this.handleNextButton());
     }
 
     //== show/hide methods
@@ -289,12 +289,9 @@ class InputUI {
         }
     }
 
-    nextScreen() {
+    handleNextButton() {
         // delete shape list dom elements
         this.clearShapeTitles();
-
-        // change to the next screen (design)
-        isInputScreen = false;
 
         // setup the list of shapes
         this.shapes.forEach((shape, index) => {
@@ -311,7 +308,8 @@ class InputUI {
             designUI.viewSavedAnneal(0);
         }
 
-        loop();
+        // change to design screen
+        changeScreen(ScreenState.DESIGN);
     }
 
     handleImport() {
@@ -365,7 +363,7 @@ class InputUI {
             }
             // initialize solution
             anneal.finalSolution = new Solution(initShapes);
-            
+
             loadedAnneals.push(anneal);
         }
         // add anneals and the highest solution number

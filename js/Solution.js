@@ -409,15 +409,15 @@ class Solution {
         // draw the layout from the bottom layer up
         this.showGridSquares(colors);
         // show the side grid numbers
-        if (editMode || devMode) this.showGridNumbers(colors);
+        if (detailView || devMode) this.showGridNumbers(colors);
         // display low res grid buffer squares
-        if (editMode || devMode) this.showBuffer(colors);
+        if (detailView || devMode) this.showBuffer(colors);
         // display low res shape squares
         if (devMode) this.showLowResShapes(colors);
         // show the high res shapes
         this.showHighResShapes(colors);
         // show the shape titles
-        if (editMode || devMode) this.showTitles(colors);
+        if (detailView || devMode) this.showTitles(colors);
         // show the collision squares
         this.showCollision(colors);
     }

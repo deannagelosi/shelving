@@ -147,23 +147,10 @@ class DesignUI {
         // toggle the slider value
         if (toggle.value() === 0) {
             toggle.value(1);
-            editMode = true;
+            detailView = true;
         } else {
             toggle.value(0);
-            editMode = false;
-        }
-        // update the screen
-        this.displayResult();
-    }
-
-    setEditMode(isEditMode) {
-        editMode = isEditMode;
-        if (isEditMode) {
-            this.html.viewButton.removeClass('active');
-            this.html.editButton.addClass('active');
-        } else {
-            this.html.viewButton.addClass('active');
-            this.html.editButton.removeClass('active');
+            detailView = false;
         }
         // update the screen
         this.displayResult();
