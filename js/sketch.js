@@ -5,10 +5,9 @@ const canvasHeight = 650;
 //= state variables
 let numGrow = 0; // cell growth amount in dev mode
 
-//= class instances
+//= UI class instances
 let inputUI;
 let designUI;
-let newCase;
 
 //= flags
 let isInputScreen; // switches screen (inout/design)

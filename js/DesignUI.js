@@ -336,17 +336,15 @@ class DesignUI {
             this.show();
 
             // setup case for cellular and boards
-            newCase = new Case(this.currentAnneal.finalSolution);
-            newCase.cellular.createTerrain();
-            newCase.cellular.calcPathValues();
-            newCase.cellular.makeInitialCells();
-            newCase.cellular.growCells(numGrow);
-            this.currCellLines = newCase.cellular.cellLines;
+            let cellular = new Cellular(this.currentAnneal.finalSolution);
+            cellular.growCells();
+            cellular.showCellLines();
 
             // display cells and terrain (cellular scores)
-            newCase.cellular.showTerrain();
-            newCase.cellular.showCellLines();
-            newCase.cellular.showCells();
+            if (devMode) {
+                cellular.showTerrain();
+                cellular.showCells();
+            }
         }
     }
 
