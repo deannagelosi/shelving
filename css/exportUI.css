@@ -13,3 +13,16 @@
     height: 100%;
     gap: 10px;
 }
+
+.export-selector {
+    margin-bottom: 10px;
+}
+
+.export-selector .input-label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.export-selector .input-field {
+    width: 80%;
+}

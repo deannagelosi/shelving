@@ -1,6 +1,7 @@
 class ExportUI {
     constructor() {
         //== state variables
+        this.currExport;
         // dom elements
         this.htmlRef = {};
         this.html = {};
@@ -39,17 +40,47 @@ class ExportUI {
     initLeftSideUI() {
         //== setup ui elements for left side bar
         this.html.backButton = createButton('Back')
-            .parent(this.htmlRef.rightSideButtons)
+            .parent(this.htmlRef.leftSideButtons)
             .addClass('button secondary-button')
+            .attribute('disabled', '')
             .mousePressed(() => this.handleBack());
 
         this.html.createButton = createButton('Create')
-            .parent(this.htmlRef.rightSideButtons)
+            .parent(this.htmlRef.leftSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '')
             .mousePressed(() => this.handleCreate());
 
         // todo: add solution name
+
+        // Material Thickness Input
+        this.html.materialThicknessGroup = createDiv()
+            .parent(this.htmlRef.leftSideList)
+            .addClass('export-selector');
+        this.html.materialThicknessLabel = createSpan('Material Thickness (in)')
+            .parent(this.html.materialThicknessGroup)
+            .addClass('input-label');
+        this.html.materialThicknessInput = createInput('0.11')
+            .parent(this.html.materialThicknessGroup)
+            .addClass('input-field')
+            .attribute('type', 'number')
+            .attribute('min', '0.13')
+            .attribute('max', '0.5')
+            .attribute('step', '0.01');
+
+        // Case Depth Input
+        this.html.caseDepthGroup = createDiv()
+            .parent(this.htmlRef.leftSideList)
+            .addClass('export-selector');
+        this.html.caseDepthLabel = createSpan('Case Depth (in)')
+            .parent(this.html.caseDepthGroup)
+            .addClass('input-label');
+        this.html.caseDepthInput = createInput('5')
+            .parent(this.html.caseDepthGroup)
+            .addClass('input-field')
+            .attribute('type', 'number')
+            .attribute('min', '1')
+            .attribute('max', '10')
+            .attribute('step', '0.5');
     }
 
     initBodyUI() {
@@ -106,5 +137,31 @@ class ExportUI {
         this.htmlRef.bottomDiv.addClass('hidden');
 
         Object.values(this.html).forEach(element => element.addClass('hidden'));
+    }
+
+    //== Button handlers
+    handleCreate() {
+        console.log('Creating export files');
+
+        const materialThickness = parseFloat(this.html.materialThicknessInput.value());
+        const caseDepth = parseFloat(this.html.caseDepthInput.value());
+
+        if (isNaN(materialThickness) || isNaN(caseDepth)) {
+            console.error("Invalid input for material thickness or case depth");
+            return;
+        }
+
+        let cellLines = designUI.currCellLines;
+
+        this.currExport = new Export(cellLines);
+        this.currExport.setMaterialThickness(materialThickness);
+        this.currExport.setCaseDepth(caseDepth);
+        this.currExport.makeBoards();
+        this.currExport.displayPreview();
+
+        // // Enable download buttons
+        // this.html.dxfButton.removeAttribute('disabled');
+        // this.html.layoutButton.removeAttribute('disabled');
+        // this.html.jsonButton.removeAttribute('disabled');
     }
 }

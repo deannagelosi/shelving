@@ -595,8 +595,6 @@ class Cellular {
                                         Math.max(y, newY),
                                         Math.max(x, newX),
                                         cell.strain,
-                                        0, // 0: not user made, 1: user made
-                                        1  // 1: enabled, 0: disabled (by user)
                                     ].join(',');
 
                                     // when added to a Set, strings are skipped if they already exist
@@ -611,11 +609,7 @@ class Cellular {
 
         // draw all unique lines
         for (let lineKey of this.cellLines) {
-            let [y1, x1, y2, x2, strain, userMade, status] = lineKey.split(',').map(Number);
-
-            if (status === 0) {
-                continue; // skip disabled lines
-            }
+            const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
 
             // calculate canvas coordinates
             let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
@@ -627,8 +621,6 @@ class Cellular {
             let lineColor;
             if (devMode) {
                 lineColor = this.strainColor(strain);
-            } else if (userMade === 1) {
-                lineColor = "rgb(255, 0, 0)";
             } else {
                 lineColor = "rgb(175, 141, 117)";
             }

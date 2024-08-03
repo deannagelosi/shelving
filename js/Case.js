@@ -1,15 +1,9 @@
 class Case {
-    constructor(_solution) {
-        this.solution = _solution;
-        this.cellular = new Cellular(this.solution);
-        // this.automata = [];
-        this.cellular;
-        this.allDots = [];
+    constructor(_squareSize, _cellLines) {
+        this.squareSize = _squareSize;
+        this.cellLines = _cellLines;
         this.boards = [];
-        this.maxDepth = 0;
-
-        this.showBoards = false;
-        this.allowMerge = false;
+        this.caseDepth;
 
         // laser cutting design
         this.materialWidth = 16.5;
@@ -34,44 +28,6 @@ class Case {
         let svgHeight = (this.materialHeight * this.sheets.length) * this.ppi + this.buffer;
 
         this.svgOutput = createGraphics(svgWidth, svgHeight, SVG);
-
-
-    }
-
-    growAutomata() {
-        // bottom: grow shelves along all the bottoms
-        for (let i = 0; i < this.automata.length; i++) {
-            let automaton = this.automata[i];
-            if (automaton.isGrowingEnd) {
-                automaton.growModeEnd = 0; // grow bottoms first
-                while (automaton.grow() != false) { }
-
-                automaton.growModeStart = 1;
-                automaton.growModeEnd = 1;
-
-                // grow from the end once to get it started
-                automaton.isGrowingEnd = automaton.grow(this.allDots);
-            }
-        }
-
-        // grow in both directions, one step at a time
-        while (this.automata.some(automaton => automaton.isGrowingEnd || automaton.isGrowingStart)) {
-            for (let i = 0; i < this.automata.length; i++) {
-                let automaton = this.automata[i];
-
-                // grow rightward (from the end of the automaton) once per loop
-                if (automaton.isGrowingEnd) {
-                    automaton.growEnd = true;
-                    automaton.isGrowingEnd = automaton.grow(this.allDots);
-                }
-
-                // automaton.isGrowingStart = false
-                if (automaton.isGrowingStart) {
-                    automaton.growEnd = false;
-                    automaton.isGrowingStart = automaton.grow(this.allDots);
-                }
-            }
-        }
     }
 
     makeBoards() {
@@ -161,75 +117,21 @@ class Case {
         }
     }
 
-    // showResult() {
-    //     if (this.showBoards) {
-    //         // show boards
-    //         let counter = 0;
-    //         for (let i = 0; i < this.boards.length; i++) {
-    //             let board = this.boards[i];
-    //             stroke("rgb(175, 141, 117)");
-    //             strokeWeight(5);
-    //             line(
-    //                 board.startCoords.x * this.solution.squareSize,
-    //                 canvasHeight - (board.startCoords.y * this.solution.squareSize),
-    //                 board.endCoords.x * this.solution.squareSize,
-    //                 canvasHeight - (board.endCoords.y * this.solution.squareSize)
-    //             );
-    //         }
-    //     } else {
-    //         // show dots
-    //         let counter = 0;
-    //         for (let i = 0; i < this.automata.length; i++) {
-    //             let automaton = this.automata[i];
-    //             let prevPosX = automaton.dots[i].x;
-    //             let currPosX = prevPosX;
-    //             let prevPosY = automaton.dots[i].y;
-    //             let currPosY = prevPosY;
-
-    //             fill(color(random(255), random(255), random(255)));
-    //             for (let j = 0; j < automaton.dots.length; j++) {
-
-    //                 if (devMode) {
-    //                     // show each dot
-    //                     noStroke(); // No border for the dots
-    //                     circle(
-    //                         automaton.dots[j].x * this.solution.squareSize,
-    //                         canvasHeight - (automaton.dots[j].y * this.solution.squareSize),
-    //                         10
-    //                     );
-    //                 } else {
-    //                     // animate the dots drawing in
-    //                     setTimeout(() => {
-    //                         // update the current position to the new dot's position
-    //                         currPosX = automaton.dots[j].x;
-    //                         currPosY = automaton.dots[j].y;
-
-    //                         stroke("rgb(175, 141, 117)");
-    //                         strokeWeight(5);
-    //                         if (Math.abs(prevPosX - currPosX) == 1 && Math.abs(prevPosY - currPosY) == 0 || Math.abs(prevPosX - currPosX) == 0 && Math.abs(prevPosY - currPosY) == 1) {
-    //                             line(
-    //                                 prevPosX * this.solution.squareSize,
-    //                                 canvasHeight - (prevPosY * this.solution.squareSize),
-    //                                 currPosX * this.solution.squareSize,
-    //                                 canvasHeight - (currPosY * this.solution.squareSize)
-    //                             );
-    //                         } else {
-    //                             console.log("prevPosX,Y: ", prevPosX, prevPosY, "currPosX, Y: ", currPosX, currPosY);
-    //                         }
-
-    //                         // update previous position to current for the next iteration
-    //                         prevPosX = currPosX;
-    //                         prevPosY = currPosY;
-
-
-    //                     }, counter);
-    //                     counter += 50;
-
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    showResult() {
+        // show boards
+        let counter = 0;
+        for (let i = 0; i < this.boards.length; i++) {
+            let board = this.boards[i];
+            stroke("rgb(175, 141, 117)");
+            strokeWeight(5);
+            line(
+                board.coords.start.x * this.squareSize,
+                canvasHeight - (board.coords.start.y * this.squareSize),
+                board.coords.end.x * this.squareSize,
+                canvasHeight - (board.coords.end.y * this.squareSize)
+            );
+        }
+    }
 
     renderBoards() {
         // use board objects and translating them into rectangles
@@ -240,17 +142,17 @@ class Case {
 
         for (let i = 0; i < this.boards.length; i++) {
             let board = this.boards[i];
-            let startRectX = board.startCoords.x * this.solution.squareSize;
-            let startRectY = canvasHeight - (board.startCoords.y * this.solution.squareSize);
+            let startRectX = board.coords.start.x * this.squareSize;
+            let startRectY = canvasHeight - (board.coords.start.y * this.squareSize);
             let endRectX;
             let endRectY;
-            let boardWidth = this.solution.squareSize / 2;
+            let boardWidth = this.squareSize / 2;
             if (board.orientation === "x") {
-                endRectX = board.endCoords.x * this.solution.squareSize + boardWidth;
+                endRectX = board.coords.end.x * this.squareSize + boardWidth;
                 endRectY = startRectY - boardWidth;
             } else if (board.orientation === "y") {
                 endRectX = startRectX + boardWidth;
-                endRectY = canvasHeight - (board.endCoords.y * this.solution.squareSize) - boardWidth;
+                endRectY = canvasHeight - (board.coords.end.y * this.squareSize) - boardWidth;
             }
 
             this.graphic.rect(startRectX, startRectY, endRectX, endRectY);
@@ -275,18 +177,18 @@ class Case {
         if (board1.orientation === board2.orientation) {
             let orientation = board1.orientation;
             let axis = orientation == "x" ? "y" : "x";
-            let aligned = board1.startCoords[axis] == board2.startCoords[axis];
+            let aligned = board1.coords.start[axis] == board2.coords.start[axis];
 
             // check for touching or overlapping on axis
             if (aligned) {
-                let board1Overlapped = board1.endCoords[orientation] >= board2.startCoords[orientation] && board1.startCoords[orientation] <= board2.startCoords[orientation]
-                let board2Overlapped = board2.endCoords[orientation] >= board1.startCoords[orientation] && board2.startCoords[orientation] <= board1.startCoords[orientation]
+                let board1Overlapped = board1.coords.end[orientation] >= board2.coords.start[orientation] && board1.coords.start[orientation] <= board2.coords.start[orientation]
+                let board2Overlapped = board2.coords.end[orientation] >= board1.coords.start[orientation] && board2.coords.start[orientation] <= board1.coords.start[orientation]
 
                 if (board1Overlapped || board2Overlapped) {
                     // merge the boards
                     // find the smallest start and biggest end, make new board
-                    let bothStarts = [board1.startCoords, board2.startCoords];
-                    let bothEnds = [board1.endCoords, board2.endCoords];
+                    let bothStarts = [board1.coords.start, board2.coords.start];
+                    let bothEnds = [board1.coords.end, board2.coords.end];
 
                     bothStarts.sort((a, b) => a[orientation] - b[orientation]);
                     bothEnds.sort((a, b) => a[orientation] - b[orientation]);
@@ -323,58 +225,37 @@ class Case {
 
                 // compare boards in different orientations
                 if (i != j && this.boards[i].orientation != this.boards[j].orientation) {
-                    // check all three intersection types: L, X, T
-                    // check L: check all start and end coords for match
-                    let startsMatch = JSON.stringify(this.boards[i].startCoords) == JSON.stringify(this.boards[j].startCoords)
-                    let endsMatch = JSON.stringify(this.boards[i].endCoords) == JSON.stringify(this.boards[j].endCoords)
-                    let startIEndJ = JSON.stringify(this.boards[i].startCoords) == JSON.stringify(this.boards[j].endCoords)
-                    let endIStartJ = JSON.stringify(this.boards[i].endCoords) == JSON.stringify(this.boards[j].startCoords)
-                    let iJointType = this.boards[i].orientation == "x" ? "pin" : "slot";
-                    let jJointType = this.boards[j].orientation == "x" ? "pin" : "slot";
-
-                    if (startsMatch) {
-                        this.boards[i].poi.startJoint = iJointType;
-                        this.boards[j].poi.startJoint = jJointType;
-                    } else if (endsMatch) {
-                        this.boards[i].poi.endJoint = iJointType;
-                        this.boards[j].poi.endJoint = jJointType;
-                    } else if (startIEndJ) {
-                        this.boards[i].poi.startJoint = iJointType;
-                        this.boards[j].poi.endJoint = jJointType;
-                    } else if (endIStartJ) {
-                        this.boards[i].poi.endJoint = iJointType;
-                        this.boards[j].poi.startJoint = jJointType;
-                    }
-
-                    let checkXWithin = this.boards[i].startCoords.x > this.boards[j].startCoords.x && this.boards[i].startCoords.x < this.boards[j].endCoords.x;
-                    let checkYWithin = this.boards[i].startCoords.y < this.boards[j].startCoords.y && this.boards[i].endCoords.y > this.boards[j].startCoords.y;
+                    // check all three intersection types: X, T
 
                     // check T: terminating coord (i) for match within coords (j) and the same orientation, i boards
+                    let checkXWithin = this.boards[i].coords.start.x > this.boards[j].coords.start.x && this.boards[i].coords.start.x < this.boards[j].coords.end.x;
+                    let checkYWithin = this.boards[i].coords.start.y < this.boards[j].coords.start.y && this.boards[i].coords.end.y > this.boards[j].coords.start.y;
+
                     if (this.boards[i].orientation == "y") {
-                        let startCoordYMatch = this.boards[i].startCoords.y == this.boards[j].startCoords.y;
-                        let endCoordYMatch = this.boards[i].endCoords.y == this.boards[j].startCoords.y;
+                        let startCoordYMatch = this.boards[i].coords.start.y == this.boards[j].coords.start.y;
+                        let endCoordYMatch = this.boards[i].coords.end.y == this.boards[j].coords.start.y;
 
                         if (startCoordYMatch && checkXWithin) {
                             this.boards[i].poi.startJoint = "pin";
-                            let tJointPos = this.boards[i].startCoords.x - this.boards[j].startCoords.x;
+                            let tJointPos = this.boards[i].coords.start.x - this.boards[j].coords.start.x;
                             this.boards[j].poi.tJoints.push(tJointPos);
                         } else if (endCoordYMatch && checkXWithin) {
                             this.boards[i].poi.endJoint = "pin";
-                            let tJointPos = this.boards[i].startCoords.x - this.boards[j].startCoords.x;
+                            let tJointPos = this.boards[i].coords.start.x - this.boards[j].coords.start.x;
                             this.boards[j].poi.tJoints.push(tJointPos);
                         }
                     } else if (this.boards[i].orientation == "x") {
-                        let checkYWithin = this.boards[i].startCoords.y > this.boards[j].startCoords.y && this.boards[i].startCoords.y < this.boards[j].endCoords.y;
-                        let startCoordXMatch = this.boards[i].startCoords.x == this.boards[j].startCoords.x;
-                        let endCoordXMatch = this.boards[i].endCoords.x == this.boards[j].startCoords.x;
+                        let checkYWithin = this.boards[i].coords.start.y > this.boards[j].coords.start.y && this.boards[i].coords.start.y < this.boards[j].coords.end.y;
+                        let startCoordXMatch = this.boards[i].coords.start.x == this.boards[j].coords.start.x;
+                        let endCoordXMatch = this.boards[i].coords.end.x == this.boards[j].coords.start.x;
 
                         if (startCoordXMatch && checkYWithin) {
                             this.boards[i].poi.startJoint = "pin";
-                            let tJointPos = this.boards[i].startCoords.y - this.boards[j].startCoords.y;
+                            let tJointPos = this.boards[i].coords.start.y - this.boards[j].coords.start.y;
                             this.boards[j].poi.tJoints.push(tJointPos);
                         } else if (endCoordXMatch && checkYWithin) {
                             this.boards[i].poi.endJoint = "pin";
-                            let tJointPos = this.boards[i].startCoords.y - this.boards[j].startCoords.y;
+                            let tJointPos = this.boards[i].coords.start.y - this.boards[j].coords.start.y;
                             this.boards[j].poi.tJoints.push(tJointPos);
                         }
                     }
@@ -383,8 +264,8 @@ class Case {
                     if (this.boards[i].orientation == "y") {
                         // check only once since impacts both orientations equally
                         if (checkXWithin && checkYWithin) {
-                            let xJointPosI = Math.abs(this.boards[i].startCoords.y - this.boards[j].startCoords.y);
-                            let xJointPosJ = Math.abs(this.boards[j].startCoords.x - this.boards[i].startCoords.x);
+                            let xJointPosI = Math.abs(this.boards[i].coords.start.y - this.boards[j].coords.start.y);
+                            let xJointPosJ = Math.abs(this.boards[j].coords.start.x - this.boards[i].coords.start.x);
                             this.boards[i].poi.xJoints.push(xJointPosI);
                             this.boards[j].poi.xJoints.push(xJointPosJ);
                         }

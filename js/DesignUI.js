@@ -3,7 +3,7 @@ class DesignUI {
         //== state variables
         this.currentAnneal;
         this.savedAnneals = [];
-        this.currCellLines;
+        this.currCellLines = [];
         this.totalSavedAnneals = 0;
         this.currentViewedAnnealIndex = null;
         // dom elements
@@ -355,6 +355,7 @@ class DesignUI {
             let cellular = new Cellular(this.currentAnneal.finalSolution);
             cellular.growCells();
             cellular.showCellLines();
+            this.currCellLines = cellular.cellLines;
 
             // display cells and terrain (cellular scores)
             if (devMode) {
