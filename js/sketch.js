@@ -1,6 +1,7 @@
-//= setup variables
+//= constants
 const canvasWidth = 650;
 const canvasHeight = 650;
+const SQUARE_SIZE = 0.25; // in inches
 
 //= state variables
 let numGrow = 0; // cell growth amount in dev mode

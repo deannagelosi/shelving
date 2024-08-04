@@ -53,14 +53,14 @@ class ExportUI {
         // todo: add solution name
 
         // Material Thickness Input
-        this.html.materialThicknessGroup = createDiv()
+        this.html.sheetThicknessGroup = createDiv()
             .parent(this.htmlRef.leftSideList)
             .addClass('export-selector');
-        this.html.materialThicknessLabel = createSpan('Material Thickness (in)')
-            .parent(this.html.materialThicknessGroup)
+        this.html.sheetThicknessLabel = createSpan('Material Thickness (in)')
+            .parent(this.html.sheetThicknessGroup)
             .addClass('input-label');
-        this.html.materialThicknessInput = createInput('0.25')
-            .parent(this.html.materialThicknessGroup)
+        this.html.sheetThicknessInput = createInput('0.25')
+            .parent(this.html.sheetThicknessGroup)
             .addClass('input-field')
             .attribute('type', 'number')
             .attribute('min', '0.13')
@@ -141,17 +141,17 @@ class ExportUI {
 
     //== Button handlers
     handleCreate() {
-        const materialThickness = parseFloat(this.html.materialThicknessInput.value());
+        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
         const caseDepth = parseFloat(this.html.caseDepthInput.value());
 
-        if (isNaN(materialThickness) || isNaN(caseDepth)) {
+        if (isNaN(sheetThickness) || isNaN(caseDepth)) {
             console.error("Invalid input for material thickness or case depth");
             return;
         }
 
         clear();
         background(255);
-        
+
         const buffer = designUI.currentAnneal.finalSolution.buffer;
         const yPadding = designUI.currentAnneal.finalSolution.yPadding;
         const xPadding = designUI.currentAnneal.finalSolution.xPadding;
@@ -159,7 +159,7 @@ class ExportUI {
         const cellData = designUI.currCellular;
 
         this.currExport = new Export(cellData, spacing);
-        this.currExport.setMaterialThickness(materialThickness);
+        this.currExport.setSheetThickness(sheetThickness);
         this.currExport.setCaseDepth(caseDepth);
         this.currExport.makeBoards();
 

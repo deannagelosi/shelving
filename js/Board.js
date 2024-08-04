@@ -1,5 +1,5 @@
 class Board {
-    constructor(_firstCoord, _secondCoord, _orientation, _id) {
+    constructor(_id, _firstCoord, _secondCoord, _orientation) {
         // state variables
         this.id = _id;
         this.orientation = _orientation; // horizontal ('x') or vertical ('y')

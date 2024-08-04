@@ -7,23 +7,25 @@ class Export {
         this.xPadding = _spacing.xPadding;
         this.yPadding = _spacing.yPadding;
         this.boards = [];
-        this.materialThickness = 0.25; // default value
-        this.caseDepth = 5; // default value
         this.boardCounter = 0;
 
         // Configuration for laser cutting
-        this.materialWidth = 16.5;
-        this.materialHeight = 11;
-        this.layoutToInch = 2; // layout squares (0.5 inches) to inch conversion
-        this.ppi = 40; // pixel per inch
-        this.gap = 0.25 * this.ppi; // gap between boards
+        this.ppi = 40; // pixel per inch (todo: use in DXF generation)
+        this.gap = 0.5 // inch gap between boards
+        this.sheets = []; // holds what boards are on each sheet and row
 
-        this.sheets = [[0, 0, 0], [0, 0, 0]]; // 3 rows, 2 sheets
+        // User-defined controls (default values)
+        this.caseDepth = 5;
+        this.sheetWidth = 20;
+        this.sheetHeight = 15;
+        this.sheetThickness = 0.25;
+        this.numSheets = 2;
     }
 
-    setMaterialThickness(thickness) {
+    // setters
+    setSheetThickness(thickness) {
         if (typeof thickness === 'number' && thickness > 0) {
-            this.materialThickness = thickness;
+            this.sheetThickness = thickness;
         } else {
             console.error("Invalid material thickness. Must be a positive number.");
         }
@@ -63,7 +65,7 @@ class Export {
         ];
 
         // Sort boards by length
-        this.boards.sort((a, b) => b.getLength() - a.getLength());
+        this.boards.sort((a, b) => b.len - a.len);
 
         // Detect joints
         this.detectJoints();
@@ -106,13 +108,8 @@ class Export {
             endCoord = { x: key, y: end };
         }
 
-        // todo: what is the goal of this code snippet
-        // todo: consider material thickness when calculating board length
-        let length = (end - start + 1) / this.layoutToInch;
-        length += this.materialThickness; // Add material thickness to length
-
         this.boardCounter++;
-        return new Board(startCoord, endCoord, orientation, this.boardCounter);
+        return new Board(this.boardCounter, startCoord, endCoord, orientation);
     }
 
     detectJoints() {
@@ -217,10 +214,10 @@ class Export {
             textSize(20);
             // if board is x oriented, draw text to the right of the start coords
             if (board.orientation === "x") {
-                text(board.id, startX(board.coords.start.x) + 30, startY(board.coords.start.y) + 5);
+                text(board.id, startX(board.coords.start.x) + 20, startY(board.coords.start.y) + 7);
             } else {
                 // if board is y oriented, draw text above the start coords
-                text(board.id, startX(board.coords.start.x) - 5, startY(board.coords.start.y) - 30);
+                text(board.id, startX(board.coords.start.x) - 7, startY(board.coords.start.y) - 20);
             }
         }
 
@@ -279,29 +276,19 @@ class Export {
         }
     }
 
-    findBoardPosition(boardWidth) {
-        for (let sheet = 0; sheet < this.sheets.length; sheet++) {
-            for (let row = 0; row < this.sheets[sheet].length; row++) {
-                let rowOccupiedWidth = this.sheets[sheet][row];
-                let rowRemainingWidth = this.materialWidth - rowOccupiedWidth;
-                let spaceNeeded = boardWidth + (this.gap / this.ppi) * 2;
-
-                if (rowRemainingWidth >= spaceNeeded) {
-                    this.sheets[sheet][row] += boardWidth + (this.gap / this.ppi);
-                    return [sheet, row];
-                }
-            }
-        }
-        console.error("Not enough space on sheets for all boards");
-        return null;
+    
     }
 
     previewCutLayout() {
         clear();
         background(255);
+
+        // find the number of rows that can fit on a sheet
+        this.setupSheets();
+
         // Calculate scaling factor to fit preview in canvas
-        const totalSheetHeight = this.materialHeight * this.sheets.length;
-        const scaleX = canvasWidth / this.materialWidth;
+        const totalSheetHeight = this.sheetHeight * this.sheets.length;
+        const scaleX = canvasWidth / this.sheetWidth;
         const scaleY = canvasHeight / totalSheetHeight;
         const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
 
@@ -309,30 +296,31 @@ class Export {
         push();
         translate(canvasWidth / 2, canvasHeight / 2);
         scale(scaleValue);
-        translate(-this.materialWidth / 2, -totalSheetHeight / 2);
+        translate(-this.sheetWidth / 2, -totalSheetHeight / 2);
 
         // Draw sheets
         for (let i = 0; i < this.sheets.length; i++) {
-            let sheetY = i * this.materialHeight;
+            let sheetY = i * this.sheetHeight;
             noFill();
             stroke(0);
             strokeWeight(1 / scaleValue);
-            rect(0, sheetY, this.materialWidth, this.materialHeight);
+            rect(0, sheetY, this.sheetWidth, this.sheetHeight);
         }
 
         // Draw boards and joints
         for (let board of this.boards) {
-            let [sheet, row] = this.findBoardPosition(board.getLength() / this.layoutToInch);
+            // calculate the true board length
+            let [sheet, row] = this.findBoardPosition(board.len);
             if (sheet === null) continue;
 
-            let boardX = this.sheets[sheet][row] - board.getLength() / this.layoutToInch;
-            let boardY = sheet * this.materialHeight + row * (this.caseDepth + this.gap / this.ppi);
+            let boardX = this.sheets[sheet][row] - board.len;
+            let boardY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
 
             // Draw board
             noFill();
             stroke(0);
             strokeWeight(1 / scaleValue);
-            rect(boardX, boardY, board.getLength() / this.layoutToInch, this.caseDepth);
+            rect(boardX, boardY, board.len, this.caseDepth);
 
             // Draw joints
             this.drawJoints(board, boardX, boardY, scaleValue);
@@ -341,9 +329,36 @@ class Export {
         pop();
     }
 
+    setupSheets() {
+        // find how many rows of boards can fit on a sheet based on depth
+        this.sheets = [];
+        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 2)));
+
+        this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
+    }
+
+    findBoardPosition(_boardLength) {
+        // fit boards efficiently on sheets in each row
+        for (let sheet = 0; sheet < this.sheets.length; sheet++) {
+            for (let row = 0; row < this.sheets[sheet].length; row++) {
+                let rowOccupiedWidth = this.sheets[sheet][row];
+                let rowRemainingWidth = this.sheetWidth - rowOccupiedWidth;
+                let spaceNeeded = _boardLength + (this.gap * 2);
+
+                if (rowRemainingWidth >= spaceNeeded) {
+                    // mark the space as occupied
+                    this.sheets[sheet][row] += _boardLength + this.gap;
+                    return [sheet, row];
+                }
+            }
+        }
+        console.error("Not enough space on sheets for all boards");
+        return [null, null];
+    }
+
     drawJoints(board, boardX, boardY, scaleValue) {
         // todo: dynamically use different pin/slot count based on depth
-        
+
         // todo: find how many pins and slots. 
         // 1 pin means 2 cuts, 1 slot means 1 cut
         // each cut should be at most 1 inch long
@@ -353,41 +368,41 @@ class Export {
         const numJoints = 5; // 2 slots, 3 pins
         const jointHeight = (1 / numJoints) * this.caseDepth;
         noFill();
-        stroke(0);
+        stroke("black");
         strokeWeight(1 / scaleValue);
 
         // Start joint
         if (board.poi.startJoint === "slot") {
-            rect(boardX, boardY + this.caseDepth * 0.2, this.materialThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.6, this.materialThickness, jointHeight);
+            rect(boardX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
+            rect(boardX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
         } else if (board.poi.startJoint === "pin") {
-            rect(boardX, boardY, this.materialThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.4, this.materialThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.8, this.materialThickness, jointHeight);
+            rect(boardX, boardY, this.sheetThickness, jointHeight);
+            rect(boardX, boardY + this.caseDepth * 0.4, this.sheetThickness, jointHeight);
+            rect(boardX, boardY + this.caseDepth * 0.8, this.sheetThickness, jointHeight);
         }
 
         // End joint
-        const endX = boardX + board.getLength() / this.layoutToInch - this.materialThickness;
+        const endX = boardX + board.len - this.sheetThickness;
         if (board.poi.endJoint === "slot") {
-            rect(endX, boardY + this.caseDepth * 0.2, this.materialThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.6, this.materialThickness, jointHeight);
+            rect(endX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
+            rect(endX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
         } else if (board.poi.endJoint === "pin") {
-            rect(endX, boardY, this.materialThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.4, this.materialThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.8, this.materialThickness, jointHeight);
+            rect(endX, boardY, this.sheetThickness, jointHeight);
+            rect(endX, boardY + this.caseDepth * 0.4, this.sheetThickness, jointHeight);
+            rect(endX, boardY + this.caseDepth * 0.8, this.sheetThickness, jointHeight);
         }
 
         // T-joints
         for (let tJoint of board.poi.tJoints) {
-            let tJointX = boardX + tJoint / this.layoutToInch;
-            rect(tJointX, boardY + this.caseDepth * 0.2, this.materialThickness, jointHeight);
-            rect(tJointX, boardY + this.caseDepth * 0.6, this.materialThickness, jointHeight);
+            let tJointX = boardX + tJoint;
+            rect(tJointX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
+            rect(tJointX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
         }
 
         // X-joints
         for (let xJoint of board.poi.xJoints) {
-            let xJointX = boardX + xJoint / this.layoutToInch;
-            rect(xJointX, boardY, this.materialThickness, this.caseDepth / 2);
+            let xJointX = boardX + xJoint;
+            rect(xJointX, boardY, this.sheetThickness, this.caseDepth / 2);
         }
     }
 }
