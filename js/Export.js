@@ -7,8 +7,8 @@ class Export {
         this.xPadding = _spacing.xPadding;
         this.yPadding = _spacing.yPadding;
         this.boards = [];
-        this.materialThickness = 0.11; // default value, can be changed
-        this.caseDepth = 5; // default value, can be changed
+        this.materialThickness = 0.25; // default value
+        this.caseDepth = 5; // default value
         this.boardCounter = 0;
 
         // Configuration for laser cutting
@@ -343,7 +343,13 @@ class Export {
 
     drawJoints(board, boardX, boardY, scaleValue) {
         // todo: dynamically use different pin/slot count based on depth
-        // - example: if the depth is 1.5, how many pins and slots should be used?
+        
+        // todo: find how many pins and slots. 
+        // 1 pin means 2 cuts, 1 slot means 1 cut
+        // each cut should be at most 1 inch long
+        // look at the this.caseDepth and do math to solve this
+        // example: if the depth is 1.5, how many pins and slots should be used?
+
         const numJoints = 5; // 2 slots, 3 pins
         const jointHeight = (1 / numJoints) * this.caseDepth;
         noFill();

@@ -107,7 +107,6 @@ class DesignUI {
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until one saved anneal
             .mousePressed(() => this.handleExport());
 
         // Next button
@@ -266,7 +265,6 @@ class DesignUI {
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
         // get a copy of shapes with only the data needed
@@ -290,7 +288,7 @@ class DesignUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
-            this.html.exportButton.html('Export');
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 

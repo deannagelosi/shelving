@@ -59,7 +59,7 @@ class ExportUI {
         this.html.materialThicknessLabel = createSpan('Material Thickness (in)')
             .parent(this.html.materialThicknessGroup)
             .addClass('input-label');
-        this.html.materialThicknessInput = createInput('0.11')
+        this.html.materialThicknessInput = createInput('0.25')
             .parent(this.html.materialThicknessGroup)
             .addClass('input-field')
             .attribute('type', 'number')
@@ -103,7 +103,7 @@ class ExportUI {
             .attribute('disabled', '')
             .mousePressed(() => this.handleDXFDownload());
 
-        this.html.layoutButton = createButton('Download Layout')
+        this.html.layoutButton = createButton('Display Layout')
             .parent(this.html.buttonList)
             .addClass('button primary-button')
             .attribute('disabled', '')
@@ -163,13 +163,17 @@ class ExportUI {
         this.currExport.setCaseDepth(caseDepth);
         this.currExport.makeBoards();
 
-        this.currExport.previewCaseLayout();
-
-        // this.currExport.previewCutLayout();
+        this.currExport.previewCutLayout();
 
         // // Enable download buttons
         // this.html.dxfButton.removeAttribute('disabled');
-        // this.html.layoutButton.removeAttribute('disabled');
+        this.html.layoutButton.removeAttribute('disabled');
         // this.html.jsonButton.removeAttribute('disabled');
+    }
+
+    handleLayoutDownload() {
+        clear();
+        background(255);
+        this.currExport.previewCaseLayout();
     }
 }

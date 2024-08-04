@@ -85,15 +85,16 @@ function keyPressed() {
             if (designUI.currentAnneal && designUI.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
+            if (devMode) {
+                designUI.html.exportButton.removeClass('hidden');
+            } else {
+                designUI.html.exportButton.addClass('hidden');
+            }
         }
         else if (key === 'g' && devMode) {
             // advance one growth at a time in dev mode
             numGrow++
             designUI.displayResult();
-        }
-        else if (key === '~') {
-            // toggle export button visibility
-            designUI.html.exportButton.toggleClass('hidden');
         }
     }
     // Export screen key commands
