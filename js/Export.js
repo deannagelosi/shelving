@@ -6,6 +6,8 @@ class Export {
         this.buffer = _spacing.buffer;
         this.xPadding = _spacing.xPadding;
         this.yPadding = _spacing.yPadding;
+        this.boards = [];
+        this.boardCounter = 0;
 
         // User-defined config
         this.caseDepth = _config.caseDepth;
@@ -13,18 +15,26 @@ class Export {
         this.sheetWidth = _config.sheetWidth;
         this.sheetHeight = _config.sheetHeight;
         this.numSheets = _config.numSheets;
-
-        this.boards = [];
-        this.boardCounter = 0;
+        // Joint configuration
+        this.numPinSlots = _config.numPinSlots || 2;
+        this.jointConfig = {
+            numSlotCuts: this.numPinSlots,
+            numPinCuts: this.numPinSlots + 1,
+            totalCuts: (this.numPinSlots * 2) + 1
+        };
 
         // Configuration for laser cutting
-        this.ppi = 40; // pixel per inch (todo: use in DXF generation)
-        this.gap = 0.75 // inch gap between boards
+        this.gap = 0.7 // inch gap between boards
+        this.fontSize = 0.25; // inch font size for etching
+        this.fontOffset = 0.15;
+        // this.kerf = 0.02; // kerf for vertical cuts in the joints
+        this.kerf = 0; // kerf for vertical cuts in the joints
         this.sheets = []; // holds what boards are on each sheet and row
+        this.totalHeight; // total height of all sheets
 
         // state variables
-        this.sheetOutline = []; // sheet outline rect
-        this.cutList = []; // rectangle cut list
+        this.sheetOutline = []; // rectangles for sheets
+        this.cutList = []; // rectangles for boards and joints
         this.etchList = []; // labels etching list
     }
 
@@ -265,7 +275,6 @@ class Export {
         }
     }
 
-
     prepLayout() {
         // populated the cutList and etchList arrays
 
@@ -291,10 +300,72 @@ class Export {
             this.cutList.push({ x: boardStartX, y: boardStartY, w: board.len, h: this.caseDepth });
 
             // Draw joints
-            this.drawJoints(board, boardStartX, boardStartY);
+            this.prepJoints(board, boardStartX, boardStartY);
 
             // Draw board id
-            this.etchList.push({ text: board.id, x: boardStartX, y: boardStartY - 0.2 });
+            this.etchList.push({ text: board.id, x: boardStartX, y: boardStartY - this.fontOffset });
+        }
+    }
+
+    prepJoints(board, boardStartX, boardStartY) {
+        // add all the joints to the cut list
+        // - 1 pin needs 2 cuts, 1 slot needs 1 cut
+        // - 2 pins needs 3 cuts, 2 slots needs 2 cuts
+        const numJoints = this.jointConfig.totalCuts;
+        const cutoutRatio = (1 / numJoints);
+        const jointHeight = cutoutRatio * this.caseDepth;
+
+        // Start joint
+        if (board.poi.startJoint === "slot") {
+            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
+                let ratio = i === 0 ? 1 : 3;
+                let x = boardStartX;
+                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
+                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
+            }
+        } else if (board.poi.startJoint === "pin") {
+            for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
+                let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
+                let x = boardStartX;
+                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
+                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
+            }
+        }
+        // End joint
+        if (board.poi.startJoint === "slot") {
+            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
+                let ratio = i === 0 ? 1 : 3;
+                let x = boardStartX + board.len - this.sheetThickness;
+                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
+                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
+            }
+        } else if (board.poi.startJoint === "pin") {
+            for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
+                let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
+                let x = boardStartX + board.len - this.sheetThickness;
+                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
+                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
+            }
+        }
+        // T-joints
+        for (let tJoint of board.poi.tJoints) {
+            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
+                let ratio = i === 0 ? 1 : 3;
+                let x = boardStartX + tJoint;
+                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
+                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
+            }
+        }
+        // X-joints
+        for (let xJoint of board.poi.xJoints) {
+            let xJointX = boardStartX + xJoint;
+            if (board.orientation == "y") {
+                // cut from top of board
+                this.cutList.push({ x: xJointX, y: boardStartY, w: this.sheetThickness, h: this.caseDepth / 2 });
+            } else {
+                // cut from bottom of board
+                this.cutList.push({ x: xJointX, y: (boardStartY + (this.caseDepth / 2)), w: this.sheetThickness, h: this.caseDepth / 2 });
+            }
         }
     }
 
@@ -302,11 +373,11 @@ class Export {
         clear();
         background(255);
 
-         // Calculate scaling factor to fit preview in canvas
-         const totalSheetHeight = this.sheetHeight * this.sheets.length;
-         const scaleX = canvasWidth / this.sheetWidth;
-         const scaleY = canvasHeight / totalSheetHeight;
-         const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
+        // Calculate scaling factor to fit preview in canvas
+        const totalSheetHeight = this.sheetHeight * this.sheets.length;
+        const scaleX = canvasWidth / this.sheetWidth;
+        const scaleY = canvasHeight / totalSheetHeight;
+        const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
 
         // Set up the drawing environment
         push();
@@ -325,7 +396,7 @@ class Export {
         for (let cut of this.cutList) {
             rect(cut.x, cut.y, cut.w, cut.h);
         }
-        // Draw the etches
+        // Draw the label etches
         fill(0);
         noStroke();
         textSize(7 / scaleValue);
@@ -336,12 +407,65 @@ class Export {
         pop();
     }
 
+    generateDXF() {
+        // Generates a DXF file for laser cutting
+        //  - Three separate layers:
+        //    - 'Sheet Outlines' for sheet boundaries(this.sheetOutline)
+        //    - 'Cuts' for board and joint cutouts (this.cutList)
+        //    - 'Labels' for board labels(this.etchList)
+        //  - Kerf adjustment is subtracted from each rectangle cut width
+        //  - 1 pixel = 1 inch scale
+        //  - Flips y-axis to correct p5.js coordinates to DXF coordinates
+        const dxf = new DXFWriter();
+        dxf.setUnits('Inches');
+        // Create layers
+        dxf.addLayer('Sheet Outlines', DXFWriter.ACI.GREEN, 'CONTINUOUS');
+        dxf.addLayer('Cuts', DXFWriter.ACI.RED, 'CONTINUOUS');
+        dxf.addLayer('Labels', DXFWriter.ACI.BLUE, 'CONTINUOUS');
+        // Add elements
+        this.populateOutlineLayer(dxf);
+        this.populateCutLayer(dxf);
+        this.populateEtchLayer(dxf);
+        // return dxf string
+        return dxf.toDxfString();
+    }
+
+    populateOutlineLayer(dxf) {
+        dxf.setActiveLayer('Sheet Outlines');
+        for (let sheet of this.sheetOutline) {
+            const y1 = this.totalHeight - sheet.y;
+            const y2 = this.totalHeight - (sheet.y + sheet.h);
+            dxf.drawRect(sheet.x, y1, sheet.x + sheet.w, y2); // x, y, width, height
+        }
+    }
+
+    populateCutLayer(dxf) {
+        dxf.setActiveLayer('Cuts');
+        for (let cut of this.cutList) {
+            const y1 = this.totalHeight - cut.y;
+            const y2 = this.totalHeight - (cut.y + cut.h);
+            dxf.drawRect(cut.x, y1, cut.x + cut.w - this.kerf, y2); // x, y, width, height
+        }
+    }
+
+    populateEtchLayer(dxf) {
+        dxf.setActiveLayer('Labels');
+        for (let label of this.etchList) {
+            const text = String(label.text);
+            const x = Number(label.x);
+            const y = this.totalHeight - Number(label.y);
+
+            dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+        }
+    }
+
     setupSheets() {
         // find how many rows of boards can fit on a sheet based on depth
         this.sheets = [];
-        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 2)));
+        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap)));
 
         this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
+        this.totalHeight = this.sheetHeight * this.numSheets;
     }
 
     findBoardPosition(_boardLength) {
@@ -361,60 +485,5 @@ class Export {
         }
         console.error("Not enough space on sheets for all boards");
         return [null, null];
-    }
-
-    drawJoints(board, boardStartX, boardStartY) {
-        // todo: dynamically use different pin/slot count based on depth
-
-        // todo: find how many pins and slots. 
-        // 1 pin means 2 cuts, 1 slot means 1 cut
-        // each cut should be at most 1 inch long
-        // look at the this.caseDepth and do math to solve this
-        // example: if the depth is 1.5, how many pins and slots should be used?
-
-        const numJoints = 5; // 2 slots, 3 pins
-        const cutoutRatio = (1 / numJoints);
-        const jointHeight = cutoutRatio * this.caseDepth;
-
-        // Start joint
-        if (board.poi.startJoint === "slot") {
-            this.cutList.push({ x: boardStartX, y: boardStartY + this.caseDepth * (1 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: boardStartX, y: boardStartY + this.caseDepth * (3 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-        } else if (board.poi.startJoint === "pin") {
-            this.cutList.push({ x: boardStartX, y: boardStartY + this.caseDepth * (0 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: boardStartX, y: boardStartY + this.caseDepth * (2 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: boardStartX, y: boardStartY + this.caseDepth * (4 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-        }
-
-        // End joint
-        const endX = boardStartX + board.len - this.sheetThickness;
-        if (board.poi.endJoint === "slot") {
-            this.cutList.push({ x: endX, y: boardStartY + this.caseDepth * (1 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: endX, y: boardStartY + this.caseDepth * (3 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-
-        } else if (board.poi.endJoint === "pin") {
-            this.cutList.push({ x: endX, y: boardStartY + this.caseDepth * (0 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: endX, y: boardStartY + this.caseDepth * (2 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: endX, y: boardStartY + this.caseDepth * (4 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-        }
-
-        // T-joints
-        for (let tJoint of board.poi.tJoints) {
-            let tJointX = boardStartX + tJoint;
-            this.cutList.push({ x: tJointX, y: boardStartY + this.caseDepth * (1 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-            this.cutList.push({ x: tJointX, y: boardStartY + this.caseDepth * (3 * cutoutRatio), w: this.sheetThickness, h: jointHeight });
-        }
-
-        // X-joints
-        for (let xJoint of board.poi.xJoints) {
-            let xJointX = boardStartX + xJoint;
-            if (board.orientation == "y") {
-                // cut from top of board
-                this.cutList.push({ x: xJointX, y: boardStartY, w: this.sheetThickness, h: this.caseDepth / 2 });
-            } else {
-                // cut from bottom of board
-                this.cutList.push({ x: xJointX, y: (boardStartY + (this.caseDepth / 2)), w: this.sheetThickness, h: this.caseDepth / 2 });
-            }
-        }
     }
 }

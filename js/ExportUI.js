@@ -82,6 +82,19 @@ class ExportUI {
             .attribute('max', '10')
             .attribute('step', '0.5');
 
+        // Number of Pin/Slots Selector
+        this.html.pinSlotGroup = createDiv()
+            .parent(this.htmlRef.leftSideList)
+            .addClass('export-selector');
+        this.html.pinSlotLabel = createSpan('# of pin/slots')
+            .parent(this.html.pinSlotGroup)
+            .addClass('input-label');
+        this.html.pinSlotSelect = createSelect()
+            .parent(this.html.pinSlotGroup)
+            .addClass('input-field');
+        this.html.pinSlotSelect.option('2', '2');
+        this.html.pinSlotSelect.option('1', '1');
+
         // Sheet Dimensions Input
         this.html.sheetDimensionsGroup = createDiv()
             .parent(this.htmlRef.leftSideList)
@@ -181,8 +194,9 @@ class ExportUI {
         const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
         const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
         const numSheets = parseInt(this.html.numSheetsInput.value());
+        const numPinSlots = parseInt(this.html.pinSlotSelect.value());
 
-        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets)) {
+        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets) || isNaN(numPinSlots)) {
             console.error("Invalid input for one or more fields");
             return;
         }
@@ -201,6 +215,7 @@ class ExportUI {
             sheetWidth,
             sheetHeight,
             numSheets,
+            numPinSlots,
         };
 
         this.currExport = new Export(cellData, spacing, config);
@@ -210,7 +225,7 @@ class ExportUI {
         this.currExport.previewLayout();
 
         // // Enable download buttons
-        // this.html.dxfButton.removeAttribute('disabled');
+        this.html.dxfButton.removeAttribute('disabled');
         this.html.layoutButton.removeAttribute('disabled');
         // this.html.jsonButton.removeAttribute('disabled');
     }
@@ -219,5 +234,19 @@ class ExportUI {
         clear();
         background(255);
         this.currExport.previewCaseLayout();
+    }
+
+    handleDXFDownload() {
+        const dxfString = this.currExport.generateDXF();
+        // save string to file
+        const blob = new Blob([dxfString], { type: 'application/dxf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'shelving_design.dxf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 }
