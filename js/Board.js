@@ -1,6 +1,7 @@
 class Board {
-    constructor(_firstCoord, _secondCoord, _orientation) {
+    constructor(_firstCoord, _secondCoord, _orientation, _id) {
         // state variables
+        this.id = _id;
         this.orientation = _orientation; // horizontal ('x') or vertical ('y')
         this.coords = this.setBoardDirection(_firstCoord, _secondCoord, this.orientation);
         this.len = this.getLength();
@@ -12,9 +13,6 @@ class Board {
             tJoints: [], // array of x-values for T-joint holes 
             xJoints: [],
         }
-
-        // flags
-        this.merged = false; // if it has merged with another board
     }
 
     getLength() {

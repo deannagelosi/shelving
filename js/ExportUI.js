@@ -141,8 +141,6 @@ class ExportUI {
 
     //== Button handlers
     handleCreate() {
-        console.log('Creating export files');
-
         const materialThickness = parseFloat(this.html.materialThicknessInput.value());
         const caseDepth = parseFloat(this.html.caseDepthInput.value());
 
@@ -151,13 +149,23 @@ class ExportUI {
             return;
         }
 
-        let cellLines = designUI.currCellLines;
+        clear();
+        background(255);
+        
+        const buffer = designUI.currentAnneal.finalSolution.buffer;
+        const yPadding = designUI.currentAnneal.finalSolution.yPadding;
+        const xPadding = designUI.currentAnneal.finalSolution.xPadding;
+        const spacing = { buffer, yPadding, xPadding }
+        const cellData = designUI.currCellular;
 
-        this.currExport = new Export(cellLines);
+        this.currExport = new Export(cellData, spacing);
         this.currExport.setMaterialThickness(materialThickness);
         this.currExport.setCaseDepth(caseDepth);
         this.currExport.makeBoards();
-        this.currExport.displayPreview();
+
+        this.currExport.previewCaseLayout();
+
+        // this.currExport.previewCutLayout();
 
         // // Enable download buttons
         // this.html.dxfButton.removeAttribute('disabled');

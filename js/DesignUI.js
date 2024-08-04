@@ -3,7 +3,7 @@ class DesignUI {
         //== state variables
         this.currentAnneal;
         this.savedAnneals = [];
-        this.currCellLines = [];
+        this.currCellular;
         this.totalSavedAnneals = 0;
         this.currentViewedAnnealIndex = null;
         // dom elements
@@ -352,15 +352,14 @@ class DesignUI {
             this.currentAnneal.finalSolution.showLayout();
 
             // setup case for cellular and boards
-            let cellular = new Cellular(this.currentAnneal.finalSolution);
-            cellular.growCells();
-            cellular.showCellLines();
-            this.currCellLines = cellular.cellLines;
+            this.currCellular = new Cellular(this.currentAnneal.finalSolution);
+            this.currCellular.growCells();
+            this.currCellular.showCellLines();
 
             // display cells and terrain (cellular scores)
             if (devMode) {
-                cellular.showTerrain();
-                cellular.showCells();
+                this.currCellular.showTerrain();
+                this.currCellular.showCells();
             }
         }
     }

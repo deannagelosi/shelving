@@ -52,6 +52,7 @@ function draw() {
             noLoop();
             break;
         case ScreenState.EXPORT:
+            devMode = false;
             inputUI.hide();
             designUI.hide();
             exportUI.show();
@@ -95,9 +96,14 @@ function keyPressed() {
             designUI.html.exportButton.toggleClass('hidden');
         }
     }
-    // // Export screen key commands
-    // else if (currentScreen == ScreenState.EXPORT) {
-    // }
+    // Export screen key commands
+    else if (currentScreen == ScreenState.EXPORT) {
+        if (key === 'd') {
+            // toggle dev mode on and off
+            devMode = !devMode;
+            exportUI.handleCreate(); // todo: switch to the create layout image function
+        }
+    }
 }
 
 function mousePressed() {

@@ -557,7 +557,7 @@ class Cellular {
         }
     }
 
-    showCellLines() {
+    showCellLines(_color = null) {
         // loop through the cellSpace grid and add any neighboring cells of the same strain as pairs
         // use these pairs to draw all of the lines. store pairs in a Set to de-duplicate pairs.
         // set for deduplicating lines as they are found
@@ -608,9 +608,10 @@ class Cellular {
         }
 
         // draw all unique lines
+        strokeWeight(7);
         for (let lineKey of this.cellLines) {
             const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
-
+            
             // calculate canvas coordinates
             let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
             let startY = ((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize);
@@ -624,8 +625,14 @@ class Cellular {
             } else {
                 lineColor = "rgb(175, 141, 117)";
             }
+
+            if (_color) {
+                // use override color if provided
+                lineColor = _color;
+                strokeWeight(2);
+            }
+
             stroke(lineColor);
-            strokeWeight(7);  // adjust line thickness as needed
 
             // draw the line
             line(startX, startY, endX, endY);

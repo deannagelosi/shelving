@@ -1,16 +1,22 @@
 class Export {
-    constructor(cellLines) {
-        this.cellLines = cellLines;
+    constructor(_cellData, _spacing) {
+        this.cellData = _cellData;
+        this.cellLines = this.cellData.cellLines;
+        this.squareSize = this.cellData.squareSize;
+        this.buffer = _spacing.buffer;
+        this.xPadding = _spacing.xPadding;
+        this.yPadding = _spacing.yPadding;
         this.boards = [];
         this.materialThickness = 0.11; // default value, can be changed
         this.caseDepth = 5; // default value, can be changed
+        this.boardCounter = 0;
 
         // Configuration for laser cutting
         this.materialWidth = 16.5;
         this.materialHeight = 11;
         this.layoutToInch = 2; // layout squares (0.5 inches) to inch conversion
         this.ppi = 40; // pixel per inch
-        this.buffer = 0.25 * this.ppi; // gap between boards
+        this.gap = 0.25 * this.ppi; // gap between boards
 
         this.sheets = [[0, 0, 0], [0, 0, 0]]; // 3 rows, 2 sheets
     }
@@ -100,91 +106,188 @@ class Export {
             endCoord = { x: key, y: end };
         }
 
+        // todo: what is the goal of this code snippet
         // todo: consider material thickness when calculating board length
         let length = (end - start + 1) / this.layoutToInch;
         length += this.materialThickness; // Add material thickness to length
 
-        return new Board(startCoord, endCoord, orientation);
+        this.boardCounter++;
+        return new Board(startCoord, endCoord, orientation, this.boardCounter);
     }
 
     detectJoints() {
         for (let i = 0; i < this.boards.length; i++) {
-            for (let j = 0; j < this.boards.length; j++) {
-                if (i !== j && this.boards[i].orientation !== this.boards[j].orientation) {
-                    this.checkJoints(this.boards[i], this.boards[j]);
+            for (let j = i + 1; j < this.boards.length; j++) {
+                if (this.boards[i].orientation !== this.boards[j].orientation) {
+                    this.checkIntersection(this.boards[i], this.boards[j]);
                 }
             }
         }
     }
 
-    checkJoints(board1, board2) {
-        // Check for T-joints and end joints
+    checkIntersection(board1, board2) {
         if (board1.orientation === "x") {
-            this.checkHorizontalJoints(board1, board2);
+            this.checkHorizontalVerticalIntersection(board1, board2);
         } else {
-            this.checkVerticalJoints(board1, board2);
+            this.checkHorizontalVerticalIntersection(board2, board1);
         }
-
-        // Check for X-joints
-        this.checkXJoints(board1, board2);
     }
 
-    checkHorizontalJoints(hBoard, vBoard) {
-        if (hBoard.coords.start.y === vBoard.coords.start.y || hBoard.coords.start.y === vBoard.coords.end.y) {
-            if (vBoard.coords.start.x >= hBoard.coords.start.x && vBoard.coords.start.x <= hBoard.coords.end.x) {
-                let jointPos = vBoard.coords.start.x - hBoard.coords.start.x;
-                if (vBoard.coords.start.x === hBoard.coords.start.x) {
-                    hBoard.poi.startJoint = "pin";
-                } else if (vBoard.coords.start.x === hBoard.coords.end.x) {
-                    hBoard.poi.endJoint = "pin";
-                } else {
-                    hBoard.poi.tJoints.push(jointPos);
+    checkHorizontalVerticalIntersection(hBoard, vBoard) {
+        // Check for T-joint: horizontal board end intersecting vertical board
+        if (hBoard.coords.start.x === vBoard.coords.start.x &&
+            hBoard.coords.start.y > vBoard.coords.start.y &&
+            hBoard.coords.start.y < vBoard.coords.end.y) {
+            this.markTJoint(hBoard, vBoard, 'start');
+        }
+        if (hBoard.coords.end.x === vBoard.coords.start.x &&
+            hBoard.coords.start.y > vBoard.coords.start.y &&
+            hBoard.coords.start.y < vBoard.coords.end.y) {
+            this.markTJoint(hBoard, vBoard, 'end');
+        }
+
+        // Check for T-joint: vertical board end intersecting horizontal board
+        if (vBoard.coords.start.y === hBoard.coords.start.y &&
+            vBoard.coords.start.x > hBoard.coords.start.x &&
+            vBoard.coords.start.x < hBoard.coords.end.x) {
+            this.markTJoint(vBoard, hBoard, 'start');
+        }
+        if (vBoard.coords.end.y === hBoard.coords.start.y &&
+            vBoard.coords.start.x > hBoard.coords.start.x &&
+            vBoard.coords.start.x < hBoard.coords.end.x) {
+            this.markTJoint(vBoard, hBoard, 'end');
+        }
+
+        // Check for X-joint
+        if (vBoard.coords.start.x > hBoard.coords.start.x &&
+            vBoard.coords.start.x < hBoard.coords.end.x &&
+            hBoard.coords.start.y > vBoard.coords.start.y &&
+            hBoard.coords.start.y < vBoard.coords.end.y) {
+            this.markXJoint(hBoard, vBoard);
+        }
+    }
+
+    markTJoint(intersectingBoard, intersectedBoard, endType) {
+        // Change the end of the intersecting board to a pin
+        intersectingBoard.poi[endType + 'Joint'] = 'pin';
+
+        // Mark the T-joint on the intersected board
+        let jointPos;
+        if (intersectedBoard.orientation === 'x') {
+            jointPos = intersectingBoard.coords[endType].x - intersectedBoard.coords.start.x;
+        } else {
+            jointPos = intersectingBoard.coords[endType].y - intersectedBoard.coords.start.y;
+        }
+        intersectedBoard.poi.tJoints.push(jointPos);
+    }
+
+    markXJoint(hBoard, vBoard) {
+        let hJointPos = vBoard.coords.start.x - hBoard.coords.start.x;
+        let vJointPos = hBoard.coords.start.y - vBoard.coords.start.y;
+
+        hBoard.poi.xJoints.push(hJointPos);
+        vBoard.poi.xJoints.push(vJointPos);
+    }
+
+    previewCaseLayout() {
+        // confirm boards created correctly by displaying them in correct orientation
+        const startX = (x1) => ((x1 * this.squareSize) + this.buffer + this.xPadding);
+        const startY = (y1) => (((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize));
+        const endX = (x2) => ((x2 * this.squareSize) + this.buffer + this.xPadding);
+        const endY = (y2) => (((canvasHeight - this.yPadding) - this.buffer) - (y2 * this.squareSize));
+
+        // draw the cell line segments
+        if (devMode) this.cellData.showCellLines("red");
+
+        // draw the boards
+        strokeWeight(7);
+        for (const board of this.boards) {
+            if (devMode) stroke("rgba(175, 141, 117, 0.5)");
+            if (!devMode) stroke("rgb(175, 141, 117)");
+            line(
+                startX(board.coords.start.x),
+                startY(board.coords.start.y),
+                endX(board.coords.end.x),
+                endY(board.coords.end.y)
+            );
+
+            // put text with the board id at the board start coords
+            fill("black");
+            stroke("white");
+            textSize(20);
+            // if board is x oriented, draw text to the right of the start coords
+            if (board.orientation === "x") {
+                text(board.id, startX(board.coords.start.x) + 30, startY(board.coords.start.y) + 5);
+            } else {
+                // if board is y oriented, draw text above the start coords
+                text(board.id, startX(board.coords.start.x) - 5, startY(board.coords.start.y) - 30);
+            }
+        }
+
+        if (devMode) {
+            // draw the end joints by type
+            noStroke();
+            // slot ends
+            for (const board of this.boards) {
+                fill("salmon");
+                if (board.poi.startJoint === "slot") {
+                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 35);
                 }
-                vBoard.poi.tJoints.push(hBoard.coords.start.y - vBoard.coords.start.y);
-            }
-        }
-    }
-
-    checkVerticalJoints(vBoard, hBoard) {
-        if (vBoard.coords.start.x === hBoard.coords.start.x || vBoard.coords.start.x === hBoard.coords.end.x) {
-            if (hBoard.coords.start.y >= vBoard.coords.start.y && hBoard.coords.start.y <= vBoard.coords.end.y) {
-                let jointPos = hBoard.coords.start.y - vBoard.coords.start.y;
-                if (hBoard.coords.start.y === vBoard.coords.start.y) {
-                    vBoard.poi.startJoint = "pin";
-                } else if (hBoard.coords.start.y === vBoard.coords.end.y) {
-                    vBoard.poi.endJoint = "pin";
-                } else {
-                    vBoard.poi.tJoints.push(jointPos);
+                if (board.poi.endJoint === "slot") {
+                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 35);
                 }
-                hBoard.poi.tJoints.push(vBoard.coords.start.x - hBoard.coords.start.x);
             }
+            // pin ends
+            for (const board of this.boards) {
+                fill("pink");
+                if (board.poi.startJoint === "pin") {
+                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 25);
+                }
+                if (board.poi.endJoint === "pin") {
+                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 25);
+                }
+            }
+            // t-joints
+            for (const board of this.boards) {
+                for (const tJoint of board.poi.tJoints) {
+                    fill("teal");
+                    if (board.orientation === "x") {
+                        // add t-joint on x-axis from start coord
+                        ellipse(startX(board.coords.start.x) + (tJoint * this.squareSize), startY(board.coords.start.y), 15);
+                    } else {
+                        // subtract t-joint on y-axis from start coord
+                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (tJoint * this.squareSize), 15);
+                    }
+                }
+            }
+            // x-joints
+            for (const board of this.boards) {
+                fill("white");
+                stroke("black");
+                strokeWeight(0.5);
+                for (const xJoint of board.poi.xJoints) {
+                    if (board.orientation === "x") {
+                        // add x-joint on x-axis from start coord
+                        ellipse(startX(board.coords.start.x) + (xJoint * this.squareSize), startY(board.coords.start.y), 10);
+                    } else {
+                        // add x-joint on y-axis from start coord
+                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (xJoint * this.squareSize), 10);
+                    }
+                }
+            }
+
         }
     }
-
-    checkXJoints(board1, board2) {
-        if (board1.orientation === "x") {
-            let xStart = Math.max(board1.coords.start.x, board2.coords.start.x);
-            let xEnd = Math.min(board1.coords.end.x, board2.coords.end.x);
-            let yStart = Math.max(board1.coords.start.y, board2.coords.start.y);
-            let yEnd = Math.min(board1.coords.end.y, board2.coords.end.y);
-
-            if (xStart < xEnd && yStart < yEnd) {
-                board1.poi.xJoints.push(xStart - board1.coords.start.x);
-                board2.poi.xJoints.push(yStart - board2.coords.start.y);
-            }
-        }
-    }
-
 
     findBoardPosition(boardWidth) {
         for (let sheet = 0; sheet < this.sheets.length; sheet++) {
             for (let row = 0; row < this.sheets[sheet].length; row++) {
                 let rowOccupiedWidth = this.sheets[sheet][row];
                 let rowRemainingWidth = this.materialWidth - rowOccupiedWidth;
-                let spaceNeeded = boardWidth + (this.buffer / this.ppi) * 2;
+                let spaceNeeded = boardWidth + (this.gap / this.ppi) * 2;
 
                 if (rowRemainingWidth >= spaceNeeded) {
-                    this.sheets[sheet][row] += boardWidth + (this.buffer / this.ppi);
+                    this.sheets[sheet][row] += boardWidth + (this.gap / this.ppi);
                     return [sheet, row];
                 }
             }
@@ -193,7 +296,7 @@ class Export {
         return null;
     }
 
-    displayPreview() {
+    previewCutLayout() {
         clear();
         background(255);
         // Calculate scaling factor to fit preview in canvas
@@ -223,7 +326,7 @@ class Export {
             if (sheet === null) continue;
 
             let boardX = this.sheets[sheet][row] - board.getLength() / this.layoutToInch;
-            let boardY = sheet * this.materialHeight + row * (this.caseDepth + this.buffer / this.ppi);
+            let boardY = sheet * this.materialHeight + row * (this.caseDepth + this.gap / this.ppi);
 
             // Draw board
             noFill();
