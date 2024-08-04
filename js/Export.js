@@ -1,11 +1,19 @@
 class Export {
-    constructor(_cellData, _spacing) {
+    constructor(_cellData, _spacing, _config) {
         this.cellData = _cellData;
         this.cellLines = this.cellData.cellLines;
         this.squareSize = this.cellData.squareSize;
         this.buffer = _spacing.buffer;
         this.xPadding = _spacing.xPadding;
         this.yPadding = _spacing.yPadding;
+
+        // User-defined config
+        this.caseDepth = _config.caseDepth;
+        this.sheetThickness = _config.sheetThickness;
+        this.sheetWidth = _config.sheetWidth;
+        this.sheetHeight = _config.sheetHeight;
+        this.numSheets = _config.numSheets;
+
         this.boards = [];
         this.boardCounter = 0;
 
@@ -13,30 +21,6 @@ class Export {
         this.ppi = 40; // pixel per inch (todo: use in DXF generation)
         this.gap = 0.5 // inch gap between boards
         this.sheets = []; // holds what boards are on each sheet and row
-
-        // User-defined controls (default values)
-        this.caseDepth = 5;
-        this.sheetWidth = 20;
-        this.sheetHeight = 15;
-        this.sheetThickness = 0.25;
-        this.numSheets = 2;
-    }
-
-    // setters
-    setSheetThickness(thickness) {
-        if (typeof thickness === 'number' && thickness > 0) {
-            this.sheetThickness = thickness;
-        } else {
-            console.error("Invalid material thickness. Must be a positive number.");
-        }
-    }
-
-    setCaseDepth(depth) {
-        if (typeof depth === 'number' && depth > 0) {
-            this.caseDepth = depth;
-        } else {
-            console.error("Invalid case depth. Must be a positive number.");
-        }
     }
 
     makeBoards() {

@@ -81,6 +81,41 @@ class ExportUI {
             .attribute('min', '1')
             .attribute('max', '10')
             .attribute('step', '0.5');
+
+        // Sheet Dimensions Input
+        this.html.sheetDimensionsGroup = createDiv()
+            .parent(this.htmlRef.leftSideList)
+            .addClass('export-selector');
+        this.html.sheetDimensionsLabel = createSpan('Sheet Dimensions (width x height)')
+            .parent(this.html.sheetDimensionsGroup)
+            .addClass('input-label');
+        this.html.sheetWidthInput = createInput('40')
+            .parent(this.html.sheetDimensionsGroup)
+            .addClass('input-field')
+            .attribute('type', 'number')
+            .attribute('min', '1')
+            .attribute('step', '1')
+        this.html.sheetHeightInput = createInput('28')
+            .parent(this.html.sheetDimensionsGroup)
+            .addClass('input-field')
+            .attribute('type', 'number')
+            .attribute('min', '1')
+            .attribute('step', '1')
+
+        // Number of Sheets Input
+        this.html.numSheetsGroup = createDiv()
+            .parent(this.htmlRef.leftSideList)
+            .addClass('export-selector');
+        this.html.numSheetsLabel = createSpan('Number of Sheets')
+            .parent(this.html.numSheetsGroup)
+            .addClass('input-label');
+        this.html.numSheetsInput = createInput('2')
+            .parent(this.html.numSheetsGroup)
+            .addClass('input-field')
+            .attribute('type', 'number')
+            .attribute('min', '1')
+            .attribute('max', '10')
+            .attribute('step', '1');
     }
 
     initBodyUI() {
@@ -141,26 +176,35 @@ class ExportUI {
 
     //== Button handlers
     handleCreate() {
-        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
         const caseDepth = parseFloat(this.html.caseDepthInput.value());
+        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
+        const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
+        const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
+        const numSheets = parseInt(this.html.numSheetsInput.value());
 
-        if (isNaN(sheetThickness) || isNaN(caseDepth)) {
-            console.error("Invalid input for material thickness or case depth");
+        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets)) {
+            console.error("Invalid input for one or more fields");
             return;
         }
 
         clear();
         background(255);
 
+        const cellData = designUI.currCellular;
         const buffer = designUI.currentAnneal.finalSolution.buffer;
         const yPadding = designUI.currentAnneal.finalSolution.yPadding;
         const xPadding = designUI.currentAnneal.finalSolution.xPadding;
         const spacing = { buffer, yPadding, xPadding }
-        const cellData = designUI.currCellular;
+        const config = {
+            caseDepth,
+            sheetThickness,
+            sheetWidth,
+            sheetHeight,
+            numSheets,
+        };
+        
 
-        this.currExport = new Export(cellData, spacing);
-        this.currExport.setSheetThickness(sheetThickness);
-        this.currExport.setCaseDepth(caseDepth);
+        this.currExport = new Export(cellData, spacing, config);
         this.currExport.makeBoards();
 
         this.currExport.previewCutLayout();
