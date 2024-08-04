@@ -1,20 +1,26 @@
-//= setup variables
+//= constants
 const canvasWidth = 650;
 const canvasHeight = 650;
+const SQUARE_SIZE = 0.25; // in inches
 
 //= state variables
 let numGrow = 0; // cell growth amount in dev mode
 
-//= class instances
+//= UI class instances
 let inputUI;
 let designUI;
-let newCase;
+let exportUI;
+
+//= screens enum
+const ScreenState = {
+    INPUT: 'input',
+    DESIGN: 'design',
+    EXPORT: 'export'
+};
 
 //= flags
-let isInputScreen; // switches screen (inout/design)
-// diagnostic toggles
+let detailView = false;
 let devMode = false;
-let editMode = false;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -23,65 +29,99 @@ function setup() {
     // setup ui elements for both screens
     inputUI = new InputUI();
     designUI = new DesignUI();
+    exportUI = new ExportUI();
 
     // start on input screen
-    isInputScreen = true;
+    changeScreen(ScreenState.INPUT);
 }
 
 function draw() {
-    if (isInputScreen) {
-        // display the input screen 
-        inputUI.show();
+    // check which screen to display
+    switch (currentScreen) {
+        case ScreenState.INPUT:
+            designUI.hide();
+            exportUI.hide();
+            inputUI.show();
 
-        noLoop();
-    } else {
-        // switch to annealing screen
-        inputUI.hide();
-        designUI.show();
+            noLoop();
+            break;
+        case ScreenState.DESIGN:
+            inputUI.hide();
+            exportUI.hide();
+            designUI.show();
 
-        // setup the design grid
-        designUI.drawBlankGrid();
+            noLoop();
+            break;
+        case ScreenState.EXPORT:
+            devMode = false;
+            inputUI.hide();
+            designUI.hide();
+            exportUI.show();
 
-        noLoop();
+            noLoop();
+            break;
     }
 }
 
+function changeScreen(newScreen) {
+    // Set the new screen and loop
+    currentScreen = newScreen;
+    loop();
+}
+
 function keyPressed() {
-    if (!isInputScreen) {
-        if (key === 'g') {
-            // advance one growth at a time in dev mode
-            if (devMode) {
-                numGrow++
-                designUI.displayResult();
-            }
-        } else if (key === 'd') {
+    // Input screen key commands
+    if (currentScreen == ScreenState.INPUT) {
+        if (key === '~') {
+            // toggle export button visibility
+            inputUI.html.exportButton.toggleClass('hidden');
+        }
+    }
+    // Design screen key commands
+    else if (currentScreen == ScreenState.DESIGN) {
+        if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
             numGrow = 0;
             if (designUI.currentAnneal && designUI.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
+            if (devMode) {
+                designUI.html.exportButton.removeClass('hidden');
+            } else {
+                designUI.html.exportButton.addClass('hidden');
+            }
+        }
+        else if (key === 'g' && devMode) {
+            // advance one growth at a time in dev mode
+            numGrow++
+            designUI.displayResult();
+        }
+    }
+    // Export screen key commands
+    else if (currentScreen == ScreenState.EXPORT) {
+        if (key === 'd') {
+            // toggle dev mode on and off
+            devMode = !devMode;
+            exportUI.handleCreate(); // todo: switch to the create layout image function
         }
     }
 }
 
 function mousePressed() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
-    // else {
-    //     designUI.selectCellLine(mouseX, mouseY);
-    // }
 }
 
 function mouseDragged() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }
 
 function mouseReleased() {
-    if (isInputScreen) {
+    if (currentScreen == ScreenState.INPUT) {
         inputUI.eraseMode = "first";
     }
 }

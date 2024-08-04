@@ -19,6 +19,7 @@ class Cellular {
         this.cellID = 0; // unique id for each cell
     }
 
+    //-- Setup Functions --//
     createTerrain() {
         // assign values to all squares in the layout to make topography
         // initial state: all spots occupied by shapes start at infinity, all empty spots start at 0
@@ -100,31 +101,6 @@ class Cellular {
         }
     }
 
-    showTerrain() {
-        if (devMode) {
-            // display the design space
-            fill(75); // dark grey
-            strokeWeight(0);
-            textAlign(CENTER, CENTER);
-            let txtXOffset = this.squareSize / 2;
-            let txtYOffset = this.squareSize / 2;
-            let txtSize = this.squareSize / 2;
-            textSize(txtSize);
-
-            for (let x = 0; x < this.layoutWidth; x++) {
-                for (let y = 0; y < this.layoutHeight; y++) {
-                    if (this.layout[y][x].terrainValue != this.maxTerrain) {
-                        // calc text position, finding y from bottom up
-                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                        // display the terrain value
-                        text(this.layout[y][x].terrainValue, rectX, rectY);
-                    }
-                }
-            }
-        }
-    }
-
     calcPathValues() {
         // assign values to all paths (i.e., lines on grid) to make topography
         // determine path values based on the adjacent terrain values
@@ -179,6 +155,7 @@ class Cellular {
         }
     }
 
+    //-- Growth Functions --//
     makeInitialCells() {
         // initialize the space where cells live (intersections on the layout)
         this.cellSpace = []; // clear the space
@@ -221,7 +198,12 @@ class Cellular {
         }
     }
 
-    growCells(numGrow) {
+    growCells() {
+        // setup the terrain and path values for the cell growth
+        this.createTerrain();
+        this.calcPathValues();
+        this.makeInitialCells();
+
         // grow alive cells until no more cells are alive
         if (devMode) {
             // grow one at a time on keypress
@@ -553,6 +535,7 @@ class Cellular {
         });
     }
 
+    //-- Display Functions --//
     showCells() {
         // loop cell space and display cells on the canvas
         for (let y = 0; y < this.cellSpace.length; y++) {
@@ -574,7 +557,7 @@ class Cellular {
         }
     }
 
-    showCellLines() {
+    showCellLines(_color = null) {
         // loop through the cellSpace grid and add any neighboring cells of the same strain as pairs
         // use these pairs to draw all of the lines. store pairs in a Set to de-duplicate pairs.
         // set for deduplicating lines as they are found
@@ -612,8 +595,6 @@ class Cellular {
                                         Math.max(y, newY),
                                         Math.max(x, newX),
                                         cell.strain,
-                                        0, // 0: not user made, 1: user made
-                                        1  // 1: enabled, 0: disabled (by user)
                                     ].join(',');
 
                                     // when added to a Set, strings are skipped if they already exist
@@ -627,13 +608,10 @@ class Cellular {
         }
 
         // draw all unique lines
+        strokeWeight(7);
         for (let lineKey of this.cellLines) {
-            let [y1, x1, y2, x2, strain, userMade, status] = lineKey.split(',').map(Number);
-
-            if (status === 0) {
-                continue; // skip disabled lines
-            }
-
+            const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
+            
             // calculate canvas coordinates
             let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
             let startY = ((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize);
@@ -644,20 +622,48 @@ class Cellular {
             let lineColor;
             if (devMode) {
                 lineColor = this.strainColor(strain);
-            } else if (userMade === 1) {
-                lineColor = "rgb(255, 0, 0)";
             } else {
                 lineColor = "rgb(175, 141, 117)";
             }
+
+            if (_color) {
+                // use override color if provided
+                lineColor = _color;
+                strokeWeight(2);
+            }
+
             stroke(lineColor);
-            strokeWeight(7);  // adjust line thickness as needed
 
             // draw the line
             line(startX, startY, endX, endY);
         }
     }
 
-    //-- Helper functions --//
+    showTerrain() {
+        // display the design space
+        fill(75); // dark grey
+        strokeWeight(0);
+        textAlign(CENTER, CENTER);
+        let txtXOffset = this.squareSize / 2;
+        let txtYOffset = this.squareSize / 2;
+        let txtSize = this.squareSize / 2;
+        textSize(txtSize);
+
+        for (let x = 0; x < this.layoutWidth; x++) {
+            for (let y = 0; y < this.layoutHeight; y++) {
+                if (this.layout[y][x].terrainValue != this.maxTerrain) {
+                    // calc text position, finding y from bottom up
+                    let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
+                    let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
+                    // display the terrain value
+                    text(this.layout[y][x].terrainValue, rectX, rectY);
+                }
+            }
+        }
+
+    }
+
+    //-- Helper Functions --//
     overhangShift(shape) {
         // for shapes with overhang, find the bottom corner of the shape
         // posX is the x-coordinate of the leftmost cell of the shape in the full layout

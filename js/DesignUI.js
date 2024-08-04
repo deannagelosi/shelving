@@ -3,7 +3,7 @@ class DesignUI {
         //== state variables
         this.currentAnneal;
         this.savedAnneals = [];
-        this.currCellLines;
+        this.currCellular;
         this.totalSavedAnneals = 0;
         this.currentViewedAnnealIndex = null;
         // dom elements
@@ -28,6 +28,8 @@ class DesignUI {
     getHtmlRef() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
+        this.htmlRef.subheading = select('#subheading');
+        this.htmlRef.headerControls = select('#header-controls');
         this.htmlRef.leftBar = select('#left-side-bar');
         this.htmlRef.rightBar = select('#right-side-bar');
         this.htmlRef.bottomDiv = select('#bottom-div');
@@ -43,7 +45,7 @@ class DesignUI {
         // slider toggle
         this.html.sliderDiv = createDiv()
             .id('slider-div')
-            .parent(this.htmlRef.header)
+            .parent(this.htmlRef.headerControls)
             .mousePressed(this.handleSlider.bind(this));
 
         // Simple label
@@ -100,13 +102,19 @@ class DesignUI {
     }
 
     initRightSideUI() {
-        //== setup ui elements for side bar
+        //== setup ui elements for right side bar
         // Export button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until one saved anneal
             .mousePressed(() => this.handleExport());
+
+        // Next button
+        this.html.nextButton = createButton('Next')
+            .parent(this.htmlRef.rightSideButtons)
+            .addClass('button primary-button')
+            .attribute('disabled', '') // until one saved anneal
+            .mousePressed(() => this.handleNext());
     }
 
     //== show/hide methods
@@ -116,18 +124,28 @@ class DesignUI {
         this.htmlRef.rightBar.removeClass('hidden');
         this.htmlRef.bottomDiv.removeClass('hidden');
         // set titles
-        this.htmlRef.rightSideTop.html('Results');
         this.htmlRef.leftSideTop.html('Shapes');
+        this.htmlRef.rightSideTop.html('Results');
+        // Set subheading
+        this.htmlRef.subheading.html("Generate Layout");
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        this.html.exportButton.addClass('hidden'); // hide export button
 
+        this.drawBlankGrid();
         // this.html.growthText.addClass('hidden');
         // if (devMode) {
         //     // show called in displayResult, not updateDisplayCallback
         //     // only displayResult is called after annealing complete
         //     this.html.growthText.removeClass('hidden');
         // }
+
+        // // temp auto-loading for testing
+        // this.viewSavedAnneal(0);
+        // setTimeout(() => {
+        //     this.handleNext();
+        // }, 0);
     }
 
     hide() {
@@ -147,23 +165,10 @@ class DesignUI {
         // toggle the slider value
         if (toggle.value() === 0) {
             toggle.value(1);
-            editMode = true;
+            detailView = true;
         } else {
             toggle.value(0);
-            editMode = false;
-        }
-        // update the screen
-        this.displayResult();
-    }
-
-    setEditMode(isEditMode) {
-        editMode = isEditMode;
-        if (isEditMode) {
-            this.html.viewButton.removeClass('active');
-            this.html.editButton.addClass('active');
-        } else {
-            this.html.viewButton.addClass('active');
-            this.html.editButton.removeClass('active');
+            detailView = false;
         }
         // update the screen
         this.displayResult();
@@ -260,7 +265,6 @@ class DesignUI {
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
         // get a copy of shapes with only the data needed
@@ -284,8 +288,21 @@ class DesignUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
-            this.html.exportButton.html('Export');
+            this.html.exportButton.removeAttribute('disabled');
         }
+    }
+
+    handleNext() {
+        // clean up the design screen
+        this.clearShapeList();
+        this.clearSavedAnneals();
+        
+        // setup for the export screen
+        clear();
+        background(255);
+
+        // change to export screen
+        changeScreen(ScreenState.EXPORT);
     }
 
     //== display methods
@@ -332,21 +349,16 @@ class DesignUI {
             background(255);
             this.currentAnneal.finalSolution.showLayout();
 
-            // update growth text if dev mode on and annealing complete
-            this.show();
-
             // setup case for cellular and boards
-            newCase = new Case(this.currentAnneal.finalSolution);
-            newCase.cellular.createTerrain();
-            newCase.cellular.calcPathValues();
-            newCase.cellular.makeInitialCells();
-            newCase.cellular.growCells(numGrow);
-            this.currCellLines = newCase.cellular.cellLines;
+            this.currCellular = new Cellular(this.currentAnneal.finalSolution);
+            this.currCellular.growCells();
+            this.currCellular.showCellLines();
 
             // display cells and terrain (cellular scores)
-            newCase.cellular.showTerrain();
-            newCase.cellular.showCellLines();
-            newCase.cellular.showCells();
+            if (devMode) {
+                this.currCellular.showTerrain();
+                this.currCellular.showCells();
+            }
         }
     }
 
@@ -438,6 +450,7 @@ class DesignUI {
             this.currentViewedAnnealIndex = null;
             this.currentAnneal = null;
             this.displaySavedAnneals();
+            this.html.nextButton.attribute('disabled', '');
             return;
         }
 
@@ -467,6 +480,7 @@ class DesignUI {
         // update display
         this.displayResult();
         this.displaySavedAnneals();
+        this.html.nextButton.removeAttribute('disabled');
     }
 
     clearSavedAnneals() {
@@ -474,99 +488,5 @@ class DesignUI {
             element.remove();
         }
         this.savedAnnealElements = [];
-    }
-
-    //== mouse event handler
-    selectCellLine(mouseX, mouseY) {
-        if (!this.currentAnneal || !this.currentAnneal.finalSolution) return null;
-
-        let currSolution = this.currentAnneal.finalSolution;
-        let xPadding = currSolution.buffer + currSolution.xPadding;
-        let yPadding = currSolution.buffer + currSolution.yPadding;
-        let layoutHeight = currSolution.layout.length * currSolution.squareSize;
-        let layoutWidth = currSolution.layout[0].length * currSolution.squareSize;
-        let squareSize = currSolution.squareSize;
-        let gridHeight = currSolution.layout.length;
-        let gridWidth = currSolution.layout[0].length;
-
-        let xValid = mouseX >= xPadding && mouseX <= layoutWidth + xPadding;
-        let yValid = mouseY >= yPadding && mouseY <= layoutHeight + yPadding;
-
-        if (!xValid || !yValid) return null;
-
-        let offsetY = layoutHeight + yPadding - mouseY;
-        let offsetX = mouseX - xPadding;
-        let tolerance = 5;
-
-        let lineInfo = null;
-
-        const nearestHorizontal = Math.round(offsetY / squareSize) * squareSize;
-        if (Math.abs(offsetY - nearestHorizontal) <= tolerance) {
-            let row = gridHeight - 1 - Math.round(offsetY / squareSize);
-            let col = Math.floor(offsetX / squareSize);
-            lineInfo = {
-                type: 'horizontal',
-                index: row,
-                gridIntersections: [
-                    { x: col, y: row },
-                    { x: col + 1, y: row }
-                ]
-            };
-        }
-
-        const nearestVertical = Math.round(offsetX / squareSize) * squareSize;
-        if (Math.abs(offsetX - nearestVertical) <= tolerance) {
-            let col = Math.round(offsetX / squareSize);
-            let row = gridHeight - 1 - Math.floor((layoutHeight - offsetY) / squareSize);
-            lineInfo = {
-                type: 'vertical',
-                index: col,
-                gridIntersections: [
-                    { x: col, y: row },
-                    { x: col, y: row + 1 }
-                ]
-            };
-        }
-
-        if (lineInfo) {
-            // console.log(lineInfo.type, lineInfo.gridIntersections);
-            let lineKey = this.findLineKey(lineInfo.gridIntersections);
-
-            if (lineKey) {
-                // console.log("Found line:", lineKey);
-                let [y1, x1, y2, x2, strain, userMade, enabled] = lineKey.split(',').map(Number);
-                // console.log(`Line from (${x1},${y1}) to (${x2},${y2}), Strain: ${strain}, User Made: ${userMade}, Enabled: ${enabled}`);
-                // Add your logic for handling the clicked line here
-            } else {
-                // console.log("No line found at the clicked position.");
-            }
-        }
-
-        return null;
-    }
-
-    findLineKey(gridIntersections) {
-        const generateLineKey = (x1, y1, x2, y2) => {
-            return [
-                Math.min(y1, y2),
-                Math.min(x1, x2),
-                Math.max(y1, y2),
-                Math.max(x1, x2)
-            ].join(',');
-        };
-
-        let partialKey = generateLineKey(
-            gridIntersections[0].x,
-            gridIntersections[0].y,
-            gridIntersections[1].x,
-            gridIntersections[1].y
-        );
-
-        for (let lineKey of this.currCellLines) {
-            if (lineKey.startsWith(partialKey)) {
-                return lineKey;
-            }
-        }
-        return null;
     }
 }

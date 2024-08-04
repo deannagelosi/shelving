@@ -21,7 +21,7 @@ class InputUI {
         this.brightMax = 1.8;
         // input grid variables
         this.maxInputInches = 10; // default grid size in inches
-        this.gridInchSize = 0.25; // each square is 0.25 inches
+        this.gridInchSize = SQUARE_SIZE; // inches per grid square
         this.inputRows;
         this.inputCols;
         // calc input grid size
@@ -48,6 +48,8 @@ class InputUI {
     getHtmlRefs() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
+        this.htmlRef.subheading = select('#subheading');
+        this.htmlRef.headerControls = select('#header-controls');
         this.htmlRef.leftBar = select('#left-side-bar');
         this.htmlRef.rightBar = select('#right-side-bar');
         this.htmlRef.bottomDiv = select('#bottom-div');
@@ -61,7 +63,7 @@ class InputUI {
         // Setup image upload and slider
         this.html.imageControls = createDiv()
             .id('image-controls')
-            .parent(this.htmlRef.header);
+            .parent(this.htmlRef.headerControls);
 
         // Grid size selector
         let gridSizeDiv = createDiv()
@@ -146,22 +148,22 @@ class InputUI {
         // create the IMPORT SHAPES button
         this.html.importButton = createButton('Import')
             .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
+            .addClass('button secondary-button')
             .mousePressed(() => this.handleImport());
 
         // create the EXPORT SHAPES button
         this.html.exportButton = createButton('Export')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until 2 shapes are saved
+            .attribute('disabled', '') // until at least 1 shape
             .mousePressed(() => this.exportShapes());
 
         // create the NEXT button
         this.html.nextButton = createButton('Next')
             .parent(this.htmlRef.rightSideButtons)
             .addClass('button primary-button')
-            .attribute('disabled', '') // until 2 shapes are saved
-            .mousePressed(() => this.nextScreen());
+            .attribute('disabled', '') // until at least 2 shapes
+            .mousePressed(() => this.handleNext());
     }
 
     //== show/hide methods
@@ -172,17 +174,20 @@ class InputUI {
         this.htmlRef.bottomDiv.removeClass('hidden');
         // set titles
         this.htmlRef.rightSideTop.html('Shapes');
+        // Set subheading
+        this.htmlRef.subheading.html("Object Input");
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        this.html.exportButton.addClass('hidden'); // hide export button
 
         // setup and draw the input grid
         this.updateGridSize();
 
-        // temp for testing
-        // loadJSON('/examples/ladder-bug.json', (importedData) => {
+        // // temp auto-loading for testing
+        // loadJSON('/examples/example-solutions.json', (importedData) => {
         //     this.loadJsonData(importedData);
-        //     this.nextScreen();
+        //     this.handleNext();
         // });
     }
 
@@ -250,11 +255,17 @@ class InputUI {
         // Reset active shape and UI
         this.resetCanvas();
 
-        // disable next button (until the user saves the changes)
-        this.html.nextButton.attribute('disabled', '');
-        // enable export button if there is more than one shape
+        // toggle export button
         if (this.shapes.length >= 1) {
             this.html.exportButton.removeAttribute('disabled');
+        } else if (this.shapes.length < 1) {
+            this.html.exportButton.attribute('disabled', '');
+        }
+        // toggle next button
+        if (this.shapes.length >= 2) {
+            this.html.nextButton.removeAttribute('disabled');
+        } else if (this.shapes.length < 2) {
+            this.html.nextButton.attribute('disabled', '');
         }
     }
 
@@ -263,7 +274,6 @@ class InputUI {
         if (this.isExporting) return; // block multiple clicks during export
 
         this.isExporting = true;
-        this.html.exportButton.html('Saving...');
         this.html.exportButton.attribute('disabled', '');
 
         // get a copy of shapes that only includes the data needed
@@ -281,37 +291,31 @@ class InputUI {
             console.error('Export failed:', error);
         } finally {
             this.isExporting = false;
-            this.html.exportButton.html('Export');
-            // Enable next button once shapes are saved and there are at least 2 shapes
-            if (this.shapes.length > 1) {
-                this.html.nextButton.removeAttribute('disabled');
-            }
+            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
-    nextScreen() {
-        // delete shape list dom elements
+    handleNext() {
+        // clean up the input screen
         this.clearShapeTitles();
 
-        // change to the next screen (design)
-        isInputScreen = false;
-
-        // setup the list of shapes
+        // setup for the design screen
+        // - setup the list of shapes
         this.shapes.forEach((shape, index) => {
             // start with all enabled
             this.shapes[index].enabled = true;
         });
-
-        // setup list of solutions if loaded
+        //  - setup list of solutions if loaded
         if (designUI.savedAnneals.length > 0) {
             // loop saved anneals once so they render correctly
             for (let i = 0; i < designUI.savedAnneals.length; i++) {
                 designUI.viewSavedAnneal(i);
             }
-            designUI.viewSavedAnneal(0);
+            designUI.viewSavedAnneal(null);
         }
 
-        loop();
+        // change to design screen
+        changeScreen(ScreenState.DESIGN);
     }
 
     handleImport() {
@@ -365,7 +369,7 @@ class InputUI {
             }
             // initialize solution
             anneal.finalSolution = new Solution(initShapes);
-            
+
             loadedAnneals.push(anneal);
         }
         // add anneals and the highest solution number
@@ -374,17 +378,11 @@ class InputUI {
 
         //== update UI
         this.resetCanvas();
-        // enable next button if all shapes are from the load files
-        if (this.shapes.length == loadedShapes.length) {
+        // toggle next button
+        if (this.shapes.length >= 2) {
             this.html.nextButton.removeAttribute('disabled');
-        } else {
-            // user loaded on top of existing shapes, save needed
+        } else if (this.shapes.length < 2) {
             this.html.nextButton.attribute('disabled', '');
-        }
-
-        // enable export button if there is more than one shape
-        if (this.shapes.length != loadedShapes.length) {
-            this.html.exportButton.removeAttribute('disabled');
         }
     }
 
@@ -516,14 +514,17 @@ class InputUI {
                 //update displayed list
                 this.displayShapeTitles();
 
-                // disable next button (until the user saves the changes)
-                this.html.nextButton.attribute('disabled', '');
-
-                // toggle save button if there are any shapes to save
+                // toggle export button
                 if (this.shapes.length >= 1) {
                     this.html.exportButton.removeAttribute('disabled');
-                } else {
+                } else if (this.shapes.length < 1) {
                     this.html.exportButton.attribute('disabled', '');
+                }
+                // toggle next button
+                if (this.shapes.length >= 2) {
+                    this.html.nextButton.removeAttribute('disabled');
+                } else if (this.shapes.length < 2) {
+                    this.html.nextButton.attribute('disabled', '');
                 }
             });
         }
