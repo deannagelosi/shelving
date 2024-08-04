@@ -19,7 +19,7 @@ class Export {
 
         // Configuration for laser cutting
         this.ppi = 40; // pixel per inch (todo: use in DXF generation)
-        this.gap = 0.5 // inch gap between boards
+        this.gap = 0.75 // inch gap between boards
         this.sheets = []; // holds what boards are on each sheet and row
     }
 
@@ -93,7 +93,7 @@ class Export {
         }
 
         this.boardCounter++;
-        return new Board(this.boardCounter, startCoord, endCoord, orientation);
+        return new Board(this.boardCounter, startCoord, endCoord, orientation, this.sheetThickness);
     }
 
     detectJoints() {
@@ -297,17 +297,23 @@ class Export {
             let [sheet, row] = this.findBoardPosition(board.len);
             if (sheet === null) continue;
 
-            let boardX = this.sheets[sheet][row] - board.len;
-            let boardY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
+            let boardStartX = this.sheets[sheet][row] - board.len;
+            let boardStartY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
 
             // Draw board
             noFill();
             stroke(0);
             strokeWeight(1 / scaleValue);
-            rect(boardX, boardY, board.len, this.caseDepth);
+            rect(boardStartX, boardStartY, board.len, this.caseDepth);
 
             // Draw joints
-            this.drawJoints(board, boardX, boardY, scaleValue);
+            this.drawJoints(board, boardStartX, boardStartY, scaleValue);
+
+            // Draw board id
+            fill(0);
+            noStroke();
+            textSize(7 / scaleValue);
+            text(board.id, boardStartX, boardStartY - 0.2);
         }
 
         pop();
@@ -340,7 +346,7 @@ class Export {
         return [null, null];
     }
 
-    drawJoints(board, boardX, boardY, scaleValue) {
+    drawJoints(board, boardStartX, boardStartY, scaleValue) {
         // todo: dynamically use different pin/slot count based on depth
 
         // todo: find how many pins and slots. 
@@ -350,43 +356,50 @@ class Export {
         // example: if the depth is 1.5, how many pins and slots should be used?
 
         const numJoints = 5; // 2 slots, 3 pins
-        const jointHeight = (1 / numJoints) * this.caseDepth;
+        const cutoutRatio = (1 / numJoints);
+        const jointHeight = cutoutRatio * this.caseDepth;
         noFill();
         stroke("black");
         strokeWeight(1 / scaleValue);
 
         // Start joint
         if (board.poi.startJoint === "slot") {
-            rect(boardX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
+            rect(boardStartX, boardStartY + this.caseDepth * (1 * cutoutRatio), this.sheetThickness, jointHeight);
+            rect(boardStartX, boardStartY + this.caseDepth * (3 * cutoutRatio), this.sheetThickness, jointHeight);
         } else if (board.poi.startJoint === "pin") {
-            rect(boardX, boardY, this.sheetThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.4, this.sheetThickness, jointHeight);
-            rect(boardX, boardY + this.caseDepth * 0.8, this.sheetThickness, jointHeight);
+            rect(boardStartX, boardStartY, this.sheetThickness, jointHeight);
+            rect(boardStartX, boardStartY + this.caseDepth * (2 * cutoutRatio), this.sheetThickness, jointHeight);
+            rect(boardStartX, boardStartY + this.caseDepth * (4 * cutoutRatio), this.sheetThickness, jointHeight);
         }
 
         // End joint
-        const endX = boardX + board.len - this.sheetThickness;
+        const endX = boardStartX + board.len - this.sheetThickness;
         if (board.poi.endJoint === "slot") {
-            rect(endX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
+            rect(endX, boardStartY + this.caseDepth * (1 * cutoutRatio), this.sheetThickness, jointHeight);
+            rect(endX, boardStartY + this.caseDepth * (3 * cutoutRatio), this.sheetThickness, jointHeight);
         } else if (board.poi.endJoint === "pin") {
-            rect(endX, boardY, this.sheetThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.4, this.sheetThickness, jointHeight);
-            rect(endX, boardY + this.caseDepth * 0.8, this.sheetThickness, jointHeight);
+            rect(endX, boardStartY, this.sheetThickness, jointHeight);
+            rect(endX, boardStartY + this.caseDepth * (2 * cutoutRatio), this.sheetThickness, jointHeight);
+            rect(endX, boardStartY + this.caseDepth * (4 * cutoutRatio), this.sheetThickness, jointHeight);
         }
 
         // T-joints
         for (let tJoint of board.poi.tJoints) {
-            let tJointX = boardX + tJoint;
-            rect(tJointX, boardY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
-            rect(tJointX, boardY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
+            let tJointX = boardStartX + tJoint;
+            rect(tJointX, boardStartY + this.caseDepth * 0.2, this.sheetThickness, jointHeight);
+            rect(tJointX, boardStartY + this.caseDepth * 0.6, this.sheetThickness, jointHeight);
         }
 
         // X-joints
         for (let xJoint of board.poi.xJoints) {
-            let xJointX = boardX + xJoint;
-            rect(xJointX, boardY, this.sheetThickness, this.caseDepth / 2);
+            let xJointX = boardStartX + xJoint;
+            if (board.orientation == "y") {
+                // cut from top of board
+                rect(xJointX, boardStartY, this.sheetThickness, this.caseDepth / 2);
+            } else {
+                // cut from bottom of board
+                rect(xJointX, (boardStartY + (this.caseDepth / 2)), this.sheetThickness, this.caseDepth / 2);
+            }
         }
     }
 }

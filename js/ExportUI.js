@@ -109,7 +109,7 @@ class ExportUI {
         this.html.numSheetsLabel = createSpan('Number of Sheets')
             .parent(this.html.numSheetsGroup)
             .addClass('input-label');
-        this.html.numSheetsInput = createInput('2')
+        this.html.numSheetsInput = createInput('1')
             .parent(this.html.numSheetsGroup)
             .addClass('input-field')
             .attribute('type', 'number')
