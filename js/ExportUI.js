@@ -202,12 +202,12 @@ class ExportUI {
             sheetHeight,
             numSheets,
         };
-        
 
         this.currExport = new Export(cellData, spacing, config);
         this.currExport.makeBoards();
+        this.currExport.prepLayout();
 
-        this.currExport.previewCutLayout();
+        this.currExport.previewLayout();
 
         // // Enable download buttons
         // this.html.dxfButton.removeAttribute('disabled');

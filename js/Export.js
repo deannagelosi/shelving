@@ -265,30 +265,20 @@ class Export {
         }
     }
 
-    
-    }
 
-    previewCutLayout() {
-        clear();
-        background(255);
+    prepLayout() {
+        // populated the cutList and etchList arrays
 
         // find the number of rows that can fit on a sheet
         this.setupSheets();
 
-        // Calculate scaling factor to fit preview in canvas
-        const totalSheetHeight = this.sheetHeight * this.sheets.length;
-        const scaleX = canvasWidth / this.sheetWidth;
-        const scaleY = canvasHeight / totalSheetHeight;
-        const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
-
-        // Find the cuts and etches
-        // Draw sheets
+        // Get sheets
         for (let i = 0; i < this.sheets.length; i++) {
             let sheetY = i * this.sheetHeight;
             this.sheetOutline.push({ x: 0, y: sheetY, w: this.sheetWidth, h: this.sheetHeight });
         }
 
-        // Draw boards and joints
+        // Get boards, joints, and labels
         for (let board of this.boards) {
             // calculate the true board length
             let [sheet, row] = this.findBoardPosition(board.len);
@@ -301,12 +291,22 @@ class Export {
             this.cutList.push({ x: boardStartX, y: boardStartY, w: board.len, h: this.caseDepth });
 
             // Draw joints
-            this.drawJoints(board, boardStartX, boardStartY, scaleValue);
+            this.drawJoints(board, boardStartX, boardStartY);
 
             // Draw board id
-
             this.etchList.push({ text: board.id, x: boardStartX, y: boardStartY - 0.2 });
         }
+    }
+
+    previewLayout() {
+        clear();
+        background(255);
+
+         // Calculate scaling factor to fit preview in canvas
+         const totalSheetHeight = this.sheetHeight * this.sheets.length;
+         const scaleX = canvasWidth / this.sheetWidth;
+         const scaleY = canvasHeight / totalSheetHeight;
+         const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
 
         // Set up the drawing environment
         push();
@@ -363,7 +363,7 @@ class Export {
         return [null, null];
     }
 
-    drawJoints(board, boardStartX, boardStartY, scaleValue) {
+    drawJoints(board, boardStartX, boardStartY) {
         // todo: dynamically use different pin/slot count based on depth
 
         // todo: find how many pins and slots. 
@@ -375,9 +375,6 @@ class Export {
         const numJoints = 5; // 2 slots, 3 pins
         const cutoutRatio = (1 / numJoints);
         const jointHeight = cutoutRatio * this.caseDepth;
-        noFill();
-        stroke("black");
-        strokeWeight(1 / scaleValue);
 
         // Start joint
         if (board.poi.startJoint === "slot") {
