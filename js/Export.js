@@ -25,9 +25,9 @@ class Export {
         };
 
         // Configuration for laser cutting
-        this.gap = 0.6 // inch gap between boards
-        this.fontSize = 0.20; // inch font size for etching
-        this.fontOffset = 0.15;
+        this.gap = 0.8 // inch gap between boards
+        this.fontSize = 0.15; // inch font size for etching
+        this.fontOffset = 0.2;
         this.sheets = []; // holds what boards are on each sheet and row
         this.totalHeight; // total height of all sheets
 
@@ -114,66 +114,73 @@ class Export {
         for (let i = 0; i < this.boards.length; i++) {
             for (let j = i + 1; j < this.boards.length; j++) {
                 if (this.boards[i].orientation !== this.boards[j].orientation) {
-                    this.checkIntersection(this.boards[i], this.boards[j]);
+                    // pass boards to intersection check, horizontal board first
+                    if (this.boards[i].orientation === "x") {
+                        // x = horizontal, y = vertical
+                        // checkIntersection(horizBoard, vertBoard)
+                        this.checkIntersection(this.boards[i], this.boards[j]);
+                    } else if (this.boards[j].orientation === "x") {
+                        this.checkIntersection(this.boards[j], this.boards[i]);
+                    }
                 }
             }
         }
     }
 
-    checkIntersection(board1, board2) {
-        if (board1.orientation === "x") {
-            this.checkHorizontalVerticalIntersection(board1, board2);
-        } else {
-            this.checkHorizontalVerticalIntersection(board2, board1);
+    checkIntersection(hBoard, vBoard) {
+        // Detect T and X joints
+        // (end-to-end joints already handled by default in board creation)
+        // boards already sorted by "smallest coords are start"
+        const hStart = { x: hBoard.coords.start.x, y: hBoard.coords.start.y };
+        const hEnd = { x: hBoard.coords.end.x, y: hBoard.coords.end.y };
+        const vStart = { x: vBoard.coords.start.x, y: vBoard.coords.start.y };
+        const vEnd = { x: vBoard.coords.end.x, y: vBoard.coords.end.y };
+        // Check for T-joint: Board end touching other board middle
+        // 1. Check if horizontal board exists between vertical board start and end
+        if (hStart.y > vStart.y && hStart.y < vEnd.y) {
+            // 1a. Check if horizontal start x is same as vertical board x
+            if (hStart.x === vStart.x) {
+                this.markTJoint(hBoard, vBoard, 'start');
+            }
+            // 1b. Check if horizontal end x is same as vertical board x
+            else if (hEnd.x === vStart.x) {
+                this.markTJoint(hBoard, vBoard, 'end');
+            }
         }
-    }
-
-    checkHorizontalVerticalIntersection(hBoard, vBoard) {
-        // Check for T-joint: horizontal board end intersecting vertical board
-        if (hBoard.coords.start.x === vBoard.coords.start.x &&
-            hBoard.coords.start.y > vBoard.coords.start.y &&
-            hBoard.coords.start.y < vBoard.coords.end.y) {
-            this.markTJoint(hBoard, vBoard, 'start');
+        // 2. Check if vertical board exists between horizontal board start and end
+        if (vStart.x > hStart.x && vStart.x < hEnd.x) {
+            // 2a. Check if vertical start y is same as horizontal board y
+            if (vStart.y === hStart.y) {
+                this.markTJoint(vBoard, hBoard, 'start');
+            }
+            // 2b. Check if vertical end y is same as horizontal board y
+            else if (vEnd.y === hStart.y) {
+                this.markTJoint(vBoard, hBoard, 'end');
+            }
         }
-        if (hBoard.coords.end.x === vBoard.coords.start.x &&
-            hBoard.coords.start.y > vBoard.coords.start.y &&
-            hBoard.coords.start.y < vBoard.coords.end.y) {
-            this.markTJoint(hBoard, vBoard, 'end');
-        }
-
-        // Check for T-joint: vertical board end intersecting horizontal board
-        if (vBoard.coords.start.y === hBoard.coords.start.y &&
-            vBoard.coords.start.x > hBoard.coords.start.x &&
-            vBoard.coords.start.x < hBoard.coords.end.x) {
-            this.markTJoint(vBoard, hBoard, 'start');
-        }
-        if (vBoard.coords.end.y === hBoard.coords.start.y &&
-            vBoard.coords.start.x > hBoard.coords.start.x &&
-            vBoard.coords.start.x < hBoard.coords.end.x) {
-            this.markTJoint(vBoard, hBoard, 'end');
-        }
-
         // Check for X-joint
-        if (vBoard.coords.start.x > hBoard.coords.start.x &&
-            vBoard.coords.start.x < hBoard.coords.end.x &&
-            hBoard.coords.start.y > vBoard.coords.start.y &&
-            hBoard.coords.start.y < vBoard.coords.end.y) {
+        if (vStart.x > hStart.x &&
+            vStart.x < hEnd.x &&
+            hStart.y > vStart.y &&
+            hStart.y < vEnd.y) {
             this.markXJoint(hBoard, vBoard);
         }
     }
 
-    markTJoint(intersectingBoard, intersectedBoard, endType) {
+    markTJoint(endTouchBoard, middleTouchBoard, endType) {
         // Change the end of the intersecting board to a pin
-        intersectingBoard.poi[endType + 'Joint'] = 'pin';
+        endTouchBoard.poi[endType] = 'pin';
 
         // Mark the T-joint on the intersected board
         let jointPos;
-        if (intersectedBoard.orientation === 'x') {
-            jointPos = intersectingBoard.coords[endType].x - intersectedBoard.coords.start.x;
+        if (middleTouchBoard.orientation === 'x') {
+            jointPos = endTouchBoard.coords[endType].x - middleTouchBoard.coords.start.x;
         } else {
-            jointPos = intersectingBoard.coords[endType].y - intersectedBoard.coords.start.y;
+            jointPos = endTouchBoard.coords[endType].y - middleTouchBoard.coords.start.y;
         }
-        intersectedBoard.poi.tJoints.push(jointPos);
+        if (jointPos < 0) console.error("Negative T-joint pos: ", jointPos, " for board: ", middleTouchBoard.id);
+        middleTouchBoard.poi.tJoints.push(jointPos);
+
     }
 
     markXJoint(hBoard, vBoard) {
@@ -211,19 +218,26 @@ class Export {
                 endX(board.coords.end.x),
                 endY(board.coords.end.y)
             );
-
-            // put text with the board id at the board start coords
-            ctx.fill("black");
-            ctx.stroke("white");
-            ctx.textSize(20);
+        }
+        // draw board labels
+        // put text with the board id at the board start coords
+        ctx.fill("black");
+        ctx.stroke("white");
+        ctx.strokeWeight(3);
+        ctx.textSize(20);
+        const labelOffset = 10;
+        for (const board of this.boards) {
             // if board is x oriented, draw text to the right of the start coords
             if (board.orientation === "x") {
-                ctx.text(board.id, startX(board.coords.start.x) + 20, startY(board.coords.start.y) + 7);
+                ctx.text(board.id, startX(board.coords.start.x) + labelOffset, startY(board.coords.start.y) + 8);
             } else {
                 // if board is y oriented, draw text above the start coords
-                ctx.text(board.id, startX(board.coords.start.x) - 7, startY(board.coords.start.y) - 20);
+                ctx.text(board.id, startX(board.coords.start.x) - 8, startY(board.coords.start.y) - labelOffset);
             }
         }
+
+        // draw shape names in correct location
+
 
         if (devMode && renderer === null) {
             // draw the end joints by type
@@ -231,20 +245,20 @@ class Export {
             // slot ends
             for (const board of this.boards) {
                 fill("salmon");
-                if (board.poi.startJoint === "slot") {
+                if (board.poi.start === "slot") {
                     ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 30);
                 }
-                if (board.poi.endJoint === "slot") {
+                if (board.poi.end === "slot") {
                     ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 30);
                 }
             }
             // pin ends
             for (const board of this.boards) {
                 fill("pink");
-                if (board.poi.startJoint === "pin") {
+                if (board.poi.start === "pin") {
                     ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 22);
                 }
-                if (board.poi.endJoint === "pin") {
+                if (board.poi.end === "pin") {
                     ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 22);
                 }
             }
@@ -330,14 +344,14 @@ class Export {
         const jointHeight = cutoutRatio * this.caseDepth;
 
         // Start joint
-        if (board.poi.startJoint === "slot") {
+        if (board.poi.start === "slot") {
             for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
                 let ratio = i === 0 ? 1 : 3;
                 let x = boardStartX;
                 let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
                 this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
             }
-        } else if (board.poi.startJoint === "pin") {
+        } else if (board.poi.start === "pin") {
             for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
                 let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
                 let x = boardStartX;
@@ -346,14 +360,14 @@ class Export {
             }
         }
         // End joint
-        if (board.poi.startJoint === "slot") {
+        if (board.poi.end === "slot") {
             for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
                 let ratio = i === 0 ? 1 : 3;
                 let x = boardStartX + board.len - this.sheetThickness;
                 let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
                 this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
             }
-        } else if (board.poi.startJoint === "pin") {
+        } else if (board.poi.end === "pin") {
             for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
                 let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
                 let x = boardStartX + board.len - this.sheetThickness;

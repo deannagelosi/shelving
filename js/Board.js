@@ -8,8 +8,8 @@ class Board {
         this.boardLabel;
 
         this.poi = { // points of interest
-            startJoint: this.orientation === "x" ? "pin" : "slot",
-            endJoint: this.orientation === "x" ? "pin" : "slot",
+            start: this.orientation === "x" ? "pin" : "slot",
+            end: this.orientation === "x" ? "pin" : "slot",
             tJoints: [], // array of x-values for T-joint holes 
             xJoints: [],
         }
