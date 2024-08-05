@@ -27,7 +27,7 @@ class Export {
 
         // Configuration for laser cutting
         this.gap = 0.6 // inch gap between boards
-        this.fontSize = 0.25; // inch font size for etching
+        this.fontSize = 0.20; // inch font size for etching
         this.fontOffset = 0.15;
         this.sheets = []; // holds what boards are on each sheet and row
         this.totalHeight; // total height of all sheets
