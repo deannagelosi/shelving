@@ -2,6 +2,7 @@ class ExportUI {
     constructor() {
         //== state variables
         this.currExport;
+        this.savedAnnealElements = []
         // dom elements
         this.htmlRef = {};
         this.html = {};
@@ -20,6 +21,7 @@ class ExportUI {
         this.hide();
     }
 
+    //== UI init functions
     getHtmlRef() {
         // get references to parent dom elements
         this.htmlRef.header = select('#header');
@@ -192,6 +194,7 @@ class ExportUI {
             .mousePressed(() => this.handleDownloadCase());
     }
 
+    //== Show/Hide functions
     show() {
         // Show export screen elements
         this.htmlRef.leftBar.removeClass('hidden');
@@ -204,6 +207,8 @@ class ExportUI {
         this.htmlRef.subheading.html("Export Design");
 
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+
+        this.displaySavedAnneals();
         this.handleCreate();
     }
 
@@ -253,8 +258,12 @@ class ExportUI {
         this.currExport.makeBoards();
         this.currExport.prepLayout();
 
-        // preview the cut plan layout
-        this.currExport.previewLayout();
+        // preview the layout or chase
+        if (this.showingLayout) {
+            this.currExport.previewLayout();
+        } else {
+            this.currExport.previewCase();
+        }
 
         // Enable show and download buttons
         this.html.showButton.removeAttribute('disabled');
@@ -295,6 +304,7 @@ class ExportUI {
         const imageBuffer = createGraphics(canvasWidth, canvasHeight);
         this.currExport.previewCase(imageBuffer);
 
+        // todo: file name  based on solution name
         imageBuffer.save('case_preview.png');
     }
 
@@ -324,5 +334,64 @@ class ExportUI {
             this.isExporting = false;
             this.html.exportButton.removeAttribute('disabled');
         }
+    }
+
+    //== Display functions
+    displaySavedAnneals() {
+        this.clearSavedAnneals();
+
+        for (let i = 0; i < designUI.savedAnneals.length; i++) {
+            let savedAnnealItem = createDiv().addClass('saved-anneal-item');
+            if (designUI.currentAnneal === designUI.savedAnneals[i]) {
+                savedAnnealItem.addClass('highlighted');
+            }
+            savedAnnealItem.parent(this.htmlRef.leftSideList);
+
+            let viewIcon = createImg('img/view.svg', 'View')
+                .addClass('icon-button')
+                .size(24, 24)
+                .parent(savedAnnealItem)
+                .mousePressed(() => this.viewSavedAnneal(i));
+
+            let titleSpan = createSpan(designUI.savedAnneals[i].title)
+                .addClass('anneal-title')
+                .parent(savedAnnealItem);
+
+            this.savedAnnealElements.push(savedAnnealItem);
+        }
+    }
+
+    viewSavedAnneal(_index) {
+        // change selected anneal
+        designUI.currentViewedAnnealIndex = _index;
+        designUI.currentAnneal = designUI.savedAnneals[_index];
+        // update cellular (boards) layout
+        designUI.currCellular = new Cellular(designUI.currentAnneal.finalSolution);
+        designUI.currCellular.growCells();
+
+        designUI.displayResult(); // todo: this is needed for changes to work. why?
+        clear();
+        background(255);
+
+        // update UI
+        this.updateSavedAnnealHighlight();
+        this.handleCreate();
+    }
+
+    updateSavedAnnealHighlight() {
+        for (let i = 0; i < this.savedAnnealElements.length; i++) {
+            if (designUI.currentAnneal === designUI.savedAnneals[i]) {
+                this.savedAnnealElements[i].addClass('highlighted');
+            } else {
+                this.savedAnnealElements[i].removeClass('highlighted');
+            }
+        }
+    }
+
+    clearSavedAnneals() {
+        for (let element of this.savedAnnealElements) {
+            element.remove();
+        }
+        this.savedAnnealElements = [];
     }
 }

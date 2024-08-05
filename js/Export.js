@@ -23,7 +23,6 @@ class Export {
             numPinCuts: this.numPinSlots + 1,
             totalCuts: (this.numPinSlots * 2) + 1
         };
-        console.log(_config)
 
         // Configuration for laser cutting
         this.gap = 0.6 // inch gap between boards

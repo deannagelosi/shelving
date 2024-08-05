@@ -431,8 +431,18 @@ class DesignUI {
 
         // update display
         this.displayResult();
-        this.displaySavedAnneals();
+        this.updateSavedAnnealHighlight();
         this.html.nextButton.removeAttribute('disabled');
+    }
+
+    updateSavedAnnealHighlight() {
+        for (let i = 0; i < this.savedAnnealElements.length; i++) {
+            if (this.currentAnneal === this.savedAnneals[i]) {
+                this.savedAnnealElements[i].addClass('highlighted');
+            } else {
+                this.savedAnnealElements[i].removeClass('highlighted');
+            }
+        }
     }
 
     clearSavedAnneals() {
