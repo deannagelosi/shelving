@@ -15,6 +15,7 @@ class Export {
         this.sheetWidth = _config.sheetWidth;
         this.sheetHeight = _config.sheetHeight;
         this.numSheets = _config.numSheets;
+        this.kerf = _config.kerf; // for vertical cuts in the joints
         // Joint configuration
         this.numPinSlots = _config.numPinSlots || 2;
         this.jointConfig = {
@@ -22,13 +23,12 @@ class Export {
             numPinCuts: this.numPinSlots + 1,
             totalCuts: (this.numPinSlots * 2) + 1
         };
+        console.log(_config)
 
         // Configuration for laser cutting
-        this.gap = 0.7 // inch gap between boards
+        this.gap = 0.6 // inch gap between boards
         this.fontSize = 0.25; // inch font size for etching
         this.fontOffset = 0.15;
-        // this.kerf = 0.02; // kerf for vertical cuts in the joints
-        this.kerf = 0; // kerf for vertical cuts in the joints
         this.sheets = []; // holds what boards are on each sheet and row
         this.totalHeight; // total height of all sheets
 
@@ -185,8 +185,11 @@ class Export {
         vBoard.poi.xJoints.push(vJointPos);
     }
 
-    previewCaseLayout() {
+    previewCase() {
         // confirm boards created correctly by displaying them in correct orientation
+        clear();
+        background(255);
+        
         const startX = (x1) => ((x1 * this.squareSize) + this.buffer + this.xPadding);
         const startY = (y1) => (((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize));
         const endX = (x2) => ((x2 * this.squareSize) + this.buffer + this.xPadding);
@@ -227,20 +230,20 @@ class Export {
             for (const board of this.boards) {
                 fill("salmon");
                 if (board.poi.startJoint === "slot") {
-                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 35);
+                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 30);
                 }
                 if (board.poi.endJoint === "slot") {
-                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 35);
+                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 30);
                 }
             }
             // pin ends
             for (const board of this.boards) {
                 fill("pink");
                 if (board.poi.startJoint === "pin") {
-                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 25);
+                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 22);
                 }
                 if (board.poi.endJoint === "pin") {
-                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 25);
+                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 22);
                 }
             }
             // t-joints
@@ -249,10 +252,10 @@ class Export {
                     fill("teal");
                     if (board.orientation === "x") {
                         // add t-joint on x-axis from start coord
-                        ellipse(startX(board.coords.start.x) + (tJoint * this.squareSize), startY(board.coords.start.y), 15);
+                        ellipse(startX(board.coords.start.x) + (tJoint * this.squareSize), startY(board.coords.start.y), 14);
                     } else {
                         // subtract t-joint on y-axis from start coord
-                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (tJoint * this.squareSize), 15);
+                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (tJoint * this.squareSize), 14);
                     }
                 }
             }
@@ -260,7 +263,7 @@ class Export {
             for (const board of this.boards) {
                 fill("white");
                 stroke("black");
-                strokeWeight(0.5);
+                strokeWeight(0.25);
                 for (const xJoint of board.poi.xJoints) {
                     if (board.orientation === "x") {
                         // add x-joint on x-axis from start coord
@@ -277,6 +280,9 @@ class Export {
 
     prepLayout() {
         // populated the cutList and etchList arrays
+        this.sheetOutline = [];
+        this.cutList = [];
+        this.etchList = [];
 
         // find the number of rows that can fit on a sheet
         this.setupSheets();
@@ -291,7 +297,14 @@ class Export {
         for (let board of this.boards) {
             // calculate the true board length
             let [sheet, row] = this.findBoardPosition(board.len);
-            if (sheet === null) continue;
+            if (sheet === null && row === null) {
+                // not enough space, add a sheet
+                // todo: remove a sheet if there are more than needed
+                let numSheets = parseInt(exportUI.html.numSheetsInput.value());
+                exportUI.html.numSheetsInput.value(numSheets + 1);
+                exportUI.handleCreate();
+                break;
+            };
 
             let boardStartX = this.sheets[sheet][row] - board.len;
             let boardStartY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
@@ -370,8 +383,9 @@ class Export {
     }
 
     previewLayout() {
-        clear();
-        background(255);
+        if (this.sheetOutline.length === 0 || this.cutList.length === 0 || this.etchList.length === 0) {
+            this.prepLayout();
+        }
 
         // Calculate scaling factor to fit preview in canvas
         const totalSheetHeight = this.sheetHeight * this.sheets.length;
@@ -384,6 +398,9 @@ class Export {
         translate(canvasWidth / 2, canvasHeight / 2);
         scale(scaleValue);
         translate(-this.sheetWidth / 2, -totalSheetHeight / 2);
+
+        clear();
+        background(255);
 
         noFill();
         stroke(0);
@@ -462,7 +479,7 @@ class Export {
     setupSheets() {
         // find how many rows of boards can fit on a sheet based on depth
         this.sheets = [];
-        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap)));
+        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.5)));
 
         this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
         this.totalHeight = this.sheetHeight * this.numSheets;
@@ -483,7 +500,6 @@ class Export {
                 }
             }
         }
-        console.error("Not enough space on sheets for all boards");
         return [null, null];
     }
 }

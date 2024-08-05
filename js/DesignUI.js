@@ -12,7 +12,6 @@ class DesignUI {
         this.savedAnnealElements = [];
         this.shapeElements = [];
         // flags
-        this.isExporting = false;
 
         //== initialize UI elements
         this.getHtmlRef();
@@ -103,12 +102,6 @@ class DesignUI {
 
     initRightSideUI() {
         //== setup ui elements for right side bar
-        // Export button
-        this.html.exportButton = createButton('Export')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
-            .mousePressed(() => this.handleExport());
-
         // Next button
         this.html.nextButton = createButton('Next')
             .parent(this.htmlRef.rightSideButtons)
@@ -131,7 +124,6 @@ class DesignUI {
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
-        this.html.exportButton.addClass('hidden'); // hide export button
 
         this.drawBlankGrid();
         // this.html.growthText.addClass('hidden');
@@ -145,6 +137,7 @@ class DesignUI {
         // this.viewSavedAnneal(0);
         // setTimeout(() => {
         //     this.handleNext();
+        //     exportUI.handleCreate();
         // }, 0);
     }
 
@@ -257,39 +250,6 @@ class DesignUI {
         // update buttons
         // disable save until a new anneal or change is made
         this.html.saveButton.attribute('disabled', '');
-        // enable export button if disabled
-        this.html.exportButton.removeAttribute('disabled');
-    }
-
-    handleExport() {
-        if (this.isExporting) return; // block multiple clicks during export
-
-        this.isExporting = true;
-        this.html.exportButton.attribute('disabled', '');
-
-        // get a copy of shapes with only the data needed
-        let shapesCopy = inputUI.shapes.map(shape => shape.exportShape());
-
-        // make a copy of saved anneals with only the data needed
-        let annealsCopy = this.savedAnneals.map(anneal => {
-            return { ...anneal, finalSolution: anneal.finalSolution.exportSolution() }
-        });
-
-        // create export object
-        let exportData = {
-            savedAnneals: annealsCopy,
-            allShapes: shapesCopy
-        }
-
-        try {
-            saveJSONFile(exportData);
-
-        } catch (error) {
-            console.error('Export failed:', error);
-        } finally {
-            this.isExporting = false;
-            this.html.exportButton.removeAttribute('disabled');
-        }
     }
 
     handleNext() {
@@ -428,14 +388,6 @@ class DesignUI {
                             // deleted one before currently viewed, move the index down
                             this.currentViewedAnnealIndex--;
                             this.viewSavedAnneal(this.currentViewedAnnealIndex);
-                        }
-                        // disable export button if no more saved anneals
-                        if (this.savedAnneals.length === 0) {
-                            this.html.exportButton.attribute('disabled', ''); // until one saved anneal
-                        }
-                        // enable export if there are saved anneals
-                        if (this.savedAnneals.length > 0) {
-                            this.html.exportButton.removeAttribute('disabled');
                         }
                     }
                 });
