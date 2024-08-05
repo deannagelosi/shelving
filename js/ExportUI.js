@@ -259,7 +259,7 @@ class ExportUI {
         // Enable show and download buttons
         this.html.showButton.removeAttribute('disabled');
         this.html.downloadDXFButton.removeAttribute('disabled');
-        // this.html.downloadCaseButton.removeAttribute('disabled');
+        this.html.downloadCaseButton.removeAttribute('disabled');
     }
 
     handleShow() {
@@ -291,7 +291,11 @@ class ExportUI {
     }
 
     handleDownloadCase() {
-        console.log('Download case plan');
+        // draw case plan in an offscreen buffer and save it
+        const imageBuffer = createGraphics(canvasWidth, canvasHeight);
+        this.currExport.previewCase(imageBuffer);
+
+        imageBuffer.save('case_preview.png');
     }
 
     handleExport() {

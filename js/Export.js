@@ -185,25 +185,28 @@ class Export {
         vBoard.poi.xJoints.push(vJointPos);
     }
 
-    previewCase() {
+    previewCase(renderer = null) {
         // confirm boards created correctly by displaying them in correct orientation
-        clear();
-        background(255);
-        
+        // if an offscreen renderer is passed in, use that to create a png for download
+        const ctx = renderer || window;
+
+        ctx.clear();
+        ctx.background(255);
+
         const startX = (x1) => ((x1 * this.squareSize) + this.buffer + this.xPadding);
-        const startY = (y1) => (((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize));
+        const startY = (y1) => (((ctx.height - this.yPadding) - this.buffer) - (y1 * this.squareSize));
         const endX = (x2) => ((x2 * this.squareSize) + this.buffer + this.xPadding);
-        const endY = (y2) => (((canvasHeight - this.yPadding) - this.buffer) - (y2 * this.squareSize));
+        const endY = (y2) => (((ctx.height - this.yPadding) - this.buffer) - (y2 * this.squareSize));
 
         // draw the cell line segments
-        if (devMode) this.cellData.showCellLines("red");
+        if (devMode && renderer === null) this.cellData.showCellLines("red");
 
         // draw the boards
-        strokeWeight(7);
+        ctx.strokeWeight(7);
         for (const board of this.boards) {
-            if (devMode) stroke("rgba(175, 141, 117, 0.5)");
-            if (!devMode) stroke("rgb(175, 141, 117)");
-            line(
+            if (devMode && renderer === null) stroke("rgba(175, 141, 117, 0.5)");
+            if (!devMode) ctx.stroke("rgb(175, 141, 117)");
+            ctx.line(
                 startX(board.coords.start.x),
                 startY(board.coords.start.y),
                 endX(board.coords.end.x),
@@ -211,19 +214,19 @@ class Export {
             );
 
             // put text with the board id at the board start coords
-            fill("black");
-            stroke("white");
-            textSize(20);
+            ctx.fill("black");
+            ctx.stroke("white");
+            ctx.textSize(20);
             // if board is x oriented, draw text to the right of the start coords
             if (board.orientation === "x") {
-                text(board.id, startX(board.coords.start.x) + 20, startY(board.coords.start.y) + 7);
+                ctx.text(board.id, startX(board.coords.start.x) + 20, startY(board.coords.start.y) + 7);
             } else {
                 // if board is y oriented, draw text above the start coords
-                text(board.id, startX(board.coords.start.x) - 7, startY(board.coords.start.y) - 20);
+                ctx.text(board.id, startX(board.coords.start.x) - 7, startY(board.coords.start.y) - 20);
             }
         }
 
-        if (devMode) {
+        if (devMode && renderer === null) {
             // draw the end joints by type
             noStroke();
             // slot ends
@@ -274,7 +277,6 @@ class Export {
                     }
                 }
             }
-
         }
     }
 
