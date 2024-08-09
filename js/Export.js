@@ -25,9 +25,9 @@ class Export {
         };
 
         // Configuration for laser cutting
-        this.gap = 0.8 // inch gap between boards
-        this.fontSize = 0.15; // inch font size for etching
-        this.fontOffset = 0.2;
+        this.gap = 0.5 // inch gap between boards
+        this.fontSize = 0.10; // inch font size for etching
+        this.fontOffset = 0.10;
         this.sheets = []; // holds what boards are on each sheet and row
         this.totalHeight; // total height of all sheets
 
@@ -431,7 +431,7 @@ class Export {
         // Draw the label etches
         fill(0);
         noStroke();
-        textSize(7 / scaleValue);
+        textSize(5 / scaleValue);
         for (let etch of this.etchList) {
             text(etch.text, etch.x, etch.y);
         }
@@ -494,7 +494,7 @@ class Export {
     setupSheets() {
         // find how many rows of boards can fit on a sheet based on depth
         this.sheets = [];
-        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.5)));
+        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
 
         this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
         this.totalHeight = this.sheetHeight * this.numSheets;

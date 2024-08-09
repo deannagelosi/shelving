@@ -77,7 +77,7 @@ class ExportUI {
         this.html.sheetThicknessLabel = createSpan('Material Thickness (in)')
             .parent(this.html.sheetThicknessGroup)
             .addClass('input-label');
-        this.html.sheetThicknessInput = createInput('0.25')
+        this.html.sheetThicknessInput = createInput('0.23')
             .parent(this.html.sheetThicknessGroup)
             .addClass('input-field')
             .attribute('type', 'number')
@@ -93,7 +93,7 @@ class ExportUI {
         this.html.caseDepthLabel = createSpan('Case Depth (in)')
             .parent(this.html.caseDepthGroup)
             .addClass('input-label');
-        this.html.caseDepthInput = createInput('5')
+        this.html.caseDepthInput = createInput('3')
             .parent(this.html.caseDepthGroup)
             .addClass('input-field')
             .attribute('type', 'number')
@@ -109,12 +109,12 @@ class ExportUI {
         this.html.kerfLabel = createSpan('Kerf Width')
             .parent(this.html.kerfGroup)
             .addClass('input-label');
-        this.html.kerfInput = createInput('0.02')
+        this.html.kerfInput = createInput('0')
             .parent(this.html.kerfGroup)
             .addClass('input-field')
             .attribute('type', 'number')
             .attribute('min', '0')
-            .attribute('max', '.03')
+            .attribute('max', '.04')
             .attribute('step', '0.01')
             .input(this.handleCreate);
 
@@ -139,7 +139,7 @@ class ExportUI {
         this.html.sheetDimensionsLabel = createSpan('Sheet Dimensions (width x height)')
             .parent(this.html.sheetDimensionsGroup)
             .addClass('input-label');
-        this.html.sheetWidthInput = createInput('40')
+        this.html.sheetWidthInput = createInput('30')
             .parent(this.html.sheetDimensionsGroup)
             .addClass('input-field')
             .attribute('type', 'number')
