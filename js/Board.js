@@ -1,15 +1,15 @@
 class Board {
-    constructor(_id, _firstCoord, _secondCoord, _orientation) {
+    constructor(_id, _firstCoord, _secondCoord, _orientation, _thickness) {
         // state variables
         this.id = _id;
         this.orientation = _orientation; // horizontal ('x') or vertical ('y')
         this.coords = this.setBoardDirection(_firstCoord, _secondCoord, this.orientation);
-        this.len = this.getLength();
+        this.len = this.getLength() + _thickness; // length of the board, including thickness offset
         this.boardLabel;
 
         this.poi = { // points of interest
-            startJoint: this.orientation === "x" ? "pin" : "slot",
-            endJoint: this.orientation === "x" ? "pin" : "slot",
+            start: this.orientation === "x" ? "pin" : "slot",
+            end: this.orientation === "x" ? "pin" : "slot",
             tJoints: [], // array of x-values for T-joint holes 
             xJoints: [],
         }

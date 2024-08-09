@@ -59,7 +59,7 @@ body {
 }
 
 #canvas-div {
-  margin: 10px;
+  margin: 0px 5px;
 }
 
 .side-bar {
@@ -68,18 +68,11 @@ body {
   justify-content: space-between;
   height: 590px;
   background-color: #f0f0f0;
-  margin-top: 40px;
+  margin-top: 30px;
   border: #c0c0c0 1px solid;
   border-radius: 3px;
   box-sizing: border-box;
-}
-
-#left-side-bar {
-  min-width: 200px;
-}
-
-#right-side-bar {
-  min-width: 200px;
+  width: 210px;
 }
 
 .sidebar-top {

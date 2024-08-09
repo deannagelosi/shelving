@@ -86,11 +86,6 @@ function keyPressed() {
             if (designUI.currentAnneal && designUI.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
-            if (devMode) {
-                designUI.html.exportButton.removeClass('hidden');
-            } else {
-                designUI.html.exportButton.addClass('hidden');
-            }
         }
         else if (key === 'g' && devMode) {
             // advance one growth at a time in dev mode
@@ -103,7 +98,8 @@ function keyPressed() {
         if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
-            exportUI.handleCreate(); // todo: switch to the create layout image function
+            exportUI.showingLayout = true;
+            exportUI.handleShow();
         }
     }
 }

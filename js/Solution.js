@@ -454,14 +454,14 @@ class Solution {
             fill(devMode && x % 5 === 0 ? "pink" : _colors.numColor);
             let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
             let textY = ((canvasHeight - this.yPadding) - this.buffer) + txtYOffset;
-            text(x, textX, textY);
+            text(x + 1, textX, textY);
 
             for (let y = 0; y < designHeight; y++) {
                 // display row number
                 fill(devMode && y % 5 === 0 ? "pink" : _colors.numColor);
                 let textX = this.xPadding + txtXOffset;
                 let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                text(y, textX, textY);
+                text(y + 1, textX, textY);
             }
         }
     }
