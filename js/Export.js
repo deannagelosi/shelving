@@ -417,24 +417,24 @@ class Export {
         clear();
         background(255);
 
-        // noFill();
-        // stroke(0);
-        // strokeWeight(1 / scaleValue);
-        // // Draw the sheets
-        // for (let sheet of this.sheetOutline) {
-        //     rect(sheet.x, sheet.y, sheet.w, sheet.h);
-        // }
+        noFill();
+        stroke(0);
+        strokeWeight(1 / scaleValue);
+        // Draw the sheets
+        for (let sheet of this.sheetOutline) {
+            rect(sheet.x, sheet.y, sheet.w, sheet.h);
+        }
         // Draw the cuts
         for (let cut of this.cutList) {
             rect(cut.x, cut.y, cut.w, cut.h);
         }
-        // // Draw the label etches
-        // fill(0);
-        // noStroke();
-        // textSize(5 / scaleValue);
-        // for (let etch of this.etchList) {
-        //     text(etch.text, etch.x, etch.y);
-        // }
+        // Draw the label etches
+        fill(0);
+        noStroke();
+        textSize(5 / scaleValue);
+        for (let etch of this.etchList) {
+            text(etch.text, etch.x, etch.y);
+        }
 
         pop();
     }
@@ -451,13 +451,13 @@ class Export {
         const dxf = new DXFWriter();
         dxf.setUnits('Inches');
         // Create layers
-        // dxf.addLayer('Sheet Outlines', DXFWriter.ACI.GREEN, 'CONTINUOUS');
+        dxf.addLayer('Sheet Outlines', DXFWriter.ACI.GREEN, 'CONTINUOUS');
         dxf.addLayer('Cuts', DXFWriter.ACI.RED, 'CONTINUOUS');
-        // dxf.addLayer('Labels', DXFWriter.ACI.BLUE, 'CONTINUOUS');
+        dxf.addLayer('Labels', DXFWriter.ACI.BLUE, 'CONTINUOUS');
         // Add elements
-        // this.populateOutlineLayer(dxf);
+        this.populateOutlineLayer(dxf);
         this.populateCutLayer(dxf);
-        // this.populateEtchLayer(dxf);
+        this.populateEtchLayer(dxf);
         // return dxf string
         return dxf.toDxfString();
     }
