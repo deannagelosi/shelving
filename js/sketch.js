@@ -21,6 +21,7 @@ const ScreenState = {
 //= flags
 let detailView = false;
 let devMode = false;
+let aspectRatioPref = 0;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);

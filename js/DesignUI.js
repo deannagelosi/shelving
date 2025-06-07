@@ -63,6 +63,30 @@ class DesignUI {
         this.html.detailLabel = createSpan('Detail')
             .addClass('toggle-label')
             .parent(this.html.sliderDiv);
+
+        // Orientation buttons
+        this.html.orientationDiv = createDiv()
+            .id('orientation-div')
+            .parent(this.htmlRef.headerControls);
+
+        this.html.orientationButtons = createDiv()
+            .addClass('orientation-buttons')
+            .parent(this.html.orientationDiv);
+
+        this.html.tallButton = createDiv()
+            .addClass('orientation-button tall')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleOrientationChange(-1));
+
+        this.html.squareButton = createDiv()
+            .addClass('orientation-button square selected')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleOrientationChange(0));
+
+        this.html.wideButton = createDiv()
+            .addClass('orientation-button wide')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleOrientationChange(1));
     }
 
     initBodyUI() {
@@ -152,6 +176,23 @@ class DesignUI {
     }
 
     //== button handlers
+    handleOrientationChange(pref) {
+        aspectRatioPref = pref;
+
+        // Update selected state
+        this.html.tallButton.removeClass('selected');
+        this.html.squareButton.removeClass('selected');
+        this.html.wideButton.removeClass('selected');
+
+        if (pref === -1) {
+            this.html.tallButton.addClass('selected');
+        } else if (pref === 0) {
+            this.html.squareButton.addClass('selected');
+        } else if (pref === 1) {
+            this.html.wideButton.addClass('selected');
+        }
+    }
+
     handleSlider() {
         let toggle = this.html.toggleSlider;
 

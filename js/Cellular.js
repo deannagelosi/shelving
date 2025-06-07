@@ -384,7 +384,7 @@ class Cellular {
                                 let upValid = validOptions.some(option => option.dir == "up");
                                 let rightValid = validOptions.some(option => option.dir == "right");
 
-                                // Selection Rule 5: Change is Bad - grow in the same direction if possible
+                                // Selection Rule 4: Change is Bad - grow in the same direction if possible
                                 if (growingLeft && leftValid) {
                                     newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
                                     continue;
@@ -395,6 +395,7 @@ class Cellular {
                                     newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
                                     continue;
                                 } else {
+                                    // Selection Rule 5: Tie breaker - pick the first option
                                     console.error("Unable to break tie in growth at x: ", x, " y: ", y);
                                     // pick the first option
                                     newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
