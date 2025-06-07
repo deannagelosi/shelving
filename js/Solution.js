@@ -196,7 +196,7 @@ class Solution {
                         for (let localX = Math.max(0, x - 1); localX <= Math.min(x + 1, this.layout[0].length - 1); localX++) {
                             // don't count the square itself
                             if (localX !== x || localY !== y) {
-                                // count if the adjacent square is empty
+                                // count if the adjacent square is not empty
                                 if (this.layout[localY][localX].shapes.length > 0) {
                                     annealScore--;
                                 }
@@ -230,7 +230,7 @@ class Solution {
                                 // count if the adjacent square is the same score
                                 if (this.layout[localY][localX].annealScore == annealScore) {
                                     // skew larger clustered scores as worse
-                                    clusterPenalty += Math.pow(3, (annealScore - this.clusterLimit));
+                                    clusterPenalty += Math.pow(2, (annealScore - this.clusterLimit));
                                 }
                                 checkCount++; // used to see how many out-of-bounds (how many skipped)
                             }
@@ -291,19 +291,48 @@ class Solution {
             overlappingCount *= Math.pow(this.shapes.length, 3);
         }
         let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / 1.5));
-        let spacePenalty = (totalAnnealScore + totalSquares) * 0.05;
+        let spacePenalty = (totalAnnealScore + totalSquares) * 0.1;
 
         // check if solution is valid
         if (totalBottomLift == 0 && overlappingCount == 0) {
             this.valid = true;
         }
-        // calc the "squareness" of the result
-        let w = this.layout[0].length
-        let h = this.layout.length
-        let whRatio = (Math.max(w, h) / Math.min(w, h)) - 1;
-        let squareness = Math.pow((whRatio * this.shapes.length), 2) * 1.5;
+        // calc the "aspect ratio penalty" of the result
+        let w = this.layout[0].length;
+        let h = this.layout.length;
 
-        this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + squareness + spacePenalty);
+        let whRatio;
+        if (w === 0 || h === 0) {
+            whRatio = 0;
+        } else {
+            // Check for global aspect ratio preference from UI slider.
+            // It is expected to be defined in the global scope (e.g. sketch.js) as: let aspectRatioPref = 0;
+            const pref = (typeof aspectRatioPref !== 'undefined') ? aspectRatioPref : 0;
+            let targetRatio;
+            if (pref === 1) { // wide
+                targetRatio = 2;
+            } else if (pref === -1) { // tall
+                targetRatio = 0.5;
+            } else { // square
+                targetRatio = 1;
+            }
+
+            const currentRatio = w / h;
+            const ratioRatio = currentRatio / targetRatio;
+            whRatio = Math.max(ratioRatio, 1 / ratioRatio) - 1;
+        }
+        let aspectRatioPenalty = Math.pow((whRatio * this.shapes.length), 2) * 5.0;
+
+        if (devMode) {
+            const pref = (typeof aspectRatioPref !== 'undefined') ? aspectRatioPref : 0;
+            let targetLabel = "Square (1:1)";
+            if (pref === 1) targetLabel = "Wide (2:1)";
+            if (pref === -1) targetLabel = "Tall (1:2)";
+
+            console.log(`AspectRatio - Target: ${targetLabel}, Current: ${(w / h).toFixed(2)}, Penalty: ${Math.round(aspectRatioPenalty)}`);
+        }
+
+        this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + aspectRatioPenalty + spacePenalty);
         // this.score = Math.floor(clusterPenalty + bottomPenalty + squareness + spacePenalty);
     }
 

@@ -148,3 +148,43 @@
     margin: 0 15px;
     font-size: 14px;
 }
+
+#orientation-div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 20px;
+    margin-top: 10px;
+    height: 100%;
+}
+
+.orientation-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.orientation-button {
+    border: 2px solid #c0c0c0;
+    cursor: pointer;
+    background-color: #f0f0f0;
+}
+
+.orientation-button.selected {
+    border-color: #3f50b5;
+    background-color: #e8eaf6;
+}
+
+.orientation-button.tall {
+    width: 20px;
+    height: 30px;
+}
+
+.orientation-button.square {
+    width: 25px;
+    height: 25px;
+}
+
+.orientation-button.wide {
+    width: 30px;
+    height: 20px;
+}
