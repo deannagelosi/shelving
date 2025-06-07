@@ -323,17 +323,7 @@ class Solution {
         }
         let aspectRatioPenalty = Math.pow((whRatio * this.shapes.length), 2) * 5.0;
 
-        if (devMode) {
-            const pref = (typeof aspectRatioPref !== 'undefined') ? aspectRatioPref : 0;
-            let targetLabel = "Square (1:1)";
-            if (pref === 1) targetLabel = "Wide (2:1)";
-            if (pref === -1) targetLabel = "Tall (1:2)";
-
-            console.log(`AspectRatio - Target: ${targetLabel}, Current: ${(w / h).toFixed(2)}, Penalty: ${Math.round(aspectRatioPenalty)}`);
-        }
-
         this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + aspectRatioPenalty + spacePenalty);
-        // this.score = Math.floor(clusterPenalty + bottomPenalty + squareness + spacePenalty);
     }
 
     createNeighbor(_maxShift) {
