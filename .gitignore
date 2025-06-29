@@ -1,6 +1,9 @@
-jsconfig.json
-libraries/
-.DS_Store
-examples/
+# IDE
 .vscode/
-docs/
+.cursor/
+
+# System
+.DS_Store
+
+# Project
+examples/
