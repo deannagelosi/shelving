@@ -179,7 +179,7 @@ class InputUI {
 
         // remove hidden class from each element in this.html
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
-        this.html.exportButton.addClass('hidden'); // hide export button
+        // this.html.exportButton.addClass('hidden'); // hide export button
 
         // setup and draw the input grid
         this.updateGridSize();
