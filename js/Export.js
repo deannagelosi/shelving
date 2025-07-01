@@ -25,7 +25,7 @@ class Export {
         };
 
         // Configuration for laser cutting
-        this.gap = 0.5 // inch gap between boards
+        this.gap = 0.5; // inch gap between boards
         this.fontSize = 0.10; // inch font size for etching
         this.fontOffset = 0.10;
         this.sheets = []; // holds what boards are on each sheet and row
@@ -496,7 +496,7 @@ class Export {
         this.sheets = [];
         let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
 
-        this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
+        this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0));
         this.totalHeight = this.sheetHeight * this.numSheets;
     }
 
@@ -517,4 +517,10 @@ class Export {
         }
         return [null, null];
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Export;
 }

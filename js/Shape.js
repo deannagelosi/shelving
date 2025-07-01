@@ -11,7 +11,7 @@ class Shape {
             lowResShape: [[]], // 1/4th the width and height as shape, scaled to 1/4th the resolution
             bufferShape: [[]], // low res + one extra square on right and top
             title: '', // title of the shape
-        }
+        };
 
         //== solution specific data
         // - data that is unique to each solution
@@ -159,4 +159,10 @@ class Shape {
             array[i] = true;
         }
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Shape;
 }

@@ -101,10 +101,10 @@ class Anneal {
         const refineConfig = {
             initialTemp: this.initialTemp * 0.1, // lower starting temp for refinement
             initialCoolingRate: 0.99, // slower cooling
-        }
+        };
 
         let bestSolution = await this.anneal(_bestStartSolution, refineConfig);
-        if (this.stopAnneal) return null // re-anneal clicked
+        if (this.stopAnneal) return null; // re-anneal clicked
 
 
         // if solution is not valid (overlapping or floating shapes), continue to refine
@@ -114,11 +114,11 @@ class Anneal {
             const refineConfig = {
                 initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
                 initialCoolingRate: 0.99, // slower cooling
-            }
-            if (devMode) console.log("additional refining...")
+            };
+            if (devMode) console.log("additional refining...");
 
             bestSolution = await this.anneal(bestSolution, refineConfig);
-            if (this.stopAnneal) return null // re-anneal clicked
+            if (this.stopAnneal) return null; // re-anneal clicked
         }
 
         return bestSolution;
@@ -133,7 +133,7 @@ class Anneal {
             maxIterations: this.maxIterations,
             reheatCounter: this.reheatCounter,
             ..._config // override defaults with any provided values
-        }
+        };
         let temperature = config.initialTemp;
         let coolingRate = config.initialCoolingRate;
         let maxIterations = config.maxIterations;
@@ -257,7 +257,7 @@ class Anneal {
 
     // handler for button that controls restart
     reAnneal() {
-        console.log("restart clicked")
+        // console.log("restart clicked");
         // stop flag noticed by async anneals, which terminate
         this.stopAnneal = true;
         // restart flag noticed by handleStartAnneal(), which calls new anneal
@@ -265,8 +265,14 @@ class Anneal {
     }
 
     endAnneal() {
-        console.log("clear (stop) clicked")
+        // console.log("clear (stop) clicked");
         // stop flag noticed by async anneals, which terminate
         this.stopAnneal = true;
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Anneal;
 }

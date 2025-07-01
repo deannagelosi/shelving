@@ -120,19 +120,19 @@ class Cellular {
                 let ULSquare = {
                     shape: this.getShapeID(y, x - 1),
                     value: this.getTerrain(y, x - 1)
-                }
+                };
                 let DLSquare = {
                     shape: this.getShapeID(y - 1, x - 1),
                     value: this.getTerrain(y - 1, x - 1)
-                }
+                };
                 let URSquare = {
                     shape: this.getShapeID(y, x),
                     value: this.getTerrain(y, x)
-                }
+                };
                 let DRSquare = {
                     shape: this.getShapeID(y - 1, x),
                     value: this.getTerrain(y - 1, x)
-                }
+                };
 
                 this.pathValues[y].push({
                     left: this.getPathValue(ULSquare, DLSquare),
@@ -577,7 +577,7 @@ class Cellular {
                             { dir: "up", y: 1, x: 0 },
                             { dir: "right", y: 0, x: 1 },
                             { dir: "left", y: -1, x: 0 }
-                        ]
+                        ];
                         for (let side of sides) {
                             let newY = y + side.y;
                             let newX = x + side.x;
@@ -612,7 +612,7 @@ class Cellular {
         strokeWeight(7);
         for (let lineKey of this.cellLines) {
             const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
-            
+
             // calculate canvas coordinates
             let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
             let startY = ((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize);
@@ -673,13 +673,13 @@ class Cellular {
 
         let leftShift = 0;
         while (bottomRow[leftShift] != true) {
-            leftShift += 1
+            leftShift += 1;
         }
         let startX = posX + leftShift;
 
         let rightShift = bottomRow.length - 1;
         while (bottomRow[rightShift] != true) {
-            rightShift -= 1
+            rightShift -= 1;
         }
         let endX = posX + rightShift;
 
@@ -742,4 +742,10 @@ class Cellular {
     range(num) {
         return num % 256;
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Cellular;
 }

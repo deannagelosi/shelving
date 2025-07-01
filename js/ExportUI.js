@@ -2,7 +2,7 @@ class ExportUI {
     constructor() {
         //== state variables
         this.currExport;
-        this.savedAnnealElements = []
+        this.savedAnnealElements = [];
         // dom elements
         this.htmlRef = {};
         this.html = {};
@@ -324,7 +324,7 @@ class ExportUI {
         let exportData = {
             savedAnneals: annealsCopy,
             allShapes: shapesCopy
-        }
+        };
 
         try {
             saveJSONFile(exportData);
@@ -394,4 +394,10 @@ class ExportUI {
         }
         this.savedAnnealElements = [];
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ExportUI;
 }

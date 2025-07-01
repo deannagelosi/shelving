@@ -90,7 +90,7 @@ function keyPressed() {
         }
         else if (key === 'g' && devMode) {
             // advance one growth at a time in dev mode
-            numGrow++
+            numGrow++;
             designUI.displayResult();
         }
     }

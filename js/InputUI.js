@@ -282,7 +282,7 @@ class InputUI {
         let exportData = {
             savedAnneals: [],
             allShapes: shapesCopy
-        }
+        };
 
         try {
             saveJSONFile(exportData);
@@ -350,7 +350,7 @@ class InputUI {
         this.shapes.push(...loadedShapes);
 
         //== process anneal data
-        let maxSolutionNum = 0
+        let maxSolutionNum = 0;
         let loadedAnneals = [];
         for (let anneal of annealData) {
             // find the largest anneal number (ex: 4 on 'solution-4')
@@ -358,7 +358,7 @@ class InputUI {
             maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
             // create new shape from saved data to add solution methods back
             // initialize solution's shapes
-            let initShapes = []
+            let initShapes = [];
             for (let shape of anneal.finalSolution.shapes) {
                 let newShape = new Shape();
                 newShape.saveUserInput(shape.data.title, shape.data.highResShape);
@@ -388,7 +388,7 @@ class InputUI {
 
     adjustGridSize() {
         // adjust the grid size in inches
-        const newValue = parseInt(this.html.gridSizeInput.value())
+        const newValue = parseInt(this.html.gridSizeInput.value());
 
         let newSize = constrain(newValue, 1, 12);
         this.html.gridSizeInput.value(newSize);
@@ -732,4 +732,10 @@ class InputUI {
 
         return minBrightness < (255 * 0.5); // 50% threshold
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = InputUI;
 }

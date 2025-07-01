@@ -259,7 +259,7 @@ class Solution {
                 // loop all of the shapes x-vales
                 let rowInBounds = this.layoutInBounds(bottomY - 1, x);
                 if (rowInBounds && this.layout[bottomY - 1][x].shapes.length === 0) {
-                    shapeBottomEmptyRowScore += this.layout[bottomY - 1][x].annealScore
+                    shapeBottomEmptyRowScore += this.layout[bottomY - 1][x].annealScore;
                 } else {
                     shapeBottomEmptyRowScore = 0;
                     isBottomShape = false;
@@ -615,7 +615,7 @@ class Solution {
     showScores() {
         if (devMode) {
             // display the design space grid
-            fill(100)
+            fill(100);
             stroke(50);
             strokeWeight(0.25);
             textAlign(CENTER, CENTER);
@@ -676,4 +676,10 @@ class Solution {
             return false;
         }
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Solution;
 }

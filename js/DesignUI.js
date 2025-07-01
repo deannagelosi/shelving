@@ -297,7 +297,7 @@ class DesignUI {
         // clean up the design screen
         this.clearShapeList();
         this.clearSavedAnneals();
-        
+
         // setup for the export screen
         clear();
         background(255);
@@ -329,7 +329,7 @@ class DesignUI {
         let colors = {
             lineColor: "rgb(198, 198, 197)",
             bkrdColor: "rgb(229, 229, 229)"
-        }
+        };
         emptySolution.showGridSquares(colors);
     }
 
@@ -492,4 +492,10 @@ class DesignUI {
         }
         this.savedAnnealElements = [];
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DesignUI;
 }
