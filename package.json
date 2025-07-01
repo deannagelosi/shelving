@@ -1,0 +1,20 @@
+{
+  "name": "Uniquely Shaped Spaces",
+  "version": "1.0.0",
+  "description": "Creates compact and visually interesting layouts for irregularly shaped objects",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^30.0.3"
+  }
+}
