@@ -11,9 +11,10 @@ let inputUI;
 let designUI;
 let exportUI;
 
-//== event system and render manager
+//== event management
 let appEvents;
 let renderScheduled = false;
+let isExporting = false;
 
 //== static DOM element references
 let htmlRefs = {};
@@ -78,6 +79,11 @@ function setup() {
                 }
             }, 0);
         }
+    });
+
+    // setup global export functionality
+    appEvents.on('exportRequested', () => {
+        handleFileExport();
     });
 
     // setup ui elements for both screens
@@ -186,6 +192,36 @@ function updateButton(button, enabled) {
         button.removeAttribute('disabled');
     } else {
         button.attribute('disabled', '');
+    }
+}
+
+function handleFileExport() {
+    // export saved shapes and solutions
+    if (isExporting) return; // debounce
+    isExporting = true;
+
+    try {
+        // get an export friendly copy of the shapes
+        let shapesCopy = appState.shapes.map(shape => shape.exportShape());
+        // get an export friendly copy of the saved anneals
+        let annealsCopy = appState.savedAnneals.map(anneal => {
+            return {
+                ...anneal,
+                solutionHistory: [], // temporarily set to empty to reduce file size
+                finalSolution: anneal.finalSolution.exportSolution()
+            };
+        });
+        // create export object
+        let exportData = {
+            savedAnneals: annealsCopy,
+            allShapes: shapesCopy
+        };
+
+        saveJSONFile(exportData);
+    } catch (error) {
+        console.error('Export failed:', error);
+    } finally {
+        isExporting = false;
     }
 }
 

@@ -7,7 +7,6 @@ class ExportUI {
         this.savedAnnealElements = [];
         // flags
         this.showingLayout = true;
-        this.isExporting = false;
 
         //== initialize UI elements
         this.initSidebarButtons();
@@ -244,31 +243,8 @@ class ExportUI {
     }
 
     handleExport() {
-        if (this.isExporting) return; // block multiple clicks during export
-
-        this.isExporting = true;
-        updateButton(this.html.exportButton, false);
-
-        // get a copy of shapes with only the data needed
-        let shapesCopy = appState.shapes.map(shape => shape.exportShape());
-        // make a copy of saved anneals with only the data needed
-        let annealsCopy = appState.savedAnneals.map(anneal => {
-            return { ...anneal, finalSolution: anneal.finalSolution.exportSolution() };
-        });
-        // create export object
-        let exportData = {
-            savedAnneals: annealsCopy,
-            allShapes: shapesCopy
-        };
-
-        try {
-            saveJSONFile(exportData);
-        } catch (error) {
-            console.error('Export failed:', error);
-        } finally {
-            this.isExporting = false;
-            updateButton(this.html.exportButton, true);
-        }
+        // trigger global export functionality
+        appEvents.emit('exportRequested');
     }
 
     handleShow() {

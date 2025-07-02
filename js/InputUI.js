@@ -7,7 +7,6 @@ class InputUI {
         this.html = {};
         this.shapeTitleElements = [];
         // flags
-        this.isExporting = false;
         this.eraseMode = "first";
 
         //== setup
@@ -67,7 +66,7 @@ class InputUI {
         this.html.exportButton = createButton('Export')
             .addClass('button primary-button hidden')
             .parent(htmlRefs.right.buttons)
-            .mousePressed(() => this.handleExportShapes());
+            .mousePressed(() => this.handleExport());
 
         this.html.nextButton = createButton('Next')
             .addClass('button primary-button hidden')
@@ -249,30 +248,9 @@ class InputUI {
         appEvents.emit('stateChanged');
     }
 
-    handleExportShapes() {
-        // add full shapes array to saved anneals
-        if (this.isExporting) return; // block multiple clicks during export
-
-        this.isExporting = true;
-        this.html.exportButton.attribute('disabled', '');
-
-        // get a copy of shapes that only includes the data needed
-        let shapesCopy = appState.shapes.map(shape => shape.exportShape());
-
-        let exportData = {
-            savedAnneals: [],
-            allShapes: shapesCopy
-        };
-
-        try {
-            saveJSONFile(exportData);
-
-        } catch (error) {
-            console.error('Export failed:', error);
-        } finally {
-            this.isExporting = false;
-            this.html.exportButton.removeAttribute('disabled');
-        }
+    handleExport() {
+        // trigger global export functionality
+        appEvents.emit('exportRequested');
     }
 
     handleNext() {

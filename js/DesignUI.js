@@ -285,7 +285,8 @@ class DesignUI {
         // save only the necessary data for each anneal
         let savedData = {
             title: `solution-${appState.totalSavedAnneals}`,
-            solutionHistory: appState.currentAnneal.solutionHistory,
+            solutionHistory: [], // temporarily set to empty to reduce memory usage
+            // solutionHistory: appState.currentAnneal.solutionHistory,
             finalSolution: appState.currentAnneal.finalSolution,
             enabledShapes: appState.shapes.map(shape => shape.enabled)
         };
