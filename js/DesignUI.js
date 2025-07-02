@@ -1,50 +1,58 @@
 class DesignUI {
     constructor() {
         //== state variables
-        this.currentAnneal;
-        this.savedAnneals = [];
-        this.currCellular;
-        this.totalSavedAnneals = 0;
-        this.currentViewedAnnealIndex = null;
-        // dom elements
-        this.htmlRef = {};
-        this.html = {};
         this.savedAnnealElements = [];
+        // dom elements
+        this.html = {};
         this.shapeElements = [];
-        // flags
 
         //== initialize UI elements
-        this.getHtmlRef();
         this.initHeaderUI();
-        this.initBodyUI();
-        this.initRightSideUI();
+        this.initBottomUI();
+        this.initSidebarButtons();
 
-        // initially hide the input elements
-        this.hide();
+        //== event listeners
+        // listen for screen changes to manage visibility
+        appEvents.on('screenChanged', ({ screen }) => {
+            if (screen === ScreenState.DESIGN) {
+                this.show();
+            } else {
+                this.hide();
+            }
+        });
     }
 
-    //== dom element setup methods
-    getHtmlRef() {
-        // get references to parent dom elements
-        this.htmlRef.header = select('#header');
-        this.htmlRef.subheading = select('#subheading');
-        this.htmlRef.headerControls = select('#header-controls');
-        this.htmlRef.leftBar = select('#left-side-bar');
-        this.htmlRef.rightBar = select('#right-side-bar');
-        this.htmlRef.bottomDiv = select('#bottom-div');
-        this.htmlRef.leftSideTop = select('#left-side-bar .sidebar-top');
-        this.htmlRef.leftSideList = select('#left-side-bar .sidebar-list');
-        this.htmlRef.rightSideTop = select('#right-side-bar .sidebar-top');
-        this.htmlRef.rightSideList = select('#right-side-bar .sidebar-list');
-        this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
+    computeState() {
+        // centralized UI button state logic
+        return {
+            canNext: appState.savedAnneals.length >= 1 && (appState.currentViewedAnnealIndex !== null || appState.currentAnneal !== null),
+            canSave: appState.currentAnneal && appState.currentAnneal.finalSolution && !appState.savedAnneals.includes(appState.currentAnneal),
+            hasShapes: appState.shapes.length > 0,
+            hasSavedAnneals: appState.savedAnneals.length > 0
+        };
+    }
+
+    initSidebarButtons() {
+        // create sidebar buttons
+        // set hidden until screen is shown
+        this.html.backButton = createButton('Back')
+            .addClass('button secondary-button hidden')
+            .parent(htmlRefs.left.buttons)
+            .mousePressed(() => this.handleBack());
+
+        this.html.nextButton = createButton('Next')
+            .addClass('button primary-button hidden')
+            .parent(htmlRefs.right.buttons)
+            .mousePressed(() => this.handleNext());
     }
 
     initHeaderUI() {
-        //== setup ui elements for header
+        // create header elements (hidden until screen is shown)
         // slider toggle
         this.html.sliderDiv = createDiv()
             .id('slider-div')
-            .parent(this.htmlRef.headerControls)
+            .addClass('hidden')
+            .parent(htmlRefs.headerControls)
             .mousePressed(this.handleSlider.bind(this));
 
         // Simple label
@@ -52,7 +60,7 @@ class DesignUI {
             .addClass('toggle-label')
             .parent(this.html.sliderDiv);
 
-        // Create and append the slider
+        // create and append the slider
         // min, max, default, step
         this.html.toggleSlider = createSlider(0, 1, 0, 1)
             .id('toggleSlider')
@@ -67,7 +75,8 @@ class DesignUI {
         // Orientation buttons
         this.html.orientationDiv = createDiv()
             .id('orientation-div')
-            .parent(this.htmlRef.headerControls);
+            .addClass('hidden')
+            .parent(htmlRefs.headerControls);
 
         this.html.orientationButtons = createDiv()
             .addClass('orientation-buttons')
@@ -76,25 +85,26 @@ class DesignUI {
         this.html.tallButton = createDiv()
             .addClass('orientation-button tall')
             .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleOrientationChange(-1));
+            .mousePressed(() => this.handleAspectRatioChange(-1));
 
         this.html.squareButton = createDiv()
             .addClass('orientation-button square selected')
             .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleOrientationChange(0));
+            .mousePressed(() => this.handleAspectRatioChange(0));
 
         this.html.wideButton = createDiv()
             .addClass('orientation-button wide')
             .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleOrientationChange(1));
+            .mousePressed(() => this.handleAspectRatioChange(1));
     }
 
-    initBodyUI() {
-        //== setup dom elements
-        // setup anneal ui element containers
+    initBottomUI() {
+        // create bottom elements (under canvas)
+        // hidden until screen is shown
         this.html.designDiv = createDiv()
-            .parent(this.htmlRef.bottomDiv)
-            .id('design-div');
+            .id('design-div')
+            .addClass('hidden')
+            .parent(htmlRefs.bottomDiv);
 
         this.html.buttonRow = createDiv()
             .parent(this.html.designDiv)
@@ -124,59 +134,53 @@ class DesignUI {
         //     .parent(this.html.designDiv).addClass('info-text');
     }
 
-    initRightSideUI() {
-        //== setup ui elements for right side bar
-        // Next button
-        this.html.nextButton = createButton('Next')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
-            .attribute('disabled', '') // until one saved anneal
-            .mousePressed(() => this.handleNext());
-    }
-
     //== show/hide methods
+    // manage visibility and screen-specific setup
     show() {
-        // toggle on the input screen divs
-        this.htmlRef.leftBar.removeClass('hidden');
-        this.htmlRef.rightBar.removeClass('hidden');
-        this.htmlRef.bottomDiv.removeClass('hidden');
-        // set titles
-        this.htmlRef.leftSideTop.html('Shapes');
-        this.htmlRef.rightSideTop.html('Results');
-        // Set subheading
-        this.htmlRef.subheading.html("Generate Layout");
-
-        // remove hidden class from each element in this.html
+        // show all design screen elements
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
-        this.drawBlankGrid();
-        // this.html.growthText.addClass('hidden');
-        // if (devMode) {
-        //     // show called in displayResult, not updateDisplayCallback
-        //     // only displayResult is called after annealing complete
-        //     this.html.growthText.removeClass('hidden');
-        // }
+        // reset the canvas
+        clear();
+        background(255);
 
-        // // temp auto-loading for testing
-        // this.viewSavedAnneal(0);
-        // setTimeout(() => {
-        //     this.handleNext();
-        //     exportUI.handleCreate();
-        // }, 0);
+        // start with all shapes enabled in the select list
+        appState.shapes.forEach((shape, index) => {
+            appState.shapes[index].enabled = true;
+        });
+
+        // draw the blank grid
+        this.drawBlankGrid();
     }
 
     hide() {
-        // toggle off input screen divs
-        this.htmlRef.leftBar.addClass('hidden');
-        this.htmlRef.rightBar.addClass('hidden');
-        this.htmlRef.bottomDiv.addClass('hidden');
-
-        // add hidden class to each element in this.html
+        // hide all design screen elements
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
+    render() {
+        // update button states based on current appState
+        const state = this.computeState();
+        updateButton(this.html.nextButton, state.canNext);
+        updateButton(this.html.saveButton, state.canSave);
+
+        // update dynamic lists
+        this.createShapeList();
+        this.createAnnealList();
+    }
+
     //== button handlers
-    handleOrientationChange(pref) {
+    handleBack() {
+        // change to input screen
+        changeScreen(ScreenState.INPUT);
+    }
+
+    handleNext() {
+        // change to export screen
+        changeScreen(ScreenState.EXPORT);
+    }
+
+    handleAspectRatioChange(pref) {
         aspectRatioPref = pref;
 
         // Update selected state
@@ -220,7 +224,7 @@ class DesignUI {
         this.html.saveButton.attribute('disabled', '');
 
         // check if each shape has all it's grid data
-        for (let shape of inputUI.shapes) {
+        for (let shape of appState.shapes) {
             if (!shape.data.lowResShape || !shape.data.bufferShape) {
                 // if missing, generate it
                 shape.saveUserInput(shape.data.title, shape.data.highResShape);
@@ -230,7 +234,7 @@ class DesignUI {
         // find only selected (enabled) shapes
         // - filter() returns shallow copy of all shapes
         // - shallow copy keeps shape specific data while allowing unique position data
-        let selectedShapes = inputUI.shapes.filter(shape => shape.enabled);
+        let selectedShapes = appState.shapes.filter(shape => shape.enabled);
         if (selectedShapes.length < 2) {
             alert('Select at least two shapes to generate');
             return;
@@ -268,8 +272,8 @@ class DesignUI {
             this.html.saveButton.removeAttribute('disabled');
 
             // save results
-            this.currentAnneal = newAnneal;
-            console.log("Annealing complete: ", this.currentAnneal.finalSolution.score);
+            appState.currentAnneal = newAnneal;
+            console.log("Annealing complete: ", appState.currentAnneal.finalSolution.score);
 
             this.displayResult();
         }
@@ -277,46 +281,31 @@ class DesignUI {
 
     handleSaveSolution() {
         // save the current solution to the array
-        this.totalSavedAnneals++;
+        appState.totalSavedAnneals++;
         // save only the necessary data for each anneal
         let savedData = {
-            title: `solution-${this.totalSavedAnneals}`,
-            solutionHistory: this.currentAnneal.solutionHistory,
-            finalSolution: this.currentAnneal.finalSolution,
-            enabledShapes: inputUI.shapes.map(shape => shape.enabled)
-        }
-        this.savedAnneals.push(savedData);
-        this.viewSavedAnneal(this.savedAnneals.length - 1);
+            title: `solution-${appState.totalSavedAnneals}`,
+            solutionHistory: appState.currentAnneal.solutionHistory,
+            finalSolution: appState.currentAnneal.finalSolution,
+            enabledShapes: appState.shapes.map(shape => shape.enabled)
+        };
+        appState.savedAnneals.push(savedData);
 
-        // update buttons
-        // disable save until a new anneal or change is made
-        this.html.saveButton.attribute('disabled', '');
+        this.viewSavedAnneal(appState.savedAnneals.length - 1);
+
+        // notify render manager
+        appEvents.emit('stateChanged');
     }
+    //== end button handlers
 
-    handleNext() {
-        // clean up the design screen
-        this.clearShapeList();
-        this.clearSavedAnneals();
-
-        // setup for the export screen
-        clear();
-        background(255);
-
-        // change to export screen
-        changeScreen(ScreenState.EXPORT);
-    }
-
-    //== display methods
     drawBlankGrid() {
         clear();
         background(255);
 
         // reset ui to cleared initial state
-        // show anneal list
-        this.viewSavedAnneal(null);
-        // show shapes list
-        this.createShapeList();
-        this.html.saveButton.attribute('disabled', '');
+        // clear current selection
+        appState.currentViewedAnnealIndex = null;
+        appState.currentAnneal = null;
 
         // enable shape selection
         this.shapeElements.forEach(element => {
@@ -331,6 +320,9 @@ class DesignUI {
             bkrdColor: "rgb(229, 229, 229)"
         };
         emptySolution.showGridSquares(colors);
+
+        // notify render manager
+        appEvents.emit('stateChanged');
     }
 
     updateDisplayCallback(_solution) {
@@ -345,30 +337,37 @@ class DesignUI {
 
     displayResult() {
         // show shapes and grid but not annealing scores
-        if (this.currentAnneal && this.currentAnneal.finalSolution) {
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             clear();
             background(255);
-            this.currentAnneal.finalSolution.showLayout();
+            appState.currentAnneal.finalSolution.showLayout();
 
             // setup case for cellular and boards
-            this.currCellular = new Cellular(this.currentAnneal.finalSolution);
-            this.currCellular.growCells();
-            this.currCellular.showCellLines();
+            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution);
+            appState.currCellular.growCells();
+            appState.currCellular.showCellLines();
 
             // display cells and terrain (cellular scores)
             if (devMode) {
-                this.currCellular.showTerrain();
-                this.currCellular.showCells();
+                appState.currCellular.showTerrain();
+                appState.currCellular.showCells();
             }
         }
     }
 
     createShapeList() {
         // create list of shapes to select from
-        this.clearShapeList();
-        inputUI.shapes.forEach((shape, index) => {
+        if (!htmlRefs.left) return;
+        if (appState.currentScreen !== ScreenState.DESIGN) return;
+
+        // clear the list
+        htmlRefs.left.list.html('');
+        this.shapeElements = [];
+
+        // create the list
+        appState.shapes.forEach((shape, index) => {
             let shapeItem = createDiv()
-                .parent(this.htmlRef.leftSideList)
+                .parent(htmlRefs.left.list)
                 .addClass(shape.enabled ? 'shape-item highlighted' : 'shape-item')
                 .mousePressed(() => this.toggleShapeSelection(index));
 
@@ -380,29 +379,29 @@ class DesignUI {
         });
     }
 
-    clearShapeList() {
-        for (let element of this.shapeElements) {
-            element.remove();
-        }
-        this.shapeElements = [];
-    }
-
     toggleShapeSelection(index) {
         if (this.shapeElements[index].hasClass('disabled')) return;
 
-        inputUI.shapes[index].enabled = !inputUI.shapes[index].enabled;
+        appState.shapes[index].enabled = !appState.shapes[index].enabled;
         this.shapeElements[index].toggleClass('highlighted');
     }
 
-    displaySavedAnneals() {
-        this.clearSavedAnneals();
+    createAnnealList() {
+        // create list of solutions to select from
+        if (!htmlRefs.right) return;
+        if (appState.currentScreen !== ScreenState.DESIGN) return;
 
-        for (let i = 0; i < this.savedAnneals.length; i++) {
+        // clear the list
+        htmlRefs.right.list.html('');
+        this.savedAnnealElements = [];
+
+        // create the list
+        for (let i = 0; i < appState.savedAnneals.length; i++) {
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
-            if (i === this.currentViewedAnnealIndex) {
+            if (i === appState.currentViewedAnnealIndex) {
                 savedAnnealItem.addClass('highlighted');
             }
-            savedAnnealItem.parent(this.htmlRef.rightSideList);
+            savedAnnealItem.parent(htmlRefs.right.list);
 
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
@@ -410,7 +409,7 @@ class DesignUI {
                 .parent(savedAnnealItem)
                 .mousePressed(() => this.viewSavedAnneal(i));
 
-            let titleSpan = createSpan(this.savedAnneals[i].title)
+            let titleSpan = createSpan(appState.savedAnneals[i].title)
                 .addClass('anneal-title')
                 .parent(savedAnnealItem);
 
@@ -419,17 +418,20 @@ class DesignUI {
                 .size(24, 24)
                 .parent(savedAnnealItem)
                 .mousePressed(() => {
-                    if (confirm(`Are you sure you want to delete "${this.savedAnneals[i].title}"?`)) {
-                        this.savedAnneals.splice(i, 1);
-                        if (i === this.currentViewedAnnealIndex) {
-                            this.currentViewedAnnealIndex = null;
-                            // currently viewed anneal was deleted
+                    if (confirm(`Are you sure you want to delete "${appState.savedAnneals[i].title}"?`)) {
+                        appState.savedAnneals.splice(i, 1);
+                        if (i === appState.currentViewedAnnealIndex) {
+                            // currently viewed anneal was deleted, display blank grid
+                            appState.currentViewedAnnealIndex = null;
+                            appState.currentAnneal = null;
                             this.drawBlankGrid();
-                        } else if (i < this.currentViewedAnnealIndex) {
-                            // deleted one before currently viewed, move the index down
-                            this.currentViewedAnnealIndex--;
-                            this.viewSavedAnneal(this.currentViewedAnnealIndex);
+                        } else if (i < appState.currentViewedAnnealIndex) {
+                            // deleted before currently viewed, move the index down
+                            appState.currentViewedAnnealIndex--;
+                            this.viewSavedAnneal(appState.currentViewedAnnealIndex);
                         }
+                        // notify render manager
+                        appEvents.emit('stateChanged');
                     }
                 });
 
@@ -440,16 +442,16 @@ class DesignUI {
     viewSavedAnneal(index) {
         if (index === null) {
             // clear the viewed anneal
-            this.currentViewedAnnealIndex = null;
-            this.currentAnneal = null;
-            this.displaySavedAnneals();
-            this.html.nextButton.attribute('disabled', '');
+            appState.currentViewedAnnealIndex = null;
+            appState.currentAnneal = null;
+            // notify render manager
+            appEvents.emit('stateChanged');
             return;
         }
 
         // display selected saved anneal
-        this.currentViewedAnnealIndex = index;
-        this.currentAnneal = this.savedAnneals[index];
+        appState.currentViewedAnnealIndex = index;
+        appState.currentAnneal = appState.savedAnneals[index];
 
         // disable shape selection changes while viewing saved anneal
         if (this.shapeElements.length === 0) {
@@ -459,10 +461,10 @@ class DesignUI {
             element.addClass('disabled');
         });
         // set which shapes are enabled for this saved solution
-        let enableShapes = this.currentAnneal.enabledShapes;
+        let enableShapes = appState.currentAnneal.enabledShapes;
         enableShapes.forEach((_enabled, i) => {
             // set the enabled states for this saved solution
-            inputUI.shapes[i].enabled = _enabled;
+            appState.shapes[i].enabled = _enabled;
             if (_enabled) {
                 this.shapeElements[i].addClass('highlighted');
             } else {
@@ -473,29 +475,23 @@ class DesignUI {
         // update display
         this.displayResult();
         this.updateSavedAnnealHighlight();
-        this.html.nextButton.removeAttribute('disabled');
+        // notify render manager
+        appEvents.emit('stateChanged');
     }
 
     updateSavedAnnealHighlight() {
         for (let i = 0; i < this.savedAnnealElements.length; i++) {
-            if (this.currentAnneal === this.savedAnneals[i]) {
+            if (appState.currentAnneal === appState.savedAnneals[i]) {
                 this.savedAnnealElements[i].addClass('highlighted');
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');
             }
         }
     }
-
-    clearSavedAnneals() {
-        for (let element of this.savedAnnealElements) {
-            element.remove();
-        }
-        this.savedAnnealElements = [];
-    }
 }
 
-// Only export the class when in a Node.js environment (e.g., during Jest tests)
-// Ignored when the app is running in the browser
+// only export the class when in a Node.js environment (e.g., during Jest tests)
+// ignored when the app is running in the browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = DesignUI;
 }

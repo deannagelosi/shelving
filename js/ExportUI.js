@@ -2,78 +2,75 @@ class ExportUI {
     constructor() {
         //== state variables
         this.currExport;
-        this.savedAnnealElements = [];
         // dom elements
-        this.htmlRef = {};
         this.html = {};
+        this.savedAnnealElements = [];
         // flags
         this.showingLayout = true;
         this.isExporting = false;
 
         //== initialize UI elements
-        this.getHtmlRef();
-        this.initHeaderUI();
-        this.initLeftSideUI();
-        this.initBodyUI();
-        this.initRightSideUI();
+        this.initSidebarButtons();
+        this.initExportSettings();
 
-        // initially hide the export elements
-        this.hide();
+        //== event listeners
+        // listen for screen changes to manage visibility
+        appEvents.on('screenChanged', ({ screen }) => {
+            if (screen === ScreenState.EXPORT) {
+                this.show();
+            } else {
+                this.hide();
+            }
+        });
+
+        // listen for requests from Export.js for additional sheets
+        appEvents.on('addSheetRequested', () => {
+            let numSheets = parseInt(this.html.numSheetsInput.value());
+            this.html.numSheetsInput.value(numSheets + 1);
+        });
+
+        // listen for requests from Export.js to refresh layout
+        appEvents.on('layoutRefreshRequested', () => {
+            this.prepareExportData();
+        });
+
+        // listen for requests to reset to layout view (dev mode toggle)
+        appEvents.on('resetToLayoutView', () => {
+            this.showingLayout = true;
+            this.handleShow();
+        });
     }
 
-    //== UI init functions
-    getHtmlRef() {
-        // get references to parent dom elements
-        this.htmlRef.header = select('#header');
-        this.htmlRef.subheading = select('#subheading');
-        this.htmlRef.leftBar = select('#left-side-bar');
-        this.htmlRef.rightBar = select('#right-side-bar');
-        this.htmlRef.bottomDiv = select('#bottom-div');
-        this.htmlRef.leftSideTop = select('#left-side-bar .sidebar-top');
-        this.htmlRef.leftSideList = select('#left-side-bar .sidebar-list');
-        this.htmlRef.leftSideButtons = select('#left-side-bar .sidebar-buttons');
-        this.htmlRef.rightSideTop = select('#right-side-bar .sidebar-top');
-        this.htmlRef.rightSideList = select('#right-side-bar .sidebar-list');
-        this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
+    computeState() {
+        // centralized UI button state logic
+        return {
+            canExport: appState.savedAnneals.length >= 1,
+            canShowDownload: appState.currentViewedAnnealIndex !== null && appState.currentAnneal !== null && this.currExport,
+            hasSavedAnneals: appState.savedAnneals.length > 0
+        };
     }
 
-    initHeaderUI() {
-        // Setup header UI elements specific to export screen
-    }
-
-    initLeftSideUI() {
-        //== setup ui elements for left side bar
+    initSidebarButtons() {
+        // create sidebar buttons (hidden until screen is shown)
         this.html.backButton = createButton('Back')
-            .parent(this.htmlRef.leftSideButtons)
-            .addClass('button secondary-button')
-            .attribute('disabled', '')
+            .addClass('button secondary-button hidden')
+            .parent(htmlRefs.left.buttons)
             .mousePressed(() => this.handleBack());
 
-        // Export button
         this.html.exportButton = createButton('Export')
-            .parent(this.htmlRef.leftSideButtons)
-            .addClass('button primary-button')
+            .addClass('button primary-button hidden')
+            .parent(htmlRefs.left.buttons)
             .mousePressed(() => this.handleExport());
     }
 
-    initBodyUI() {
-        // Setup body UI elements for export screen
-        this.html.exportDiv = createDiv()
-            .parent(this.htmlRef.bottomDiv)
-            .id('export-div');
-    }
+    initExportSettings() {
+        // create settings elements (hidden until screen is shown)
 
-    initRightSideUI() {
-        //== setup ui elements for left side bar
-        // settings
-        // todo: add solution name
-
-        // bind handleCreate to this instance of the input values
-        this.handleCreate = this.handleCreate.bind(this);
+        // bind prepareExportData to this instance of the input values
+        this.prepareExportData = this.prepareExportData.bind(this);
         // Material Thickness Input
         this.html.sheetThicknessGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.sheetThicknessLabel = createSpan('Material Thickness (in)')
             .parent(this.html.sheetThicknessGroup)
             .addClass('input-label');
@@ -84,12 +81,11 @@ class ExportUI {
             .attribute('min', '0.13')
             .attribute('max', '0.5')
             .attribute('step', '0.01')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
 
         // Case Depth Input
         this.html.caseDepthGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.caseDepthLabel = createSpan('Case Depth (in)')
             .parent(this.html.caseDepthGroup)
             .addClass('input-label');
@@ -100,12 +96,11 @@ class ExportUI {
             .attribute('min', '1')
             .attribute('max', '10')
             .attribute('step', '0.5')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
 
         // Kerf Input
         this.html.kerfGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.kerfLabel = createSpan('Kerf Width')
             .parent(this.html.kerfGroup)
             .addClass('input-label');
@@ -116,26 +111,24 @@ class ExportUI {
             .attribute('min', '0')
             .attribute('max', '.04')
             .attribute('step', '0.01')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
 
         // Number of Pin/Slots Selector
         this.html.pinSlotGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.pinSlotLabel = createSpan('# of pin/slots')
             .parent(this.html.pinSlotGroup)
             .addClass('input-label');
         this.html.pinSlotSelect = createSelect()
             .parent(this.html.pinSlotGroup)
             .addClass('input-field')
-            .changed(this.handleCreate);
+            .changed(this.prepareExportData);
         this.html.pinSlotSelect.option('2', '2');
         this.html.pinSlotSelect.option('1', '1');
 
         // Sheet Dimensions Input
         this.html.sheetDimensionsGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.sheetDimensionsLabel = createSpan('Sheet Dimensions (width x height)')
             .parent(this.html.sheetDimensionsGroup)
             .addClass('input-label');
@@ -145,19 +138,18 @@ class ExportUI {
             .attribute('type', 'number')
             .attribute('min', '1')
             .attribute('step', '1')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
         this.html.sheetHeightInput = createInput('28')
             .parent(this.html.sheetDimensionsGroup)
             .addClass('input-field')
             .attribute('type', 'number')
             .attribute('min', '1')
             .attribute('step', '1')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
 
         // Number of Sheets Input
         this.html.numSheetsGroup = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-selector');
+            .addClass('export-selector hidden');
         this.html.numSheetsLabel = createSpan('Number of Sheets')
             .parent(this.html.numSheetsGroup)
             .addClass('input-label');
@@ -168,12 +160,11 @@ class ExportUI {
             .attribute('min', '1')
             .attribute('max', '10')
             .attribute('step', '1')
-            .input(this.handleCreate);
+            .input(this.prepareExportData);
 
-        // Buttons
+        // buttons for settings
         this.html.buttonList = createDiv()
-            .parent(this.htmlRef.rightSideList)
-            .addClass('export-button-list');
+            .addClass('export-button-list hidden');
 
         this.html.showButton = createButton('Show Case')
             .parent(this.html.buttonList)
@@ -194,84 +185,94 @@ class ExportUI {
             .mousePressed(() => this.handleDownloadCase());
     }
 
-    //== Show/Hide functions
+    //== show/hide functions
+    // manage visibility and screen-specific setup
     show() {
-        // Show export screen elements
-        this.htmlRef.leftBar.removeClass('hidden');
-        this.htmlRef.rightBar.removeClass('hidden');
-        this.htmlRef.bottomDiv.removeClass('hidden');
-        // set titles
-        this.htmlRef.leftSideTop.html('Solutions');
-        this.htmlRef.rightSideTop.html('Settings');
-        // Set subheading
-        this.htmlRef.subheading.html("Export Design");
-
+        // show all export screen elements
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
-        this.displaySavedAnneals();
-        this.handleCreate();
+        // reset the canvas
+        clear();
+        background(255);
+
+        // prepare active solution for export
+        this.prepareExportData();
     }
 
     hide() {
-        // Hide export screen elements
-        this.htmlRef.leftBar.addClass('hidden');
-        this.htmlRef.rightBar.addClass('hidden');
-        this.htmlRef.bottomDiv.addClass('hidden');
-
+        // hide all export screen elements
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
-    //== Button handlers
-    handleCreate() {
-        const caseDepth = parseFloat(this.html.caseDepthInput.value());
-        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
-        const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
-        const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
-        const numSheets = parseInt(this.html.numSheetsInput.value());
-        const numPinSlots = parseInt(this.html.pinSlotSelect.value());
-        const kerf = parseFloat(this.html.kerfInput.value());
+    render() {
+        // update button states based on current appState
+        const state = this.computeState();
+        updateButton(this.html.exportButton, state.canExport);
+        updateButton(this.html.showButton, state.canShowDownload);
+        updateButton(this.html.downloadDXFButton, state.canShowDownload);
+        updateButton(this.html.downloadCaseButton, state.canShowDownload);
 
-        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets) || isNaN(numPinSlots) || isNaN(kerf)) {
-            alert("Invalid input for one or more fields");
-            return;
-        }
-        // get laser config
-        const config = {
-            caseDepth,
-            sheetThickness,
-            sheetWidth,
-            sheetHeight,
-            numSheets,
-            numPinSlots,
-            kerf
+        // update dynamic lists
+        this.createAnnealList();
+
+        // displayed settings in right sidebar
+        this.displaySettings();
+    }
+
+    displaySettings() {
+        // add the settings to the right sidebar (other screens clear the sidebars)
+        if (!htmlRefs.right) return;
+        if (appState.currentScreen !== ScreenState.EXPORT) return;
+
+        // clear the list to ensure clean state
+        htmlRefs.right.list.html('');
+
+        // add all settings elements to the right sidebar list section
+        this.html.sheetThicknessGroup.parent(htmlRefs.right.list);
+        this.html.caseDepthGroup.parent(htmlRefs.right.list);
+        this.html.kerfGroup.parent(htmlRefs.right.list);
+        this.html.pinSlotGroup.parent(htmlRefs.right.list);
+        this.html.sheetDimensionsGroup.parent(htmlRefs.right.list);
+        this.html.numSheetsGroup.parent(htmlRefs.right.list);
+        this.html.buttonList.parent(htmlRefs.right.list);
+    }
+
+    //== button handlers
+    handleBack() {
+        // change to design screen
+        changeScreen(ScreenState.DESIGN);
+    }
+
+    handleExport() {
+        if (this.isExporting) return; // block multiple clicks during export
+
+        this.isExporting = true;
+        updateButton(this.html.exportButton, false);
+
+        // get a copy of shapes with only the data needed
+        let shapesCopy = appState.shapes.map(shape => shape.exportShape());
+        // make a copy of saved anneals with only the data needed
+        let annealsCopy = appState.savedAnneals.map(anneal => {
+            return { ...anneal, finalSolution: anneal.finalSolution.exportSolution() };
+        });
+        // create export object
+        let exportData = {
+            savedAnneals: annealsCopy,
+            allShapes: shapesCopy
         };
-        // get cellular layout data (case lines)
-        const cellData = designUI.currCellular;
-        // get spacing data
-        const buffer = designUI.currentAnneal.finalSolution.buffer;
-        const yPadding = designUI.currentAnneal.finalSolution.yPadding;
-        const xPadding = designUI.currentAnneal.finalSolution.xPadding;
-        const spacing = { buffer, yPadding, xPadding }
 
-        // create new export
-        this.currExport = new Export(cellData, spacing, config);
-        this.currExport.makeBoards();
-        this.currExport.prepLayout();
-
-        // preview the layout or chase
-        if (this.showingLayout) {
-            this.currExport.previewLayout();
-        } else {
-            this.currExport.previewCase();
+        try {
+            saveJSONFile(exportData);
+        } catch (error) {
+            console.error('Export failed:', error);
+        } finally {
+            this.isExporting = false;
+            updateButton(this.html.exportButton, true);
         }
-
-        // Enable show and download buttons
-        this.html.showButton.removeAttribute('disabled');
-        this.html.downloadDXFButton.removeAttribute('disabled');
-        this.html.downloadCaseButton.removeAttribute('disabled');
     }
 
     handleShow() {
+        // show the layout or case plan
         clear();
         background(255);
         this.showingLayout = !this.showingLayout;
@@ -307,45 +308,88 @@ class ExportUI {
         // todo: file name  based on solution name
         imageBuffer.save('case_preview.png');
     }
+    //== end button handlers
 
-    handleExport() {
-        if (this.isExporting) return; // block multiple clicks during export
+    prepareExportData() {
+        // if no current anneal, set to first saved anneal
+        if (!appState.currentAnneal) {
+            let validIndex = appState.currentViewedAnnealIndex != null;
+            let index = validIndex ? appState.currentViewedAnnealIndex : 0;
 
-        this.isExporting = true;
-        this.html.exportButton.attribute('disabled', '');
-
-        // get a copy of shapes with only the data needed
-        let shapesCopy = inputUI.shapes.map(shape => shape.exportShape());
-        // make a copy of saved anneals with only the data needed
-        let annealsCopy = designUI.savedAnneals.map(anneal => {
-            return { ...anneal, finalSolution: anneal.finalSolution.exportSolution() }
-        });
-        // create export object
-        let exportData = {
-            savedAnneals: annealsCopy,
-            allShapes: shapesCopy
-        };
-
-        try {
-            saveJSONFile(exportData);
-        } catch (error) {
-            console.error('Export failed:', error);
-        } finally {
-            this.isExporting = false;
-            this.html.exportButton.removeAttribute('disabled');
+            appState.currentViewedAnnealIndex = index;
+            appState.currentAnneal = appState.savedAnneals[index];
         }
+
+        // prepare cellular data from current anneal to get up-to-date board data
+        if (!appState.currCellular) {
+            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution);
+            appState.currCellular.growCells();
+        }
+
+        const caseDepth = parseFloat(this.html.caseDepthInput.value());
+        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
+        const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
+        const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
+        const numSheets = parseInt(this.html.numSheetsInput.value());
+        const numPinSlots = parseInt(this.html.pinSlotSelect.value());
+        const kerf = parseFloat(this.html.kerfInput.value());
+
+        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets) || isNaN(numPinSlots) || isNaN(kerf)) {
+            alert("Invalid input for one or more fields");
+            return;
+        }
+        // get laser config
+        const config = {
+            caseDepth,
+            sheetThickness,
+            sheetWidth,
+            sheetHeight,
+            numSheets,
+            numPinSlots,
+            kerf
+        };
+        // get cellular layout data (case lines)
+        const cellData = appState.currCellular;
+        // get spacing data
+        const buffer = appState.currentAnneal.finalSolution.buffer;
+        const yPadding = appState.currentAnneal.finalSolution.yPadding;
+        const xPadding = appState.currentAnneal.finalSolution.xPadding;
+        const spacing = { buffer, yPadding, xPadding };
+
+        // create new export
+        this.currExport = new Export(cellData, spacing, config);
+        this.currExport.makeBoards();
+        this.currExport.prepLayout();
+
+        // preview the layout or chase
+        if (this.showingLayout) {
+            this.currExport.previewLayout();
+        } else {
+            this.currExport.previewCase();
+        }
+
+        // enable show and download buttons
+        updateButton(this.html.showButton, true);
+        updateButton(this.html.downloadDXFButton, true);
+        updateButton(this.html.downloadCaseButton, true);
     }
 
     //== Display functions
-    displaySavedAnneals() {
-        this.clearSavedAnneals();
+    createAnnealList() {
+        // create list of solutions to select
+        if (!htmlRefs.left) return;
 
-        for (let i = 0; i < designUI.savedAnneals.length; i++) {
+        // clear the list
+        htmlRefs.left.list.html('');
+        this.savedAnnealElements = [];
+
+        // create the list
+        for (let i = 0; i < appState.savedAnneals.length; i++) {
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
-            if (designUI.currentAnneal === designUI.savedAnneals[i]) {
+            if (appState.currentAnneal === appState.savedAnneals[i]) {
                 savedAnnealItem.addClass('highlighted');
             }
-            savedAnnealItem.parent(this.htmlRef.leftSideList);
+            savedAnnealItem.parent(htmlRefs.left.list);
 
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
@@ -353,7 +397,7 @@ class ExportUI {
                 .parent(savedAnnealItem)
                 .mousePressed(() => this.viewSavedAnneal(i));
 
-            let titleSpan = createSpan(designUI.savedAnneals[i].title)
+            let titleSpan = createSpan(appState.savedAnneals[i].title)
                 .addClass('anneal-title')
                 .parent(savedAnnealItem);
 
@@ -363,41 +407,30 @@ class ExportUI {
 
     viewSavedAnneal(_index) {
         // change selected anneal
-        designUI.currentViewedAnnealIndex = _index;
-        designUI.currentAnneal = designUI.savedAnneals[_index];
-        // update cellular (boards) layout
-        designUI.currCellular = new Cellular(designUI.currentAnneal.finalSolution);
-        designUI.currCellular.growCells();
-
-        designUI.displayResult(); // todo: this is needed for changes to work. why?
-        clear();
-        background(255);
+        appState.currentViewedAnnealIndex = _index;
+        appState.currentAnneal = appState.savedAnneals[_index];
 
         // update UI
         this.updateSavedAnnealHighlight();
-        this.handleCreate();
+        this.prepareExportData();
+
+        // notify render manager
+        appEvents.emit('stateChanged');
     }
 
     updateSavedAnnealHighlight() {
         for (let i = 0; i < this.savedAnnealElements.length; i++) {
-            if (designUI.currentAnneal === designUI.savedAnneals[i]) {
+            if (appState.currentAnneal === appState.savedAnneals[i]) {
                 this.savedAnnealElements[i].addClass('highlighted');
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');
             }
         }
     }
-
-    clearSavedAnneals() {
-        for (let element of this.savedAnnealElements) {
-            element.remove();
-        }
-        this.savedAnnealElements = [];
-    }
 }
 
-// Only export the class when in a Node.js environment (e.g., during Jest tests)
-// Ignored when the app is running in the browser
+// only export the class when in a Node.js environment (e.g., during Jest tests)
+// ignored when the app is running in the browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ExportUI;
 }

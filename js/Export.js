@@ -313,11 +313,9 @@ class Export {
             // calculate the true board length
             let [sheet, row] = this.findBoardPosition(board.len);
             if (sheet === null && row === null) {
-                // not enough space, add a sheet
-                // todo: remove a sheet if there are more than needed
-                let numSheets = parseInt(exportUI.html.numSheetsInput.value());
-                exportUI.html.numSheetsInput.value(numSheets + 1);
-                exportUI.handleCreate();
+                // not enough space, request a new sheet and restart layout
+                appEvents.emit('addSheetRequested');
+                appEvents.emit('layoutRefreshRequested');
                 break;
             };
 

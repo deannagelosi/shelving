@@ -1,24 +1,31 @@
-//= constants
+//== constants
 const canvasWidth = 650;
 const canvasHeight = 650;
 const SQUARE_SIZE = 0.25; // in inches
 
-//= state variables
+//== state variables
 let numGrow = 0; // cell growth amount in dev mode
 
-//= UI class instances
+//== UI class instances
 let inputUI;
 let designUI;
 let exportUI;
 
-//= screens enum
+//== event system and render manager
+let appEvents;
+let renderScheduled = false;
+
+//== static DOM element references
+let htmlRefs = {};
+
+//== screens enum
 const ScreenState = {
     INPUT: 'input',
     DESIGN: 'design',
     EXPORT: 'export'
 };
 
-//= flags
+//== flags
 let detailView = false;
 let devMode = false;
 let aspectRatioPref = 0;
@@ -26,6 +33,52 @@ let aspectRatioPref = 0;
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-div');
+
+    // select all DOM containers
+    htmlRefs = {
+        left: {
+            top: select('#left-side-bar .sidebar-top'),
+            list: select('#left-side-bar .sidebar-list'),
+            buttons: select('#left-side-bar .sidebar-buttons')
+        },
+        right: {
+            top: select('#right-side-bar .sidebar-top'),
+            list: select('#right-side-bar .sidebar-list'),
+            buttons: select('#right-side-bar .sidebar-buttons')
+        },
+        leftSidebar: select('#left-side-bar'),
+        rightSidebar: select('#right-side-bar'),
+        headerControls: select('#header-controls'),
+        bottomDiv: select('#bottom-div'),
+        subheading: select('#subheading')
+    };
+
+    // initialize event system
+    appEvents = new EventEmitter();
+
+    // setup re-rendering active screen on state change event listener
+    appEvents.on('stateChanged', () => {
+        if (!renderScheduled) {
+            // debounce multiple state change events into a single render call
+            renderScheduled = true;
+            // setTimeout pushes renders to after any state changes complete
+            setTimeout(() => {
+                renderScheduled = false;
+                // call render on the active screen
+                switch (appState.currentScreen) {
+                    case ScreenState.INPUT:
+                        inputUI.render();
+                        break;
+                    case ScreenState.DESIGN:
+                        designUI.render();
+                        break;
+                    case ScreenState.EXPORT:
+                        exportUI.render();
+                        break;
+                }
+            }, 0);
+        }
+    });
 
     // setup ui elements for both screens
     inputUI = new InputUI();
@@ -37,54 +90,25 @@ function setup() {
 }
 
 function draw() {
-    // check which screen to display
-    switch (currentScreen) {
-        case ScreenState.INPUT:
-            designUI.hide();
-            exportUI.hide();
-            inputUI.show();
-
-            noLoop();
-            break;
-        case ScreenState.DESIGN:
-            inputUI.hide();
-            exportUI.hide();
-            designUI.show();
-
-            noLoop();
-            break;
-        case ScreenState.EXPORT:
-            devMode = false;
-            inputUI.hide();
-            designUI.hide();
-            exportUI.show();
-
-            noLoop();
-            break;
-    }
-}
-
-function changeScreen(newScreen) {
-    // Set the new screen and loop
-    currentScreen = newScreen;
-    loop();
+    // setup canvas. UI managed by view manager and UI classes
+    noLoop();
 }
 
 function keyPressed() {
     // Input screen key commands
-    if (currentScreen == ScreenState.INPUT) {
+    if (appState.currentScreen == ScreenState.INPUT) {
         if (key === '~') {
             // toggle export button visibility
             inputUI.html.exportButton.toggleClass('hidden');
         }
     }
     // Design screen key commands
-    else if (currentScreen == ScreenState.DESIGN) {
+    else if (appState.currentScreen == ScreenState.DESIGN) {
         if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
             numGrow = 0;
-            if (designUI.currentAnneal && designUI.currentAnneal.finalSolution) {
+            if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
         }
@@ -95,31 +119,73 @@ function keyPressed() {
         }
     }
     // Export screen key commands
-    else if (currentScreen == ScreenState.EXPORT) {
+    else if (appState.currentScreen == ScreenState.EXPORT) {
         if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
-            exportUI.showingLayout = true;
-            exportUI.handleShow();
+            appEvents.emit('resetToLayoutView');
         }
     }
 }
 
 function mousePressed() {
-    if (currentScreen == ScreenState.INPUT) {
+    if (appState.currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
-    if (currentScreen == ScreenState.INPUT) {
+    if (appState.currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY, true);
     }
 }
 
 function mouseReleased() {
-    if (currentScreen == ScreenState.INPUT) {
+    if (appState.currentScreen == ScreenState.INPUT) {
         inputUI.eraseMode = "first";
+    }
+}
+
+//== helper functions
+function changeScreen(newScreen) {
+    // setup view for the new screen
+    switch (newScreen) {
+        case ScreenState.INPUT:
+            htmlRefs.subheading.html("Object Input");
+            htmlRefs.right.top.html('Shapes');
+            htmlRefs.leftSidebar.addClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+        case ScreenState.DESIGN:
+            htmlRefs.subheading.html("Generate Layout");
+            htmlRefs.left.top.html('Shapes');
+            htmlRefs.right.top.html('Results');
+            htmlRefs.leftSidebar.removeClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+        case ScreenState.EXPORT:
+            htmlRefs.subheading.html("Export Design");
+            htmlRefs.left.top.html('Solutions');
+            htmlRefs.right.top.html('Settings');
+            htmlRefs.leftSidebar.removeClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+    }
+
+    // update app screen state
+    appState.currentScreen = newScreen;
+
+    // notify listeners of screen change
+    appEvents.emit('screenChanged', { screen: newScreen }); // triggers show/hide methods
+    appEvents.emit('stateChanged'); // triggers render method
+}
+
+function updateButton(button, enabled) {
+    // enable/disable button based on boolean flag
+    if (enabled) {
+        button.removeAttribute('disabled');
+    } else {
+        button.attribute('disabled', '');
     }
 }
 
