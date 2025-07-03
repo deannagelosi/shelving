@@ -203,7 +203,7 @@ class ExportUI {
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
-    render() {
+    update() {
         // update button states based on current appState
         const state = this.computeState();
         updateButton(this.html.exportButton, state.canExport);
@@ -390,7 +390,7 @@ class ExportUI {
         this.updateSavedAnnealHighlight();
         this.prepareExportData();
 
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
 

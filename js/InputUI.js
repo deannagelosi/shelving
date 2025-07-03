@@ -180,7 +180,7 @@ class InputUI {
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
-    render() {
+    update() {
         // update button states based on current appState
         const state = this.computeState();
         updateButton(this.html.exportButton, state.canExport);
@@ -244,7 +244,7 @@ class InputUI {
         // reset active shape and UI
         this.resetCanvas();
 
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
@@ -320,7 +320,7 @@ class InputUI {
 
         // reset UI
         this.resetCanvas();
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
@@ -455,7 +455,7 @@ class InputUI {
                 let index = shapeTitle.attribute('data-index');
                 appState.shapes.splice(index, 1);
 
-                // notify render manager
+                // notify ui update manager
                 appEvents.emit('stateChanged');
             });
         }

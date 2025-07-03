@@ -13,7 +13,7 @@ let exportUI;
 
 //== event management
 let appEvents;
-let renderScheduled = false;
+let updateScheduled = false;
 let isExporting = false;
 
 //== static DOM element references
@@ -57,24 +57,24 @@ function setup() {
     // initialize event system
     appEvents = new EventEmitter();
 
-    // setup re-rendering active screen on state change event listener
+    // ui update manager for state change events
     appEvents.on('stateChanged', () => {
-        if (!renderScheduled) {
-            // debounce multiple state change events into a single render call
-            renderScheduled = true;
-            // setTimeout pushes renders to after any state changes complete
+        if (!updateScheduled) {
+            // debounce multiple state change events into a single ui update call
+            updateScheduled = true;
+            // setTimeout delays ui updates until after state changes complete
             setTimeout(() => {
-                renderScheduled = false;
-                // call render on the active screen
+                updateScheduled = false;
+                // call ui update on the active screen
                 switch (appState.currentScreen) {
                     case ScreenState.INPUT:
-                        inputUI.render();
+                        inputUI.update();
                         break;
                     case ScreenState.DESIGN:
-                        designUI.render();
+                        designUI.update();
                         break;
                     case ScreenState.EXPORT:
-                        exportUI.render();
+                        exportUI.update();
                         break;
                 }
             }, 0);
@@ -181,9 +181,10 @@ function changeScreen(newScreen) {
     // update app screen state
     appState.currentScreen = newScreen;
 
-    // notify listeners of screen change
-    appEvents.emit('screenChanged', { screen: newScreen }); // triggers show/hide methods
-    appEvents.emit('stateChanged'); // triggers render method
+    // triggers ui .show()/.hide() methods
+    appEvents.emit('screenChanged', { screen: newScreen });
+    // trigger ui .update() method
+    appEvents.emit('stateChanged');
 }
 
 function updateButton(button, enabled) {

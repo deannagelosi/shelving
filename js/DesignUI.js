@@ -158,7 +158,7 @@ class DesignUI {
         Object.values(this.html).forEach(element => element.addClass('hidden'));
     }
 
-    render() {
+    update() {
         // update button states based on current appState
         const state = this.computeState();
         updateButton(this.html.nextButton, state.canNext);
@@ -294,7 +294,7 @@ class DesignUI {
 
         this.viewSavedAnneal(appState.savedAnneals.length - 1);
 
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
     //== end button handlers
@@ -322,7 +322,7 @@ class DesignUI {
         };
         emptySolution.showGridSquares(colors);
 
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
@@ -431,7 +431,7 @@ class DesignUI {
                             appState.currentViewedAnnealIndex--;
                             this.viewSavedAnneal(appState.currentViewedAnnealIndex);
                         }
-                        // notify render manager
+                        // notify ui update manager
                         appEvents.emit('stateChanged');
                     }
                 });
@@ -445,7 +445,7 @@ class DesignUI {
             // clear the viewed anneal
             appState.currentViewedAnnealIndex = null;
             appState.currentAnneal = null;
-            // notify render manager
+            // notify ui update manager
             appEvents.emit('stateChanged');
             return;
         }
@@ -476,7 +476,7 @@ class DesignUI {
         // update display
         this.displayResult();
         this.updateSavedAnnealHighlight();
-        // notify render manager
+        // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
