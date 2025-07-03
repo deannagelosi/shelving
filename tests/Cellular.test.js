@@ -5,15 +5,6 @@ const Solution = require('../js/core/Solution');
 // Load shapes from fixture for testing
 const allFixtureShapes = loadShapesFromFixture();
 
-// Mock p5.js global variables for Solution
-beforeEach(() => {
-    global.canvasWidth = 800;
-    global.canvasHeight = 600;
-    global.aspectRatioPref = 0;
-    global.devMode = false;
-    global.detailView = false;
-});
-
 describe('Cellular', () => {
     // Helper function to create a simple test solution
     function createTestSolution() {
@@ -24,7 +15,7 @@ describe('Cellular', () => {
         shapes[1].posX = 3;
         shapes[1].posY = 0;
 
-        const solution = new Solution(shapes);
+        const solution = new Solution(shapes, 0, 0);
         solution.makeLayout();
         solution.calcScore();
         return solution;
@@ -42,11 +33,13 @@ describe('Cellular', () => {
         expect(cellular.shapes).toBe(solution.shapes);
         expect(cellular.layoutHeight).toBe(solution.layout.length);
         expect(cellular.layoutWidth).toBe(solution.layout[0].length);
-        expect(cellular.squareSize).toBe(solution.squareSize);
         expect(cellular.maxTerrain).toBe(0);
         expect(cellular.cellID).toBe(0);
         expect(Array.isArray(cellular.cellSpace)).toBe(true);
         expect(Array.isArray(cellular.pathValues)).toBe(true);
+        // Check devMode defaults
+        expect(cellular.devMode).toBe(false);
+        expect(cellular.numGrow).toBe(1);
     });
 
     test('createTerrain should assign terrain values based on distance from shapes', () => {

@@ -1,5 +1,5 @@
 class Cellular {
-    constructor(_solution) {
+    constructor(_solution, _devMode = false, _numGrow = 1) {
         this.cellSpace = [[]]; // 2D array of intersections on the layout grid where cells live
         this.pathValues = [[]]; // 2D array of each path's (lines on the layout) height value
         this.cellLines = new Set(); // holds the unique lines to draw
@@ -9,10 +9,11 @@ class Cellular {
         this.layoutHeight = this.layout.length;
         this.layoutWidth = this.layout[0].length;
         this.shapes = _solution.shapes; // array of shapes and their positions
-        this.squareSize = _solution.squareSize; // size of each square in the layout
-        this.buffer = _solution.buffer; // left & bottom buffer when displaying
-        this.yPadding = _solution.yPadding;
-        this.xPadding = _solution.xPadding;
+
+        // debug config
+        this.devMode = _devMode; // show step-by-step growth
+        this.numGrow = _numGrow; // number of growth steps to take in debug mode
+
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
         this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
         this.numAlive;
@@ -205,9 +206,9 @@ class Cellular {
         this.makeInitialCells();
 
         // grow alive cells until no more cells are alive
-        if (devMode) {
+        if (this.devMode) {
             // grow one at a time on keypress
-            for (let i = 0; i < numGrow; i++) {
+            for (let i = 0; i < this.numGrow; i++) {
                 this.growOnce();
             }
         } else {
@@ -534,134 +535,6 @@ class Cellular {
             alive: _alive,
             parent: _parentCell
         });
-    }
-
-    //-- Display Functions --//
-    showCells() {
-        // loop cell space and display cells on the canvas
-        for (let y = 0; y < this.cellSpace.length; y++) {
-            for (let x = 0; x < this.cellSpace[y].length; x++) {
-                for (let cell of this.cellSpace[y][x]) {
-                    // if (!cell.alive) {
-                    //     cellColor = lerpColor(cellColor, color(0, 0, 0), 0.4)
-                    // }
-                    if (cell.alive) {
-                        let cellColor = this.strainColor(cell.strain);
-                        fill(cellColor);
-                        noStroke();
-                        let dotX = (x * this.squareSize) + this.buffer + this.xPadding;
-                        let dotY = ((canvasHeight - this.yPadding) - this.buffer) - (y * this.squareSize);
-                        circle(dotX, dotY, 12);
-                    }
-                }
-            }
-        }
-    }
-
-    showCellLines(_color = null) {
-        // loop through the cellSpace grid and add any neighboring cells of the same strain as pairs
-        // use these pairs to draw all of the lines. store pairs in a Set to de-duplicate pairs.
-        // set for deduplicating lines as they are found
-        this.cellLine = new Set();
-
-        // loop through all positions in cellSpace
-        for (let y = 0; y < this.cellSpace.length; y++) {
-            for (let x = 0; x < this.cellSpace[y].length; x++) {
-                // check if there are cells at this position
-                if (this.cellSpace[y][x].length > 0) {
-                    // loop through all cells at this position
-                    for (let cell of this.cellSpace[y][x]) {
-                        // directions to check: right, up, left, down
-                        const sides = [
-                            { dir: "left", y: 0, x: -1 },
-                            { dir: "up", y: 1, x: 0 },
-                            { dir: "right", y: 0, x: 1 },
-                            { dir: "left", y: -1, x: 0 }
-                        ];
-                        for (let side of sides) {
-                            let newY = y + side.y;
-                            let newX = x + side.x;
-
-                            // check if the new position is within bounds
-                            if (this.cellSpaceInBounds(newY, newX)) {
-                                // check if there's a cell with the same strain in the new position
-                                let matchingCell = this.cellSpace[newY][newX].find(c => c.strain === cell.strain);
-
-                                if (matchingCell) {
-                                    // to avoid duplicates create a string with the information
-                                    // use min and max to always put the smaller coordinate first
-                                    let lineKey = [
-                                        Math.min(y, newY),
-                                        Math.min(x, newX),
-                                        Math.max(y, newY),
-                                        Math.max(x, newX),
-                                        cell.strain,
-                                    ].join(',');
-
-                                    // when added to a Set, strings are skipped if they already exist
-                                    this.cellLines.add(lineKey);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // draw all unique lines
-        strokeWeight(7);
-        for (let lineKey of this.cellLines) {
-            const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
-
-            // calculate canvas coordinates
-            let startX = (x1 * this.squareSize) + this.buffer + this.xPadding;
-            let startY = ((canvasHeight - this.yPadding) - this.buffer) - (y1 * this.squareSize);
-            let endX = (x2 * this.squareSize) + this.buffer + this.xPadding;
-            let endY = ((canvasHeight - this.yPadding) - this.buffer) - (y2 * this.squareSize);
-
-            // set line color based on strain
-            let lineColor;
-            if (devMode) {
-                lineColor = this.strainColor(strain);
-            } else {
-                lineColor = "rgb(175, 141, 117)";
-            }
-
-            if (_color) {
-                // use override color if provided
-                lineColor = _color;
-                strokeWeight(2);
-            }
-
-            stroke(lineColor);
-
-            // draw the line
-            line(startX, startY, endX, endY);
-        }
-    }
-
-    showTerrain() {
-        // display the design space
-        fill(75); // dark grey
-        strokeWeight(0);
-        textAlign(CENTER, CENTER);
-        let txtXOffset = this.squareSize / 2;
-        let txtYOffset = this.squareSize / 2;
-        let txtSize = this.squareSize / 2;
-        textSize(txtSize);
-
-        for (let x = 0; x < this.layoutWidth; x++) {
-            for (let y = 0; y < this.layoutHeight; y++) {
-                if (this.layout[y][x].terrainValue != this.maxTerrain) {
-                    // calc text position, finding y from bottom up
-                    let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-                    let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                    // display the terrain value
-                    text(this.layout[y][x].terrainValue, rectX, rectY);
-                }
-            }
-        }
-
     }
 
     //-- Helper Functions --//

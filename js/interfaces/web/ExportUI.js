@@ -298,7 +298,7 @@ class ExportUI {
 
         // prepare cellular data from current anneal to get up-to-date board data
         if (!appState.currCellular) {
-            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution);
+            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution, false, 1);
             appState.currCellular.growCells();
         }
 

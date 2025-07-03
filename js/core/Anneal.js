@@ -1,5 +1,5 @@
 class Anneal {
-    constructor(_shapes, _ui) {
+    constructor(_shapes, _devMode = false, _aspectRatioPref = 0) {
         //== anneal strategy variables
         // annealing strategy:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -14,9 +14,9 @@ class Anneal {
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
         this.displayInterval = 30; // how often to update the display with a new solution
 
-        //== ui
-        this.ui = _ui;
-        // this.statusText = this.ui.html.statusText;
+        //== configuration
+        this.devMode = _devMode; // enable debug logging
+        this.aspectRatioPref = _aspectRatioPref; // aspect ratio preference
 
         //== state variables
         this.shapes = _shapes;
@@ -28,29 +28,21 @@ class Anneal {
         this.restartAnneal = false;
     }
 
-    async run() {
-        // == Setup == //
-        // switch button modes:
-        // - 'generate' -> 'regenerate' mode
-        // - 'clear' -> 'stop + clear' mode
-        this.ui.html.annealButton.html('Regenerate');
-        this.ui.html.annealButton.mousePressed(() => this.reAnneal());
-        this.ui.html.clearButton.mousePressed(() => this.endAnneal());
-
+    async run(progressCallback = null) {
         // == Start Annealing Process == //
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
-        let bestStartSolution = await this.multiStartPhase();
+        let bestStartSolution = await this.multiStartPhase(progressCallback);
         if (this.stopAnneal && !bestStartSolution) return; // re-anneal clicked
 
-        let refinedSolution = await this.refinePhase(bestStartSolution);
+        let refinedSolution = await this.refinePhase(bestStartSolution, progressCallback);
         if (this.stopAnneal && !refinedSolution) return; // re-anneal clicked
 
         // == Annealing Complete == //
         // anneal completed with out being stopped
         this.finalSolution = refinedSolution;
 
-        if (devMode) {
+        if (this.devMode) {
             console.log("Refine complete. Score:", this.finalSolution.score);
         }
 
@@ -60,7 +52,7 @@ class Anneal {
         this.multiStartsHistory = {}; // clear the multi-start history
     }
 
-    async multiStartPhase() {
+    async multiStartPhase(progressCallback = null) {
         //  multi-start phase
         // - run several quick anneals concurrently, return best one to refine
         this.multiStartSolutions = [];
@@ -70,11 +62,12 @@ class Anneal {
             const multiConfig = {
                 multiStart: true,
                 initialTemp: this.initialTemp * (1 - startID / this.numStarts),
-                initialCoolingRate: this.initialCoolingRate * 0.75
+                initialCoolingRate: this.initialCoolingRate * 0.75,
+                progressCallback: progressCallback
             };
 
             // create new solution with random layout.
-            let initialSolution = new Solution(this.shapes, startID);
+            let initialSolution = new Solution(this.shapes, startID, this.aspectRatioPref);
             initialSolution.randomLayout();
 
             // start concurrent anneals (pass which iteration number for multi-start)
@@ -87,7 +80,7 @@ class Anneal {
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
-        if (devMode) {
+        if (this.devMode) {
             console.log("Multi-start results: ", results.map(s => s.score).join(', '));
             console.log("Best solution:", bestStartSolution.score);
         }
@@ -95,12 +88,13 @@ class Anneal {
         return bestStartSolution;
     }
 
-    async refinePhase(_bestStartSolution) {
+    async refinePhase(_bestStartSolution, progressCallback = null) {
         // == refinement phase == //
         // -- configure the annealing process for refinement -- //
         const refineConfig = {
             initialTemp: this.initialTemp * 0.1, // lower starting temp for refinement
             initialCoolingRate: 0.99, // slower cooling
+            progressCallback: progressCallback
         };
 
         let bestSolution = await this.anneal(_bestStartSolution, refineConfig);
@@ -114,8 +108,9 @@ class Anneal {
             const refineConfig = {
                 initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
                 initialCoolingRate: 0.99, // slower cooling
+                progressCallback: progressCallback
             };
-            if (devMode) console.log("additional refining...");
+            if (this.devMode) console.log("additional refining...");
 
             bestSolution = await this.anneal(bestSolution, refineConfig);
             if (this.stopAnneal) return null; // re-anneal clicked
@@ -132,6 +127,7 @@ class Anneal {
             initialCoolingRate: this.initialCoolingRate,
             maxIterations: this.maxIterations,
             reheatCounter: this.reheatCounter,
+            progressCallback: null,
             ..._config // override defaults with any provided values
         };
         let temperature = config.initialTemp;
@@ -182,7 +178,7 @@ class Anneal {
             temperature *= coolingRate;
 
             if (iterationsSinceImprovement > config.reheatCounter) {
-                if (devMode) console.log("Reheating...");
+                if (this.devMode) console.log("Reheating...");
                 // adaptive cooling: if stuck, reheat the system
                 // - increasing the temperature causes more exploration, helping to escape a local minima
                 // increase temperature, but don't exceed initial temp
@@ -194,11 +190,13 @@ class Anneal {
 
             // update display at specified intervals
             if (iteration % this.displayInterval === 0) {
-                // this.saveSolutionHistory(bestSolution, config.multiStart);
                 this.saveSolutionHistory(currentSolution, config.multiStart);
                 // only show the first (longest running) multi-start, then all refinements
                 if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
-                    this.ui.updateDisplayCallback(currentSolution);
+                    // send solution to web worker progress callback
+                    if (config.progressCallback) {
+                        config.progressCallback(currentSolution);
+                    }
                 }
             }
 
@@ -210,7 +208,7 @@ class Anneal {
             totalIterations++;
         }
 
-        if (devMode) {
+        if (this.devMode) {
             console.log("iterations completed:", Math.round((totalIterations / maxIterations) * 10000) / 100, "%");
         }
 

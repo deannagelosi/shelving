@@ -280,13 +280,7 @@ class InputUI {
         let annealData = _importedData.savedAnneals;
 
         // process shape data
-        let loadedShapes = [];
-        for (let shape of shapeData) {
-            // create new shape from saved data
-            let newShape = new Shape();
-            newShape.saveUserInput(shape.data.title, shape.data.highResShape);
-            loadedShapes.push(newShape);
-        }
+        let loadedShapes = shapeData.map(shapeData => loadShapeFromData(shapeData));
         // add shapes
         appState.shapes.push(...loadedShapes);
 
@@ -297,20 +291,8 @@ class InputUI {
             // find the largest anneal number (ex: 4 on 'solution-4')
             let titleNumber = parseInt(anneal.title.split('-')[1]);
             maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
-            // create new shape from saved data to add solution methods back
-            // initialize solution's shapes
-            let initShapes = [];
-            for (let shape of anneal.finalSolution.shapes) {
-                let newShape = new Shape();
-                newShape.saveUserInput(shape.data.title, shape.data.highResShape);
-                newShape.posX = shape.posX;
-                newShape.posY = shape.posY;
-                newShape.enabled = shape.enabled;
-                initShapes.push(newShape);
-            }
-            // initialize solution
-            anneal.finalSolution = new Solution(initShapes);
-            anneal.finalSolution.makeLayout();
+            // create new solution from saved data to restore class methods
+            anneal.finalSolution = loadSolutionFromData(anneal.finalSolution, true);
 
             loadedAnneals.push(anneal);
         }

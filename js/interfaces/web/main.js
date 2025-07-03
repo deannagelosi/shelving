@@ -196,6 +196,7 @@ function updateButton(button, enabled) {
     }
 }
 
+//== data export functions
 function handleFileExport() {
     // export saved shapes and solutions
     if (isExporting) return; // debounce
@@ -244,8 +245,42 @@ function saveJSONFile(_exportData) {
     URL.revokeObjectURL(url);
 }
 
-// prevent page reloads unless confirmed
-window.onbeforeunload = function (e) {
-    e.preventDefault();
-    e.returnValue = '';
-};
+//== data loading functions
+function loadShapeFromData(shapeData) {
+    // Create Shape instance from plain data object
+    // Used by file import and test fixtures
+    const newShape = new Shape();
+    newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape);
+
+    // Set position and state properties if provided
+    if (shapeData.posX !== undefined) newShape.posX = shapeData.posX;
+    if (shapeData.posY !== undefined) newShape.posY = shapeData.posY;
+    if (shapeData.enabled !== undefined) newShape.enabled = shapeData.enabled;
+
+    return newShape;
+}
+
+function loadSolutionFromData(solutionData, shouldComputeLayout = false) {
+    // Create Solution instance from plain data object
+    // shouldComputeLayout: true for imported JSON (needs layout computation)
+    //                     false for worker results (already has computed layout/score)
+
+    // Convert shape data to Shape instances
+    const shapes = solutionData.shapes.map(shapeData => loadShapeFromData(shapeData));
+
+    // Create Solution instance
+    const solution = new Solution(shapes, solutionData.startID, solutionData.aspectRatioPref);
+
+    if (shouldComputeLayout) {
+        // For imported data that needs layout computation
+        solution.makeLayout();
+    } else {
+        // For worker data that already has computed layout/score
+        solution.layout = solutionData.layout;
+        solution.score = solutionData.score;
+        solution.valid = solutionData.valid;
+        if (solutionData.clusterLimit !== undefined) solution.clusterLimit = solutionData.clusterLimit;
+    }
+
+    return solution;
+}

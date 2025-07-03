@@ -6,6 +6,14 @@ class DesignUI {
         this.html = {};
         this.shapeElements = [];
 
+        //== renderer instances
+        this.solutionRenderer = new SolutionRenderer();
+        this.cellularRenderer = new CellularRenderer();
+
+        //== web worker setup
+        this.solutionWorker = null;
+        this.initializeWorker();
+
         //== initialize UI elements
         this.initHeaderUI();
         this.initBottomUI();
@@ -134,6 +142,165 @@ class DesignUI {
         //     .parent(this.html.designDiv).addClass('info-text');
     }
 
+    //== web worker methods
+    initializeWorker() {
+        try {
+            this.solutionWorker = new Worker('js/workers/solution-worker.js');
+
+            // set up message handling
+            this.solutionWorker.onmessage = (event) => {
+                this.handleWorkerMessage(event.data);
+            };
+            // set up error handling
+            this.solutionWorker.onerror = (error) => {
+                console.error('Worker error:', error);
+                this.handleWorkerError(error);
+            };
+            // initialize worker in single mode
+            this.solutionWorker.postMessage({
+                type: 'SET_MODE',
+                payload: { mode: 'single', config: {} }
+            });
+        } catch (error) {
+            console.error('Failed to initialize solution worker:', error);
+            this.solutionWorker = null;
+        }
+    }
+
+    handleWorkerMessage(data) {
+        const { type, payload } = data;
+
+        switch (type) {
+            case 'MODE_SET':
+                console.log('Worker mode set:', payload.mode);
+                break;
+            case 'PROGRESS':
+                this.handleWorkerProgress(payload);
+                break;
+            case 'RESULT':
+                this.handleWorkerResult(payload);
+                break;
+            case 'ERROR':
+                this.handleWorkerError(payload);
+                break;
+            default:
+                console.warn('Unknown worker message type:', type);
+        }
+    }
+
+    handleWorkerProgress(progress) {
+        const { progressType, mode, phase, message, score, valid, visualData } = progress;
+
+        switch (progressType) {
+            case 'PHASE_START':
+                console.log(`Starting ${phase}: ${message}`);
+                break;
+            case 'ANNEAL_PROGRESS':
+                if (mode === 'single' && visualData) {
+                    // handle visual updates in single mode (web)
+                    try {
+                        // create a minimal solution object for rendering
+                        const minimalSolution = {
+                            layout: visualData.layout,
+                            shapes: visualData.shapes,
+                            score: score,
+                            valid: valid
+                        };
+                        // call the display update with the minimal solution
+                        this.updateDisplayCallback(minimalSolution);
+                    } catch (error) {
+                        console.error('Error handling visual progress:', error);
+                        // don't throw error, annealing process still continues
+                    }
+                } else {
+                    // handle progress updates if no visual data
+                    console.log(`Annealing progress: score=${score}, valid=${valid}, mode=${mode}`);
+                }
+                break;
+            case 'PHASE_COMPLETE':
+                console.log(`Completed ${phase}:`, progress);
+                break;
+        }
+    }
+
+    handleWorkerResult(result) {
+        const { finalSolution, cellular, metadata } = result;
+
+        try {
+            // convert the json worker result into a Solution object
+            const solution = loadSolutionFromData(finalSolution, false);
+
+            // create the anneal object to maintain compatibility with existing code
+            const anneal = {
+                finalSolution: solution,
+                solutionHistory: [] // empty for now to reduce memory usage
+            };
+            // store results in appState
+            appState.currentAnneal = anneal;
+
+            console.log("Worker annealing complete:", solution.score);
+            // update UI to show completed state
+            this.finishAnnealing();
+            this.displayResult();
+        } catch (error) {
+            console.error('Error processing worker result:', error);
+            this.handleWorkerError({ message: `Result processing failed: ${error.message}` });
+        }
+    }
+
+    handleWorkerError(error) {
+        console.error('Worker error:', error.message);
+        alert(`Generation failed: ${error.message}`);
+        // reset UI to cleared state
+        this.drawBlankGrid();
+        this.finishAnnealing();
+    }
+
+    finishAnnealing() {
+        // Restore UI to non-annealing state
+        // switch buttons back:
+        // - regenerate -> generate
+        // - stop and clear -> just clear
+        // - save button enabled (if generation was successful)
+        this.html.annealButton.html('Generate');
+        this.html.annealButton.mousePressed(() => this.handleStartAnneal());
+        this.html.clearButton.mousePressed(() => this.drawBlankGrid());
+
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
+            this.html.saveButton.removeAttribute('disabled');
+        }
+
+        // re-enable shape selection
+        this.shapeElements.forEach(element => {
+            element.removeClass('disabled');
+        });
+    }
+
+    //== helper methods
+    calculateLayoutProperties(solution) {
+        // calculate display properties for Solutions
+        if (!solution || !solution.layout || solution.layout.length === 0) {
+            // default values for empty/blank layouts
+            return {
+                squareSize: 25,
+                buffer: 25,
+                xPadding: (canvasWidth - (20 * 25)) / 2 - 25,
+                yPadding: (canvasHeight - (20 * 25)) / 2 - 25
+            };
+        }
+
+        let layoutHeight = solution.layout.length;
+        let layoutWidth = solution.layout[0].length;
+        let squareHeight = canvasHeight / (layoutHeight + 2); // + 2 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / (layoutWidth + 2); // + 2 makes room for left/right buffer
+        let squareSize = Math.min(squareHeight, squareWidth);
+        let buffer = squareSize;
+        let yPadding = ((canvasHeight - (layoutHeight * squareSize)) / 2) - buffer;
+        let xPadding = ((canvasWidth - (layoutWidth * squareSize)) / 2) - buffer;
+
+        return { squareSize, buffer, xPadding, yPadding };
+    }
+
     //== show/hide methods
     // manage visibility and screen-specific setup
     show() {
@@ -213,6 +380,12 @@ class DesignUI {
     }
 
     async handleStartAnneal() {
+        // check if worker is available
+        if (!this.solutionWorker) {
+            alert('Solution worker is not available.');
+            return;
+        }
+
         // disable shape selection changes while annealing
         this.shapeElements.forEach(element => {
             element.addClass('disabled');
@@ -239,44 +412,48 @@ class DesignUI {
             alert('Select at least two shapes to generate');
             return;
         }
-        let newAnneal = new Anneal(selectedShapes, this);
 
-        await newAnneal.run();
-        // check if annealing completed or was aborted
-        if (newAnneal.stopAnneal && !newAnneal.finalSolution) {
-            // user triggered a stop or restart
-            if (newAnneal.restartAnneal) {
-                // restart new annealing process
-                return this.handleStartAnneal();
-            } else {
-                // user stopped the annealing process
-                console.log("Annealing stopped.");
-                this.drawBlankGrid();
-                // switch buttons back:
-                // - 'regenerate' -> 'generate' mode
-                // - 'stop + clear' -> 'clear' mode
-                this.html.annealButton.html('Generate');
-                this.html.annealButton.mousePressed(() => this.handleStartAnneal());
-                this.html.clearButton.mousePressed(() => this.drawBlankGrid());
-            }
+        try {
+            // update UI to show annealing state
+            this.html.annealButton.html('Regenerate');
+            this.html.annealButton.mousePressed(() => this.handleStopAnneal());
+            this.html.clearButton.mousePressed(() => this.handleStopAnneal());
 
-        } else {
-            // annealing completed
-            // switch buttons back:
-            // - 'regenerate' -> 'generate' mode
-            // - 'stop + clear' -> 'clear' mode
-            // - 'save' enabled
-            this.html.annealButton.html('Generate');
-            this.html.annealButton.mousePressed(() => this.handleStartAnneal());
-            this.html.clearButton.mousePressed(() => this.drawBlankGrid());
-            this.html.saveButton.removeAttribute('disabled');
+            // send generation request to worker
+            this.solutionWorker.postMessage({
+                type: 'GENERATE_SOLUTION',
+                payload: {
+                    shapes: selectedShapes,
+                    jobId: `single-${Date.now()}`,
+                    startId: 0,
+                    aspectRatioPref: aspectRatioPref,
+                    devMode: devMode,
+                    annealConfig: {
+                        displayInterval: 30
+                    }
+                }
+            });
 
-            // save results
-            appState.currentAnneal = newAnneal;
-            console.log("Annealing complete: ", appState.currentAnneal.finalSolution.score);
+            console.log("Generation request sent to worker...");
 
-            this.displayResult();
+        } catch (error) {
+            console.error('Failed to start annealing:', error);
+            alert(`Failed to start generation: ${error.message}`);
+            this.finishAnnealing();
         }
+    }
+
+    handleStopAnneal() {
+        // terminate and restart the worker
+        console.log("Stopping annealing...");
+
+        if (this.solutionWorker) {
+            this.solutionWorker.terminate();
+            this.initializeWorker();
+        }
+
+        this.drawBlankGrid();
+        this.finishAnnealing();
     }
 
     handleSaveSolution() {
@@ -314,26 +491,45 @@ class DesignUI {
         });
 
         // create empty solution and display grid only
-        let emptySolution = new Solution();
+        let emptySolution = new Solution([], 0, aspectRatioPref);
         emptySolution.makeBlankLayout(20);
+
+        // calculate layout properties and set up config for renderer
+        let layoutProps = this.calculateLayoutProperties(emptySolution);
+        let canvas = { height: canvasHeight, width: canvasWidth };
+        let config = {
+            devMode: false,
+            detailView: false,
+            ...layoutProps
+        };
         let colors = {
             lineColor: "rgb(198, 198, 197)",
             bkrdColor: "rgb(229, 229, 229)"
         };
-        emptySolution.showGridSquares(colors);
+
+        // use renderer to display the grid on the canvas
+        this.solutionRenderer.renderGridSquares(emptySolution.layout, canvas, config, colors);
 
         // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
     updateDisplayCallback(_solution) {
-        // passed as a callback to the annealing process so it can update the display
-
+        // receives a solution from the web worker and updates the display
         clear();
         background(255);
-        // show shapes, grid, and annealing scores
-        _solution.showLayout();
-        _solution.showScores(); // anneal score when in progress
+        // calculate layout properties and set up config for renderer
+        let layoutProps = this.calculateLayoutProperties(_solution);
+        let canvas = { height: canvasHeight, width: canvasWidth };
+        let config = {
+            devMode: devMode,
+            detailView: detailView,
+            ...layoutProps
+        };
+
+        // use renderer to display the layout on the canvas
+        this.solutionRenderer.renderLayout(_solution, canvas, config);
+        this.solutionRenderer.renderScores(_solution.layout, canvas, config);
     }
 
     displayResult() {
@@ -341,17 +537,31 @@ class DesignUI {
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             clear();
             background(255);
-            appState.currentAnneal.finalSolution.showLayout();
+
+            // calculate layout properties and set up config for renderer
+            let solution = appState.currentAnneal.finalSolution;
+            let layoutProps = this.calculateLayoutProperties(solution);
+            let canvas = { height: canvasHeight, width: canvasWidth };
+            let config = {
+                devMode: devMode,
+                detailView: detailView,
+                ...layoutProps
+            };
+
+            // use renderer to display the layout on the canvas
+            this.solutionRenderer.renderLayout(solution, canvas, config);
 
             // setup case for cellular and boards
-            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution);
+            appState.currCellular = new Cellular(solution, devMode, numGrow);
             appState.currCellular.growCells();
-            appState.currCellular.showCellLines();
+
+            // use renderer to display the cellular lines on the canvas
+            this.cellularRenderer.renderCellLines(appState.currCellular.cellSpace, canvas, config);
 
             // display cells and terrain (cellular scores)
             if (devMode) {
-                appState.currCellular.showTerrain();
-                appState.currCellular.showCells();
+                this.cellularRenderer.renderTerrain(solution.layout, canvas, { ...config, maxTerrain: appState.currCellular.maxTerrain });
+                this.cellularRenderer.renderCells(appState.currCellular.cellSpace, canvas, config);
             }
         }
     }

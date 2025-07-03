@@ -21,20 +21,12 @@ describe('Anneal', () => {
     test('constructor should create initial structures', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 2);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
 
         // 2. Execute
-        const anneal = new Anneal(shapes, mockUI);
+        const anneal = new Anneal(shapes);
 
         // 3. Assert - Check that constructor sets up expected properties
         expect(anneal.shapes).toBe(shapes);
-        expect(anneal.ui).toBe(mockUI);
         expect(anneal.numStarts).toBe(10);
         expect(anneal.maxIterations).toBe(1000);
         expect(anneal.initialTemp).toBe(10000);
@@ -49,14 +41,8 @@ describe('Anneal', () => {
     test('calcMovementRange should return expected values based on temperature', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
-        const anneal = new Anneal(shapes, mockUI);
+
+        const anneal = new Anneal(shapes);
 
         // 2. Execute & Assert - Test movement range at different temperatures
         const initialTemp = 1000;
@@ -79,14 +65,8 @@ describe('Anneal', () => {
     test('acceptSolution should accept better solutions and probabilistically accept worse ones', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
-        const anneal = new Anneal(shapes, mockUI);
+
+        const anneal = new Anneal(shapes);
 
         // 2. Execute & Assert
 
@@ -117,14 +97,8 @@ describe('Anneal', () => {
     test('saveSolutionHistory should store solution data appropriately', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
-        const anneal = new Anneal(shapes, mockUI);
+
+        const anneal = new Anneal(shapes);
 
         // Create a mock solution with exportSolution method
         const mockSolution = {
@@ -154,14 +128,8 @@ describe('Anneal', () => {
     test('button handlers should set appropriate flags', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
-        const anneal = new Anneal(shapes, mockUI);
+
+        const anneal = new Anneal(shapes);
 
         // 2. Execute & Assert
 
@@ -186,14 +154,8 @@ describe('Anneal', () => {
     test('should implement adaptive reheating when stuck in local minimum', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-        const mockUI = {
-            updateDisplayCallback: jest.fn(),
-            html: {
-                annealButton: { html: jest.fn(), mousePressed: jest.fn() },
-                clearButton: { mousePressed: jest.fn() }
-            }
-        };
-        const anneal = new Anneal(shapes, mockUI);
+
+        const anneal = new Anneal(shapes);
 
         // Create a mock solution that will simulate being stuck
         const mockSolution = {
