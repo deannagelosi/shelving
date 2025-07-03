@@ -1,5 +1,5 @@
 const { loadShapesFromFixture } = require('./fixtures/loader');
-const Shape = require('../js/Shape');
+const Shape = require('../js/core/Shape');
 
 // Load all shapes from the fixture file before tests run
 const allFixtureShapes = loadShapesFromFixture();

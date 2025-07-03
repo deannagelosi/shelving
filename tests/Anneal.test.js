@@ -1,9 +1,9 @@
 const { loadShapesFromFixture } = require('./fixtures/loader');
-const Anneal = require('../js/Anneal');
-const Solution = require('../js/Solution');
+const Anneal = require('../js/core/Anneal');
+const Solution = require('../js/core/Solution');
 
 // Mock the Solution module to isolate Anneal logic
-jest.mock('../js/Solution');
+jest.mock('../js/core/Solution');
 
 // Load shapes from fixture for testing
 const allFixtureShapes = loadShapesFromFixture();

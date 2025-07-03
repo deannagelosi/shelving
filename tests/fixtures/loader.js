@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const Shape = require('../../js/Shape');
+const Shape = require('../../js/core/Shape');
 
 function loadShapesFromFixture() {
     // Construct the full path to the fixture file

@@ -248,4 +248,4 @@ function saveJSONFile(_exportData) {
 window.onbeforeunload = function (e) {
     e.preventDefault();
     e.returnValue = '';
-  };
+};

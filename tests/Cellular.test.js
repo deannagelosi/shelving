@@ -1,6 +1,6 @@
 const { loadShapesFromFixture } = require('./fixtures/loader');
-const Cellular = require('../js/Cellular');
-const Solution = require('../js/Solution');
+const Cellular = require('../js/core/Cellular');
+const Solution = require('../js/core/Solution');
 
 // Load shapes from fixture for testing
 const allFixtureShapes = loadShapesFromFixture();
