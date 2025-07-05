@@ -3,18 +3,12 @@
 // single-run mode is used by the web interface
 // bulk-run mode is used by the bulk CLI tool for statistical analysis
 
-try {
-    importScripts('../core/EventEmitter.js');
-    importScripts('../core/Shape.js');
-    importScripts('../core/Solution.js');
-    importScripts('../core/Cellular.js');
-    importScripts('../core/Anneal.js');
-} catch (error) {
-    console.error('Failed to import core scripts:', error);
-}
-
 class SolutionWorker {
-    constructor() {
+    constructor(dependencies) {
+        // Dependencies are injected for environment compatibility
+        this.Anneal = dependencies.Anneal;
+        this.Cellular = dependencies.Cellular;
+
         this.mode = null; // 'single' or 'bulk'
         this.config = null;
         this.currentJob = null;
@@ -30,6 +24,10 @@ class SolutionWorker {
                     break;
                 case 'SET_MODE':
                     this.setMode(payload);
+                    break;
+                case 'TEST':
+                    // Test message to verify communication channel
+                    console.log(`[WORKER ${process.pid}]: Received TEST message - communication channel is working!`);
                     break;
                 default:
                     this.sendError(`Unknown message type: ${type}`);
@@ -117,7 +115,7 @@ class SolutionWorker {
             // Phase 2: Cellular growth
             this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
-            const cellular = new Cellular(anneal.finalSolution, devMode);
+            const cellular = new this.Cellular(anneal.finalSolution, devMode);
             cellular.growCells();
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
@@ -127,9 +125,12 @@ class SolutionWorker {
 
             // send the complete final solution data
             const result = {
-                finalSolution: anneal.finalSolution,
+                title: `solution-${this.currentJob.startId + 1}`,
+                finalSolution: anneal.finalSolution.toDataObject(),
+                enabledShapes: shapeInstances.map(() => true),
+                solutionHistory: [], // Empty for bulk runs to reduce size
                 cellular: {
-                    cellLines: Array.from(cellular.cellLines || []),
+                    cellSpace: cellular.cellSpace,
                     maxTerrain: cellular.maxTerrain,
                     numAlive: cellular.numAlive || 0
                 },
@@ -146,6 +147,11 @@ class SolutionWorker {
             // send final result
             this.sendResult(result);
 
+            // Terminate immediately after sending result in bulk mode
+            if (this.mode === 'bulk') {
+                process.exit(0);
+            }
+
         } catch (error) {
             this.sendError(`Solution generation failed: ${error.message}`, error.stack);
         } finally {
@@ -154,7 +160,18 @@ class SolutionWorker {
     }
 
     sendMessage(type, payload = {}) {
-        self.postMessage({ type, payload });
+        if (this.parentPort) {
+            // Node.js environment
+            this.parentPort.postMessage({ type, payload });
+        } else if (typeof self !== 'undefined' && self.postMessage) {
+            // Browser environment
+            self.postMessage({ type, payload });
+        } else if (typeof process !== 'undefined' && process.send) {
+            // Node.js child_process (fallback)
+            process.send({ type, payload });
+        } else {
+            console.error(`WORKER: Unable to send message: ${type}`, payload);
+        }
     }
 
     sendProgress(progressType, data) {
@@ -182,20 +199,104 @@ class SolutionWorker {
     }
 }
 
-// initialize worker instance
-const worker = new SolutionWorker();
-
-// handle messages from main thread
-self.onmessage = function (event) {
-    worker.processMessage(event.data);
-};
-
-// handle worker errors
-self.onerror = function (error) {
-    worker.sendError(`Worker runtime error: ${error.message}`, error.stack);
-};
-
-// export for unit testing (i.e. if in Node environment)
+// Export for unit testing when imported as a module
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SolutionWorker;
-} 
+}
+
+//== Worker Initialization
+if (typeof module === 'undefined' || !module.parent) {
+    let worker;
+
+    // Environment-agnostic initialization
+    if (typeof importScripts === 'function') {
+        // Browser Web Worker Environment
+        try {
+            worker = initializeBrowserWorker();
+        } catch (error) {
+            self.postMessage({ type: 'ERROR', payload: { message: 'Worker initialization failed: ' + error.message } });
+        }
+
+    } else if (typeof require === 'function') {
+        // Node.js worker_threads Environment  
+
+        try {
+            worker = initializeNodeWorker();
+        } catch (error) {
+            console.error(`FATAL ERROR during initialization: ${error.message}`);
+            process.exit(1);
+        }
+    }
+}
+
+/**
+ * Initialize worker in browser environment
+ */
+function initializeBrowserWorker() {
+    // Load dependencies
+    importScripts(
+        '../core/EventEmitter.js',
+        '../core/Shape.js',
+        '../core/Solution.js',
+        '../core/Cellular.js',
+        '../core/Anneal.js'
+    );
+
+    // In the browser, classes are available in the global scope
+    const worker = new SolutionWorker({ Anneal, Cellular });
+
+    // Set up browser event handlers
+    self.onmessage = function (event) {
+        if (worker) {
+            worker.processMessage(event.data);
+        }
+    };
+
+    self.onerror = function (error) {
+        if (worker) {
+            worker.sendError(`Worker runtime error: ${error.message}`, error.stack);
+        }
+    };
+
+    return worker;
+}
+
+/**
+ * Initialize worker in Node.js environment
+ */
+function initializeNodeWorker() {
+    const { parentPort } = require('worker_threads');
+
+    // Load dependencies
+    const Solution = require('../core/Solution.js');
+    const Shape = require('../core/Shape.js');
+    const Anneal = require('../core/Anneal.js');
+    const Cellular = require('../core/Cellular.js');
+
+    // Make dependencies available in global scope
+    if (typeof global !== 'undefined') {
+        if (!global.Solution) global.Solution = Solution;
+        if (!global.Shape) global.Shape = Shape;
+    }
+
+    // Create worker instance
+    const worker = new SolutionWorker({ Anneal, Cellular });
+
+    // Store parentPort reference for message sending
+    worker.parentPort = parentPort;
+
+    // Set up Node.js worker_threads event handlers
+    parentPort.on('message', (data) => {
+        if (worker) {
+            worker.processMessage(data);
+        }
+    });
+
+    parentPort.on('error', (error) => {
+        if (worker) {
+            worker.sendError(`Worker runtime error: ${error.message}`, error.stack);
+        }
+    });
+
+    return worker;
+}
