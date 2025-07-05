@@ -228,12 +228,12 @@ class DesignUI {
 
         try {
             // convert the json worker result into a Solution object
-            const solution = loadSolutionFromData(finalSolution, false);
+            const solution = Solution.fromDataObject(finalSolution);
 
-            // create the anneal object to maintain compatibility with existing code
             const anneal = {
                 finalSolution: solution,
-                solutionHistory: [] // empty for now to reduce memory usage
+                solutionHistory: [], // empty for now to reduce memory usage
+                cellular: cellular // store pre-computed cellular data from worker
             };
             // store results in appState
             appState.currentAnneal = anneal;
@@ -419,11 +419,14 @@ class DesignUI {
             this.html.annealButton.mousePressed(() => this.handleStopAnneal());
             this.html.clearButton.mousePressed(() => this.handleStopAnneal());
 
+            // convert shapes to plain data objects for worker
+            const shapesData = selectedShapes.map(shape => shape.toDataObject());
+
             // send generation request to worker
             this.solutionWorker.postMessage({
                 type: 'GENERATE_SOLUTION',
                 payload: {
-                    shapes: selectedShapes,
+                    shapes: shapesData,
                     jobId: `single-${Date.now()}`,
                     startId: 0,
                     aspectRatioPref: aspectRatioPref,
@@ -552,8 +555,27 @@ class DesignUI {
             this.solutionRenderer.renderLayout(solution, canvas, config);
 
             // setup case for cellular and boards
-            appState.currCellular = new Cellular(solution, devMode, numGrow);
-            appState.currCellular.growCells();
+            if (appState.currentAnneal.cellular) {
+                // worker result, use returned cellular data
+                appState.currCellular = {
+                    cellSpace: appState.currentAnneal.cellular.cellSpace,
+                    maxTerrain: appState.currentAnneal.cellular.maxTerrain,
+                    numAlive: appState.currentAnneal.cellular.numAlive
+                };
+            } else {
+                // imported solution, recalculate cellular data
+                appState.currCellular = new Cellular(solution, devMode, numGrow);
+                appState.currCellular.growCells();
+
+                // store cellular data in appState
+                if (appState.savedAnneals.includes(appState.currentAnneal)) {
+                    appState.currentAnneal.cellular = {
+                        cellSpace: appState.currCellular.cellSpace,
+                        maxTerrain: appState.currCellular.maxTerrain,
+                        numAlive: appState.currCellular.numAlive
+                    };
+                }
+            }
 
             // use renderer to display the cellular lines on the canvas
             this.cellularRenderer.renderCellLines(appState.currCellular.cellSpace, canvas, config);
@@ -673,15 +695,20 @@ class DesignUI {
         });
         // set which shapes are enabled for this saved solution
         let enableShapes = appState.currentAnneal.enabledShapes;
-        enableShapes.forEach((_enabled, i) => {
-            // set the enabled states for this saved solution
-            appState.shapes[i].enabled = _enabled;
-            if (_enabled) {
-                this.shapeElements[i].addClass('highlighted');
-            } else {
-                this.shapeElements[i].removeClass('highlighted');
-            }
-        });
+
+        if (enableShapes && Array.isArray(enableShapes)) {
+            enableShapes.forEach((_enabled, i) => {
+                // set the enabled states for this saved solution
+                appState.shapes[i].enabled = _enabled;
+                if (_enabled) {
+                    this.shapeElements[i].addClass('highlighted');
+                } else {
+                    this.shapeElements[i].removeClass('highlighted');
+                }
+            });
+        } else {
+            console.error('Error: enableShapes is not an array or is undefined');
+        }
 
         // update display
         this.displayResult();

@@ -60,12 +60,16 @@ class SolutionWorker {
         this.currentJob = { jobId, startId };
 
         try {
+            // Convert plain shape data objects to Shape class instances
+            // (postMessage serialization strips class methods)
+            const shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData));
+
             // Phase 1: Create initial solution
             this.sendProgress('PHASE_START', { phase: 'anneal', message: 'Starting annealing process...' });
 
             // create Anneal instance
-            const anneal = new Anneal(
-                shapes,
+            const anneal = new this.Anneal(
+                shapeInstances,
                 devMode,
                 aspectRatioPref
             );

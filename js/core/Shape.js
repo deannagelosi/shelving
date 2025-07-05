@@ -140,8 +140,8 @@ class Shape {
         }
     }
 
-    exportShape() {
-        // return copy of shape with only export json
+    toDataObject() {
+        // convert Shape instance to text object (JSON) (export/worker communication)
         return {
             data: {
                 highResShape: this.data.highResShape,
@@ -151,6 +151,19 @@ class Shape {
             posY: this.posY,
             enabled: this.enabled
         };
+    }
+
+    static fromDataObject(shapeData) {
+        // convert Shape text object (JSON) to Shape instance (import/worker communication)
+        const newShape = new Shape();
+        newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape);
+
+        // Set position and state properties if provided
+        if (shapeData.posX !== undefined) newShape.posX = shapeData.posX;
+        if (shapeData.posY !== undefined) newShape.posY = shapeData.posY;
+        if (shapeData.enabled !== undefined) newShape.enabled = shapeData.enabled;
+
+        return newShape;
     }
 
     // Function to set values to true between two indices

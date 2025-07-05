@@ -280,7 +280,7 @@ class InputUI {
         let annealData = _importedData.savedAnneals;
 
         // process shape data
-        let loadedShapes = shapeData.map(shapeData => loadShapeFromData(shapeData));
+        let loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
         // add shapes
         appState.shapes.push(...loadedShapes);
 
@@ -292,7 +292,7 @@ class InputUI {
             let titleNumber = parseInt(anneal.title.split('-')[1]);
             maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
             // create new solution from saved data to restore class methods
-            anneal.finalSolution = loadSolutionFromData(anneal.finalSolution, true);
+            anneal.finalSolution = Solution.fromDataObject(anneal.finalSolution);
 
             loadedAnneals.push(anneal);
         }

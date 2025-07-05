@@ -240,7 +240,7 @@ class Anneal {
 
     saveSolutionHistory(_bestSolution, _multiStart) {
         // only save the necessary data for the solution history
-        let solutionData = _bestSolution.exportSolution();
+        let solutionData = _bestSolution.toDataObject();
 
         if (_multiStart) {
             if (!this.multiStartsHistory[_bestSolution.startID]) {

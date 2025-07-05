@@ -304,8 +304,13 @@ class Solution {
         // create a new solution that's a neighbor to the current solution
         // - max shift (movement) amount is based on temperature
 
-        // make a shallow copy of shapes (gives new posX and posY, but uses same shape data)
-        let shapesCopy = this.shapes.map(shape => ({ ...shape }));
+        // make a proper copy of shapes that preserves class instances
+        // Create new Shape instances with copied position data but shared shape data
+        let shapesCopy = this.shapes.map(shape => {
+            const newShape = Object.create(Object.getPrototypeOf(shape));
+            Object.assign(newShape, shape);
+            return newShape;
+        });
         let newSolution = new Solution(shapesCopy, this.startID, this.aspectRatioPref);
 
         // pick a random shape to act on
@@ -395,14 +400,51 @@ class Solution {
         });
     }
 
-    exportSolution() {
-        // makes a copy of the solution without extra data
+    // NOTE: The old exportSolution() method has been replaced by toDataObject()
+    // which provides better consistency and centralized data serialization logic.
+
+    toDataObject() {
+        // convert Solution instance to text object (JSON) (export/worker communication)
+        // note: layout excluded to keep data size small (easily recalculated)
         return {
-            shapes: this.exportShapes(),
+            shapes: this.shapes.map(shape => shape.toDataObject()),
             startID: this.startID,
             score: this.score,
-            valid: this.valid
+            valid: this.valid,
+            aspectRatioPref: this.aspectRatioPref,
+            clusterLimit: this.clusterLimit
         };
+    }
+
+    static fromDataObject(solutionData) {
+        // convert Solution text object (JSON) to Solution instance (import/worker communication)
+        // note: recalculates layout and score if missing
+        const shapes = solutionData.shapes.map(shapeData => Shape.fromDataObject(shapeData));
+
+        const solution = new Solution(
+            shapes,
+            solutionData.startID,
+            solutionData.aspectRatioPref || 0
+        );
+
+        // set missing properties if they exist
+        if (solutionData.clusterLimit !== undefined) {
+            solution.clusterLimit = solutionData.clusterLimit;
+        }
+
+        // Check if layout data exists (from worker) or needs to be recalculated (from import)
+        if (solutionData.layout && solutionData.score !== undefined && solutionData.valid !== undefined) {
+            // Data includes computed layout (worker result)
+            solution.layout = solutionData.layout;
+            solution.score = solutionData.score;
+            solution.valid = solutionData.valid;
+        } else {
+            // Data lacks computed layout, recalculate (imported file)
+            solution.makeLayout();
+            solution.calcScore();
+        }
+
+        return solution;
     }
 
     // helper functions
