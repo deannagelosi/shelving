@@ -18,7 +18,7 @@ jest.mock('fs', () => ({
 // Mock path
 jest.mock('path');
 
-const BulkCLI = require('../js/interfaces/cli/BulkCLI');
+const BulkCLI = require('../js/interfaces/bulk/BulkCLI');
 const { Worker } = require('worker_threads');
 const fs = require('fs');
 const path = require('path');

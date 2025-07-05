@@ -144,7 +144,7 @@ class BulkCLI {
      */
     showHelp() {
         console.log(`
-Usage: node bulk-cli.js [options]
+Usage: node BulkCLI.js [options]
 
 Options:
   -s, --shapes <file>          Input shapes JSON file (required)
@@ -154,9 +154,9 @@ Options:
   -h, --help                   Show this help message
 
 Examples:
-  node bulk-cli.js --shapes input.json --count 100
-  node bulk-cli.js -s shapes.json -c 500 --aspect-ratio 1.5
-  node bulk-cli.js -s data.json -c 1000 -b 50
+  node BulkCLI.js --shapes input.json --count 100
+  node BulkCLI.js -s shapes.json -c 500 --aspect-ratio 1.5
+  node BulkCLI.js -s data.json -c 1000 -b 50
         `);
     }
 
