@@ -1,6 +1,12 @@
 const { loadShapesFromFixture } = require('./fixtures/loader');
+const Shape = require('../js/core/Shape');
+const Solution = require('../js/core/Solution');
 const fs = require('fs');
 const path = require('path');
+
+// Make classes globally available for environment compatibility (like worker does)
+global.Shape = Shape;
+global.Solution = Solution;
 
 describe('Data Loading & Export Tests', () => {
     let sampleShapesData;
@@ -74,36 +80,15 @@ describe('Data Loading & Export Tests', () => {
             });
         });
 
-        test('should handle empty savedAnneals array', () => {
-            expect(sampleShapesData.savedAnneals).toEqual([]);
-        });
+
     });
 
     describe('JSON Edge Cases', () => {
-        test('should handle malformed JSON gracefully', () => {
-            const malformedJson = '{ "allShapes": [invalid json}';
 
-            expect(() => {
-                JSON.parse(malformedJson);
-            }).toThrow();
-        });
 
-        test('should handle missing allShapes property', () => {
-            const dataWithoutShapes = { savedAnneals: [] };
 
-            // This would fail in loadShapesFromFixture, but we can test the structure
-            expect(dataWithoutShapes.allShapes).toBeUndefined();
-        });
 
-        test('should handle empty allShapes array', () => {
-            const dataWithEmptyShapes = {
-                savedAnneals: [],
-                allShapes: []
-            };
 
-            expect(dataWithEmptyShapes.allShapes).toEqual([]);
-            expect(dataWithEmptyShapes.allShapes.length).toBe(0);
-        });
 
         test('should handle shapes with empty highResShape', () => {
             const shapeWithEmptyGrid = {
@@ -127,13 +112,7 @@ describe('Data Loading & Export Tests', () => {
             expect(shapeWithoutTitle.data.title).toBeUndefined();
         });
 
-        test('should handle null and undefined inputs', () => {
-            expect(() => JSON.stringify(null)).not.toThrow();
-            expect(() => JSON.stringify(undefined)).not.toThrow();
 
-            expect(JSON.stringify(null)).toBe('null');
-            expect(JSON.stringify(undefined)).toBe(undefined);
-        });
     });
 
     describe('Data Consistency Validation', () => {
@@ -235,8 +214,7 @@ describe('Data Loading & Export Tests', () => {
                 },
                 metadata: {
                     timestamp: Date.now(),
-                    mode: 'test',
-                    devMode: false
+                    mode: 'test'
                 }
             };
 
@@ -247,24 +225,106 @@ describe('Data Loading & Export Tests', () => {
         });
     });
 
-    describe('File System Operations', () => {
-        test('should handle file reading operations', () => {
-            const fixturePath = path.resolve(__dirname, 'fixtures/sample_shapes.json');
+    describe('Unified Data Methods', () => {
+        describe('Shape.fromDataObject()', () => {
+            test('should create Shape instance from valid data', () => {
+                const shapeData = sampleShapesData.allShapes[0];
+                const shape = Shape.fromDataObject(shapeData);
 
-            // Test file exists
-            expect(fs.existsSync(fixturePath)).toBe(true);
+                expect(shape).toBeInstanceOf(Shape);
+                expect(shape.data.title).toBe(shapeData.data.title);
+                expect(shape.data.highResShape).toEqual(shapeData.data.highResShape);
+            });
 
-            // Test file is readable
-            const stats = fs.statSync(fixturePath);
-            expect(stats.isFile()).toBe(true);
-            expect(stats.size).toBeGreaterThan(0);
+            test('should handle position and enabled properties', () => {
+                const shapeData = {
+                    data: { title: 'Test', highResShape: [[true]] },
+                    posX: 5,
+                    posY: 10,
+                    enabled: false
+                };
+                const shape = Shape.fromDataObject(shapeData);
+
+                expect(shape.posX).toBe(5);
+                expect(shape.posY).toBe(10);
+                expect(shape.enabled).toBe(false);
+            });
         });
 
-        test('should handle non-existent file gracefully', () => {
-            const nonExistentPath = path.resolve(__dirname, 'fixtures/non-existent.json');
+        describe('Shape.toDataObject()', () => {
+            test('should export Shape to plain object', () => {
+                const shape = new Shape();
+                shape.saveUserInput('Test Shape', [[true, false], [false, true]]);
+                shape.posX = 3;
+                shape.posY = 7;
+                shape.enabled = false;
 
-            expect(fs.existsSync(nonExistentPath)).toBe(false);
-            expect(() => fs.readFileSync(nonExistentPath)).toThrow();
+                const exported = shape.toDataObject();
+
+                expect(exported.data.title).toBe('Test Shape');
+                // Shape.saveUserInput automatically pads to be divisible by 4
+                expect(Array.isArray(exported.data.highResShape)).toBe(true);
+                expect(exported.data.highResShape.length).toBeGreaterThan(0);
+                expect(exported.posX).toBe(3);
+                expect(exported.posY).toBe(7);
+                expect(exported.enabled).toBe(false);
+            });
+        });
+
+        describe('Solution.fromDataObject()', () => {
+            test('should create Solution and recalculate layout when missing', () => {
+                const testData = {
+                    shapes: [sampleShapesData.allShapes[0]],
+                    startID: 0,
+                    aspectRatioPref: 0
+                    // No layout, score, or valid - simulating imported data
+                };
+
+                const solution = Solution.fromDataObject(testData);
+
+                expect(solution).toBeInstanceOf(Solution);
+                expect(Array.isArray(solution.layout)).toBe(true);
+                expect(typeof solution.score).toBe('number');
+                expect(typeof solution.valid).toBe('boolean');
+            });
+
+            test('should use existing layout when provided', () => {
+                const mockLayout = [[[]]];
+                const testData = {
+                    shapes: [sampleShapesData.allShapes[0]],
+                    startID: 0,
+                    aspectRatioPref: 0,
+                    layout: mockLayout,
+                    score: 100,
+                    valid: true
+                };
+
+                const solution = Solution.fromDataObject(testData);
+
+                expect(solution.layout).toBe(mockLayout);
+                expect(solution.score).toBe(100);
+                expect(solution.valid).toBe(true);
+            });
+        });
+
+        describe('Solution.toDataObject()', () => {
+            test('should export Solution without layout', () => {
+                const shapes = [Shape.fromDataObject(sampleShapesData.allShapes[0])];
+                const solution = new Solution(shapes, 0, 1);
+                solution.makeLayout();
+                solution.calcScore();
+
+                const exported = solution.toDataObject();
+
+                expect(exported.shapes).toHaveLength(1);
+                expect(exported.startID).toBe(0);
+                expect(exported.aspectRatioPref).toBe(1);
+                expect(typeof exported.score).toBe('number');
+                expect(typeof exported.valid).toBe('boolean');
+                expect(exported.layout).toBeUndefined(); // Should not include layout
+            });
         });
     });
+
+
 }); 

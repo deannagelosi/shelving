@@ -100,10 +100,10 @@ describe('Anneal', () => {
 
         const anneal = new Anneal(shapes);
 
-        // Create a mock solution with exportSolution method
+        // Create a mock solution with toDataObject method
         const mockSolution = {
             startID: 0,
-            exportSolution: jest.fn().mockReturnValue({
+            toDataObject: jest.fn().mockReturnValue({
                 shapes: [],
                 startID: 0,
                 score: 100,
@@ -122,7 +122,7 @@ describe('Anneal', () => {
         expect(anneal.solutionHistory.length).toBe(1);
 
         // 3. Assert
-        expect(mockSolution.exportSolution).toHaveBeenCalledTimes(2);
+        expect(mockSolution.toDataObject).toHaveBeenCalledTimes(2);
     });
 
     test('button handlers should set appropriate flags', () => {
@@ -161,7 +161,7 @@ describe('Anneal', () => {
         const mockSolution = {
             score: 100,
             createNeighbor: jest.fn(),
-            exportSolution: jest.fn().mockReturnValue({
+            toDataObject: jest.fn().mockReturnValue({
                 shapes: [],
                 startID: 0,
                 score: 100,
@@ -172,7 +172,7 @@ describe('Anneal', () => {
         // Mock createNeighbor to always return worse solutions (simulating being stuck)
         mockSolution.createNeighbor.mockReturnValue({
             score: 150, // Worse score
-            exportSolution: jest.fn().mockReturnValue({
+            toDataObject: jest.fn().mockReturnValue({
                 shapes: [],
                 startID: 0,
                 score: 150,
