@@ -555,7 +555,11 @@ class DesignUI {
             this.solutionRenderer.renderLayout(solution, canvas, config);
 
             // setup case for cellular and boards
-            if (appState.currentAnneal.cellular) {
+            if (devMode) {
+                // create temporary cellular instance for step-by-step growth preview
+                appState.currCellular = new Cellular(solution, devMode, numGrow);
+                appState.currCellular.growCells();
+            } else if (appState.currentAnneal.cellular) {
                 // worker result, use returned cellular data
                 appState.currCellular = {
                     cellSpace: appState.currentAnneal.cellular.cellSpace,
