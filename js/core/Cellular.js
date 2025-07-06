@@ -2,7 +2,6 @@ class Cellular {
     constructor(_solution, _devMode = false, _numGrow = 1) {
         this.cellSpace = [[]]; // 2D array of intersections on the layout grid where cells live
         this.pathValues = [[]]; // 2D array of each path's (lines on the layout) height value
-        this.cellLines = new Set(); // holds the unique lines to draw
 
         if (_solution.layout.length <= 1) _solution.makeLayout();
         this.layout = _solution.layout; // array of shapes in their annealed position
@@ -171,13 +170,34 @@ class Cellular {
         // populate cell space with perimeter cells
         for (let y = 0; y < this.layoutHeight + 1; y++) {
             // left wall
-            this.addCell(y, 0, { strain: 0 }, false);
+            this.cellSpace[y][0].push({
+                id: this.cellID++,
+                strain: 0,
+                alive: false,
+                parent: null,
+                parentCoords: (y > 0) ? { x: 0, y: y - 1 } : null
+            });
             // right wall
-            this.addCell(y, this.layoutWidth, { strain: 0 }, false);
+            this.cellSpace[y][this.layoutWidth].push({
+                id: this.cellID++,
+                strain: 0,
+                alive: false,
+                parent: null,
+                parentCoords: (y > 0) ? { x: this.layoutWidth, y: y - 1 } : null
+            });
         }
         // top wall
         for (let x = 0; x < this.layoutWidth + 1; x++) {
-            this.addCell(this.layoutHeight, x, { strain: 0 }, false);
+            // Skip corner to avoid duplicate
+            if (x > 0) {
+                this.cellSpace[this.layoutHeight][x].push({
+                    id: this.cellID++,
+                    strain: 0,
+                    alive: false,
+                    parent: null,
+                    parentCoords: { x: x - 1, y: this.layoutHeight }
+                });
+            }
         }
 
         // populate cell space with cells at the bottom of each shape
@@ -187,14 +207,20 @@ class Cellular {
             let bottomLength = shapeEnds[1] - shapeEnds[0] + 2;
 
             for (let j = 0; j < bottomLength; j++) {
-                // add a cell 
                 let y = shape.posY;
                 let x = shapeEnds[0] + j;
-                let isAlive = j == 0 || j == bottomLength - 1 ? true : false;
-                this.addCell(y, x, { strain: i + 1 }, isAlive);
-                // mark just added cell as a 'bottom of shape' cell
-                // - since parent may not be the cell next to it, we note this to stop backtrack
-                this.cellSpace[y][x][this.cellSpace[y][x].length - 1].bottom = true;
+                let isAlive = j === 0 || j === bottomLength - 1;
+                let parentCoords = (j > 0) ? { x: x - 1, y: y } : null;
+
+                const newCell = {
+                    id: this.cellID++,
+                    strain: i + 1,
+                    alive: isAlive,
+                    parent: null,
+                    parentCoords: parentCoords,
+                    bottom: true
+                };
+                this.cellSpace[y][x].push(newCell);
             }
         }
     }
@@ -236,10 +262,18 @@ class Cellular {
                         // == Merge Rule 1: Standard Merge - when alive cells overlap they merge and one dies
                         // merge into the same strain family
                         this.mergeStrains(this.cellSpace[y][x]);
-                        // remove all but one of the alive cells
-                        this.cellSpace[y][x] = [this.cellSpace[y][x][0]];
-                        // cell marked to protect from crowded death
-                        this.cellSpace[y][x][0].merged = true;
+                        // one cell survives and the rest die
+                        let foundSurvivor = false;
+                        for (const cell of this.cellSpace[y][x]) {
+                            if (cell.alive) {
+                                if (!foundSurvivor) {
+                                    cell.merged = true;
+                                    foundSurvivor = true;
+                                } else {
+                                    cell.alive = false;
+                                }
+                            }
+                        }
 
                     } else if (numAlive == 1) {
                         // only one alive cell (parentCell) at this position
@@ -308,7 +342,7 @@ class Cellular {
                             if (this.cellSpaceInBounds(option.y, option.x)) {
                                 // == Elimination Rule 1: Can't Backtrack
                                 // 1. don't backtrack into parent cell:
-                                if (this.cellSpace[option.y][option.x].some(cell => cell.id === parentCell.parent.id)) {
+                                if (parentCell.parent && this.cellSpace[option.y][option.x].some(cell => cell.id === parentCell.parent.id)) {
                                     option.valid = false;
                                 }
                                 // 2. don't backtrack into parent cell when on bottom of shape:
@@ -348,7 +382,7 @@ class Cellular {
                             continue;
                         } else if (validOptions.length == 1) {
                             // == Selection Rule 1: if only one option remains, take it
-                            newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                            newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell, parentX: x, parentY: y });
                             continue;
                         } else if (validOptions.length > 1) {
                             // == Selection Rule 2: Attraction - cells are attracted to cells of a different strain
@@ -357,7 +391,7 @@ class Cellular {
                                 // this.cellSpace[y][x + 1].some(cell => cell.strain == parentCell.strain)
                                 // if (this.cellSpace[option.y][option.x].some(cell => !cell.alive && cell.strain != parentCell.strain)) {
                                 if (this.cellSpace[option.y][option.x].some(cell => cell.strain != parentCell.strain)) {
-                                    newCells.push({ y: option.y, x: option.x, parentCell: parentCell });
+                                    newCells.push({ y: option.y, x: option.x, parentCell: parentCell, parentX: x, parentY: y });
                                     cellAdded = true;
                                     break;
                                 }
@@ -376,7 +410,7 @@ class Cellular {
                             if (validOptions[0].score != validOptions[1].score) {
                                 // not tied
                                 // == Selection Rule 3: Easiest Path - take the path with the lowest score
-                                newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                                newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell, parentX: x, parentY: y });
                                 continue;
                             } else {
                                 // Tie in the remaining options
@@ -387,19 +421,19 @@ class Cellular {
 
                                 // Selection Rule 4: Change is Bad - grow in the same direction if possible
                                 if (growingLeft && leftValid) {
-                                    newCells.push({ y: y, x: x - 1, parentCell: parentCell }); // left
+                                    newCells.push({ y: y, x: x - 1, parentCell: parentCell, parentX: x, parentY: y }); // left
                                     continue;
                                 } else if (growingUp && upValid) {
-                                    newCells.push({ y: y + 1, x: x, parentCell: parentCell }); // up
+                                    newCells.push({ y: y + 1, x: x, parentCell: parentCell, parentX: x, parentY: y }); // up
                                     continue;
                                 } else if (growingRight && rightValid) {
-                                    newCells.push({ y: y, x: x + 1, parentCell: parentCell }); // right
+                                    newCells.push({ y: y, x: x + 1, parentCell: parentCell, parentX: x, parentY: y }); // right
                                     continue;
                                 } else {
                                     // Selection Rule 5: Tie breaker - pick the first option
                                     console.error("Unable to break tie in growth at x: ", x, " y: ", y);
                                     // pick the first option
-                                    newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell });
+                                    newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell, parentX: x, parentY: y });
                                     continue;
                                 }
 
@@ -411,13 +445,14 @@ class Cellular {
             } // end of x loop
             // Found all new cells for the row. Add them and move to the next row
             for (let newCell of newCells) {
-                this.addCell(newCell.y, newCell.x, newCell.parentCell);
+                this.addCell(newCell.y, newCell.x, newCell.parentCell, { x: newCell.parentX, y: newCell.parentY });
             }
         } // end of y loop
 
         // count number of alive cells
-        this.numAlive = 0;
-        for (let y = 0; y < this.cellSpace.length; y++) {
+
+        this._updateAliveCount();
+    }
             for (let x = 0; x < this.cellSpace[y].length; x++) {
                 for (let cell of this.cellSpace[y][x]) {
                     if (cell.alive === true) {
@@ -525,19 +560,66 @@ class Cellular {
         }
     }
 
-    addCell(_y, _x, _parentCell, _alive = true) {
+    addCell(_y, _x, _parentCell, _parentCoords, _alive = true) {
         // kill parent cell when replicating
-        _parentCell.alive = false;
+        if (_parentCell && 'alive' in _parentCell) {
+            _parentCell.alive = false;
+        }
         // add a new child cell to the cell space
         this.cellSpace[_y][_x].push({
             id: this.cellID++,
             strain: _parentCell.strain,
             alive: _alive,
-            parent: _parentCell
+            parent: _parentCell,
+            parentCoords: _parentCoords
         });
     }
 
     //-- Helper Functions --//
+    _updateAliveCount() {
+        // count number of alive cells
+        this.numAlive = 0;
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (let cell of this.cellSpace[y][x]) {
+                    if (cell.alive === true) {
+                        this.numAlive++;
+                    }
+                }
+            }
+        }
+    }
+
+    getCellRenderLines() {
+        const cellLines = new Set();
+
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (let cell of this.cellSpace[y][x]) {
+                    if (cell.parentCoords) {
+                        const { x: parentX, y: parentY } = cell.parentCoords;
+                        const lineKey = [
+                            Math.min(y, parentY),
+                            Math.min(x, parentX),
+                            Math.max(y, parentY),
+                            Math.max(x, parentX),
+                            cell.strain,
+                        ].join(',');
+                        cellLines.add(lineKey);
+                    }
+                }
+            }
+        }
+        return cellLines;
+    }
+
+    isOverhang(y, x) {
+        // an overhang exists if the layout square is occupied, but the one below it is empty.
+        const shapeAbove = this.getShapeID(y, x);
+        const shapeBelow = this.getShapeID(y - 1, x);
+        return shapeAbove !== null && shapeBelow === null;
+    }
+
     overhangShift(shape) {
         // for shapes with overhang, find the bottom corner of the shape
         // posX is the x-coordinate of the leftmost cell of the shape in the full layout
@@ -614,6 +696,18 @@ class Cellular {
 
     range(num) {
         return num % 256;
+    }
+
+    static fromDataObject(cellularData, solution) {
+        // "Rehydrates" a Cellular instance from raw JSON data and a Solution instance
+        const newCellular = new Cellular(solution);
+
+        // Overwrite the default properties with the loaded data
+        if (cellularData.cellSpace) newCellular.cellSpace = cellularData.cellSpace;
+        if (cellularData.maxTerrain) newCellular.maxTerrain = cellularData.maxTerrain;
+        if (cellularData.numAlive) newCellular.numAlive = cellularData.numAlive;
+
+        return newCellular;
     }
 }
 

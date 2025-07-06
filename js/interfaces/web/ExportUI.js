@@ -297,9 +297,9 @@ class ExportUI {
         }
 
         // prepare cellular data from current anneal to get up-to-date board data
-        if (!appState.currCellular) {
-            appState.currCellular = new Cellular(appState.currentAnneal.finalSolution, false, 1);
-            appState.currCellular.growCells();
+        if (!appState.currentAnneal.cellular) {
+            appState.currentAnneal.cellular = new Cellular(appState.currentAnneal.finalSolution, false, 1);
+            appState.currentAnneal.cellular.growCells();
         }
 
         const caseDepth = parseFloat(this.html.caseDepthInput.value());
@@ -325,7 +325,7 @@ class ExportUI {
             kerf
         };
         // get cellular layout data (case lines)
-        const cellData = appState.currCellular;
+        const cellData = appState.currentAnneal.cellular;
         // get spacing data
         const buffer = appState.currentAnneal.finalSolution.buffer;
         const yPadding = appState.currentAnneal.finalSolution.yPadding;

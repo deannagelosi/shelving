@@ -6,6 +6,5 @@ const appState = {
     totalSavedAnneals: 0,
     currentAnneal: null,
     currentViewedAnnealIndex: null,
-    currCellular: null,
     // other global state can be added here
 };

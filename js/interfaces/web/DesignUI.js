@@ -561,11 +561,8 @@ class DesignUI {
                 appState.currCellular.growCells();
             } else if (appState.currentAnneal.cellular) {
                 // worker result, use returned cellular data
-                appState.currCellular = {
-                    cellSpace: appState.currentAnneal.cellular.cellSpace,
-                    maxTerrain: appState.currentAnneal.cellular.maxTerrain,
-                    numAlive: appState.currentAnneal.cellular.numAlive
-                };
+                // convert the cellular data into a full Cellular instance
+                appState.currCellular = Cellular.fromDataObject(appState.currentAnneal.cellular, solution);
             } else {
                 // imported solution, recalculate cellular data
                 appState.currCellular = new Cellular(solution, devMode, numGrow);
@@ -582,7 +579,9 @@ class DesignUI {
             }
 
             // use renderer to display the cellular lines on the canvas
-            this.cellularRenderer.renderCellLines(appState.currCellular.cellSpace, canvas, config);
+            // get formatted line data from the cellular instance
+            const cellLines = appState.currCellular.getCellRenderLines();
+            this.cellularRenderer.renderCellLines(cellLines, canvas, config);
 
             // display cells and terrain (cellular scores)
             if (devMode) {
