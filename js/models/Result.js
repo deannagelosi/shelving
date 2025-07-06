@@ -103,6 +103,10 @@ class Result {
                 metadata_json TEXT NOT NULL,
                 score REAL NOT NULL,
                 valid BOOLEAN NOT NULL,
+                baseline_grid_json TEXT,
+                baseline_cellular_json TEXT,
+                score_grid REAL,
+                score_cellular_naive REAL,
                 FOREIGN KEY (job_id) REFERENCES bulk_jobs (job_id)
             )
         `;
@@ -288,8 +292,9 @@ class Result {
         const sql = `
             INSERT INTO solutions (
                 solution_id, job_id, start_id, export_data_json, 
-                cellular_json, metadata_json, score, valid
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                cellular_json, metadata_json, score, valid,
+                baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const validateItem = (result) => {
@@ -308,6 +313,12 @@ class Result {
                 allShapes: inputShapes
             };
 
+            // Extract baseline data if available
+            const baselineGridJson = result.result.baselineGrid ? JSON.stringify(result.result.baselineGrid) : null;
+            const baselineCellularJson = result.result.baselineNaiveCellular ? JSON.stringify(result.result.baselineNaiveCellular) : null;
+            const scoreGrid = result.result.baselineGrid ? result.result.baselineGrid.score : null;
+            const scoreCellularNaive = result.result.baselineNaiveCellular ? result.result.baselineNaiveCellular.numAlive : null;
+
             return [
                 solutionId,
                 result.jobId,
@@ -316,7 +327,11 @@ class Result {
                 JSON.stringify(result.result.cellular),
                 JSON.stringify(result.result.metadata),
                 result.result.finalSolution.score,
-                result.result.finalSolution.valid ? 1 : 0
+                result.result.finalSolution.valid ? 1 : 0,
+                baselineGridJson,
+                baselineCellularJson,
+                scoreGrid,
+                scoreCellularNaive
             ];
         };
 

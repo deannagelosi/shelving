@@ -246,6 +246,20 @@ class Cellular {
         }
     }
 
+    growCellsNaive() {
+        this.createTerrain();
+        this.calcPathValues();
+        this.makeInitialCells();
+
+        // Use a do-while loop to ensure the simulation runs at least once
+        // and correctly calculates the initial numAlive
+        if (this.cellSpace.flat().some(pos => pos.some(cell => cell.alive))) {
+            do {
+                this.growOnceNaive();
+            } while (this.numAlive > 0);
+        }
+    }
+
     growOnce() {
         // loop cell space and grow any alive cells once
 
@@ -453,14 +467,129 @@ class Cellular {
 
         this._updateAliveCount();
     }
+
+    growOnceNaive() {
+        // simplified version of growOnce, always picks path with the lowest value
+        // used for baseline comparison with cellular automata algorithm
+
+        // loop top down and add cells one row at a time
+        for (let y = this.cellSpace.length - 1; y >= 0; y--) {
+            let newCells = []; // store new cells to add after the row is completely checked
             for (let x = 0; x < this.cellSpace[y].length; x++) {
-                for (let cell of this.cellSpace[y][x]) {
-                    if (cell.alive === true) {
-                        this.numAlive++;
+                if (this.cellSpace[y][x].length > 0) {
+                    // process each alive cell independently (no merging)
+                    for (let cell of this.cellSpace[y][x]) {
+                        if (cell.alive) {
+                            // setup options for directions of cell growth (left, up, or right)
+                            let options = [
+                                { dir: "left", x: x - 1, y: y, valid: true, value: null },
+                                { dir: "up", x: x, y: y + 1, valid: true, value: null },
+                                { dir: "right", x: x + 1, y: y, valid: true, value: null }
+                            ];
+
+                            // == Rule: Force Upward Growth on Collision at Origin Elevation ==
+                            let isAtOriginY = false;
+                            if (cell.strain > 0) { // Strain 0 is perimeter, does not apply
+                                const originShape = this.shapes[cell.strain - 1];
+                                if (originShape && y === originShape.posY) {
+                                    isAtOriginY = true;
+                                }
+                            }
+
+                            if (isAtOriginY && this.cellSpace[y][x].length > 1) {
+                                // A collision is happening at the origin elevation.
+                                // Check if it's with a different shape's strain.
+                                const otherStrainsPresent = this.cellSpace[y][x].some(otherCell =>
+                                    otherCell.strain !== cell.strain && otherCell.strain > 0
+                                );
+
+                                if (otherStrainsPresent) {
+                                    // Disqualify horizontal movement to force an upward wall.
+                                    options.forEach(option => {
+                                        if (option.dir === 'left' || option.dir === 'right') {
+                                            option.valid = false;
+                                        }
+                                    });
+                                }
+                            }
+
+                            // Get path values for each option
+                            for (let option of options) {
+                                if (this.pathInBounds(y, x)) {
+                                    option.value = this.pathValues[y][x][option.dir];
+                                } else {
+                                    option.valid = false;
+                                }
+                            }
+
+                            // == Essential Elimination Rules Only == //
+                            for (let option of options) {
+                                if (this.cellSpaceInBounds(option.y, option.x)) {
+                                    // Don't backtrack into parent cell
+                                    if (cell.parent && this.cellSpace[option.y][option.x].some(c => c.id === cell.parent.id)) {
+                                        option.valid = false;
+                                    }
+                                    // Don't backtrack when on bottom of shape
+                                    if (this.cellSpace[option.y][option.x].some(c => c.bottom === true && c.strain === cell.strain && option.dir != "up")) {
+                                        option.valid = false;
+                                    }
+                                    // Don't backtrack into same strain
+                                    if (this.cellSpace[option.y][option.x].some(c => c.strain === cell.strain)) {
+                                        option.valid = false;
+                                    }
+                                    // Don't grow through shapes (path at max terrain)
+                                    if (option.value == this.maxTerrain) {
+                                        option.valid = false;
+                                    }
+
+                                    // == Rule: Prevent moving under an over hang from open space ==
+                                    // stops cells from going under shapes, but allows them to exit
+                                    if (option.dir === 'left' || option.dir === 'right') {
+                                        const isEnteringOverhang = this.isOverhang(option.y, option.x) && !this.isOverhang(y, x);
+                                        if (isEnteringOverhang) {
+                                            option.valid = false;
+                                        }
+                                    }
+
+                                } else {
+                                    // can't go out of bounds - this kills the cell
+                                    option.valid = false;
+                                }
+                            }
+
+                            let validOptions = options.filter(option => option.valid == true);
+
+                            // == Simplified Selection: Always Pick Lowest Value == //
+                            if (validOptions.length == 0) {
+                                // no valid options, kill the cell
+                                cell.alive = false;
+                            } else {
+                                // sort by path value and pick the lowest
+                                validOptions.sort((a, b) => a.value - b.value);
+                                newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: cell, parentX: x, parentY: y });
+                            }
+                        }
                     }
                 }
+            } // end of x loop
+
+            // Found all new cells for the row. Add them and move to the next row
+            for (let newCell of newCells) {
+                // == New Kill Rule: Die on contact with an established (dead) path ==
+                let isAlive = true;
+                if (this.cellSpaceInBounds(newCell.y, newCell.x)) {
+                    const destinationCells = this.cellSpace[newCell.y][newCell.x];
+                    // destination contains dead cells, cell dies to stop path overlap
+                    // If two living cells pass by each other one will "win" based on order processed
+                    if (destinationCells.some(c => !c.alive)) {
+                        isAlive = false;
+                    }
+                }
+                this.addCell(newCell.y, newCell.x, newCell.parentCell, { x: newCell.parentX, y: newCell.parentY }, isAlive);
             }
-        }
+        } // end of y loop
+
+        this._updateAliveCount();
     }
 
     mergeStrains(_cells) {

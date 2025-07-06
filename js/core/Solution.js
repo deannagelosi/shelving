@@ -447,6 +447,55 @@ class Solution {
         return solution;
     }
 
+    static createGridBaseline(shapeInstances, aspectRatioPref = 0) {
+        // create a deterministic grid-packing baseline solution
+        // calculate rows and columns for a near-square layout
+        const numShapes = shapeInstances.length;
+        const cols = Math.ceil(Math.sqrt(numShapes));
+        const rows = Math.ceil(numShapes / cols);
+
+        // create copies of shapes to avoid modifying the originals
+        const shapesCopy = shapeInstances.map(shape => {
+            const newShape = Object.create(Object.getPrototypeOf(shape));
+            Object.assign(newShape, shape);
+            return newShape;
+        });
+
+        // calculate column widths and row heights
+        const colWidths = new Array(cols).fill(0);
+        const rowHeights = new Array(rows).fill(0);
+
+        for (let i = 0; i < shapesCopy.length; i++) {
+            const shape = shapesCopy[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            const shapeWidth = shape.data.bufferShape[0].length;
+            const shapeHeight = shape.data.bufferShape.length;
+
+            colWidths[col] = Math.max(colWidths[col], shapeWidth);
+            rowHeights[row] = Math.max(rowHeights[row], shapeHeight);
+        }
+
+        // position shapes in grid
+        for (let i = 0; i < shapesCopy.length; i++) {
+            const shape = shapesCopy[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            // calculate position based on cumulative column widths and row heights
+            shape.posX = colWidths.slice(0, col).reduce((sum, width) => sum + width, 0);
+            shape.posY = rowHeights.slice(0, row).reduce((sum, height) => sum + height, 0);
+        }
+
+        // create solution instance and calculate layout/score
+        const gridSolution = new Solution(shapesCopy, 0, aspectRatioPref);
+        gridSolution.makeLayout();
+        gridSolution.calcScore();
+
+        return gridSolution;
+    }
+
     // helper functions
     layoutInBounds(coordY, coordX) {
         // check if the grid is in bounds

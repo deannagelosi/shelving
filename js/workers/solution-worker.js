@@ -8,6 +8,7 @@ class SolutionWorker {
         // Dependencies are injected for environment compatibility
         this.Anneal = dependencies.Anneal;
         this.Cellular = dependencies.Cellular;
+        this.Solution = dependencies.Solution;
 
         this.mode = null; // 'single' or 'bulk'
         this.config = null;
@@ -112,6 +113,14 @@ class SolutionWorker {
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'anneal', score: anneal.finalSolution.score });
 
+            // Generate grid-packing baseline (bulk mode only)
+            let gridBaseline = null;
+            if (this.mode === 'bulk') {
+                this.sendProgress('PHASE_START', { phase: 'baseline-grid', message: 'Generating grid-packing baseline...' });
+                gridBaseline = this.Solution.createGridBaseline(shapeInstances, aspectRatioPref);
+                this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-grid', score: gridBaseline.score });
+            }
+
             // Phase 2: Cellular growth
             this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
@@ -119,6 +128,15 @@ class SolutionWorker {
             cellular.growCells();
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
+
+            // Generate naive cellular baseline (bulk mode only)
+            let naiveCellular = null;
+            if (this.mode === 'bulk') {
+                this.sendProgress('PHASE_START', { phase: 'baseline-cellular', message: 'Generating naive cellular baseline...' });
+                naiveCellular = new this.Cellular(anneal.finalSolution, devMode);
+                naiveCellular.growCellsNaive();
+                this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-cellular', cellCount: naiveCellular.numAlive || 0 });
+            }
 
             // Phase 3: Export preparation
             this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing export data...' });
@@ -141,6 +159,19 @@ class SolutionWorker {
                     aspectRatioPref: aspectRatioPref
                 }
             };
+
+            // Add baseline data if in bulk mode
+            if (this.mode === 'bulk') {
+                result.baselineGrid = {
+                    solution: gridBaseline.toDataObject(),
+                    score: gridBaseline.score
+                };
+                result.baselineNaiveCellular = {
+                    cellSpace: naiveCellular.cellSpace,
+                    maxTerrain: naiveCellular.maxTerrain,
+                    numAlive: naiveCellular.numAlive || 0
+                };
+            }
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'export', message: 'Export data prepared' });
 
@@ -243,7 +274,7 @@ function initializeBrowserWorker() {
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -280,7 +311,7 @@ function initializeNodeWorker() {
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;
