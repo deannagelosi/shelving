@@ -17,7 +17,6 @@ class QueueWorker {
         this.result = null;
         this.currentJobId = null;
         this.currentJobConfig = null;
-        this.currentInputShapes = null;
         this.completedCount = 0;
         this.failedCount = 0;
         this.totalExpected = 0;
@@ -54,10 +53,10 @@ class QueueWorker {
                     await this.startJob(payload);
                     break;
                 case 'SOLUTION_RESULT':
-                    this.queueResult(payload);
+                    this.queueResult({ type: 'SOLUTION_RESULT', flatRecord: payload });
                     break;
                 case 'SOLUTION_ERROR':
-                    this.queueResult(payload);
+                    this.queueResult({ type: 'SOLUTION_ERROR', ...payload });
                     break;
                 default:
                     console.warn(`Unknown message type: ${type}`);
@@ -80,7 +79,6 @@ class QueueWorker {
 
         this.currentJobId = await this.result.createBulkJob(config, inputShapes, totalWorkers);
         this.currentJobConfig = config;
-        this.currentInputShapes = inputShapes; // Cache input shapes
         this.totalExpected = totalWorkers;
         this.completedCount = 0;
         this.failedCount = 0;
@@ -150,13 +148,10 @@ class QueueWorker {
         // Process solutions in batch
         if (solutions.length > 0) {
             try {
-                const solutionData = solutions.map(item => ({
-                    jobId: this.currentJobId,
-                    startId: item.startId,
-                    result: item.result
-                }));
+                // Extract flat records directly from batch items
+                const flatRecords = solutions.map(item => item.flatRecord);
 
-                await this.result.saveSolutionBatch(solutionData, this.currentInputShapes);
+                await this.result.saveSolutionBatch(flatRecords);
                 this.completedCount += solutions.length;
 
             } catch (error) {
@@ -167,12 +162,12 @@ class QueueWorker {
                         this.savingDatabaseErrors = true;
                         const errorData = solutions.map(item => ({
                             jobId: this.currentJobId,
-                            startId: item.startId,
+                            startId: item.flatRecord.startId,
                             error: {
                                 message: `Database save failed: ${error.message}`,
                                 stack: error.stack
                             },
-                            workerPayload: item
+                            workerPayload: item.flatRecord
                         }));
                         await this.result.saveErrorBatch(errorData);
                     } catch (recursiveError) {
@@ -253,7 +248,7 @@ class QueueWorker {
 
         try {
             // Determine job status
-            const status = this.failedCount > 0 ? 'completed_with_errors' : 'completed';
+            const status = this.failedCount > 0 ? 'failed' : 'completed';
 
             // Mark job as complete in database
             await this.result.completeBulkJob(this.currentJobId, status);
@@ -271,7 +266,6 @@ class QueueWorker {
             // Reset state for next job
             this.currentJobId = null;
             this.currentJobConfig = null;
-            this.currentInputShapes = null; // Clear cached input shapes
             this.completedCount = 0;
             this.failedCount = 0;
             this.totalExpected = 0;

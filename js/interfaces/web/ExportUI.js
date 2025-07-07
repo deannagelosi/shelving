@@ -297,9 +297,17 @@ class ExportUI {
         }
 
         // prepare cellular data from current anneal to get up-to-date board data
+        let cellularInstance;
         if (!appState.currentAnneal.cellular) {
-            appState.currentAnneal.cellular = new Cellular(appState.currentAnneal.finalSolution, false, 1);
-            appState.currentAnneal.cellular.growCells();
+            // no cellular data exists, create new instance
+            cellularInstance = new Cellular(appState.currentAnneal.finalSolution, false, 1);
+            cellularInstance.growCells();
+        } else if (typeof appState.currentAnneal.cellular.getCellRenderLines === 'function') {
+            // already a proper Cellular instance
+            cellularInstance = appState.currentAnneal.cellular;
+        } else {
+            // plain data object from worker or storage, reconstruct instance
+            cellularInstance = Cellular.fromDataObject(appState.currentAnneal.cellular, appState.currentAnneal.finalSolution);
         }
 
         const caseDepth = parseFloat(this.html.caseDepthInput.value());
@@ -325,7 +333,7 @@ class ExportUI {
             kerf
         };
         // get cellular layout data (case lines)
-        const cellData = appState.currentAnneal.cellular;
+        const cellData = cellularInstance;
         // get spacing data
         const buffer = appState.currentAnneal.finalSolution.buffer;
         const yPadding = appState.currentAnneal.finalSolution.yPadding;
@@ -335,6 +343,10 @@ class ExportUI {
         // create new export
         this.currExport = new Export(cellData, spacing, config);
         this.currExport.makeBoards();
+        
+        // log the number of boards created
+        console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
+        
         this.currExport.prepLayout();
 
         // preview the layout or chase

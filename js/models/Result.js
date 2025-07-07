@@ -107,6 +107,12 @@ class Result {
                 baseline_cellular_json TEXT,
                 score_grid REAL,
                 score_cellular_naive REAL,
+                empty_space_optimized INTEGER,
+                empty_space_grid INTEGER,
+                board_count_optimized INTEGER,
+                board_count_naive INTEGER,
+                board_render_data_optimized TEXT,
+                board_render_data_naive TEXT,
                 FOREIGN KEY (job_id) REFERENCES bulk_jobs (job_id)
             )
         `;
@@ -288,59 +294,51 @@ class Result {
     /**
      * Save multiple solutions in a single transaction
      */
-    async saveSolutionBatch(solutions, inputShapes) {
+    async saveSolutionBatch(flatRecords) {
         const sql = `
             INSERT INTO solutions (
                 solution_id, job_id, start_id, export_data_json, 
                 cellular_json, metadata_json, score, valid,
-                baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive,
+                empty_space_optimized, empty_space_grid, board_count_optimized, board_count_naive,
+                board_render_data_optimized, board_render_data_naive
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
-        const validateItem = (result) => {
-            return result.result && result.result.finalSolution;
+        const validateItem = (flatRecord) => {
+            return flatRecord && flatRecord.jobId && flatRecord.startId !== undefined;
         };
 
-        const prepareData = (result, solutionId) => {
-            // Create export format structure for export_data_json
-            const exportFormat = {
-                savedAnneals: [{
-                    title: result.result.title || `solution-${result.startId + 1}`,
-                    finalSolution: result.result.finalSolution,
-                    enabledShapes: inputShapes.map(() => true), // All shapes enabled in bulk runs
-                    solutionHistory: [] // Empty for bulk runs
-                }],
-                allShapes: inputShapes
-            };
-
-            // Extract baseline data if available
-            const baselineGridJson = result.result.baselineGrid ? JSON.stringify(result.result.baselineGrid) : null;
-            const baselineCellularJson = result.result.baselineNaiveCellular ? JSON.stringify(result.result.baselineNaiveCellular) : null;
-            const scoreGrid = result.result.baselineGrid ? result.result.baselineGrid.score : null;
-            const scoreCellularNaive = result.result.baselineNaiveCellular ? result.result.baselineNaiveCellular.numAlive : null;
-
+        const prepareData = (flatRecord, solutionId) => {
+            // Map flat record properties directly to database columns
             return [
                 solutionId,
-                result.jobId,
-                result.startId,
-                JSON.stringify(exportFormat),
-                JSON.stringify(result.result.cellular),
-                JSON.stringify(result.result.metadata),
-                result.result.finalSolution.score,
-                result.result.finalSolution.valid ? 1 : 0,
-                baselineGridJson,
-                baselineCellularJson,
-                scoreGrid,
-                scoreCellularNaive
+                flatRecord.jobId,
+                flatRecord.startId,
+                flatRecord.export_data_json,
+                flatRecord.cellular_json,
+                flatRecord.metadata_json,
+                flatRecord.score,
+                flatRecord.valid ? 1 : 0,
+                flatRecord.baseline_grid_json,
+                flatRecord.baseline_cellular_json,
+                flatRecord.score_grid,
+                flatRecord.score_cellular_naive,
+                flatRecord.empty_space_optimized,
+                flatRecord.empty_space_grid,
+                flatRecord.board_count_optimized,
+                flatRecord.board_count_naive,
+                flatRecord.board_render_data_optimized,
+                flatRecord.board_render_data_naive
             ];
         };
 
         return this._executeTransaction(
-            solutions,
+            flatRecords,
             sql,
             prepareData,
             validateItem,
-            'Missing required field: result.finalSolution'
+            'Missing required fields in flat record'
         );
     }
 

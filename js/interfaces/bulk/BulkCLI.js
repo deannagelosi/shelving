@@ -377,15 +377,11 @@ Examples:
 
         switch (type) {
             case 'RESULT':
-                // Forward result to queue worker
+                // Forward flat record directly to queue worker
                 // Note: Worker will self-terminate after sending result
                 this.queueWorker.postMessage({
                     type: 'SOLUTION_RESULT',
-                    payload: {
-                        type: 'SOLUTION_RESULT',
-                        startId: startId,
-                        result: payload
-                    }
+                    payload: payload
                 });
                 break;
 

@@ -11,9 +11,17 @@ let selectedSolution = null;
 let viewerDevMode = false;
 let viewerNumGrow = 0;
 
+// Viewer stats
+let solutionStats = {
+    boardCountOptimized: null,
+    boardCountNaive: null,
+    emptySpaceOptimized: null,
+    emptySpaceGrid: null
+};
+
 // Off-screen graphics buffers for rendering
 let optimizedBuffer, gridBuffer, naiveCellularBuffer;
-let solutionRenderer, cellularRenderer;
+let solutionRenderer, cellularRenderer, boardRenderer;
 
 // Canvas dimensions
 const CANVAS_WIDTH = 1200;
@@ -37,6 +45,7 @@ function setup() {
     // Initialize renderers as stateless utilities (correct pattern)
     solutionRenderer = new SolutionRenderer();
     cellularRenderer = new CellularRenderer();
+    boardRenderer = new BoardRenderer();
 
     // Initialize SQL.js
     initSqlJs({
@@ -63,6 +72,7 @@ function draw() {
 
         // Draw labels
         drawLabels();
+        drawStats();
     } else {
         // Show instructions
         fill(100);
@@ -89,6 +99,34 @@ function drawLabels() {
         naiveLabel += ` (Step ${viewerNumGrow})`;
     }
     text(naiveLabel, 810 + BUFFER_WIDTH / 2, 5);
+}
+
+function drawStats() {
+    if (!selectedSolution) return;
+
+    fill(50);
+    textAlign(CENTER, TOP);
+    textSize(12);
+
+    const yPos = 20 + BUFFER_HEIGHT + 5;
+
+    // Optimized solution stats
+    if (solutionStats.boardCountOptimized !== null && solutionStats.emptySpaceOptimized !== null) {
+        const optText = `Boards: ${solutionStats.boardCountOptimized} | Empty Space: ${solutionStats.emptySpaceOptimized} units`;
+        text(optText, 10 + BUFFER_WIDTH / 2, yPos);
+    }
+
+    // Grid baseline stats
+    if (solutionStats.emptySpaceGrid !== null) {
+        const gridText = `Empty Space: ${solutionStats.emptySpaceGrid} units`;
+        text(gridText, 410 + BUFFER_WIDTH / 2, yPos);
+    }
+
+    // Naive cellular stats
+    if (solutionStats.boardCountNaive !== null) {
+        const naiveText = `Boards: ${solutionStats.boardCountNaive}`;
+        text(naiveText, 810 + BUFFER_WIDTH / 2, yPos);
+    }
 }
 
 function keyPressed() {
@@ -244,7 +282,9 @@ class ViewerUI {
             const stmt = currentDatabase.prepare(`
                 SELECT solution_id, start_id, score, valid, 
                        baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive,
-                       export_data_json, cellular_json
+                       export_data_json, cellular_json,
+                       empty_space_optimized, empty_space_grid, board_count_optimized, board_count_naive,
+                       board_render_data_optimized, board_render_data_naive
                 FROM solutions 
                 WHERE job_id = ? 
                 ORDER BY start_id
@@ -308,6 +348,14 @@ class ViewerUI {
     renderSolution() {
         if (!selectedSolution) return;
 
+        // Use pre-calculated statistics from database
+        solutionStats = {
+            boardCountOptimized: selectedSolution.board_count_optimized,
+            boardCountNaive: selectedSolution.board_count_naive,
+            emptySpaceOptimized: selectedSolution.empty_space_optimized,
+            emptySpaceGrid: selectedSolution.empty_space_grid
+        };
+
         try {
             // Parse the solution data
             const exportData = JSON.parse(selectedSolution.export_data_json);
@@ -315,14 +363,17 @@ class ViewerUI {
             const baselineGrid = JSON.parse(selectedSolution.baseline_grid_json);
             const baselineNaiveCellular = JSON.parse(selectedSolution.baseline_cellular_json);
 
+            // Extract the full saved anneal object to get spacing info
+            const savedAnneal = exportData.savedAnneals[0];
+
             // Create Solution instances for rendering
-            const optimizedSolution = Solution.fromDataObject(exportData.savedAnneals[0].finalSolution);
+            const optimizedSolution = Solution.fromDataObject(savedAnneal.finalSolution);
             const gridSolution = Solution.fromDataObject(baselineGrid.solution);
 
             // Create Cellular instances by rehydrating the raw data or upgrading legacy data
             let optimizedCellular;
             if (this.isLegacyCellularData(cellularData)) {
-                console.log('Detected legacy optimized data. Regenerating with standard algorithm...');
+                // legacy version. regenerating with updated algorithm
                 optimizedCellular = new Cellular(optimizedSolution);
                 optimizedCellular.growCells();
             } else {
@@ -331,11 +382,43 @@ class ViewerUI {
 
             let naiveCellular;
             if (this.isLegacyCellularData(baselineNaiveCellular)) {
-                console.log('Detected legacy naive data. Regenerating with naive algorithm...');
+                // legacy version. regenerating with updated algorithm
                 naiveCellular = new Cellular(optimizedSolution);
                 naiveCellular.growCellsNaive();
             } else {
                 naiveCellular = Cellular.fromDataObject(baselineNaiveCellular, optimizedSolution);
+            }
+
+            // Get board render data from database if available, otherwise calculate
+            let optimizedBoardData, naiveBoardData;
+            if (selectedSolution.board_render_data_optimized && selectedSolution.board_render_data_naive) {
+                // Use pre-calculated board render data
+                optimizedBoardData = JSON.parse(selectedSolution.board_render_data_optimized);
+                naiveBoardData = JSON.parse(selectedSolution.board_render_data_naive);
+            } else {
+                // Fallback: calculate board render data (for legacy data)
+                const exportConfig = {
+                    caseDepth: 3,
+                    sheetThickness: 0.23,
+                    sheetWidth: 30,
+                    sheetHeight: 28,
+                    numSheets: 1,
+                    kerf: 0,
+                    numPinSlots: 2
+                };
+                const spacing = {
+                    buffer: savedAnneal.buffer,
+                    xPadding: savedAnneal.xPadding,
+                    yPadding: savedAnneal.yPadding
+                };
+
+                const optimizedExport = new Export(optimizedCellular, spacing, exportConfig);
+                optimizedExport.makeBoards();
+                optimizedBoardData = optimizedExport.getBoardRenderData();
+
+                const naiveExport = new Export(naiveCellular, spacing, exportConfig);
+                naiveExport.makeBoards();
+                naiveBoardData = naiveExport.getBoardRenderData();
             }
 
             // Calculate rendering configuration for each buffer
@@ -357,11 +440,14 @@ class ViewerUI {
             gridBuffer.clear();
             naiveCellularBuffer.clear();
 
-            // Render optimized solution (solution + cellular)
+            // Render optimized solution (solution + cellular + boards)
             this.renderToBuffer(optimizedBuffer, () => {
                 solutionRenderer.renderLayout(optimizedSolution, optimizedCanvas, optimizedConfig);
                 const optimizedCellLines = optimizedCellular.getCellRenderLines();
                 cellularRenderer.renderCellLines(optimizedCellLines, optimizedCanvas, optimizedConfig);
+                if (!optimizedConfig.devMode) {
+                    boardRenderer.renderBoards(optimizedBoardData, optimizedCanvas, optimizedConfig, { showLabels: true });
+                }
                 if (optimizedConfig.devMode) {
                     cellularRenderer.renderTerrain(optimizedSolution.layout, optimizedCanvas, { ...optimizedConfig, maxTerrain: optimizedCellular.maxTerrain });
                     cellularRenderer.renderCells(optimizedCellular.cellSpace, optimizedCanvas, optimizedConfig);
@@ -373,7 +459,7 @@ class ViewerUI {
                 solutionRenderer.renderLayout(gridSolution, gridCanvas, gridConfig);
             });
 
-            // Render naive cellular baseline (cellular only on optimized layout)
+            // Render naive cellular baseline (cellular + boards only on optimized layout)
             this.renderToBuffer(naiveCellularBuffer, () => {
                 solutionRenderer.renderLayout(optimizedSolution, naiveCanvas, naiveConfig);
 
@@ -392,6 +478,9 @@ class ViewerUI {
 
                     const debugCellLines = debugCellular.getCellRenderLines();
                     cellularRenderer.renderCellLines(debugCellLines, naiveCanvas, naiveConfig);
+                    if (!naiveConfig.devMode) {
+                        boardRenderer.renderBoards(naiveBoardData, naiveCanvas, naiveConfig, { showLabels: true });
+                    }
                     if (naiveConfig.devMode) {
                         cellularRenderer.renderTerrain(optimizedSolution.layout, naiveCanvas, { ...naiveConfig, maxTerrain: debugCellular.maxTerrain });
                         cellularRenderer.renderCells(debugCellular.cellSpace, naiveCanvas, naiveConfig);
@@ -400,6 +489,9 @@ class ViewerUI {
                     // Normal mode: use stored baseline data (authoritative source)
                     const naiveCellLines = naiveCellular.getCellRenderLines();
                     cellularRenderer.renderCellLines(naiveCellLines, naiveCanvas, naiveConfig);
+                    if (!naiveConfig.devMode) {
+                        boardRenderer.renderBoards(naiveBoardData, naiveCanvas, naiveConfig, { showLabels: true });
+                    }
                     if (naiveConfig.devMode) {
                         cellularRenderer.renderTerrain(optimizedSolution.layout, naiveCanvas, { ...naiveConfig, maxTerrain: naiveCellular.maxTerrain });
                         cellularRenderer.renderCells(naiveCellular.cellSpace, naiveCanvas, naiveConfig);
@@ -436,6 +528,8 @@ class ViewerUI {
         // If no cells found, treat as legacy (will be regenerated)
         return true;
     }
+
+
 
     renderToBuffer(buffer, renderFunction) {
         // Set the drawing context to the buffer and execute render function

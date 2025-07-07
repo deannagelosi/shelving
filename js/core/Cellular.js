@@ -559,6 +559,22 @@ class Cellular {
 
                             let validOptions = options.filter(option => option.valid == true);
 
+                            // == Rule: Prefer Upward Movement When Splitting Equal Terrain == //
+                            // When looking up, if terrain to left and right are equal, choose up direction
+                            // This indicates the path is equidistant from far-apart shapes (good for splitting middle)
+                            const upOption = validOptions.find(option => option.dir === "up");
+                            if (upOption && validOptions.length > 1) {
+                                // Check terrain values in the layout squares to the left and right of the current cell's upward path
+                                const leftTerrain = this.getTerrain(y, x - 1);
+                                const rightTerrain = this.getTerrain(y, x);
+
+                                // If left and right terrain are equal, immediately choose up direction
+                                if (leftTerrain === rightTerrain) {
+                                    newCells.push({ y: upOption.y, x: upOption.x, parentCell: cell, parentX: x, parentY: y });
+                                    continue; // Skip the normal selection logic
+                                }
+                            }
+
                             // == Simplified Selection: Always Pick Lowest Value == //
                             if (validOptions.length == 0) {
                                 // no valid options, kill the cell

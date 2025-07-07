@@ -9,6 +9,8 @@ class SolutionWorker {
         this.Anneal = dependencies.Anneal;
         this.Cellular = dependencies.Cellular;
         this.Solution = dependencies.Solution;
+        this.Export = dependencies.Export;
+        this.Board = dependencies.Board;
 
         this.mode = null; // 'single' or 'bulk'
         this.config = null;
@@ -138,45 +140,48 @@ class SolutionWorker {
                 this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-cellular', cellCount: naiveCellular.numAlive || 0 });
             }
 
-            // Phase 3: Export preparation
-            this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing export data...' });
+            // Phase 3: Data preparation
+            this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing data for storage...' });
 
-            // send the complete final solution data
-            const result = {
-                title: `solution-${this.currentJob.startId + 1}`,
-                finalSolution: anneal.finalSolution.toDataObject(),
-                enabledShapes: shapeInstances.map(() => true),
-                solutionHistory: [], // Empty for bulk runs to reduce size
-                cellular: {
-                    cellSpace: cellular.cellSpace,
-                    maxTerrain: cellular.maxTerrain,
-                    numAlive: cellular.numAlive || 0
-                },
-                metadata: {
-                    timestamp: Date.now(),
-                    mode: this.mode,
-                    devMode: devMode,
-                    aspectRatioPref: aspectRatioPref
-                }
-            };
+            if (this.mode === 'single') {
+                // For single mode, use the legacy nested result structure
+                const result = {
+                    title: `solution-${this.currentJob.startId + 1}`,
+                    finalSolution: anneal.finalSolution.toDataObject(),
+                    enabledShapes: shapeInstances.map(() => true),
+                    solutionHistory: [], // Empty for bulk runs to reduce size
+                    cellular: {
+                        cellSpace: cellular.cellSpace,
+                        maxTerrain: cellular.maxTerrain,
+                        numAlive: cellular.numAlive || 0
+                    },
+                    metadata: {
+                        timestamp: Date.now(),
+                        mode: this.mode,
+                        devMode: devMode,
+                        aspectRatioPref: aspectRatioPref
+                    }
+                };
+                this.sendResult(result);
+            } else {
+                // For bulk mode, calculate statistics and create flat record
+                this.sendProgress('PHASE_START', { phase: 'statistics', message: 'Calculating statistics...' });
+                const statistics = this.calculateStatistics(anneal, gridBaseline, cellular, naiveCellular);
+                this.sendProgress('PHASE_COMPLETE', { phase: 'statistics', message: 'Statistics calculated' });
 
-            // Add baseline data if in bulk mode
-            if (this.mode === 'bulk') {
-                result.baselineGrid = {
-                    solution: gridBaseline.toDataObject(),
-                    score: gridBaseline.score
-                };
-                result.baselineNaiveCellular = {
-                    cellSpace: naiveCellular.cellSpace,
-                    maxTerrain: naiveCellular.maxTerrain,
-                    numAlive: naiveCellular.numAlive || 0
-                };
+                // Create flat record that matches database schema exactly
+                const flatRecord = this.createFlatRecord(
+                    anneal,
+                    gridBaseline,
+                    cellular,
+                    naiveCellular,
+                    statistics,
+                    shapeInstances
+                );
+                this.sendResult(flatRecord);
             }
 
-            this.sendProgress('PHASE_COMPLETE', { phase: 'export', message: 'Export data prepared' });
-
-            // send final result
-            this.sendResult(result);
+            this.sendProgress('PHASE_COMPLETE', { phase: 'export', message: 'Data prepared for storage' });
 
             // Terminate immediately after sending result in bulk mode
             if (this.mode === 'bulk') {
@@ -228,6 +233,108 @@ class SolutionWorker {
             timestamp: Date.now()
         });
     }
+
+    calculateStatistics(anneal, gridBaseline, cellular, naiveCellular) {
+        // Calculate statistics for bulk mode storage
+        const statistics = {};
+
+        // Calculate empty space for optimized and grid solutions
+        statistics.emptySpaceOptimized = anneal.finalSolution.calculateEmptySpace();
+        statistics.emptySpaceGrid = gridBaseline.calculateEmptySpace();
+
+        // Define export configuration (hardcoded for bulk mode)
+        const exportConfig = {
+            caseDepth: 3,
+            sheetThickness: 0.23,
+            sheetWidth: 30,
+            sheetHeight: 28,
+            numSheets: 1,
+            kerf: 0,
+            numPinSlots: 2
+        };
+
+        // Extract spacing from anneal instance
+        const spacing = {
+            buffer: anneal.buffer,
+            xPadding: anneal.xPadding,
+            yPadding: anneal.yPadding
+        };
+
+        // Calculate board counts and render data for optimized solution
+        const optimizedExport = new this.Export(cellular, spacing, exportConfig);
+        optimizedExport.makeBoards();
+        statistics.boardCountOptimized = optimizedExport.boards.length;
+        statistics.boardRenderDataOptimized = optimizedExport.getBoardRenderData();
+
+        // Calculate board counts and render data for naive cellular baseline
+        const naiveExport = new this.Export(naiveCellular, spacing, exportConfig);
+        naiveExport.makeBoards();
+        statistics.boardCountNaive = naiveExport.boards.length;
+        statistics.boardRenderDataNaive = naiveExport.getBoardRenderData();
+
+        return statistics;
+    }
+
+    createFlatRecord(anneal, gridBaseline, cellular, naiveCellular, statistics, shapeInstances) {
+        // Create export format structure for export_data_json
+        const exportData = {
+            savedAnneals: [{
+                title: `solution-${this.currentJob.startId + 1}`,
+                finalSolution: anneal.finalSolution.toDataObject(),
+                enabledShapes: shapeInstances.map(() => true), // All shapes enabled in bulk runs
+                solutionHistory: [] // Empty for bulk runs
+            }],
+            allShapes: shapeInstances.map(shape => shape.toDataObject())
+        };
+
+        // Create cellular data structure
+        const cellularData = {
+            cellSpace: cellular.cellSpace,
+            maxTerrain: cellular.maxTerrain,
+            numAlive: cellular.numAlive || 0
+        };
+
+        // Create metadata
+        const metadata = {
+            timestamp: Date.now(),
+            mode: this.mode,
+            devMode: false, // Always false in bulk mode
+            aspectRatioPref: anneal.finalSolution.aspectRatioPref
+        };
+
+        // Create flat record that matches database schema exactly
+        return {
+            // Job identifiers
+            jobId: this.currentJob.jobId,
+            startId: this.currentJob.startId,
+
+            // Simple metrics (numbers/booleans)
+            score: anneal.finalSolution.score,
+            valid: anneal.finalSolution.valid,
+            score_grid: gridBaseline.score,
+            score_cellular_naive: naiveCellular.numAlive || 0,
+            empty_space_optimized: statistics.emptySpaceOptimized,
+            empty_space_grid: statistics.emptySpaceGrid,
+            board_count_optimized: statistics.boardCountOptimized,
+            board_count_naive: statistics.boardCountNaive,
+
+            // Complex data (pre-stringified JSON)
+            export_data_json: JSON.stringify(exportData),
+            cellular_json: JSON.stringify(cellularData),
+            metadata_json: JSON.stringify(metadata),
+            baseline_grid_json: JSON.stringify({
+                solution: gridBaseline.toDataObject(),
+                score: gridBaseline.score
+            }),
+            baseline_cellular_json: JSON.stringify({
+                cellSpace: naiveCellular.cellSpace,
+                maxTerrain: naiveCellular.maxTerrain,
+                numAlive: naiveCellular.numAlive || 0
+            }),
+            board_render_data_optimized: JSON.stringify(statistics.boardRenderDataOptimized),
+            board_render_data_naive: JSON.stringify(statistics.boardRenderDataNaive)
+        };
+    }
 }
 
 // Export for unit testing when imported as a module
@@ -270,11 +377,13 @@ function initializeBrowserWorker() {
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',
-        '../core/Anneal.js'
+        '../core/Anneal.js',
+        '../core/Export.js',
+        '../core/Board.js'
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -303,15 +412,18 @@ function initializeNodeWorker() {
     const Shape = require('../core/Shape.js');
     const Anneal = require('../core/Anneal.js');
     const Cellular = require('../core/Cellular.js');
+    const Export = require('../core/Export.js');
+    const Board = require('../core/Board.js');
 
     // Make dependencies available in global scope
     if (typeof global !== 'undefined') {
         if (!global.Solution) global.Solution = Solution;
         if (!global.Shape) global.Shape = Shape;
+        if (!global.Board) global.Board = Board;
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;

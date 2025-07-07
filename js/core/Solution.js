@@ -496,6 +496,26 @@ class Solution {
         return gridSolution;
     }
 
+    calculateEmptySpace() {
+        // calculate the number of empty squares in the layout
+        if (!this.layout || this.layout.length === 0 || this.layout[0].length === 0) {
+            return 0;
+        }
+
+        const totalSquares = this.layout.length * this.layout[0].length;
+        let occupiedSquares = 0;
+
+        for (const row of this.layout) {
+            for (const cell of row) {
+                if (cell.isShape && cell.isShape.some(s => s === true)) {
+                    occupiedSquares++;
+                }
+            }
+        }
+
+        return totalSquares - occupiedSquares;
+    }
+
     // helper functions
     layoutInBounds(coordY, coordX) {
         // check if the grid is in bounds

@@ -1,7 +1,7 @@
 class Export {
     constructor(_cellData, _spacing, _config) {
         this.cellData = _cellData;
-        this.cellLines = this.cellData.cellLines;
+        this.cellLines = this.cellData.getCellRenderLines();
         this.squareSize = this.cellData.squareSize;
         this.buffer = _spacing.buffer;
         this.xPadding = _spacing.xPadding;
@@ -43,7 +43,7 @@ class Export {
 
         // Group cellLines into horizontal and vertical segments
         for (let lineKey of this.cellLines) {
-            const [y1, x1, y2, x2] = lineKey.split(',').map(Number);
+            const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
 
             if (y1 === y2) { // Horizontal segment
                 const key = y1;
@@ -79,7 +79,7 @@ class Export {
             let currentEnd = lineSegments[0].end;
 
             for (let i = 1; i < lineSegments.length; i++) {
-                if (lineSegments[i].start <= currentEnd + 1) {
+                if (lineSegments[i].start <= currentEnd) {
                     currentEnd = Math.max(currentEnd, lineSegments[i].end);
                 } else {
                     // Create a new board
@@ -189,6 +189,16 @@ class Export {
 
         hBoard.poi.xJoints.push(hJointPos);
         vBoard.poi.xJoints.push(vJointPos);
+    }
+
+    getBoardRenderData() {
+        // return simplified board data for rendering
+        return this.boards.map(board => ({
+            id: board.id,
+            start: { x: board.coords.start.x, y: board.coords.start.y },
+            end: { x: board.coords.end.x, y: board.coords.end.y },
+            orientation: board.orientation
+        }));
     }
 
     previewCase(renderer = null) {
