@@ -201,6 +201,11 @@ class Export {
         }));
     }
 
+    getTotalBoardLength() {
+        // calculate total length of all boards for statistical analysis
+        return this.boards.reduce((total, board) => total + board.len, 0);
+    }
+
     previewCase(renderer = null) {
         // confirm boards created correctly by displaying them in correct orientation
         // if an offscreen renderer is passed in, use that to create a png for download

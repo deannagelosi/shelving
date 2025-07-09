@@ -131,13 +131,13 @@ class SolutionWorker {
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
 
-            // Generate naive cellular baseline (bulk mode only)
-            let naiveCellular = null;
+            // Generate baseline algorithm (bulk mode only)
+            let baselineCellular = null;
             if (this.mode === 'bulk') {
-                this.sendProgress('PHASE_START', { phase: 'baseline-cellular', message: 'Generating naive cellular baseline...' });
-                naiveCellular = new this.Cellular(anneal.finalSolution, devMode);
-                naiveCellular.growCellsNaive();
-                this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-cellular', cellCount: naiveCellular.numAlive || 0 });
+                this.sendProgress('PHASE_START', { phase: 'baseline-cellular', message: 'Generating baseline wall growth...' });
+                baselineCellular = new this.Cellular(anneal.finalSolution, devMode);
+                baselineCellular.growBaseline();
+                this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-cellular', cellCount: baselineCellular.numAlive || 0 });
             }
 
             // Phase 3: Data preparation
@@ -166,7 +166,7 @@ class SolutionWorker {
             } else {
                 // For bulk mode, calculate statistics and create flat record
                 this.sendProgress('PHASE_START', { phase: 'statistics', message: 'Calculating statistics...' });
-                const statistics = this.calculateStatistics(anneal, gridBaseline, cellular, naiveCellular);
+                const statistics = this.calculateStatistics(anneal, gridBaseline, cellular, baselineCellular);
                 this.sendProgress('PHASE_COMPLETE', { phase: 'statistics', message: 'Statistics calculated' });
 
                 // Create flat record that matches database schema exactly
@@ -174,7 +174,7 @@ class SolutionWorker {
                     anneal,
                     gridBaseline,
                     cellular,
-                    naiveCellular,
+                    baselineCellular,
                     statistics,
                     shapeInstances
                 );
@@ -234,7 +234,7 @@ class SolutionWorker {
         });
     }
 
-    calculateStatistics(anneal, gridBaseline, cellular, naiveCellular) {
+    calculateStatistics(anneal, gridBaseline, cellular, baselineCellular) {
         // Calculate statistics for bulk mode storage
         const statistics = {};
 
@@ -260,22 +260,24 @@ class SolutionWorker {
             yPadding: anneal.yPadding
         };
 
-        // Calculate board counts and render data for optimized solution
+        // Calculate board counts, lengths, and render data for optimized solution
         const optimizedExport = new this.Export(cellular, spacing, exportConfig);
         optimizedExport.makeBoards();
         statistics.boardCountOptimized = optimizedExport.boards.length;
+        statistics.totalBoardLengthOptimized = optimizedExport.getTotalBoardLength();
         statistics.boardRenderDataOptimized = optimizedExport.getBoardRenderData();
 
-        // Calculate board counts and render data for naive cellular baseline
-        const naiveExport = new this.Export(naiveCellular, spacing, exportConfig);
-        naiveExport.makeBoards();
-        statistics.boardCountNaive = naiveExport.boards.length;
-        statistics.boardRenderDataNaive = naiveExport.getBoardRenderData();
+        // Calculate board counts, lengths, and render data for baseline algorithm
+        const baselineExport = new this.Export(baselineCellular, spacing, exportConfig);
+        baselineExport.makeBoards();
+        statistics.boardCountBaseline = baselineExport.boards.length;
+        statistics.totalBoardLengthBaseline = baselineExport.getTotalBoardLength();
+        statistics.boardRenderDataBaseline = baselineExport.getBoardRenderData();
 
         return statistics;
     }
 
-    createFlatRecord(anneal, gridBaseline, cellular, naiveCellular, statistics, shapeInstances) {
+    createFlatRecord(anneal, gridBaseline, cellular, baselineCellular, statistics, shapeInstances) {
         // Create export format structure for export_data_json
         const exportData = {
             savedAnneals: [{
@@ -302,6 +304,16 @@ class SolutionWorker {
             aspectRatioPref: anneal.finalSolution.aspectRatioPref
         };
 
+        // Create stats breakdown object containing all raw statistical values
+        const statsBreakdown = {
+            empty_space_optimized: statistics.emptySpaceOptimized,
+            empty_space_grid: statistics.emptySpaceGrid,
+            board_count_optimized: statistics.boardCountOptimized,
+            board_count_baseline: statistics.boardCountBaseline,
+            total_board_length_optimized: statistics.totalBoardLengthOptimized,
+            total_board_length_baseline: statistics.totalBoardLengthBaseline
+        };
+
         // Create flat record that matches database schema exactly
         return {
             // Job identifiers
@@ -311,12 +323,9 @@ class SolutionWorker {
             // Simple metrics (numbers/booleans)
             score: anneal.finalSolution.score,
             valid: anneal.finalSolution.valid,
-            score_grid: gridBaseline.score,
-            score_cellular_naive: naiveCellular.numAlive || 0,
-            empty_space_optimized: statistics.emptySpaceOptimized,
-            empty_space_grid: statistics.emptySpaceGrid,
-            board_count_optimized: statistics.boardCountOptimized,
-            board_count_naive: statistics.boardCountNaive,
+
+            // Consolidated statistical data
+            stats_breakdown_json: JSON.stringify(statsBreakdown),
 
             // Complex data (pre-stringified JSON)
             export_data_json: JSON.stringify(exportData),
@@ -327,12 +336,12 @@ class SolutionWorker {
                 score: gridBaseline.score
             }),
             baseline_cellular_json: JSON.stringify({
-                cellSpace: naiveCellular.cellSpace,
-                maxTerrain: naiveCellular.maxTerrain,
-                numAlive: naiveCellular.numAlive || 0
+                cellSpace: baselineCellular.cellSpace,
+                maxTerrain: baselineCellular.maxTerrain,
+                numAlive: baselineCellular.numAlive || 0
             }),
             board_render_data_optimized: JSON.stringify(statistics.boardRenderDataOptimized),
-            board_render_data_naive: JSON.stringify(statistics.boardRenderDataNaive)
+            board_render_data_baseline: JSON.stringify(statistics.boardRenderDataBaseline)
         };
     }
 }

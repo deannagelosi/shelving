@@ -246,20 +246,6 @@ class Cellular {
         }
     }
 
-    growCellsNaive() {
-        this.createTerrain();
-        this.calcPathValues();
-        this.makeInitialCells();
-
-        // Use a do-while loop to ensure the simulation runs at least once
-        // and correctly calculates the initial numAlive
-        if (this.cellSpace.flat().some(pos => pos.some(cell => cell.alive))) {
-            do {
-                this.growOnceNaive();
-            } while (this.numAlive > 0);
-        }
-    }
-
     growOnce() {
         // loop cell space and grow any alive cells once
 
@@ -391,9 +377,10 @@ class Cellular {
 
                         // if no valid options, log the issue and kill the cell
                         if (validOptions.length == 0) {
-                            console.error("No valid options at x: ", x, " y: ", y, " for parentCell: ", parentCell);
                             parentCell.alive = false;
-                            continue;
+                            throw new Error(`No valid options at (${x},${y}) for parentCell: ${parentCell}`);
+                            // console.error("No valid options at x: ", x, " y: ", y, " for parentCell: ", parentCell);
+                            // continue;
                         } else if (validOptions.length == 1) {
                             // == Selection Rule 1: if only one option remains, take it
                             newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell, parentX: x, parentY: y });
@@ -445,7 +432,7 @@ class Cellular {
                                     continue;
                                 } else {
                                     // Selection Rule 5: Tie breaker - pick the first option
-                                    console.error("Unable to break tie in growth at x: ", x, " y: ", y);
+                                    console.log(`Unable to break tie at (${x},${y}), picking first option.`);
                                     // pick the first option
                                     newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: parentCell, parentX: x, parentY: y });
                                     continue;
@@ -453,7 +440,7 @@ class Cellular {
 
                             }
                         }
-                        console.error("Error growing at x: ", x, " y: ", y, " with parentCell: ", parentCell, " and options: ", options);
+                        throw new Error(`Error growing at (${x},${y}) for parentCell: ${parentCell} and options: ${options}`);
                     }
                 }
             } // end of x loop
@@ -464,146 +451,6 @@ class Cellular {
         } // end of y loop
 
         // count number of alive cells
-
-        this._updateAliveCount();
-    }
-
-    growOnceNaive() {
-        // simplified version of growOnce, always picks path with the lowest value
-        // used for baseline comparison with cellular automata algorithm
-
-        // loop top down and add cells one row at a time
-        for (let y = this.cellSpace.length - 1; y >= 0; y--) {
-            let newCells = []; // store new cells to add after the row is completely checked
-            for (let x = 0; x < this.cellSpace[y].length; x++) {
-                if (this.cellSpace[y][x].length > 0) {
-                    // process each alive cell independently (no merging)
-                    for (let cell of this.cellSpace[y][x]) {
-                        if (cell.alive) {
-                            // setup options for directions of cell growth (left, up, or right)
-                            let options = [
-                                { dir: "left", x: x - 1, y: y, valid: true, value: null },
-                                { dir: "up", x: x, y: y + 1, valid: true, value: null },
-                                { dir: "right", x: x + 1, y: y, valid: true, value: null }
-                            ];
-
-                            // == Rule: Force Upward Growth on Collision at Origin Elevation ==
-                            let isAtOriginY = false;
-                            if (cell.strain > 0) { // Strain 0 is perimeter, does not apply
-                                const originShape = this.shapes[cell.strain - 1];
-                                if (originShape && y === originShape.posY) {
-                                    isAtOriginY = true;
-                                }
-                            }
-
-                            if (isAtOriginY && this.cellSpace[y][x].length > 1) {
-                                // A collision is happening at the origin elevation.
-                                // Check if it's with a different shape's strain.
-                                const otherStrainsPresent = this.cellSpace[y][x].some(otherCell =>
-                                    otherCell.strain !== cell.strain && otherCell.strain > 0
-                                );
-
-                                if (otherStrainsPresent) {
-                                    // Disqualify horizontal movement to force an upward wall.
-                                    options.forEach(option => {
-                                        if (option.dir === 'left' || option.dir === 'right') {
-                                            option.valid = false;
-                                        }
-                                    });
-                                }
-                            }
-
-                            // Get path values for each option
-                            for (let option of options) {
-                                if (this.pathInBounds(y, x)) {
-                                    option.value = this.pathValues[y][x][option.dir];
-                                } else {
-                                    option.valid = false;
-                                }
-                            }
-
-                            // == Essential Elimination Rules Only == //
-                            for (let option of options) {
-                                if (this.cellSpaceInBounds(option.y, option.x)) {
-                                    // Don't backtrack into parent cell
-                                    if (cell.parent && this.cellSpace[option.y][option.x].some(c => c.id === cell.parent.id)) {
-                                        option.valid = false;
-                                    }
-                                    // Don't backtrack when on bottom of shape
-                                    if (this.cellSpace[option.y][option.x].some(c => c.bottom === true && c.strain === cell.strain && option.dir != "up")) {
-                                        option.valid = false;
-                                    }
-                                    // Don't backtrack into same strain
-                                    if (this.cellSpace[option.y][option.x].some(c => c.strain === cell.strain)) {
-                                        option.valid = false;
-                                    }
-                                    // Don't grow through shapes (path at max terrain)
-                                    if (option.value == this.maxTerrain) {
-                                        option.valid = false;
-                                    }
-
-                                    // == Rule: Prevent moving under an over hang from open space ==
-                                    // stops cells from going under shapes, but allows them to exit
-                                    if (option.dir === 'left' || option.dir === 'right') {
-                                        const isEnteringOverhang = this.isOverhang(option.y, option.x) && !this.isOverhang(y, x);
-                                        if (isEnteringOverhang) {
-                                            option.valid = false;
-                                        }
-                                    }
-
-                                } else {
-                                    // can't go out of bounds - this kills the cell
-                                    option.valid = false;
-                                }
-                            }
-
-                            let validOptions = options.filter(option => option.valid == true);
-
-                            // == Rule: Prefer Upward Movement When Splitting Equal Terrain == //
-                            // When looking up, if terrain to left and right are equal, choose up direction
-                            // This indicates the path is equidistant from far-apart shapes (good for splitting middle)
-                            const upOption = validOptions.find(option => option.dir === "up");
-                            if (upOption && validOptions.length > 1) {
-                                // Check terrain values in the layout squares to the left and right of the current cell's upward path
-                                const leftTerrain = this.getTerrain(y, x - 1);
-                                const rightTerrain = this.getTerrain(y, x);
-
-                                // If left and right terrain are equal, immediately choose up direction
-                                if (leftTerrain === rightTerrain) {
-                                    newCells.push({ y: upOption.y, x: upOption.x, parentCell: cell, parentX: x, parentY: y });
-                                    continue; // Skip the normal selection logic
-                                }
-                            }
-
-                            // == Simplified Selection: Always Pick Lowest Value == //
-                            if (validOptions.length == 0) {
-                                // no valid options, kill the cell
-                                cell.alive = false;
-                            } else {
-                                // sort by path value and pick the lowest
-                                validOptions.sort((a, b) => a.value - b.value);
-                                newCells.push({ y: validOptions[0].y, x: validOptions[0].x, parentCell: cell, parentX: x, parentY: y });
-                            }
-                        }
-                    }
-                }
-            } // end of x loop
-
-            // Found all new cells for the row. Add them and move to the next row
-            for (let newCell of newCells) {
-                // == New Kill Rule: Die on contact with an established (dead) path ==
-                let isAlive = true;
-                if (this.cellSpaceInBounds(newCell.y, newCell.x)) {
-                    const destinationCells = this.cellSpace[newCell.y][newCell.x];
-                    // destination contains dead cells, cell dies to stop path overlap
-                    // If two living cells pass by each other one will "win" based on order processed
-                    if (destinationCells.some(c => !c.alive)) {
-                        isAlive = false;
-                    }
-                }
-                this.addCell(newCell.y, newCell.x, newCell.parentCell, { x: newCell.parentX, y: newCell.parentY }, isAlive);
-            }
-        } // end of y loop
 
         this._updateAliveCount();
     }
@@ -853,6 +700,394 @@ class Cellular {
         if (cellularData.numAlive) newCellular.numAlive = cellularData.numAlive;
 
         return newCellular;
+    }
+
+    //-- Baseline Growth Functions --//
+    growBaseline(numGrowSteps = -1) {
+        // --- Setup ---
+        this.makeInitialCellsBaseline();
+
+        // --- Growth Loop ---
+        // In each step, process one tick of horizontal movement and one tick of vertical movement.
+        // The loop continues until no cells are left alive.
+        let aliveCellsExist = true;
+        let step = 0;
+        const maxSteps = 1000; // Safety break for infinite loops
+        const loopLimit = (numGrowSteps === -1) ? maxSteps : numGrowSteps;
+
+        while (aliveCellsExist && step < loopLimit) {
+            step++;
+            this.growHorizontalOnceBaseline();
+            this.growVerticalOnceBaseline();
+
+            const currentStats = this.getGrowthStats();
+            // Check if any cells are still alive to continue the loop.
+            aliveCellsExist = currentStats.alive > 0;
+        }
+
+        if (step >= maxSteps) {
+            console.error(`Safety triggered at ${maxSteps} steps. Likely infinite baseline build loop.`);
+        }
+    }
+
+    makeInitialCellsBaseline() {
+        // set up the initial state for the baseline algorithm
+        this.cellSpace = []; // clear the space
+        this.cellID = 0; // reset cell IDs
+        for (let y = 0; y < this.layoutHeight + 1; y++) {
+            this.cellSpace.push([]);
+            for (let x = 0; x < this.layoutWidth + 1; x++) {
+                this.cellSpace[y].push([]);
+            }
+        }
+
+        // populate cell space with perimeter cells
+        for (let y = 0; y < this.layoutHeight + 1; y++) {
+            // left wall
+            this.cellSpace[y][0].push({
+                id: this.cellID++, strain: 0, alive: false, parent: null,
+                parentCoords: (y > 0) ? { x: 0, y: y - 1 } : null
+            });
+            // right wall
+            this.cellSpace[y][this.layoutWidth].push({
+                id: this.cellID++, strain: 0, alive: false, parent: null,
+                parentCoords: (y > 0) ? { x: this.layoutWidth, y: y - 1 } : null
+            });
+        }
+        // top wall
+        for (let x = 0; x < this.layoutWidth + 1; x++) {
+            if (x > 0) { // Skip corner
+                this.cellSpace[this.layoutHeight][x].push({
+                    id: this.cellID++, strain: 0, alive: false, parent: null,
+                    parentCoords: { x: x - 1, y: this.layoutHeight }
+                });
+            }
+        }
+
+        // populate cell space with cells at the bottom of each shape
+        for (let i = 0; i < this.shapes.length; i++) {
+            let shape = this.shapes[i];
+            let shapeEnds = this.overhangShift(shape);
+            let bottomLength = shapeEnds[1] - shapeEnds[0] + 2;
+
+            for (let j = 0; j < bottomLength; j++) {
+                let y = shape.posY;
+                let x = shapeEnds[0] + j;
+                let isAlive = j === 0 || j === bottomLength - 1;
+                let parentCoords = (j > 0) ? { x: x - 1, y: y } : null;
+
+                const newCell = {
+                    id: this.cellID++,
+                    strain: i + 1,
+                    alive: isAlive,
+                    parent: null,
+                    parentCoords: parentCoords,
+                    bottom: true,
+                    direction: null,
+                    allowance: undefined,
+                    destinationType: null,
+                    underOverhangOfShapeID: null
+                };
+
+                if (isAlive) {
+                    if (j === 0) { // left side, should travel left (away from shape)
+                        newCell.direction = 'left';
+                    } else { // right side, should travel right (away from shape)
+                        newCell.direction = 'right';
+                    }
+                }
+
+                this.cellSpace[y][x].push(newCell);
+            }
+        }
+    }
+
+    growHorizontalOnceBaseline() {
+        // --- Self-Setup Phase ---
+        // Calculate allowance for any new horizontal cells that need it.
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                const cellToSetup = this.cellSpace[y][x].find(c => c.alive && (c.direction === 'left' || c.direction === 'right') && c.allowance === undefined);
+                if (cellToSetup) {
+                    const { allowance, reason } = this.calculateAllowance(cellToSetup, y, x);
+                    cellToSetup.destinationType = reason;
+                    cellToSetup.allowance = allowance;
+                }
+            }
+        }
+
+        // --- Movement Phase ---
+        const cellsToProcess = [];
+        // Collect all alive, horizontal cells to process in this tick
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                const aliveHorizontalCell = this.cellSpace[y][x].find(c => c.alive && (c.direction === 'left' || c.direction === 'right'));
+                if (aliveHorizontalCell) {
+                    cellsToProcess.push({ cell: aliveHorizontalCell, x, y });
+                }
+            }
+        }
+
+        for (const item of cellsToProcess) {
+            const { cell, x, y } = item;
+
+            // Cell may have been killed by a previous collision in this same tick
+            if (!cell.alive) {
+                continue;
+            }
+
+
+            const moveDir = cell.direction === 'left' ? -1 : 1;
+            const neighborX = x + moveDir;
+
+            // 1. Check for a head-on collision
+            if (this.cellSpaceInBounds(y, neighborX)) {
+                // Two types of head-on collisions:
+                // 1. Two live cells moving in the opposite direction meet
+                // 2. Two live cells moving perpendicular meet (one sideways, one up)
+                const neighborCellList = this.cellSpace[y][neighborX];
+                const opposingCell = neighborCellList.find(c => c.alive && (c.direction === (cell.direction === 'left' ? 'right' : 'left')));
+                const perpendicularCell = neighborCellList.find(c => c.alive && (c.direction === 'up'));
+
+                if (opposingCell) {
+                    // Create a dead cell at the collision point to complete the wall
+                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    // Stop the opposing cell and turn it upwards
+                    opposingCell.direction = 'up';
+                    opposingCell.allowance = 0;
+                    continue; // This cell's turn is over.
+                }
+
+                if (perpendicularCell) {
+                    // Create a dead cell at the collision point to complete the wall
+                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    // Leave the perpendicular cell alone to continue moving up
+                    continue; // This cell's turn is over.
+                }
+            }
+
+            // 2. If no collision, check allowance and move
+            if (cell.allowance > 0) {
+                // Check if next space is a wall
+                const neighborCellList = this.cellSpace[y][neighborX];
+                const deadCell = neighborCellList.find(c => !c.alive);
+                if (deadCell) {
+                    // cell has reached a wall. move to it and die.
+                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    continue;
+                }
+
+                // Move forward if space is available
+                if (this.cellSpaceInBounds(y, neighborX)) {
+                    this.addCellBaseline(y, neighborX, cell, { x, y });
+                } else {
+                    // Reached the edge, die
+                    cell.alive = false;
+                }
+            } else {
+                // Allowance is zero, stop and turn up, or die at perimeter
+                if (cell.destinationType === 'edge') {
+                    cell.alive = false;
+                } else {
+                    // Cell has 0 allowance, change direction to up
+                    cell.direction = 'up';
+                }
+            }
+        }
+    }
+
+    addCellBaseline(_y, _x, _parentCell, _parentCoords, _alive = true) {
+        // kill parent cell when replicating
+        if (_parentCell && 'alive' in _parentCell) {
+            _parentCell.alive = false;
+        }
+        // add a new child cell to the cell space
+        this.cellSpace[_y][_x].push({
+            id: this.cellID++,
+            strain: _parentCell.strain,
+            alive: _alive,
+            parent: _parentCell,
+            parentCoords: _parentCoords,
+            direction: _parentCell.direction,
+            destinationType: _parentCell.destinationType,
+            allowance: _parentCell.allowance > 0 ? _parentCell.allowance - 1 : 0,
+            underOverhangOfShapeID: _parentCell.underOverhangOfShapeID
+        });
+    }
+
+    growVerticalOnceBaseline() {
+        const cellsToProcess = [];
+        // Collect all alive, upward-moving cells to process in this tick
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                const aliveUpCell = this.cellSpace[y][x].find(c => c.alive && c.direction === 'up');
+                if (aliveUpCell) {
+                    cellsToProcess.push({ cell: aliveUpCell, x, y });
+                }
+            }
+        }
+
+        for (const item of cellsToProcess) {
+            const { cell, x, y } = item;
+
+            // Cell may have been killed or diverted by a previous operation in this same tick
+            if (!cell.alive || cell.direction !== 'up') {
+                continue;
+            }
+
+            const targetY = y + 1;
+            const targetX = x;
+
+            // --- Rule 1: Shape Collision Check ---
+            // An upward path from (y,x) passes between layout squares (y, x-1) and (y, x).
+            // A collision only occurs if the path is fully blocked by the *same* shape.
+            if (this.layoutInBounds(y, x - 1) && this.layoutInBounds(y, x)) {
+                const leftShape = this.getShapeID(y, x - 1);
+                const rightShape = this.getShapeID(y, x);
+
+                // If both sides of the path are the same shape, it's a collision.
+                if (leftShape !== null && leftShape === rightShape) {
+                    const blockingShapeID = leftShape;
+                    const newDirection = this.getHorizontalEscapeDirection(y, x, blockingShapeID);
+                    cell.direction = newDirection;
+                    // Flag the cell for allowance recalculation and grant it a "permission slip"
+                    // to travel under the shape it just collided with.
+                    cell.allowance = undefined;
+                    cell.underOverhangOfShapeID = blockingShapeID;
+                    continue; // Cell is now horizontal, skip further processing.
+                }
+            }
+
+            // --- Rule 2: Cell Collision & Movement ---
+            if (this.cellSpaceInBounds(targetY, targetX)) {
+                // Check for collision at the target *before* moving.
+                const isCollision = this.cellSpace[targetY][targetX].length > 0;
+                // Move the cell, and set its alive status based on the collision check.
+                this.addCellBaseline(targetY, targetX, cell, { x, y }, !isCollision);
+            } else {
+                // Hit the top boundary of the cell space.
+                cell.alive = false;
+            }
+        }
+    }
+
+    calculateAllowance(_cell, _y, _x) {
+        // Get the cell's "permission slip" to be under an overhang, if it has one.
+        let overhangPermissionID = _cell.underOverhangOfShapeID;
+
+        let currentX = _x;
+        let distance = 0;
+        let reason = 'edge';
+
+        let firstStep = true;
+        while (true) {
+            // increment currentX looking ahead
+            if (firstStep) {
+                if (_cell.direction === 'left') currentX--;
+                // on first step rightward is already looking right
+                firstStep = false;
+            } else {
+                if (_cell.direction === 'left') currentX--;
+                if (_cell.direction === 'right') currentX++;
+            }
+
+            // Stop if we go out of bounds
+            if (!this.cellSpaceInBounds(_y, currentX)) {
+                reason = 'edge';
+                if (_cell.direction === 'right') distance--;
+                break;
+            }
+
+            const shape_above = this.getShapeID(_y, currentX);
+
+            if (shape_above !== null) {
+                // --- We have encountered a shape. Now we must decide if it's an obstacle. ---
+
+                if (overhangPermissionID === null || overhangPermissionID === undefined) {
+                    // This is a normal cell with no permission. Any shape is an obstacle.
+                    reason = 'shape';
+                    break;
+                }
+
+                // This cell has a permission slip. Let's see if it's valid here.
+                if (shape_above === overhangPermissionID) {
+                    // We are under the correct overhang. Check for a solid wall.
+                    const shape_below = this.getShapeID(_y - 1, currentX);
+                    if (shape_below !== null && shape_below === overhangPermissionID) {
+                        // OBSTACLE: We have hit a solid wall of the permitted shape.
+                        reason = 'shape';
+                        break;
+                    } else {
+                        // SAFE: This is just an overhang. Continue scanning.
+                        distance++;
+                    }
+                } else {
+                    // OBSTACLE: This is a different, unauthorized shape.
+                    // We must stop. Since we're no longer under the correct overhang,
+                    // we revoke the permission slip for any future calculations.
+                    reason = 'shape';
+                    _cell.underOverhangOfShapeID = null;
+                    break;
+                }
+            } else {
+                // --- There is no shape above. This is open space. ---
+
+                // If we were just under an overhang, our permission is now used up.
+                // Revoke the slip so we don't try to enter another overhang later.
+                if (overhangPermissionID !== null && overhangPermissionID !== undefined) {
+                    overhangPermissionID = null;
+                    _cell.underOverhangOfShapeID = null;
+                }
+                distance++;
+            }
+        }
+        // if shape collision, only move halfway towards the shape
+        const allowance = (reason === 'shape' && distance > 0) ? Math.ceil(distance / 2) : distance;
+        return { allowance, reason };
+    }
+
+    getHorizontalEscapeDirection(collisionY, collisionX, blockingShapeID) {
+        // Search outwards from the collision which side the shape is blocking on.
+        // Then return the *opposite* direction of the found wall.
+        for (let distance = 1; distance <= this.layoutWidth + 1; distance++) {
+            // Check Left for a wall
+            const leftX = collisionX - distance;
+            if (leftX < 0 || (this.getShapeID(collisionY, leftX) === blockingShapeID && this.getShapeID(collisionY - 1, leftX) === blockingShapeID)) {
+                return 'right'; // Wall on left (or edge hit), so go right.
+            }
+
+            // Check Right for a wall
+            const rightX = collisionX + distance;
+            if (rightX >= this.layoutWidth || (this.getShapeID(collisionY, rightX) === blockingShapeID && this.getShapeID(collisionY - 1, rightX) === blockingShapeID)) {
+                return 'left'; // Wall on right (or edge hit), so go left.
+            }
+        }
+
+        // If the loop completes, the cell is trapped.
+        throw new Error(`Could not find horizontal escape route for a trapped cell at (${collisionX}, ${collisionY}).`);
+    }
+
+    getGrowthStats() {
+        const stats = {
+            alive: 0,
+            up: 0,
+            left: 0,
+            right: 0,
+        };
+
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (const cell of this.cellSpace[y][x]) {
+                    if (cell.alive) {
+                        stats.alive++;
+                        if (cell.direction === 'up') stats.up++;
+                        else if (cell.direction === 'left') stats.left++;
+                        else if (cell.direction === 'right') stats.right++;
+                    }
+                }
+            }
+        }
+        return stats;
     }
 }
 

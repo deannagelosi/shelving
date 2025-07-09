@@ -14,7 +14,7 @@ let viewerNumGrow = 0;
 // Viewer stats
 let solutionStats = {
     boardCountOptimized: null,
-    boardCountNaive: null,
+    boardCountBaseline: null,
     emptySpaceOptimized: null,
     emptySpaceGrid: null
 };
@@ -93,12 +93,12 @@ function drawLabels() {
     // Grid baseline label
     text('Grid Baseline', 410 + BUFFER_WIDTH / 2, 5);
 
-    // Naive cellular label
-    let naiveLabel = 'Naive Cellular Baseline';
+    // Baseline algorithm label
+    let baselineLabel = 'Baseline Algorithm';
     if (viewerDevMode) {
-        naiveLabel += ` (Step ${viewerNumGrow})`;
+        baselineLabel += ` (Step ${viewerNumGrow})`;
     }
-    text(naiveLabel, 810 + BUFFER_WIDTH / 2, 5);
+    text(baselineLabel, 810 + BUFFER_WIDTH / 2, 5);
 }
 
 function drawStats() {
@@ -122,10 +122,10 @@ function drawStats() {
         text(gridText, 410 + BUFFER_WIDTH / 2, yPos);
     }
 
-    // Naive cellular stats
-    if (solutionStats.boardCountNaive !== null) {
-        const naiveText = `Boards: ${solutionStats.boardCountNaive}`;
-        text(naiveText, 810 + BUFFER_WIDTH / 2, yPos);
+    // Baseline algorithm stats
+    if (solutionStats.boardCountBaseline !== null) {
+        const baselineText = `Boards: ${solutionStats.boardCountBaseline}`;
+        text(baselineText, 810 + BUFFER_WIDTH / 2, yPos);
     }
 }
 
@@ -135,17 +135,17 @@ function keyPressed() {
         // Toggle viewer dev mode on and off
         viewerDevMode = !viewerDevMode;
         viewerNumGrow = 0;
+        console.log(`Debug mode ${viewerDevMode ? 'enabled' : 'disabled'}`);
         if (selectedSolution) {
             viewerUI.renderSolution();
-            viewerUI.showMessage(`Debug mode ${viewerDevMode ? 'enabled' : 'disabled'}`, 'info');
         }
     }
     else if (key === 'g' && viewerDevMode) {
         // Advance one growth step at a time in dev mode
         viewerNumGrow++;
+        console.log(`Growth step: ${viewerNumGrow}`);
         if (selectedSolution) {
             viewerUI.renderSolution();
-            viewerUI.showMessage(`Growth step: ${viewerNumGrow}`, 'info');
         }
     }
 }
@@ -281,10 +281,9 @@ class ViewerUI {
         try {
             const stmt = currentDatabase.prepare(`
                 SELECT solution_id, start_id, score, valid, 
-                       baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive,
+                       baseline_grid_json, baseline_cellular_json, stats_breakdown_json,
                        export_data_json, cellular_json,
-                       empty_space_optimized, empty_space_grid, board_count_optimized, board_count_naive,
-                       board_render_data_optimized, board_render_data_naive
+                       board_render_data_optimized, board_render_data_baseline
                 FROM solutions 
                 WHERE job_id = ? 
                 ORDER BY start_id
@@ -311,18 +310,29 @@ class ViewerUI {
             el.remove();
         }
 
+        // Clear existing solutions container
+        const existingSolutionsContainer = selectAll('.solutions-container');
+        for (let el of existingSolutionsContainer) {
+            el.remove();
+        }
+
         if (currentSolutions.length === 0) {
             this.jobListDiv.html(this.jobListDiv.html() + '<p>No solutions found for this job</p>');
             return;
         }
 
-        // Create solution list
-        const solutionListTitle = createDiv('<strong>Solutions:</strong>');
+        // Create solution list title
+        const solutionListTitle = createDiv(`<strong>Solutions (${currentSolutions.length}):</strong>`);
         solutionListTitle.parent(this.jobListDiv);
+
+        // Create scrollable solutions container
+        const solutionsContainer = createDiv('');
+        solutionsContainer.parent(this.jobListDiv);
+        solutionsContainer.class('solutions-container');
 
         for (let solution of currentSolutions) {
             const solutionDiv = createDiv('');
-            solutionDiv.parent(this.jobListDiv);
+            solutionDiv.parent(solutionsContainer);
             solutionDiv.class('solution-item');
 
             const hasBaselines = solution.baseline_grid_json && solution.baseline_cellular_json;
@@ -348,12 +358,19 @@ class ViewerUI {
     renderSolution() {
         if (!selectedSolution) return;
 
-        // Use pre-calculated statistics from database
+        // Parse and use statistics from database
+        let statsBreakdown = {};
+        try {
+            statsBreakdown = JSON.parse(selectedSolution.stats_breakdown_json || '{}');
+        } catch (error) {
+            console.warn('Failed to parse stats_breakdown_json:', error);
+        }
+
         solutionStats = {
-            boardCountOptimized: selectedSolution.board_count_optimized,
-            boardCountNaive: selectedSolution.board_count_naive,
-            emptySpaceOptimized: selectedSolution.empty_space_optimized,
-            emptySpaceGrid: selectedSolution.empty_space_grid
+            boardCountOptimized: statsBreakdown.board_count_optimized,
+            boardCountBaseline: statsBreakdown.board_count_baseline,
+            emptySpaceOptimized: statsBreakdown.empty_space_optimized,
+            emptySpaceGrid: statsBreakdown.empty_space_grid
         };
 
         try {
@@ -382,19 +399,19 @@ class ViewerUI {
 
             let naiveCellular;
             if (this.isLegacyCellularData(baselineNaiveCellular)) {
-                // legacy version. regenerating with updated algorithm
+                // legacy version. regenerating with baseline algorithm
                 naiveCellular = new Cellular(optimizedSolution);
-                naiveCellular.growCellsNaive();
+                naiveCellular.growBaseline();
             } else {
                 naiveCellular = Cellular.fromDataObject(baselineNaiveCellular, optimizedSolution);
             }
 
             // Get board render data from database if available, otherwise calculate
-            let optimizedBoardData, naiveBoardData;
-            if (selectedSolution.board_render_data_optimized && selectedSolution.board_render_data_naive) {
+            let optimizedBoardData, baselineBoardData;
+            if (selectedSolution.board_render_data_optimized && selectedSolution.board_render_data_baseline) {
                 // Use pre-calculated board render data
                 optimizedBoardData = JSON.parse(selectedSolution.board_render_data_optimized);
-                naiveBoardData = JSON.parse(selectedSolution.board_render_data_naive);
+                baselineBoardData = JSON.parse(selectedSolution.board_render_data_baseline);
             } else {
                 // Fallback: calculate board render data (for legacy data)
                 const exportConfig = {
@@ -416,9 +433,9 @@ class ViewerUI {
                 optimizedExport.makeBoards();
                 optimizedBoardData = optimizedExport.getBoardRenderData();
 
-                const naiveExport = new Export(naiveCellular, spacing, exportConfig);
-                naiveExport.makeBoards();
-                naiveBoardData = naiveExport.getBoardRenderData();
+                const baselineExport = new Export(naiveCellular, spacing, exportConfig);
+                baselineExport.makeBoards();
+                baselineBoardData = baselineExport.getBoardRenderData();
             }
 
             // Calculate rendering configuration for each buffer
@@ -459,43 +476,27 @@ class ViewerUI {
                 solutionRenderer.renderLayout(gridSolution, gridCanvas, gridConfig);
             });
 
-            // Render naive cellular baseline (cellular + boards only on optimized layout)
+            // Render baseline algorithm (cellular + boards only on optimized layout)
             this.renderToBuffer(naiveCellularBuffer, () => {
                 solutionRenderer.renderLayout(optimizedSolution, naiveCanvas, naiveConfig);
 
-                // Handle naive cellular rendering based on debug mode
+                // Handle cellular rendering based on debug mode
                 if (viewerDevMode) {
-                    // Debug mode: re-simulate naive growth from initial conditions up to viewerNumGrow steps
-                    const debugCellular = new Cellular(optimizedSolution, true, viewerNumGrow);
-                    debugCellular.createTerrain();
-                    debugCellular.calcPathValues();
-                    debugCellular.makeInitialCells();
+                    // Debug mode: re-simulate baseline growth from initial conditions up to viewerNumGrow steps
+                    const debugCellular = new Cellular(optimizedSolution);
+                    debugCellular.growBaseline(viewerNumGrow); // Pass step count
 
-                    // Run naive growth for the specified number of steps (0 = just initial setup)
-                    for (let i = 0; i < viewerNumGrow; i++) {
-                        debugCellular.growOnceNaive();
-                    }
+                    const stats = debugCellular.getGrowthStats();
+                    console.log(`Alive: ${stats.alive}, Up: ${stats.up}, Left: ${stats.left}, Right: ${stats.right}`);
 
                     const debugCellLines = debugCellular.getCellRenderLines();
                     cellularRenderer.renderCellLines(debugCellLines, naiveCanvas, naiveConfig);
-                    if (!naiveConfig.devMode) {
-                        boardRenderer.renderBoards(naiveBoardData, naiveCanvas, naiveConfig, { showLabels: true });
-                    }
-                    if (naiveConfig.devMode) {
-                        cellularRenderer.renderTerrain(optimizedSolution.layout, naiveCanvas, { ...naiveConfig, maxTerrain: debugCellular.maxTerrain });
-                        cellularRenderer.renderCells(debugCellular.cellSpace, naiveCanvas, naiveConfig);
-                    }
+                    cellularRenderer.renderCells(debugCellular.cellSpace, naiveCanvas, naiveConfig);
                 } else {
-                    // Normal mode: use stored baseline data (authoritative source)
+                    // Normal mode: use stored baseline algorithm data (authoritative source)
                     const naiveCellLines = naiveCellular.getCellRenderLines();
                     cellularRenderer.renderCellLines(naiveCellLines, naiveCanvas, naiveConfig);
-                    if (!naiveConfig.devMode) {
-                        boardRenderer.renderBoards(naiveBoardData, naiveCanvas, naiveConfig, { showLabels: true });
-                    }
-                    if (naiveConfig.devMode) {
-                        cellularRenderer.renderTerrain(optimizedSolution.layout, naiveCanvas, { ...naiveConfig, maxTerrain: naiveCellular.maxTerrain });
-                        cellularRenderer.renderCells(naiveCellular.cellSpace, naiveCanvas, naiveConfig);
-                    }
+                    boardRenderer.renderBoards(baselineBoardData, naiveCanvas, naiveConfig, { showLabels: true });
                 }
             });
 

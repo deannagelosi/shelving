@@ -18,8 +18,8 @@ class BulkCLI {
             // Default configuration
             aspectRatioPref: 0,         // Square preference
             workerCount: 10,            // Number of parallel workers
-            batchSize: 50,              // Workers per batch before extended delay
-            staggerDelay: 100,          // Delay between worker launches (ms)
+            batchSize: 100,              // Workers per batch before extended delay
+            staggerDelay: 500,          // Delay between worker launches (ms)
         };
 
         // Constants for worker staggering behavior
@@ -55,6 +55,13 @@ class BulkCLI {
 
             // Load input shapes
             await this.loadInputShapes(options.shapesFile);
+
+            // Check and initialize database if needed
+            const databaseInitialized = await this.checkAndInitializeDatabase();
+            if (!databaseInitialized) {
+                // Database was just created, exit and prompt for rerun
+                return;
+            }
 
             // Initialize queue worker
             await this.initializeQueueWorker();
@@ -205,6 +212,45 @@ Examples:
                 throw new Error(`Invalid JSON in shapes file: ${error.message}`);
             } else {
                 throw error;
+            }
+        }
+    }
+
+    /**
+     * Check and initialize database if needed
+     */
+    async checkAndInitializeDatabase() {
+        const dbPath = path.join(__dirname, '../../models/results.sqlite');
+        
+        try {
+            await fs.access(dbPath);
+            console.log('📁 Database found at: ' + dbPath);
+            return true;
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                console.log('📁 Database not found at: ' + dbPath);
+                console.log('💾 Initializing new database...');
+                
+                // Import and initialize the Result class to create the database
+                const Result = require('../../models/Result.js');
+                const result = new Result();
+                
+                try {
+                    await result.init();
+                    await result.close();
+                    
+                    console.log('✅ Database initialized successfully.');
+                    console.log('');
+                    console.log('🔄 Database is now ready. Please run the command again to start bulk analysis.');
+                    console.log('');
+                    
+                    return false; // Indicate that database was just initialized
+                } catch (initError) {
+                    console.error('❌ Database initialization failed:', initError.message);
+                    process.exit(1);
+                }
+            } else {
+                throw error; // Re-throw other errors
             }
         }
     }

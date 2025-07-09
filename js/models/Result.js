@@ -105,14 +105,9 @@ class Result {
                 valid BOOLEAN NOT NULL,
                 baseline_grid_json TEXT,
                 baseline_cellular_json TEXT,
-                score_grid REAL,
-                score_cellular_naive REAL,
-                empty_space_optimized INTEGER,
-                empty_space_grid INTEGER,
-                board_count_optimized INTEGER,
-                board_count_naive INTEGER,
+                stats_breakdown_json TEXT,
                 board_render_data_optimized TEXT,
-                board_render_data_naive TEXT,
+                board_render_data_baseline TEXT,
                 FOREIGN KEY (job_id) REFERENCES bulk_jobs (job_id)
             )
         `;
@@ -299,10 +294,9 @@ class Result {
             INSERT INTO solutions (
                 solution_id, job_id, start_id, export_data_json, 
                 cellular_json, metadata_json, score, valid,
-                baseline_grid_json, baseline_cellular_json, score_grid, score_cellular_naive,
-                empty_space_optimized, empty_space_grid, board_count_optimized, board_count_naive,
-                board_render_data_optimized, board_render_data_naive
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                baseline_grid_json, baseline_cellular_json, stats_breakdown_json,
+                board_render_data_optimized, board_render_data_baseline
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const validateItem = (flatRecord) => {
@@ -322,14 +316,9 @@ class Result {
                 flatRecord.valid ? 1 : 0,
                 flatRecord.baseline_grid_json,
                 flatRecord.baseline_cellular_json,
-                flatRecord.score_grid,
-                flatRecord.score_cellular_naive,
-                flatRecord.empty_space_optimized,
-                flatRecord.empty_space_grid,
-                flatRecord.board_count_optimized,
-                flatRecord.board_count_naive,
+                flatRecord.stats_breakdown_json,
                 flatRecord.board_render_data_optimized,
-                flatRecord.board_render_data_naive
+                flatRecord.board_render_data_baseline
             ];
         };
 
