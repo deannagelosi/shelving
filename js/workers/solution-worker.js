@@ -17,6 +17,32 @@ class SolutionWorker {
         this.currentJob = null;
     }
 
+    /**
+     * Sample k items from an array with replacement
+     * @param {Array} array - Source array to sample from
+     * @param {number} k - Number of items to sample
+     * @returns {Array} Array of k sampled items (may contain duplicates)
+     */
+    sampleWithReplacement(array, k) {
+        if (!Array.isArray(array) || array.length === 0) {
+            throw new Error('Cannot sample from empty or invalid array');
+        }
+
+        if (k < 1) {
+            throw new Error('Sample size must be at least 1');
+        }
+
+        const result = [];
+        for (let i = 0; i < k; i++) {
+            const randomIndex = Math.floor(Math.random() * array.length);
+            // Create a new Shape instance from the data to create unique objects
+            const shapeData = array[randomIndex].toDataObject();
+            result.push(Shape.fromDataObject(shapeData));
+        }
+
+        return result;
+    }
+
     async processMessage(data) {
         const { type, payload } = data;
 
@@ -55,7 +81,9 @@ class SolutionWorker {
             startId = 0,
             aspectRatioPref = 0,
             devMode = false,
-            annealConfig = {}
+            annealConfig = {},
+            randMin = null,
+            randMax = null
         } = payload;
 
         this.currentJob = { jobId, startId };
@@ -63,14 +91,41 @@ class SolutionWorker {
         try {
             // Convert plain shape data objects to Shape class instances
             // (postMessage serialization strips class methods)
-            const shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData));
+            let shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData));
+
+            // Apply random sampling in bulk mode if parameters are provided
+            let actualShapes = shapeInstances;
+            let samplingInfo = null;
+
+            if (this.mode === 'bulk' && randMin !== null && randMax !== null) {
+                this.sendProgress('PHASE_START', { phase: 'sampling', message: 'Sampling shapes for this solution...' });
+
+                // Generate random count between randMin and randMax (inclusive)
+                const shapeCount = randMin + Math.floor(Math.random() * (randMax - randMin + 1));
+
+                // Sample shapes with replacement
+                const sampledShapes = this.sampleWithReplacement(shapeInstances, shapeCount);
+                actualShapes = sampledShapes;
+
+                // Store sampling information for stats
+                samplingInfo = {
+                    shapeCount: shapeCount,
+                    shapeIds: sampledShapes.map(shape => shape.data.title),
+                    totalAvailableShapes: shapeInstances.length
+                };
+
+                this.sendProgress('PHASE_COMPLETE', {
+                    phase: 'sampling',
+                    message: `Sampled ${shapeCount} shapes from ${shapeInstances.length} available`
+                });
+            }
 
             // Phase 1: Create initial solution
             this.sendProgress('PHASE_START', { phase: 'anneal', message: 'Starting annealing process...' });
 
             // create Anneal instance
             const anneal = new this.Anneal(
-                shapeInstances,
+                actualShapes,
                 devMode,
                 aspectRatioPref
             );
@@ -119,7 +174,7 @@ class SolutionWorker {
             let gridBaseline = null;
             if (this.mode === 'bulk') {
                 this.sendProgress('PHASE_START', { phase: 'baseline-grid', message: 'Generating grid-packing baseline...' });
-                gridBaseline = this.Solution.createGridBaseline(shapeInstances, aspectRatioPref);
+                gridBaseline = this.Solution.createGridBaseline(actualShapes, aspectRatioPref);
                 this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-grid', score: gridBaseline.score });
             }
 
@@ -148,7 +203,7 @@ class SolutionWorker {
                 const result = {
                     title: `solution-${this.currentJob.startId + 1}`,
                     finalSolution: anneal.finalSolution.toDataObject(),
-                    enabledShapes: shapeInstances.map(() => true),
+                    enabledShapes: actualShapes.map(() => true),
                     solutionHistory: [], // Empty for bulk runs to reduce size
                     cellular: {
                         cellSpace: cellular.cellSpace,
@@ -176,7 +231,8 @@ class SolutionWorker {
                     cellular,
                     baselineCellular,
                     statistics,
-                    shapeInstances
+                    actualShapes,
+                    samplingInfo
                 );
                 this.sendResult(flatRecord);
             }
@@ -281,7 +337,7 @@ class SolutionWorker {
         return statistics;
     }
 
-    createFlatRecord(anneal, gridBaseline, cellular, baselineCellular, statistics, shapeInstances) {
+    createFlatRecord(anneal, gridBaseline, cellular, baselineCellular, statistics, shapeInstances, samplingInfo) {
         // Create export format structure for export_data_json
         const exportData = {
             savedAnneals: [{
@@ -318,6 +374,9 @@ class SolutionWorker {
             total_board_length_baseline: statistics.totalBoardLengthBaseline,
             cubby_areas_optimized: statistics.cubbyAreasOptimized,
             cubby_areas_baseline: statistics.cubbyAreasBaseline,
+            // Add sampling information if available
+            shape_count: samplingInfo ? samplingInfo.shapeCount : shapeInstances.length,
+            shape_ids: samplingInfo ? samplingInfo.shapeIds : shapeInstances.map(shape => shape.data.title)
         };
 
         // Create flat record that matches database schema exactly
@@ -347,7 +406,8 @@ class SolutionWorker {
                 numAlive: baselineCellular.numAlive || 0
             }),
             board_render_data_optimized: JSON.stringify(statistics.boardRenderDataOptimized),
-            board_render_data_baseline: JSON.stringify(statistics.boardRenderDataBaseline)
+            board_render_data_baseline: JSON.stringify(statistics.boardRenderDataBaseline),
+            sampling_info_json: JSON.stringify(samplingInfo) // Add sampling info to the record
         };
     }
 }

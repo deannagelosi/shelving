@@ -91,6 +91,8 @@ class BulkCLI {
             count: this.config.workerCount,
             aspectRatio: this.config.aspectRatioPref,
             batchSize: this.config.batchSize,
+            randMin: null,
+            randMax: null,
             help: false
         };
 
@@ -119,6 +121,14 @@ class BulkCLI {
                     options.batchSize = parseInt(nextArg, 10);
                     i++;
                     break;
+                case '--rand-min':
+                    options.randMin = parseInt(nextArg, 10);
+                    i++;
+                    break;
+                case '--rand-max':
+                    options.randMax = parseInt(nextArg, 10);
+                    i++;
+                    break;
                 case '--help':
                 case '-h':
                     options.help = true;
@@ -143,6 +153,25 @@ class BulkCLI {
             throw new Error('Count must be a positive integer');
         }
 
+        // Validate random sampling parameters
+        if ((options.randMin !== null) !== (options.randMax !== null)) {
+            throw new Error('Both --rand-min and --rand-max must be provided together');
+        }
+
+        if (options.randMin !== null && options.randMax !== null) {
+            if (isNaN(options.randMin) || isNaN(options.randMax)) {
+                throw new Error('Random sampling bounds must be valid integers');
+            }
+
+            if (options.randMin < 1) {
+                throw new Error('--rand-min must be at least 1');
+            }
+
+            if (options.randMax < options.randMin) {
+                throw new Error('--rand-max must be greater than or equal to --rand-min');
+            }
+        }
+
         return options;
     }
 
@@ -158,12 +187,15 @@ Options:
   -c, --count <number>         Number of solutions to generate (default: 10)
   -a, --aspect-ratio <number>  Aspect ratio preference (default: 0)
   -b, --batch-size <num>       Workers per batch before extended delay (default: 50)
+      --rand-min <number>      Minimum shapes to sample per solution (requires --rand-max)
+      --rand-max <number>      Maximum shapes to sample per solution (requires --rand-min)
   -h, --help                   Show this help message
 
 Examples:
   node BulkCLI.js --shapes input.json --count 100
   node BulkCLI.js -s shapes.json -c 500 --aspect-ratio 1.5
   node BulkCLI.js -s data.json -c 1000 -b 50
+  node BulkCLI.js -s input.json -c 200 --rand-min 5 --rand-max 15
         `);
     }
 
@@ -174,11 +206,18 @@ Examples:
         this.config.aspectRatioPref = options.aspectRatio;
         this.config.workerCount = options.count;
         this.config.batchSize = options.batchSize;
+        this.config.randMin = options.randMin;
+        this.config.randMax = options.randMax;
 
         console.log('📋 Configuration:');
         console.log(`   - Solutions to generate: ${this.config.workerCount}`);
         console.log(`   - Aspect ratio preference: ${this.config.aspectRatioPref}`);
         console.log(`   - Batch size: ${this.config.batchSize}`);
+        if (this.config.randMin !== null && this.config.randMax !== null) {
+            console.log(`   - Random sampling: ${this.config.randMin} to ${this.config.randMax} shapes per solution`);
+        } else {
+            console.log(`   - Shape selection: All shapes`);
+        }
         console.log('');
     }
 
@@ -203,6 +242,16 @@ Examples:
             }
 
             console.log(`   ✅ Loaded ${this.inputShapes.length} shapes`);
+
+            // Validate random sampling bounds against total shape count
+            if (this.config.randMin !== null && this.config.randMax !== null) {
+                if (this.config.randMax > this.inputShapes.length) {
+                    throw new Error(`--rand-max (${this.config.randMax}) cannot exceed total number of shapes (${this.inputShapes.length})`);
+                }
+                console.log(`   ✅ Random sampling validated: ${this.config.randMin} to ${this.config.randMax} shapes per solution`);
+            } else {
+                console.log(`   ℹ️  Using all ${this.inputShapes.length} shapes for each solution`);
+            }
             console.log('');
 
         } catch (error) {
@@ -221,7 +270,7 @@ Examples:
      */
     async checkAndInitializeDatabase() {
         const dbPath = path.join(__dirname, '../../models/results.sqlite');
-        
+
         try {
             await fs.access(dbPath);
             console.log('📁 Database found at: ' + dbPath);
@@ -230,20 +279,20 @@ Examples:
             if (error.code === 'ENOENT') {
                 console.log('📁 Database not found at: ' + dbPath);
                 console.log('💾 Initializing new database...');
-                
+
                 // Import and initialize the Result class to create the database
                 const Result = require('../../models/Result.js');
                 const result = new Result();
-                
+
                 try {
                     await result.init();
                     await result.close();
-                    
+
                     console.log('✅ Database initialized successfully.');
                     console.log('');
                     console.log('🔄 Database is now ready. Please run the command again to start bulk analysis.');
                     console.log('');
-                    
+
                     return false; // Indicate that database was just initialized
                 } catch (initError) {
                     console.error('❌ Database initialization failed:', initError.message);
@@ -322,7 +371,11 @@ Examples:
         this.queueWorker.postMessage({
             type: 'START_JOB',
             payload: {
-                config: { aspectRatioPref: this.config.aspectRatioPref },
+                config: {
+                    aspectRatioPref: this.config.aspectRatioPref,
+                    randMin: this.config.randMin,
+                    randMax: this.config.randMax
+                },
                 inputShapes: this.inputShapes,
                 totalWorkers: this.totalWorkers
             }
@@ -376,7 +429,11 @@ Examples:
             type: 'SET_MODE',
             payload: {
                 mode: 'bulk',
-                config: { aspectRatioPref: this.config.aspectRatioPref }
+                config: {
+                    aspectRatioPref: this.config.aspectRatioPref,
+                    randMin: this.config.randMin,
+                    randMax: this.config.randMax
+                }
             }
         });
 
@@ -387,7 +444,9 @@ Examples:
                 shapes: this.inputShapes,
                 jobId: this.jobId,
                 startId: startId,
-                aspectRatioPref: this.config.aspectRatioPref
+                aspectRatioPref: this.config.aspectRatioPref,
+                randMin: this.config.randMin,
+                randMax: this.config.randMax
             }
         });
     }
@@ -409,7 +468,9 @@ Examples:
                 workerPayload: {
                     shapes: this.inputShapes,
                     startId: startId,
-                    aspectRatioPref: this.config.aspectRatioPref
+                    aspectRatioPref: this.config.aspectRatioPref,
+                    randMin: this.config.randMin,
+                    randMax: this.config.randMax
                 }
             }
         };
