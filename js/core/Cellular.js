@@ -1089,6 +1089,141 @@ class Cellular {
         }
         return stats;
     }
+
+    getWallSet() {
+        // Create a strain-agnostic set of wall segments
+        const wallSet = new Set();
+
+        for (let y = 0; y < this.cellSpace.length; y++) {
+            for (let x = 0; x < this.cellSpace[y].length; x++) {
+                for (let cell of this.cellSpace[y][x]) {
+                    if (cell.parentCoords) {
+                        const { x: parentX, y: parentY } = cell.parentCoords;
+
+                        if (y === parentY) {
+                            // A horizontal path creates a HORIZONTAL wall.
+                            const wallX = Math.min(x, parentX);
+                            wallSet.add(`h-${wallX}-${y}`);
+                        } else if (x === parentX) {
+                            // A vertical path creates a VERTICAL wall.
+                            const wallY = Math.min(y, parentY);
+                            wallSet.add(`v-${x}-${wallY}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        return wallSet;
+    }
+
+    calculateAllCubbyAreas() {
+        // Perform a flood-fill process for every shape in the layout
+        const results = [];
+
+        // Pre-compute wall set for fast lookups
+        const wallSet = this.getWallSet();
+
+        // Process each shape
+        for (let i = 0; i < this.shapes.length; i++) {
+            const shape = this.shapes[i];
+
+            // Find the seed point using existing overhangShift logic
+            const shapeEnds = this.overhangShift(shape);
+            const seedX = shapeEnds[0];
+            const seedY = shape.posY;
+
+            // Execute flood fill from the seed point
+            const floodResult = this.floodFill(seedX, seedY, wallSet);
+
+            // Calculate shape area
+            const shapeArea = shape.getArea();
+
+            // Store results
+            results.push({
+                shape_id: i,
+                cubbyArea: floodResult.area,
+                shapeArea: shapeArea,
+                labelCoords: { x: seedX, y: seedY },
+                visitedCells: floodResult.visitedCells
+            });
+        }
+
+        return results;
+    }
+
+    floodFill(startX, startY, wallSet) {
+        // Flood-fill algorithm to calculate enclosed area
+        const visited = new Set();
+        const visitedCells = [];
+        const queue = [{ x: startX, y: startY }];
+        let area = 0;
+
+        while (queue.length > 0) {
+            const { x, y } = queue.shift();
+
+            // Create unique key for this position
+            const posKey = `${x}-${y}`;
+
+            // Skip if already visited
+            if (visited.has(posKey)) {
+                continue;
+            }
+
+            // Check if position is within layout bounds
+            if (!this.layoutInBounds(y, x)) {
+                continue;
+            }
+
+            // Check if this position is blocked by walls
+            const topWall = wallSet.has(`h-${x}-${y + 1}`);
+            const bottomWall = wallSet.has(`h-${x}-${y}`);
+            const leftWall = wallSet.has(`v-${x}-${y}`);
+            const rightWall = wallSet.has(`v-${x + 1}-${y}`);
+
+            // If completely surrounded by walls, this is not part of the cubby space
+            if (topWall && bottomWall && leftWall && rightWall) {
+                continue;
+            }
+
+            // Mark as visited and count this square
+            visited.add(posKey);
+            visitedCells.push({ x: x, y: y });
+            area++;
+
+            // Add neighboring positions to queue
+            const neighbors = [
+                { x: x + 1, y: y },     // right
+                { x: x - 1, y: y },     // left
+                { x: x, y: y + 1 },     // up
+                { x: x, y: y - 1 }      // down
+            ];
+
+            for (const neighbor of neighbors) {
+                const neighborKey = `${neighbor.x}-${neighbor.y}`;
+                if (!visited.has(neighborKey)) {
+                    // Check if there's a wall blocking the path to this neighbor
+                    let blocked = false;
+
+                    if (neighbor.x > x) { // moving right
+                        blocked = wallSet.has(`v-${neighbor.x}-${y}`);
+                    } else if (neighbor.x < x) { // moving left
+                        blocked = wallSet.has(`v-${x}-${y}`);
+                    } else if (neighbor.y > y) { // moving up
+                        blocked = wallSet.has(`h-${x}-${neighbor.y}`);
+                    } else if (neighbor.y < y) { // moving down
+                        blocked = wallSet.has(`h-${x}-${y}`);
+                    }
+
+                    if (!blocked) {
+                        queue.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        return { area: area, visitedCells: visitedCells };
+    }
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)

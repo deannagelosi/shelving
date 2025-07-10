@@ -242,6 +242,10 @@ class SolutionWorker {
         statistics.emptySpaceOptimized = anneal.finalSolution.calculateEmptySpace();
         statistics.emptySpaceGrid = gridBaseline.calculateEmptySpace();
 
+        // Calculate cubby areas for both optimized and baseline cellular results
+        statistics.cubbyAreasOptimized = cellular.calculateAllCubbyAreas();
+        statistics.cubbyAreasBaseline = baselineCellular.calculateAllCubbyAreas();
+
         // Define export configuration (hardcoded for bulk mode)
         const exportConfig = {
             caseDepth: 3,
@@ -311,7 +315,9 @@ class SolutionWorker {
             board_count_optimized: statistics.boardCountOptimized,
             board_count_baseline: statistics.boardCountBaseline,
             total_board_length_optimized: statistics.totalBoardLengthOptimized,
-            total_board_length_baseline: statistics.totalBoardLengthBaseline
+            total_board_length_baseline: statistics.totalBoardLengthBaseline,
+            cubby_areas_optimized: statistics.cubbyAreasOptimized,
+            cubby_areas_baseline: statistics.cubbyAreasBaseline,
         };
 
         // Create flat record that matches database schema exactly

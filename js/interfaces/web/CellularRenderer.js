@@ -81,6 +81,68 @@ class CellularRenderer {
         }
     }
 
+    renderFloodFillVisualization(areaDataArray, canvas, config) {
+        // Visualize flood-fill exploration by drawing visited cells
+        // Each shape's visited cells are drawn in a different color with proper grid alignment
+
+        if (!areaDataArray || areaDataArray.length === 0) {
+            return; // No area data to visualize
+        }
+
+        // Color palette for different shapes (semi-transparent)
+        const colors = [
+            [255, 100, 100, 80],  // Red
+            [100, 255, 100, 80],  // Green
+            [100, 100, 255, 80],  // Blue
+            [255, 255, 100, 80],  // Yellow
+            [255, 100, 255, 80],  // Magenta
+            [100, 255, 255, 80],  // Cyan
+            [255, 150, 100, 80],  // Orange
+            [150, 100, 255, 80],  // Purple
+        ];
+
+        noStroke();
+
+        for (let i = 0; i < areaDataArray.length; i++) {
+            const areaData = areaDataArray[i];
+            const { visitedCells, labelCoords } = areaData;
+            console.log("Label coords: ", labelCoords);
+
+            if (!visitedCells || visitedCells.length === 0) {
+                console.log("No visited cells data for label: ", labelCoords);
+                continue; // Skip if no visited cells data
+            }
+
+            // Select color based on shape index, cycling through palette
+            const colorIndex = i % colors.length;
+            const [r, g, b, a] = colors[colorIndex];
+            fill(r, g, b, a);
+
+            // Draw a rectangle for each visited cell
+            for (const cell of visitedCells) {
+                // Convert layout coordinates to canvas coordinates using same approach as other methods
+                let canvasX = (cell.x * config.squareSize) + config.buffer + config.xPadding;
+                let canvasY = ((canvas.height - config.yPadding) - config.squareSize - config.buffer) - (cell.y * config.squareSize);
+
+                // Draw the rectangle representing the visited cell
+                rect(canvasX, canvasY, config.squareSize, config.squareSize);
+
+                // Check if this cell is the seed location and add visual indicator
+                if (labelCoords && cell.x === labelCoords.x && cell.y === labelCoords.y) {
+                    // Draw a thick border around the seed cell
+                    noFill();
+                    stroke(r, g, b, 255); // Use same color as fill but fully opaque
+                    strokeWeight(3);
+                    rect(canvasX, canvasY, config.squareSize, config.squareSize);
+                    
+                    // Reset stroke settings for next iteration
+                    noStroke();
+                    fill(r, g, b, a);
+                }
+            }
+        }
+    }
+
     //== helper methods
     strainColor(strain) {
         let value = ((strain + 1) * 255) % 256;

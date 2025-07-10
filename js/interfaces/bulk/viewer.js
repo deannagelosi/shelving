@@ -373,6 +373,10 @@ class ViewerUI {
             emptySpaceGrid: statsBreakdown.empty_space_grid
         };
 
+        // Extract area data arrays for visual verification
+        const cubbyAreasOptimized = statsBreakdown.cubby_areas_optimized || [];
+        const cubbyAreasBaseline = statsBreakdown.cubby_areas_baseline || [];
+
         try {
             // Parse the solution data
             const exportData = JSON.parse(selectedSolution.export_data_json);
@@ -468,6 +472,10 @@ class ViewerUI {
                 if (optimizedConfig.devMode) {
                     cellularRenderer.renderTerrain(optimizedSolution.layout, optimizedCanvas, { ...optimizedConfig, maxTerrain: optimizedCellular.maxTerrain });
                     cellularRenderer.renderCells(optimizedCellular.cellSpace, optimizedCanvas, optimizedConfig);
+                    // Render flood fill visualization for debugging
+                    cellularRenderer.renderFloodFillVisualization(cubbyAreasOptimized, optimizedCanvas, optimizedConfig);
+                    // Render area labels for visual verification
+                    this.renderAreaLabels(cubbyAreasOptimized, optimizedCanvas, optimizedConfig);
                 }
             });
 
@@ -492,6 +500,10 @@ class ViewerUI {
                     const debugCellLines = debugCellular.getCellRenderLines();
                     cellularRenderer.renderCellLines(debugCellLines, naiveCanvas, naiveConfig);
                     cellularRenderer.renderCells(debugCellular.cellSpace, naiveCanvas, naiveConfig);
+                    // Render flood fill visualization for debugging
+                    cellularRenderer.renderFloodFillVisualization(cubbyAreasBaseline, naiveCanvas, naiveConfig);
+                    // Render area labels for visual verification
+                    this.renderAreaLabels(cubbyAreasBaseline, naiveCanvas, naiveConfig);
                 } else {
                     // Normal mode: use stored baseline algorithm data (authoritative source)
                     const naiveCellLines = naiveCellular.getCellRenderLines();
@@ -506,6 +518,41 @@ class ViewerUI {
             console.error('Error stack:', error.stack);
         }
     }
+
+    renderAreaLabels(areaDataArray, canvas, config) {
+        // Helper function to draw area labels on canvas buffers
+        // Format: C:XX / S:YY (Cubby Area: XX / Shape Area: YY)
+
+        if (!areaDataArray || areaDataArray.length === 0) {
+            return; // No area data to display
+        }
+
+        // Set text properties for labels
+        textAlign(CENTER, CENTER);
+        textSize(10);
+        fill(0, 0, 0, 200); // Semi-transparent black text
+        strokeWeight(2);
+        stroke(255, 255, 255, 200); // Semi-transparent white outline
+
+        for (const areaData of areaDataArray) {
+            const { cubbyArea, shapeArea, labelCoords } = areaData;
+
+            // Convert layout coordinates to canvas coordinates
+            const canvasX = (labelCoords.x * config.squareSize) + config.xPadding + (config.squareSize / 2);
+            const canvasY = canvas.height - ((labelCoords.y * config.squareSize) + config.yPadding + (config.squareSize / 2));
+
+            // Create label text
+            const labelText = `C:${cubbyArea} / S:${shapeArea}`;
+
+            // Draw text with outline
+            text(labelText, canvasX, canvasY);
+        }
+
+        // Reset text properties
+        noStroke();
+    }
+
+
 
     isLegacyCellularData(cellularData) {
         // Check if the cellular data is in the old format (missing parentCoords)

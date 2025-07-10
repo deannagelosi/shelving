@@ -172,6 +172,19 @@ class Shape {
             array[i] = true;
         }
     }
+
+    getArea() {
+        // Calculate the area of the shape by counting true values in bufferShape
+        let area = 0;
+        for (let y = 0; y < this.data.bufferShape.length; y++) {
+            for (let x = 0; x < this.data.bufferShape[y].length; x++) {
+                if (this.data.bufferShape[y][x] === true) {
+                    area++;
+                }
+            }
+        }
+        return area;
+    }
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)
