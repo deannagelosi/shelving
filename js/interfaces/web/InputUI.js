@@ -416,18 +416,31 @@ class InputUI {
             // create item row div
             let titleRow = createDiv().addClass('shape-title');
             titleRow.parent(htmlRefs.right.list);
+            
+            // create view icon
+            let viewIcon = createImg('img/view.svg', 'View');
+            viewIcon.size(24, 24);
+            viewIcon.style('display', 'inline-block');
+            viewIcon.style('cursor', 'pointer');
+            viewIcon.style('margin-left', '5px');
+            viewIcon.addClass('icon-button');
+            viewIcon.parent(titleRow);
+            viewIcon.mousePressed(() => this.loadShape(i));
+
+            // create shape title
+            let shapeTitle = createP(`${appState.shapes[i].data.title}`);
+            shapeTitle.attribute('data-index', i);
+            shapeTitle.parent(titleRow);
+            
             // create trash icon
             let trashIcon = createImg('img/trash.svg', '🗑️'); // emoji backup if svg issue
             trashIcon.size(24, 24);
             trashIcon.style('display', 'inline-block');
             trashIcon.style('cursor', 'pointer');
             trashIcon.style('margin-left', '5px');
+            trashIcon.addClass('icon-button');
             trashIcon.parent(titleRow);
 
-            // create shape title
-            let shapeTitle = createP(`${appState.shapes[i].data.title}`);
-            shapeTitle.attribute('data-index', i);
-            shapeTitle.parent(titleRow);
             // save row for removal later
             this.shapeTitleElements.push(titleRow);
 
@@ -443,6 +456,43 @@ class InputUI {
         }
     }
 
+    loadShape(index) {
+        // load a saved shape into the input grid for editing
+        const shape = appState.shapes[index];
+        
+        // clear current state (preserve grid size but clear content)
+        this.resetInputGrid();
+        this.imgData = {};
+        
+        // load shape into grid with bottom-left + horizontal center positioning
+        this.loadShapeIntoGrid(shape);
+        
+        // update UI
+        this.html.titleInput.value(shape.data.title);
+        this.drawInputGrid();
+    }
+
+    loadShapeIntoGrid(shape) {
+        // load shape data into input grid with bottom-left + horizontal center positioning
+        const shapeGrid = shape.data.highResShape;
+        const shapeHeight = shapeGrid.length;
+        const shapeWidth = shapeGrid[0].length;
+        
+        // calculate positioning:
+        // - horizontal: center in available width
+        // - vertical: align to bottom (row 0 of input grid)
+        const offsetX = Math.floor((this.inputCols - shapeWidth) / 2);
+        const offsetY = 0; // bottom alignment - start at row 0
+        
+        // copy shape data to input grid (with bounds checking)
+        for (let y = 0; y < shapeHeight && (offsetY + y) < this.inputRows; y++) {
+            for (let x = 0; x < shapeWidth && (offsetX + x) < this.inputCols; x++) {
+                if (offsetX + x >= 0) { // safety check for negative offset
+                    this.inputGrid[offsetY + y][offsetX + x] = shapeGrid[y][x];
+                }
+            }
+        }
+    }
 
     updateGridSize() {
         // recalculate grid-related variables
