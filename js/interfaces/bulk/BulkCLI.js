@@ -12,23 +12,64 @@ const path = require('path');
  * - Providing real-time console progress updates
  * - Managing cleanup and completion
  */
+
+/**
+ * Inner class for managing a pool of workers with concurrency limit
+ */
+class WorkerPool {
+    constructor({ totalTasks, maxWorkers, staggerDelay, launchFn }) {
+        this.totalTasks = totalTasks;
+        this.maxWorkers = maxWorkers;
+        this.staggerDelay = staggerDelay;
+        this.launchFn = launchFn; // Function to launch a worker with startId
+        this.nextId = 0;
+        this.active = 0;
+    }
+
+    async start() {
+        // Launch initial workers up to max
+        while (this.active < this.maxWorkers && this.nextId < this.totalTasks) {
+            await this.launchNext();
+        }
+    }
+
+    async launchNext() {
+        if (this.nextId >= this.totalTasks) return;
+        const id = this.nextId++;
+        this.active++;
+        this.launchFn(id);
+        if (this.active < this.maxWorkers && this.nextId < this.totalTasks) {
+            await this.sleep(this.staggerDelay);
+        }
+    }
+
+    onFinished() {
+        this.active--;
+        if (this.nextId < this.totalTasks) {
+            this.launchNext();
+        }
+    }
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
 class BulkCLI {
     constructor() {
         this.config = {
             // Default configuration
             aspectRatioPref: 0,         // Square preference
-            workerCount: 10,            // Number of parallel workers
-            batchSize: 100,              // Workers per batch before extended delay
+            solutionCount: 100,         // Default total solutions
+            maxWorkers: 4,              // Max parallel workers (concurrency limit)
             staggerDelay: 500,          // Delay between worker launches (ms)
         };
 
         // Constants for worker staggering behavior
-        this.BATCH_BOUNDARY_DELAY_MULTIPLIER = 10; // Extended delay multiplier at batch boundaries
 
         this.queueWorker = null;
         this.completedWorkers = 0;
         this.failedWorkers = 0;
-        this.totalWorkers = 0;
         this.inputShapes = [];
         this.jobId = null;
         this.startTime = null;
@@ -37,6 +78,8 @@ class BulkCLI {
         this.completionResolve = null; // Function to signal job completion
         this.jobStartedPromise = null; // Promise for job ID assignment
         this.jobStartedResolve = null; // Function to signal job ID received
+        this.totalSolutions = 0; // Store total solutions requested
+        this.pool = null; // WorkerPool instance
     }
 
     /**
@@ -88,9 +131,9 @@ class BulkCLI {
     parseArguments(args) {
         const options = {
             shapesFile: null,
-            count: this.config.workerCount,
+            count: this.config.solutionCount,
             aspectRatio: this.config.aspectRatioPref,
-            batchSize: this.config.batchSize,
+            workers: this.config.maxWorkers,
             randMin: null,
             randMax: null,
             help: false
@@ -116,9 +159,9 @@ class BulkCLI {
                     options.aspectRatio = parseFloat(nextArg);
                     i++;
                     break;
-                case '--batch-size':
-                case '-b':
-                    options.batchSize = parseInt(nextArg, 10);
+                case '--workers':
+                case '-w':
+                    options.workers = parseInt(nextArg, 10);
                     i++;
                     break;
                 case '--rand-min':
@@ -151,6 +194,10 @@ class BulkCLI {
 
         if (isNaN(options.count) || options.count < 1) {
             throw new Error('Count must be a positive integer');
+        }
+
+        if (isNaN(options.workers) || options.workers < 1) {
+            throw new Error('Workers must be a positive integer');
         }
 
         // Validate random sampling parameters
@@ -186,7 +233,7 @@ Options:
   -s, --shapes <file>          Input shapes JSON file (required)
   -c, --count <number>         Number of solutions to generate (default: 10)
   -a, --aspect-ratio <number>  Aspect ratio preference (default: 0)
-  -b, --batch-size <num>       Workers per batch before extended delay (default: 50)
+  -w, --workers <number>       Max parallel workers (default: 4)
       --rand-min <number>      Minimum shapes to sample per solution (requires --rand-max)
       --rand-max <number>      Maximum shapes to sample per solution (requires --rand-min)
   -h, --help                   Show this help message
@@ -194,7 +241,7 @@ Options:
 Examples:
   node BulkCLI.js --shapes input.json --count 100
   node BulkCLI.js -s shapes.json -c 500 --aspect-ratio 1.5
-  node BulkCLI.js -s data.json -c 1000 -b 50
+  node BulkCLI.js -s data.json -c 1000 -w 50
   node BulkCLI.js -s input.json -c 200 --rand-min 5 --rand-max 15
         `);
     }
@@ -204,15 +251,15 @@ Examples:
      */
     async loadConfiguration(options) {
         this.config.aspectRatioPref = options.aspectRatio;
-        this.config.workerCount = options.count;
-        this.config.batchSize = options.batchSize;
+        this.config.maxWorkers = options.workers;
         this.config.randMin = options.randMin;
         this.config.randMax = options.randMax;
+        this.totalSolutions = options.count;
 
         console.log('📋 Configuration:');
-        console.log(`   - Solutions to generate: ${this.config.workerCount}`);
+        console.log(`   - Solutions to generate: ${options.count}`);
+        console.log(`   - Max parallel workers: ${this.config.maxWorkers}`);
         console.log(`   - Aspect ratio preference: ${this.config.aspectRatioPref}`);
-        console.log(`   - Batch size: ${this.config.batchSize}`);
         if (this.config.randMin !== null && this.config.randMax !== null) {
             console.log(`   - Random sampling: ${this.config.randMin} to ${this.config.randMax} shapes per solution`);
         } else {
@@ -337,10 +384,10 @@ Examples:
      */
     async startBulkAnalysis() {
         this.startTime = Date.now();
-        this.totalWorkers = this.config.workerCount;
 
         console.log('🎯 Starting bulk analysis...');
-        console.log(`   - Target: ${this.totalWorkers} solutions`);
+        console.log(`   - Target: ${this.totalSolutions} solutions`);
+        console.log(`   - Max parallel workers: ${this.config.maxWorkers}`);
         console.log('');
 
         // Set up completion notification mechanism
@@ -354,8 +401,17 @@ Examples:
         // Start progress reporting
         this.startProgressReporting();
 
-        // Launch solution workers with staggering
-        await this.launchSolutionWorkers();
+        // Set up WorkerPool
+        const solutionWorkerPath = path.join(__dirname, '../../workers/solution-worker.js');
+        this.pool = new WorkerPool({
+            totalTasks: this.totalSolutions,
+            maxWorkers: this.config.maxWorkers,
+            staggerDelay: this.config.staggerDelay,
+            launchFn: (startId) => this.launchSolutionWorker(solutionWorkerPath, startId)
+        });
+
+        // Launch workers via pool
+        await this.pool.start();
     }
 
     /**
@@ -377,32 +433,12 @@ Examples:
                     randMax: this.config.randMax
                 },
                 inputShapes: this.inputShapes,
-                totalWorkers: this.totalWorkers
+                totalSolutions: this.totalSolutions
             }
         });
 
         // Wait for job ID to be assigned
         await this.jobStartedPromise;
-    }
-
-    /**
-     * Launch solution workers with proper staggering
-     */
-    async launchSolutionWorkers() {
-        const solutionWorkerPath = path.join(__dirname, '../../workers/solution-worker.js');
-
-        for (let i = 0; i < this.totalWorkers; i++) {
-            // Implement staggering if we have many workers
-            if (i > 0 && i % this.config.batchSize === 0) {
-                // Wait a bit when hitting batch boundary
-                await this.sleep(this.config.staggerDelay * this.BATCH_BOUNDARY_DELAY_MULTIPLIER);
-            } else if (i > 0) {
-                // Small delay between each worker
-                await this.sleep(this.config.staggerDelay);
-            }
-
-            this.launchSolutionWorker(solutionWorkerPath, i);
-        }
     }
 
     /**
@@ -490,6 +526,7 @@ Examples:
                     type: 'SOLUTION_RESULT',
                     payload: payload
                 });
+                this.pool.onFinished(); // Signal worker finished
                 break;
 
             case 'ERROR':
@@ -498,6 +535,7 @@ Examples:
                     this.createSolutionErrorPayload(startId, payload, 'solution')
                 );
                 // Note: Worker will self-terminate after sending error
+                this.pool.onFinished(); // Signal worker finished
                 break;
 
             case 'PROGRESS':
@@ -523,6 +561,7 @@ Examples:
 
         // Terminate worker on runtime errors (not self-terminating in this case)
         worker.terminate();
+        this.pool.onFinished(); // Signal worker finished
     }
 
     /**
@@ -603,12 +642,12 @@ Examples:
      */
     updateProgress() {
         const totalProcessed = this.completedWorkers + this.failedWorkers;
-        const percentage = Math.round((totalProcessed / this.totalWorkers) * 100);
+        const percentage = Math.round((totalProcessed / this.totalSolutions) * 100);
         const elapsed = Math.round((Date.now() - this.startTime) / 1000);
 
         // Calculate rate and estimate
         const rate = totalProcessed > 0 ? totalProcessed / (elapsed || 1) : 0;
-        const remaining = this.totalWorkers - totalProcessed;
+        const remaining = this.totalSolutions - totalProcessed;
         const eta = rate > 0 ? Math.round(remaining / rate) : 0;
 
         // Format time
@@ -622,7 +661,7 @@ Examples:
         // Clear line and write progress
         process.stdout.write('\r\x1b[K');
         process.stdout.write(
-            `📈 ${totalProcessed}/${this.totalWorkers} (${percentage}%) | ` +
+            `📈 ${totalProcessed}/${this.totalSolutions} (${percentage}%) | ` +
             `✅ ${this.completedWorkers} | ❌ ${this.failedWorkers} | ` +
             `⏱️ ${formatTime(elapsed)}${eta > 0 ? ` | ETA ${formatTime(eta)}` : ''}`
         );

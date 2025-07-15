@@ -1,7 +1,6 @@
-// web worker for solution generation pipeline
-// supports both single-run and bulk-run modes using the same core algorithms
-// single-run mode is used by the web interface
-// bulk-run mode is used by the bulk CLI tool for statistical analysis
+// Web worker for solution generation pipeline
+// Supports both single-run and bulk-run modes using the same core algorithms
+// Single-run mode used by web app, bulk-run mode used by bulk CLI tool + viewer
 
 class SolutionWorker {
     constructor(dependencies) {
@@ -186,15 +185,6 @@ class SolutionWorker {
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
 
-            // Generate baseline algorithm (bulk mode only)
-            let baselineCellular = null;
-            if (this.mode === 'bulk') {
-                this.sendProgress('PHASE_START', { phase: 'baseline-cellular', message: 'Generating baseline wall growth...' });
-                baselineCellular = new this.Cellular(anneal.finalSolution, devMode);
-                baselineCellular.growBaseline();
-                this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-cellular', cellCount: baselineCellular.numAlive || 0 });
-            }
-
             // Phase 3: Data preparation
             this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing data for storage...' });
 
@@ -221,7 +211,7 @@ class SolutionWorker {
             } else {
                 // For bulk mode, calculate statistics and create flat record
                 this.sendProgress('PHASE_START', { phase: 'statistics', message: 'Calculating statistics...' });
-                const statistics = this.calculateStatistics(anneal, gridBaseline, cellular, baselineCellular);
+                const statistics = this.calculateStatistics(anneal, gridBaseline, cellular);
                 this.sendProgress('PHASE_COMPLETE', { phase: 'statistics', message: 'Statistics calculated' });
 
                 // Create flat record that matches database schema exactly
@@ -229,7 +219,6 @@ class SolutionWorker {
                     anneal,
                     gridBaseline,
                     cellular,
-                    baselineCellular,
                     statistics,
                     actualShapes,
                     samplingInfo
@@ -290,7 +279,7 @@ class SolutionWorker {
         });
     }
 
-    calculateStatistics(anneal, gridBaseline, cellular, baselineCellular) {
+    calculateStatistics(anneal, gridBaseline, cellular) {
         // Calculate statistics for bulk mode storage
         const statistics = {};
 
@@ -298,9 +287,20 @@ class SolutionWorker {
         statistics.emptySpaceOptimized = anneal.finalSolution.calculateEmptySpace();
         statistics.emptySpaceGrid = gridBaseline.calculateEmptySpace();
 
-        // Calculate cubby areas for both optimized and baseline cellular results
+        // Add case geometry to statistics
+        statistics.caseWidth = anneal.finalSolution.layout[0].length;
+        statistics.caseHeight = anneal.finalSolution.layout.length;
+
+        // Calculate cubby areas for the optimized cellular result
         statistics.cubbyAreasOptimized = cellular.calculateAllCubbyAreas();
-        statistics.cubbyAreasBaseline = baselineCellular.calculateAllCubbyAreas();
+
+        // Add perimeters to the cubby area data
+        statistics.cubbyAreasOptimized.forEach(cubby => {
+            const shape = cellular.shapes[cubby.shape_id];
+            if (shape) {
+                cubby.perimeter = shape.getPerimeter();
+            }
+        });
 
         // Define export configuration (hardcoded for bulk mode)
         const exportConfig = {
@@ -327,17 +327,10 @@ class SolutionWorker {
         statistics.totalBoardLengthOptimized = optimizedExport.getTotalBoardLength();
         statistics.boardRenderDataOptimized = optimizedExport.getBoardRenderData();
 
-        // Calculate board counts, lengths, and render data for baseline algorithm
-        const baselineExport = new this.Export(baselineCellular, spacing, exportConfig);
-        baselineExport.makeBoards();
-        statistics.boardCountBaseline = baselineExport.boards.length;
-        statistics.totalBoardLengthBaseline = baselineExport.getTotalBoardLength();
-        statistics.boardRenderDataBaseline = baselineExport.getBoardRenderData();
-
         return statistics;
     }
 
-    createFlatRecord(anneal, gridBaseline, cellular, baselineCellular, statistics, shapeInstances, samplingInfo) {
+    createFlatRecord(anneal, gridBaseline, cellular, statistics, shapeInstances, samplingInfo) {
         // Create export format structure for export_data_json
         const exportData = {
             savedAnneals: [{
@@ -369,11 +362,10 @@ class SolutionWorker {
             empty_space_optimized: statistics.emptySpaceOptimized,
             empty_space_grid: statistics.emptySpaceGrid,
             board_count_optimized: statistics.boardCountOptimized,
-            board_count_baseline: statistics.boardCountBaseline,
             total_board_length_optimized: statistics.totalBoardLengthOptimized,
-            total_board_length_baseline: statistics.totalBoardLengthBaseline,
             cubby_areas_optimized: statistics.cubbyAreasOptimized,
-            cubby_areas_baseline: statistics.cubbyAreasBaseline,
+            caseWidth: statistics.caseWidth,
+            caseHeight: statistics.caseHeight,
             // Add sampling information if available
             shape_count: samplingInfo ? samplingInfo.shapeCount : shapeInstances.length,
             shape_ids: samplingInfo ? samplingInfo.shapeIds : shapeInstances.map(shape => shape.data.title)
@@ -400,13 +392,7 @@ class SolutionWorker {
                 solution: gridBaseline.toDataObject(),
                 score: gridBaseline.score
             }),
-            baseline_cellular_json: JSON.stringify({
-                cellSpace: baselineCellular.cellSpace,
-                maxTerrain: baselineCellular.maxTerrain,
-                numAlive: baselineCellular.numAlive || 0
-            }),
             board_render_data_optimized: JSON.stringify(statistics.boardRenderDataOptimized),
-            board_render_data_baseline: JSON.stringify(statistics.boardRenderDataBaseline),
             sampling_info_json: JSON.stringify(samplingInfo) // Add sampling info to the record
         };
     }

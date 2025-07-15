@@ -75,11 +75,11 @@ class QueueWorker {
      * Start a new bulk job
      */
     async startJob(payload) {
-        const { config, inputShapes, totalWorkers } = payload;
+        const { config, inputShapes, totalSolutions } = payload;
 
-        this.currentJobId = await this.result.createBulkJob(config, inputShapes, totalWorkers);
+        this.currentJobId = await this.result.createBulkJob(config, inputShapes, totalSolutions);
         this.currentJobConfig = config;
-        this.totalExpected = totalWorkers;
+        this.totalExpected = totalSolutions;
         this.completedCount = 0;
         this.failedCount = 0;
         this.jobStartTime = Date.now();
@@ -87,7 +87,7 @@ class QueueWorker {
 
         this.sendMessage('JOB_STARTED', {
             jobId: this.currentJobId,
-            totalWorkers: totalWorkers
+            totalSolutions: totalSolutions
         });
     }
 
