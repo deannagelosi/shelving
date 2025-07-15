@@ -27,6 +27,13 @@
         <section id="canvas-container">
             <!-- p5.js canvas will be created here -->
         </section>
+
+        <section id="analysis-dashboard" style="display: none;">
+            <h2>Statistical Analysis Dashboard</h2>
+            <div id="analysis-content">
+                <!-- Analysis blocks will be created here -->
+            </div>
+        </section>
     </main>
 
     <!-- p5.js library -->
@@ -34,6 +41,12 @@
 
     <!-- SQL.js library for SQLite database reading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- jStat library for statistical analysis -->
+    <script src="../../../lib/jstat.min.js"></script>
+
+    <!-- Chart.js library for statistical visualization -->
+    <script src="../../../lib/chart.js-4.5.0.min.js"></script>
 
     <!-- Core application classes -->
     <script src="../../core/EventEmitter.js"></script>
@@ -47,8 +60,12 @@
     <script src="../../interfaces/web/SolutionRenderer.js"></script>
     <script src="../../interfaces/web/CellularRenderer.js"></script>
     <script src="../../interfaces/web/BoardRenderer.js"></script>
+    <script src="stats.js"></script>
 
-    <!-- Viewer logic -->
+    <!-- Viewer application scripts -->
+    <script src="viewerState.js"></script>
+    <script src="repository.js"></script>
+    <script src="viewerRenderer.js"></script>
     <script src="viewer.js"></script>
 </body>
 

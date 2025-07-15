@@ -94,6 +94,34 @@ main {
     background-color: #d5dbdb;
 }
 
+.solutions-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    background-color: #ffffff;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+}
+
+.solutions-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.solutions-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.solutions-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.solutions-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
 .solution-item {
     background-color: #e8f5e8;
     border: 1px solid #27ae60;
@@ -162,4 +190,86 @@ main {
     border-radius: 4px;
     padding: 1rem;
     margin: 1rem 0;
+}
+
+/* Analysis Dashboard Styles */
+#analysis-dashboard {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+#analysis-dashboard h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+#analysis-content {
+    display: grid;
+    gap: 2rem;
+}
+
+.analysis-block {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.analysis-block h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.kpi-table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.kpi-table th,
+.kpi-table td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.kpi-table th {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.chart-container {
+    margin: 1rem 0;
+    height: 300px;
+    position: relative;
+}
+
+.confidence-interval {
+    background-color: #e8f5e8;
+    border: 1px solid #27ae60;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+.improvement-positive {
+    color: #27ae60;
+}
+
+.improvement-negative {
+    color: #e74c3c;
+}
+
+.improvement-neutral {
+    color: #f39c12;
 }
