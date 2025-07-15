@@ -106,10 +106,8 @@ class CellularRenderer {
         for (let i = 0; i < areaDataArray.length; i++) {
             const areaData = areaDataArray[i];
             const { visitedCells, labelCoords } = areaData;
-            console.log("Label coords: ", labelCoords);
 
             if (!visitedCells || visitedCells.length === 0) {
-                console.log("No visited cells data for label: ", labelCoords);
                 continue; // Skip if no visited cells data
             }
 
