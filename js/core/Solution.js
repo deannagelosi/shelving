@@ -1,3 +1,26 @@
+// Weights for objective functions in calcScore
+const WEIGHTS = {
+    // ----- Overlap / collision -----
+    overlapShapeExponent: 3,           // shapes^exponent multiplier when any overlap exists
+
+    // ----- Empty-space clustering -----
+    clusterPenaltyExponent: 4,         // (clusters above min)^exponent multiplier
+    clusterLimit: 5,                   // >= this annealScore is considered clustered
+
+    // ----- Floating shapes (gravity) -----
+    bottomLiftExponent: 3,             // shapes^exponent multiplier when any bottom lift exists
+    emptyRowDivisor: 1.5,              // divisor applied to shapes.length for empty-row contribution
+
+    // ----- General wasted space -----
+    spaceScalar: 0.1,                  // linear scaling factor for total empty space
+
+    // ----- Aspect ratio handling -----
+    aspectExponent: 2,                 // (ratio deviation)^exponent
+    targetWideRatio: 2,                // w/h target when aspectRatioPref === 1 (wide)
+    targetTallRatio: 0.5,              // w/h target when aspectRatioPref === -1 (tall)
+    targetSquareRatio: 1               // w/h target when aspectRatioPref === 0 (square)
+};
+
 class Solution {
     constructor(_shapes, _startID, _aspectRatioPref = 0) {
         this.shapes = _shapes; // shapes with position data
@@ -5,7 +28,8 @@ class Solution {
         this.aspectRatioPref = _aspectRatioPref; // -1 for tall, 0 for square, 1 for wide layouts
         this.layout = [[]]; // 2D array of shapes that occupy the layout
 
-        this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
+        // penalize when anneal scores of this and above are clustered (multiples touching)
+        this.clusterLimit = WEIGHTS.clusterLimit;
         this.score;
         this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
     }
@@ -206,7 +230,7 @@ class Solution {
                                 // count if the adjacent square is the same score
                                 if (this.layout[localY][localX].annealScore == annealScore) {
                                     // skew larger clustered scores as worse
-                                    clusterPenalty += Math.pow(2, (annealScore - this.clusterLimit));
+                                    clusterPenalty += Math.pow((annealScore - this.clusterLimit + 1), WEIGHTS.clusterPenaltyExponent);
                                 }
                                 checkCount++; // used to see how many out-of-bounds (how many skipped)
                             }
@@ -261,13 +285,13 @@ class Solution {
 
         // adjust penalties
         if (totalBottomLift > 0) {
-            totalBottomLift *= Math.pow(this.shapes.length, 3);
+            totalBottomLift *= Math.pow(this.shapes.length, WEIGHTS.bottomLiftExponent);
         }
         if (overlappingCount > 0) {
-            overlappingCount *= Math.pow(this.shapes.length, 3);
+            overlappingCount *= Math.pow(this.shapes.length, WEIGHTS.overlapShapeExponent);
         }
-        let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / 1.5));
-        let spacePenalty = (totalAnnealScore + totalSquares) * 0.1;
+        let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / WEIGHTS.emptyRowDivisor));
+        let spacePenalty = (totalAnnealScore + totalSquares) * WEIGHTS.spaceScalar;
 
         // check if solution is valid
         if (totalBottomLift == 0 && overlappingCount == 0) {
@@ -277,25 +301,23 @@ class Solution {
         let w = this.layout[0].length;
         let h = this.layout.length;
 
-        let whRatio;
+        let diffRatio;
         if (w === 0 || h === 0) {
-            whRatio = 0;
+            diffRatio = 0;
         } else {
             // compare aspect ratio preference to the result
             let targetRatio;
             if (this.aspectRatioPref === 1) { // wide
-                targetRatio = 2;
+                targetRatio = WEIGHTS.targetWideRatio;
             } else if (this.aspectRatioPref === -1) { // tall
-                targetRatio = 0.5;
+                targetRatio = WEIGHTS.targetTallRatio;
             } else { // square
-                targetRatio = 1;
+                targetRatio = WEIGHTS.targetSquareRatio;
             }
-
-            const currentRatio = w / h;
-            const ratioRatio = currentRatio / targetRatio;
-            whRatio = Math.max(ratioRatio, 1 / ratioRatio) - 1;
+            const currentRatio = Math.max((w / h), (h / w));
+            diffRatio = currentRatio / targetRatio;
         }
-        let aspectRatioPenalty = Math.pow((whRatio * this.shapes.length), 2) * 5.0;
+        let aspectRatioPenalty = Math.pow(diffRatio, WEIGHTS.aspectExponent);
 
         this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + aspectRatioPenalty + spacePenalty);
     }
