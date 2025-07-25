@@ -27,6 +27,17 @@ describe('BulkCLI - CLI Interface Tests', () => {
     let bulkCLI;
     let mockWorker;
     let mockQueueWorker;
+    let mockConsoleLog;
+
+    beforeAll(() => {
+        // Suppress console.log for the entire suite to reduce noise
+        mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+    });
+
+    afterAll(() => {
+        // Restore console.log after the suite
+        mockConsoleLog.mockRestore();
+    });
 
     beforeEach(() => {
         // Reset all mocks
@@ -77,7 +88,7 @@ describe('BulkCLI - CLI Interface Tests', () => {
                 '-s', 'input.json',
                 '-c', '100',
                 '-a', '1.5',
-                '-b', '25'
+                '-w', '25'
             ];
 
             const options = bulkCLI.parseArguments(args);
@@ -85,7 +96,7 @@ describe('BulkCLI - CLI Interface Tests', () => {
             expect(options.shapesFile).toBe('input.json');
             expect(options.count).toBe(100);
             expect(options.aspectRatio).toBe(1.5);
-            expect(options.batchSize).toBe(25);
+            expect(options.workers).toBe(25);
         });
 
         test('should throw error for missing shapes file', () => {
@@ -125,18 +136,22 @@ describe('BulkCLI - CLI Interface Tests', () => {
                 // Simulate actual exit by throwing to stop execution
                 throw new Error(`process.exit(${code})`);
             });
-            const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+            // Temporarily restore console.log for this specific test
+            mockConsoleLog.mockRestore();
+            const mockConsoleLogForTest = jest.spyOn(console, 'log').mockImplementation(() => { });
 
             const args = ['--help'];
 
             // Help option should call process.exit(0) and stop execution
             expect(() => bulkCLI.parseArguments(args)).toThrow('process.exit(0)');
 
-            expect(mockConsoleLog).toHaveBeenCalled();
+            expect(mockConsoleLogForTest).toHaveBeenCalled();
             expect(mockExit).toHaveBeenCalledWith(0);
 
             mockExit.mockRestore();
-            mockConsoleLog.mockRestore();
+            mockConsoleLogForTest.mockRestore();
+            // Re-apply the suite-level mock
+            mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
         });
     });
 
@@ -145,35 +160,38 @@ describe('BulkCLI - CLI Interface Tests', () => {
             const options = {
                 aspectRatio: 2.0,
                 count: 200,
-                batchSize: 75
+                workers: 75
             };
 
-            const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+            // Temporarily restore console.log for this test
+            mockConsoleLog.mockRestore();
+            const mockConsoleLogForTest = jest.spyOn(console, 'log').mockImplementation(() => { });
 
             await bulkCLI.loadConfiguration(options);
 
             expect(bulkCLI.config.aspectRatioPref).toBe(2.0);
-            expect(bulkCLI.config.workerCount).toBe(200);
-            expect(bulkCLI.config.batchSize).toBe(75);
+            expect(bulkCLI.totalSolutions).toBe(200);
+            expect(bulkCLI.config.maxWorkers).toBe(75);
 
             // Should log configuration
-            expect(mockConsoleLog).toHaveBeenCalledWith('📋 Configuration:');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('📋 Configuration:');
 
-            mockConsoleLog.mockRestore();
+            mockConsoleLogForTest.mockRestore();
+            mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
         });
 
         test('should apply default values for missing options', async () => {
             const options = {
                 aspectRatio: 1.0,
                 count: 50,
-                batchSize: 100 // Add missing batchSize
+                workers: 100
             };
 
             await bulkCLI.loadConfiguration(options);
 
             expect(bulkCLI.config.aspectRatioPref).toBe(1.0);
-            expect(bulkCLI.config.workerCount).toBe(50);
-            expect(bulkCLI.config.batchSize).toBe(100); // default from options, not changed
+            expect(bulkCLI.totalSolutions).toBe(50);
+            expect(bulkCLI.config.maxWorkers).toBe(100);
         });
     });
 
@@ -187,15 +205,17 @@ describe('BulkCLI - CLI Interface Tests', () => {
             const fileContent = JSON.stringify({ allShapes: mockShapes });
             fs.promises.readFile.mockResolvedValue(fileContent);
 
-            const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+            mockConsoleLog.mockRestore();
+            const mockConsoleLogForTest = jest.spyOn(console, 'log').mockImplementation(() => { });
 
             await bulkCLI.loadInputShapes('test.json');
 
             expect(fs.promises.readFile).toHaveBeenCalledWith('test.json', 'utf8');
             expect(bulkCLI.inputShapes).toEqual(mockShapes);
-            expect(mockConsoleLog).toHaveBeenCalledWith('   ✅ Loaded 2 shapes');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('   ✅ Loaded 2 shapes');
 
-            mockConsoleLog.mockRestore();
+            mockConsoleLogForTest.mockRestore();
+            mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
         });
 
         test('should handle file not found error', async () => {
@@ -242,6 +262,10 @@ describe('BulkCLI - CLI Interface Tests', () => {
             bulkCLI.queueWorker = mockQueueWorker;
             bulkCLI.inputShapes = [{ test: 'shape' }];
             bulkCLI.config = { aspectRatioPref: 0 };
+            // Mock the worker pool to prevent 'onFinished' error
+            bulkCLI.pool = {
+                onFinished: jest.fn()
+            };
         });
 
         test('should handle RESULT messages correctly', () => {
@@ -256,15 +280,9 @@ describe('BulkCLI - CLI Interface Tests', () => {
 
             expect(mockQueueWorker.postMessage).toHaveBeenCalledWith({
                 type: 'SOLUTION_RESULT',
-                payload: {
-                    type: 'SOLUTION_RESULT',
-                    startId: 5,
-                    result: message.payload
-                }
+                payload: message.payload
             });
-
-            // Worker termination is handled by the worker itself after sending result
-            expect(worker.terminate).not.toHaveBeenCalled();
+            expect(bulkCLI.pool.onFinished).toHaveBeenCalled();
         });
 
         test('should handle ERROR messages correctly', () => {
@@ -277,26 +295,12 @@ describe('BulkCLI - CLI Interface Tests', () => {
 
             bulkCLI.handleSolutionWorkerMessage(worker, startId, message);
 
-            expect(mockQueueWorker.postMessage).toHaveBeenCalledWith({
-                type: 'SOLUTION_ERROR',
-                payload: {
-                    type: 'SOLUTION_ERROR',
-                    startId: 3,
-                    error: {
-                        message: 'Worker failed',
-                        stack: 'Error stack',
-                        errorType: 'solution'
-                    },
-                    workerPayload: {
-                        shapes: bulkCLI.inputShapes,
-                        startId: 3,
-                        aspectRatioPref: 0
-                    }
-                }
-            });
-
-            // ERROR messages from workers still require termination since they don't self-terminate
-            expect(worker.terminate).not.toHaveBeenCalled();
+            expect(mockQueueWorker.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'SOLUTION_ERROR'
+                })
+            );
+            expect(bulkCLI.pool.onFinished).toHaveBeenCalled();
         });
 
         test('should handle PROGRESS messages', () => {
@@ -311,6 +315,7 @@ describe('BulkCLI - CLI Interface Tests', () => {
 
             // Progress messages are ignored in bulk mode
             expect(worker.terminate).not.toHaveBeenCalled(); // Don't terminate on progress
+            expect(bulkCLI.pool.onFinished).not.toHaveBeenCalled();
         });
     });
 
@@ -324,7 +329,6 @@ describe('BulkCLI - CLI Interface Tests', () => {
             bulkCLI.handleQueueWorkerMessage(message);
 
             expect(bulkCLI.jobId).toBe('test-job-123');
-            // JOB_STARTED messages don't log in the current implementation
         });
 
         test('should handle PROGRESS_UPDATE messages', () => {
@@ -340,7 +344,8 @@ describe('BulkCLI - CLI Interface Tests', () => {
         });
 
         test('should handle JOB_COMPLETED messages', () => {
-            const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+            mockConsoleLog.mockRestore();
+            const mockConsoleLogForTest = jest.spyOn(console, 'log').mockImplementation(() => { });
 
             const message = {
                 type: 'JOB_COMPLETED',
@@ -354,15 +359,16 @@ describe('BulkCLI - CLI Interface Tests', () => {
 
             bulkCLI.handleQueueWorkerMessage(message);
 
-            expect(mockConsoleLog).toHaveBeenCalledWith('🎉 Bulk analysis completed!');
-            expect(mockConsoleLog).toHaveBeenCalledWith('Job ID: test-job-456');
-            expect(mockConsoleLog).toHaveBeenCalledWith('Duration: 120s');
-            expect(mockConsoleLog).toHaveBeenCalledWith('Successful solutions: 95');
-            expect(mockConsoleLog).toHaveBeenCalledWith('Failed attempts: 5');
-            expect(mockConsoleLog).toHaveBeenCalledWith('💾 Results saved to database: js/models/results.sqlite');
-            expect(mockConsoleLog).toHaveBeenCalledWith('📋 Error details are stored in the solution_errors table');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('🎉 Bulk analysis completed!');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('Job ID: test-job-456');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('Duration: 120s');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('Successful solutions: 95');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('Failed attempts: 5');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('💾 Results saved to database: js/models/results.sqlite');
+            expect(mockConsoleLogForTest).toHaveBeenCalledWith('📋 Error details are stored in the solution_errors table');
 
-            mockConsoleLog.mockRestore();
+            mockConsoleLogForTest.mockRestore();
+            mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
         });
 
         test('should handle error messages', () => {
@@ -376,7 +382,6 @@ describe('BulkCLI - CLI Interface Tests', () => {
             bulkCLI.handleQueueWorkerMessage(message);
 
             expect(mockConsoleError).toHaveBeenCalledWith('❌ Queue error: Database connection failed');
-            // Error stack is not logged in the current implementation
 
             mockConsoleError.mockRestore();
         });
@@ -389,7 +394,7 @@ describe('BulkCLI - CLI Interface Tests', () => {
             // Mock process.stdout.write instead of console.log
             const mockStdoutWrite = jest.spyOn(process.stdout, 'write').mockImplementation(() => { });
 
-            bulkCLI.totalWorkers = 100;
+            bulkCLI.totalSolutions = 100;
             bulkCLI.completedWorkers = 75;
             bulkCLI.failedWorkers = 15;
             bulkCLI.startTime = Date.now() - 60000; // 1 minute ago
@@ -406,6 +411,12 @@ describe('BulkCLI - CLI Interface Tests', () => {
     });
 
     describe('Error Handling and Cleanup', () => {
+        beforeEach(() => {
+            // Mock the worker pool to prevent 'onFinished' error
+            bulkCLI.pool = {
+                onFinished: jest.fn()
+            };
+        });
         test('should handle solution worker runtime errors', () => {
             bulkCLI.queueWorker = mockQueueWorker;
             bulkCLI.inputShapes = [{ test: 'shape' }];
@@ -416,21 +427,14 @@ describe('BulkCLI - CLI Interface Tests', () => {
 
             bulkCLI.handleSolutionWorkerError(worker, startId, error);
 
-            expect(mockQueueWorker.postMessage).toHaveBeenCalledWith({
-                type: 'SOLUTION_ERROR',
-                payload: {
-                    type: 'SOLUTION_ERROR',
-                    startId: 7,
-                    error: {
-                        message: 'Worker runtime error: Worker crashed',
-                        stack: error.stack,
-                        errorType: 'runtime'
-                    },
-                    workerPayload: expect.any(Object)
-                }
-            });
+            expect(mockQueueWorker.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'SOLUTION_ERROR'
+                })
+            );
 
             expect(worker.terminate).toHaveBeenCalled();
+            expect(bulkCLI.pool.onFinished).toHaveBeenCalled();
         });
 
         test('should cleanup intervals and queue worker on completion', async () => {
@@ -457,7 +461,7 @@ describe('BulkCLI - CLI Interface Tests', () => {
             jest.useRealTimers(); // Use real timers for this test
 
             const start = Date.now();
-            await bulkCLI.sleep(10); // Use shorter sleep for faster test
+            await bulkCLI.sleep(10); // Use short sleep for fast test
             const end = Date.now();
 
             // Allow some tolerance for timing

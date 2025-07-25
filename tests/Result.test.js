@@ -5,11 +5,20 @@ describe('Result.js Database Operations', () => {
     let result;
     let testShapes;
     let testConfig;
+    let mockConsoleLog; // To suppress noisy console logs
 
     beforeAll(async () => {
+        // Suppress console.log for the entire suite
+        mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => { });
+
         // Load test shapes from fixtures
         testShapes = loadShapesFromFixture().slice(0, 3); // Use first 3 shapes for testing
         testConfig = { aspectRatioPref: 0 };
+    });
+
+    afterAll(() => {
+        // Restore console.log after all tests in the suite have run
+        mockConsoleLog.mockRestore();
     });
 
     beforeEach(async () => {
@@ -99,39 +108,27 @@ describe('Result.js Database Operations', () => {
 
             // Create mock solution result that matches solution-worker output format
             mockSolutionResult = {
-                finalSolution: {
-                    shapes: testShapes.map((shape, index) => ({
-                        posX: index * 10,
-                        posY: index * 5,
-                        data: shape.data
-                    })),
-                    score: 150.5,
-                    valid: true,
-                    buffer: 10,
-                    yPadding: 15,
-                    xPadding: 15
-                },
-                cellular: {
-                    cellLines: [[0, 0, 10, 10], [5, 5, 15, 15]],
-                    maxTerrain: 25,
-                    numAlive: 42
-                },
-                metadata: {
-                    timestamp: Date.now(),
-                    mode: 'bulk',
-                    aspectRatioPref: 0
-                }
+                jobId: jobId,
+                startId: 0,
+                score: 150.5,
+                valid: true,
+                export_data_json: JSON.stringify({ key: 'export' }),
+                cellular_json: JSON.stringify({ key: 'cellular' }),
+                metadata_json: JSON.stringify({ key: 'meta' }),
+                baseline_grid_json: JSON.stringify({ key: 'grid' }),
+                stats_breakdown_json: JSON.stringify({ key: 'stats' }),
+                board_render_data_optimized: JSON.stringify({ key: 'render' })
             };
         });
 
         test('should save solution batch in transaction', async () => {
             const batch = [
-                { jobId, startId: 0, result: mockSolutionResult },
-                { jobId, startId: 1, result: { ...mockSolutionResult, finalSolution: { ...mockSolutionResult.finalSolution, score: 200.0 } } },
-                { jobId, startId: 2, result: { ...mockSolutionResult, finalSolution: { ...mockSolutionResult.finalSolution, score: 100.0 } } }
+                mockSolutionResult,
+                { ...mockSolutionResult, startId: 1, score: 200.0 },
+                { ...mockSolutionResult, startId: 2, score: 100.0 }
             ];
 
-            const savedIds = await result.saveSolutionBatch(batch, testShapes);
+            const savedIds = await result.saveSolutionBatch(batch);
 
             expect(savedIds).toHaveLength(3);
             expect(savedIds.every(id => typeof id === 'string')).toBe(true);
@@ -139,11 +136,11 @@ describe('Result.js Database Operations', () => {
 
         test('should save solution batch with provided inputShapes', async () => {
             const batch = [
-                { jobId, startId: 0, result: mockSolutionResult }
+                mockSolutionResult
             ];
 
             // Test the optimization by providing inputShapes directly
-            const savedIds = await result.saveSolutionBatch(batch, testShapes);
+            const savedIds = await result.saveSolutionBatch(batch);
 
             expect(savedIds).toHaveLength(1);
             expect(typeof savedIds[0]).toBe('string');

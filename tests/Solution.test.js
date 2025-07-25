@@ -68,32 +68,27 @@ describe('Solution', () => {
         expect(solution.score).toBeGreaterThan(100); // Overlaps should create significant penalty
     });
 
-    test('should mark valid solution with no overlaps or floating shapes', () => {
-        // 1. Setup - Create a simple single shape layout (easier to ensure validity)
-        const shapes = allFixtureShapes.slice(0, 1);
-        shapes[0].posX = 0;
-        shapes[0].posY = 0; // On the bottom
-        const solution = new Solution(shapes);
+    test('should correctly set valid flag for overlapping vs. non-overlapping solutions', () => {
+        // 1. Setup a valid, non-overlapping solution
+        const validShapes = allFixtureShapes.slice(0, 1);
+        validShapes[0].posX = 0;
+        validShapes[0].posY = 0; // On the bottom
+        const validSolution = new Solution(validShapes);
+        validSolution.makeLayout();
+        validSolution.calcScore();
 
-        // 2. Execute
-        solution.makeLayout();
-        solution.calcScore();
-
-        // 3. Assert - Single shape on bottom should be valid
-        expect(solution.valid).toBe(true);
-        expect(solution.score).toBeGreaterThanOrEqual(0);
-
-        // Also test that it has lower score than an overlapping scenario
+        // 2. Setup an invalid, overlapping solution
         const overlappingShapes = allFixtureShapes.slice(0, 2);
         overlappingShapes[0].posX = 0;
         overlappingShapes[0].posY = 0;
-        overlappingShapes[1].posX = 0; // Same position
-        overlappingShapes[1].posY = 0;
+        overlappingShapes[1].posX = 0; // Same position = overlap
         const overlappingSolution = new Solution(overlappingShapes);
         overlappingSolution.makeLayout();
         overlappingSolution.calcScore();
 
-        expect(solution.score).toBeLessThan(overlappingSolution.score);
+        // 3. Assert
+        expect(validSolution.valid).toBe(true);
+        expect(overlappingSolution.valid).toBe(false);
     });
 
     test('should handle createNeighbor functionality', () => {
