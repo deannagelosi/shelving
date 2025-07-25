@@ -286,6 +286,22 @@ class ExportUI {
     }
     //== end button handlers
 
+    showBoardTooLongError(longestBoard, sheetWidth) {
+        clear();
+        background(255);
+        fill('red');
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text(
+            `Error: Board #${longestBoard.id} is too long for the current sheet.\n\n` +
+            `Board Length: ${longestBoard.len.toFixed(2)} inches\n` +
+            `Sheet Width: ${sheetWidth.toFixed(2)} inches\n\n` +
+            `Please increase the sheet width in the settings to continue.`,
+            width / 2,
+            height / 2
+        );
+    }
+
     prepareExportData() {
         // if no current anneal, set to first saved anneal
         if (!appState.currentAnneal) {
@@ -343,10 +359,20 @@ class ExportUI {
         // create new export
         this.currExport = new Export(cellData, spacing, config);
         this.currExport.makeBoards();
-        
+
         // log the number of boards created
         console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
-        
+
+        // Check if any board is longer than the sheet width
+        const longestBoard = this.currExport.getLongestBoard();
+        if (longestBoard && longestBoard.len > sheetWidth) {
+            this.showBoardTooLongError(longestBoard, sheetWidth);
+            updateButton(this.html.showButton, false);
+            updateButton(this.html.downloadDXFButton, false);
+            updateButton(this.html.downloadCaseButton, false);
+            return;
+        }
+
         this.currExport.prepLayout();
 
         // preview the layout or chase

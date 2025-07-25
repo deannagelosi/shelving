@@ -201,6 +201,14 @@ class Export {
         }));
     }
 
+    getLongestBoard() {
+        if (!this.boards || this.boards.length === 0) {
+            return null;
+        }
+        // boards are already sorted by length, descending
+        return this.boards[0];
+    }
+
     getTotalBoardLength() {
         // calculate total length of all boards for statistical analysis
         return this.boards.reduce((total, board) => total + board.len, 0);

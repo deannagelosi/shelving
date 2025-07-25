@@ -61,7 +61,7 @@ class Anneal {
             // give each start lower initial temperature and faster cooling
             const multiConfig = {
                 multiStart: true,
-                initialTemp: this.initialTemp * (1 - startID / this.numStarts),
+                initialTemp: this.initialTemp * (1 - (startID / this.numStarts)),
                 initialCoolingRate: this.initialCoolingRate * 0.75,
                 progressCallback: progressCallback
             };
