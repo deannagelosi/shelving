@@ -681,15 +681,6 @@ class Cellular {
         }
     }
 
-    strainColor(strain) {
-        let value = ((strain + 1) * 255) % 256;
-        return color(this.range(value), this.range(value * 70), this.range(value * 56));
-    }
-
-    range(num) {
-        return num % 256;
-    }
-
     static fromDataObject(cellularData, solution) {
         // "Rehydrates" a Cellular instance from raw JSON data and a Solution instance
         const newCellular = new Cellular(solution);

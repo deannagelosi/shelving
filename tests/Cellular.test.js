@@ -191,30 +191,6 @@ describe('Cellular', () => {
         expect(shapeEnds[1]).toBeGreaterThanOrEqual(shapeEnds[0]);
     });
 
-    test('utility functions should work', () => {
-        // 1. Setup
-        const solution = createTestSolution();
-        const cellular = new Cellular(solution);
-
-        // 2. Execute & Assert
-
-        // Test range function
-        expect(cellular.range(0)).toBe(0);
-        expect(cellular.range(255)).toBe(255);
-        expect(cellular.range(256)).toBe(0); // Should wrap
-        expect(cellular.range(300)).toBe(44); // 300 % 256 = 44
-
-        // Test strainColor function - mock the p5.js color function
-        global.color = jest.fn((r, g, b) => ({ r, g, b }));
-
-        const color1 = cellular.strainColor(1);
-        const color2 = cellular.strainColor(2);
-
-        // Colors should be different for different strains
-        expect(color1).not.toEqual(color2);
-        expect(global.color).toHaveBeenCalled();
-    });
-
     describe('growOnce() method core rules', () => {
         // Helper function to create a minimal cellular instance with custom cell space
         function createCellularWithCustomCellSpace(cellSpaceSetup) {
