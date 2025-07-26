@@ -1,6 +1,13 @@
-jsconfig.json
-libraries/
-.DS_Store
-examples/
+# IDE
 .vscode/
-docs/
+.cursor/
+
+# System
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Project
+examples/
+*.sqlite

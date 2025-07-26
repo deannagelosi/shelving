@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Results Viewer - Uniquely Shaped Spaces</title>
+    <link rel="stylesheet" href="viewer.css">
+</head>
+
+<body>
+    <header>
+        <h1>Bulk Results Viewer</h1>
+        <p>Load and compare optimized solutions with their statistical baselines</p>
+    </header>
+
+    <main>
+        <section id="controls">
+            <div id="file-input-container">
+                <!-- File input will be created by p5.js -->
+            </div>
+            <div id="job-list-container">
+                <!-- Job list will be created by p5.js -->
+            </div>
+        </section>
+
+        <section id="canvas-container">
+            <!-- p5.js canvas will be created here -->
+        </section>
+
+        <section id="analysis-dashboard" style="display: none;">
+            <h2>Statistical Analysis Dashboard</h2>
+            <div id="analysis-content">
+                <!-- Analysis blocks will be created here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- p5.js library -->
+    <script src="../../../lib/p5-1.6.0.js"></script>
+
+    <!-- SQL.js library for SQLite database reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- jStat library for statistical analysis -->
+    <script src="../../../lib/jstat.min.js"></script>
+
+    <!-- Chart.js library for statistical visualization -->
+    <script src="../../../lib/chart.js-4.5.0.min.js"></script>
+
+    <!-- Core application classes -->
+    <script src="../../core/EventEmitter.js"></script>
+    <script src="../../core/Shape.js"></script>
+    <script src="../../core/Solution.js"></script>
+    <script src="../../core/Cellular.js"></script>
+    <script src="../../core/Board.js"></script>
+    <script src="../../core/Export.js"></script>
+
+    <!-- Renderer classes -->
+    <script src="../../interfaces/web/SolutionRenderer.js"></script>
+    <script src="../../interfaces/web/CellularRenderer.js"></script>
+    <script src="../../interfaces/web/BoardRenderer.js"></script>
+    <script src="stats.js"></script>
+
+    <!-- Viewer application scripts -->
+    <script src="viewerState.js"></script>
+    <script src="repository.js"></script>
+    <script src="viewerRenderer.js"></script>
+    <script src="viewer.js"></script>
+</body>
+
+</html>

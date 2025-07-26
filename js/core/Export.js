@@ -1,7 +1,7 @@
 class Export {
     constructor(_cellData, _spacing, _config) {
         this.cellData = _cellData;
-        this.cellLines = this.cellData.cellLines;
+        this.cellLines = this.cellData.getCellRenderLines();
         this.squareSize = this.cellData.squareSize;
         this.buffer = _spacing.buffer;
         this.xPadding = _spacing.xPadding;
@@ -25,7 +25,7 @@ class Export {
         };
 
         // Configuration for laser cutting
-        this.gap = 0.5 // inch gap between boards
+        this.gap = 0.5; // inch gap between boards
         this.fontSize = 0.10; // inch font size for etching
         this.fontOffset = 0.10;
         this.sheets = []; // holds what boards are on each sheet and row
@@ -43,7 +43,7 @@ class Export {
 
         // Group cellLines into horizontal and vertical segments
         for (let lineKey of this.cellLines) {
-            const [y1, x1, y2, x2] = lineKey.split(',').map(Number);
+            const [y1, x1, y2, x2, strain] = lineKey.split(',').map(Number);
 
             if (y1 === y2) { // Horizontal segment
                 const key = y1;
@@ -79,7 +79,7 @@ class Export {
             let currentEnd = lineSegments[0].end;
 
             for (let i = 1; i < lineSegments.length; i++) {
-                if (lineSegments[i].start <= currentEnd + 1) {
+                if (lineSegments[i].start <= currentEnd) {
                     currentEnd = Math.max(currentEnd, lineSegments[i].end);
                 } else {
                     // Create a new board
@@ -189,6 +189,29 @@ class Export {
 
         hBoard.poi.xJoints.push(hJointPos);
         vBoard.poi.xJoints.push(vJointPos);
+    }
+
+    getBoardRenderData() {
+        // return simplified board data for rendering
+        return this.boards.map(board => ({
+            id: board.id,
+            start: { x: board.coords.start.x, y: board.coords.start.y },
+            end: { x: board.coords.end.x, y: board.coords.end.y },
+            orientation: board.orientation
+        }));
+    }
+
+    getLongestBoard() {
+        if (!this.boards || this.boards.length === 0) {
+            return null;
+        }
+        // boards are already sorted by length, descending
+        return this.boards[0];
+    }
+
+    getTotalBoardLength() {
+        // calculate total length of all boards for statistical analysis
+        return this.boards.reduce((total, board) => total + board.len, 0);
     }
 
     previewCase(renderer = null) {
@@ -313,11 +336,9 @@ class Export {
             // calculate the true board length
             let [sheet, row] = this.findBoardPosition(board.len);
             if (sheet === null && row === null) {
-                // not enough space, add a sheet
-                // todo: remove a sheet if there are more than needed
-                let numSheets = parseInt(exportUI.html.numSheetsInput.value());
-                exportUI.html.numSheetsInput.value(numSheets + 1);
-                exportUI.handleCreate();
+                // not enough space, request a new sheet and restart layout
+                appEvents.emit('addSheetRequested');
+                appEvents.emit('layoutRefreshRequested');
                 break;
             };
 
@@ -496,7 +517,7 @@ class Export {
         this.sheets = [];
         let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
 
-        this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0))
+        this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0));
         this.totalHeight = this.sheetHeight * this.numSheets;
     }
 
@@ -517,4 +538,10 @@ class Export {
         }
         return [null, null];
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Export;
 }

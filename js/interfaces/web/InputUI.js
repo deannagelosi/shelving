@@ -3,13 +3,10 @@ class InputUI {
         //== state variables
         this.inputGrid = [];
         this.imgData = {}; // (image, mask, brightness data, etc)
-        this.shapes = []; // array of Shape objects [{data (reference), posX (int), posY (int)}]
-        // dom elements and shape titles
-        this.htmlRef = {};
+        // dom elements
         this.html = {};
         this.shapeTitleElements = [];
         // flags
-        this.isExporting = false;
         this.eraseMode = "first";
 
         //== setup
@@ -35,37 +32,57 @@ class InputUI {
         this.clickDelay = 200; // milliseconds
 
         //== initialize UI elements
-        this.getHtmlRefs();
         this.initHeaderUI();
-        this.initBodyUI();
-        this.initRightSideUI();
+        this.initBottomUI();
+        this.initSidebarButtons();
 
-        // initially hide the input elements
-        this.hide();
+        //== event listeners
+        // listen for screen changes to manage visibility
+        appEvents.on('screenChanged', ({ screen }) => {
+            if (screen === ScreenState.INPUT) {
+                this.show();
+            } else {
+                this.hide();
+            }
+        });
     }
 
-    //== dom element setup methods
-    getHtmlRefs() {
-        // get references to parent dom elements
-        this.htmlRef.header = select('#header');
-        this.htmlRef.subheading = select('#subheading');
-        this.htmlRef.headerControls = select('#header-controls');
-        this.htmlRef.leftBar = select('#left-side-bar');
-        this.htmlRef.rightBar = select('#right-side-bar');
-        this.htmlRef.bottomDiv = select('#bottom-div');
-        this.htmlRef.rightSideTop = select('#right-side-bar .sidebar-top');
-        this.htmlRef.rightSideList = select('#right-side-bar .sidebar-list');
-        this.htmlRef.rightSideButtons = select('#right-side-bar .sidebar-buttons');
+    computeState() {
+        // centralized UI button state logic
+        return {
+            canExport: appState.shapes.length >= 1,
+            canNext: appState.shapes.length >= 2,
+            hasShapes: appState.shapes.length > 0
+        };
+    }
+
+    initSidebarButtons() {
+        // create sidebar buttons (hidden until screen is shown)
+        this.html.importButton = createButton('Import')
+            .addClass('button secondary-button hidden')
+            .parent(htmlRefs.right.buttons)
+            .mousePressed(() => this.handleImport());
+
+        this.html.exportButton = createButton('Export')
+            .addClass('button primary-button hidden')
+            .parent(htmlRefs.right.buttons)
+            .mousePressed(() => this.handleExport());
+
+        this.html.nextButton = createButton('Next')
+            .addClass('button primary-button hidden')
+            .parent(htmlRefs.right.buttons)
+            .mousePressed(() => this.handleNext());
     }
 
     initHeaderUI() {
-        //== setup ui elements for header
-        // Setup image upload and slider
+        // create header elements  (hidden until screen is shown)
+        // setup image upload and slider
         this.html.imageControls = createDiv()
             .id('image-controls')
-            .parent(this.htmlRef.headerControls);
+            .addClass('hidden')
+            .parent(htmlRefs.headerControls);
 
-        // Grid size selector
+        // grid size selector
         let gridSizeDiv = createDiv()
             .class('grid-size-control')
             .parent(this.html.imageControls);
@@ -80,23 +97,23 @@ class InputUI {
             .parent(gridSizeDiv)
             .input(() => this.adjustGridSize());
 
-        // Create a vertical divider
+        // create a vertical divider
         this.html.dividerLeft = createDiv()
             .class('vertical-divider')
             .parent(this.html.imageControls);
 
-        // Create upload button
+        // create upload button
         this.html.headerUploadButton = createButton('Upload image')
             .addClass('button primary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.handleImageUpload());
 
-        // Create a vertical divider
+        // create a vertical divider
         this.html.dividerRight = createDiv()
             .class('vertical-divider')
             .parent(this.html.imageControls);
 
-        // Create brightness slider
+        // create brightness slider
         this.html.sliderDiv = createDiv()
             .class('slider-control')
             .parent(this.html.imageControls);
@@ -111,21 +128,22 @@ class InputUI {
             .class('slider-icon empty')
             .parent(this.html.sliderDiv);
 
-        // Create and append the clear button
+        // create and append the clear button
         this.html.headerClearButton = createButton('Clear')
             .addClass('button secondary-button')
             .parent(this.html.imageControls)
             .mousePressed(() => this.resetCanvas());
     }
 
-    initBodyUI() {
-        //== setup ui elements for body
-        // create input fields and buttons row div
+    initBottomUI() {
+        // create bottom elements (under canvas)
+        // hidden until screen is shown
         this.html.inputDiv = createDiv()
-            .parent(this.htmlRef.bottomDiv)
-            .id('input-div');
+            .id('input-div')
+            .addClass('hidden')
+            .parent(htmlRefs.bottomDiv);
 
-        // create the title input field
+        // create the shape title input field
         this.html.titleLabel = createP('Title:')
             .parent(this.html.inputDiv)
             .addClass('input-label');
@@ -140,65 +158,36 @@ class InputUI {
         this.html.saveButton = createButton('Save')
             .parent(this.html.inputDiv)
             .addClass('button primary-button')
-            .mousePressed(() => this.saveShape());
-    }
-
-    initRightSideUI() {
-        //== setup ui elements for side bar
-        // create the IMPORT SHAPES button
-        this.html.importButton = createButton('Import')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button secondary-button')
-            .mousePressed(() => this.handleImport());
-
-        // create the EXPORT SHAPES button
-        this.html.exportButton = createButton('Export')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
-            .attribute('disabled', '') // until at least 1 shape
-            .mousePressed(() => this.exportShapes());
-
-        // create the NEXT button
-        this.html.nextButton = createButton('Next')
-            .parent(this.htmlRef.rightSideButtons)
-            .addClass('button primary-button')
-            .attribute('disabled', '') // until at least 2 shapes
-            .mousePressed(() => this.handleNext());
+            .mousePressed(() => this.handleSaveShape());
     }
 
     //== show/hide methods
+    // manage visibility and screen-specific setup
     show() {
-        // toggle on the input screen divs
-        this.htmlRef.leftBar.addClass('hidden');
-        this.htmlRef.rightBar.removeClass('hidden');
-        this.htmlRef.bottomDiv.removeClass('hidden');
-        // set titles
-        this.htmlRef.rightSideTop.html('Shapes');
-        // Set subheading
-        this.htmlRef.subheading.html("Object Input");
-
-        // remove hidden class from each element in this.html
+        // show all input screen elements
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
-        this.html.exportButton.addClass('hidden'); // hide export button
 
-        // setup and draw the input grid
+        // reset the canvas
+        clear();
+        background(255);
+
+        // setup and draw the blank input grid
         this.updateGridSize();
-
-        // // temp auto-loading for testing
-        // loadJSON('/examples/example-solutions.json', (importedData) => {
-        //     this.loadJsonData(importedData);
-        //     this.handleNext();
-        // });
     }
 
     hide() {
-        // toggle off input screen divs
-        this.htmlRef.leftBar.addClass('hidden');
-        this.htmlRef.rightBar.addClass('hidden');
-        this.htmlRef.bottomDiv.addClass('hidden');
-
-        // add hidden class to each element in this.html
+        // hide all input screen elements
         Object.values(this.html).forEach(element => element.addClass('hidden'));
+    }
+
+    update() {
+        // update button states based on current appState
+        const state = this.computeState();
+        updateButton(this.html.exportButton, state.canExport);
+        updateButton(this.html.nextButton, state.canNext);
+
+        // update dynamic lists
+        this.displayShapeTitles();
     }
 
     //== button handlers
@@ -239,81 +228,32 @@ class InputUI {
         input.elt.click(); // open  file dialog on click
     }
 
-    saveShape() {
+    handleSaveShape() {
         // find the shape title
         let titleValue = this.html.titleInput.value().trim();
         if (titleValue === '') { // no title entered by user
-            titleValue = `shape-${this.shapes.length + 1}`;
+            titleValue = `shape-${appState.shapes.length + 1}`;
         }
 
         // save the shape
         let newShape = new Shape();
         let gridCopy = this.inputGrid.map(colArray => [...colArray]);
         newShape.saveUserInput(titleValue, gridCopy); // save a copy of the input grid
-        this.shapes.push(newShape);
+        appState.shapes.push(newShape);
 
-        // Reset active shape and UI
+        // reset active shape and UI
         this.resetCanvas();
 
-        // toggle export button
-        if (this.shapes.length >= 1) {
-            this.html.exportButton.removeAttribute('disabled');
-        } else if (this.shapes.length < 1) {
-            this.html.exportButton.attribute('disabled', '');
-        }
-        // toggle next button
-        if (this.shapes.length >= 2) {
-            this.html.nextButton.removeAttribute('disabled');
-        } else if (this.shapes.length < 2) {
-            this.html.nextButton.attribute('disabled', '');
-        }
+        // notify ui update manager
+        appEvents.emit('stateChanged');
     }
 
-    exportShapes() {
-        // add full shapes array to saved anneals
-        if (this.isExporting) return; // block multiple clicks during export
-
-        this.isExporting = true;
-        this.html.exportButton.attribute('disabled', '');
-
-        // get a copy of shapes that only includes the data needed
-        let shapesCopy = this.shapes.map(shape => shape.exportShape());
-
-        let exportData = {
-            savedAnneals: [],
-            allShapes: shapesCopy
-        }
-
-        try {
-            saveJSONFile(exportData);
-
-        } catch (error) {
-            console.error('Export failed:', error);
-        } finally {
-            this.isExporting = false;
-            this.html.exportButton.removeAttribute('disabled');
-        }
+    handleExport() {
+        // trigger global export functionality
+        appEvents.emit('exportRequested');
     }
 
     handleNext() {
-        // clean up the input screen
-        this.clearShapeTitles();
-
-        // setup for the design screen
-        // - setup the list of shapes
-        this.shapes.forEach((shape, index) => {
-            // start with all enabled
-            this.shapes[index].enabled = true;
-        });
-        //  - setup list of solutions if loaded
-        if (designUI.savedAnneals.length > 0) {
-            // loop saved anneals once so they render correctly
-            for (let i = 0; i < designUI.savedAnneals.length; i++) {
-                designUI.viewSavedAnneal(i);
-            }
-            designUI.viewSavedAnneal(null);
-        }
-
         // change to design screen
         changeScreen(ScreenState.DESIGN);
     }
@@ -332,63 +272,43 @@ class InputUI {
         input.hide(); // hide default file input
         input.elt.click(); // open file dialog on click
     }
+    //== end button handlers
 
     loadJsonData(_importedData) {
         // handles loading saved shapes from json file
         let shapeData = _importedData.allShapes;
         let annealData = _importedData.savedAnneals;
 
-        //== process shape data
-        let loadedShapes = [];
-        for (let shape of shapeData) {
-            // create new shape from saved data
-            let newShape = new Shape();
-            newShape.saveUserInput(shape.data.title, shape.data.highResShape);
-            loadedShapes.push(newShape);
-        }
+        // process shape data
+        let loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
         // add shapes
-        this.shapes.push(...loadedShapes);
+        appState.shapes.push(...loadedShapes);
 
-        //== process anneal data
-        let maxSolutionNum = 0
+        // process anneal data
+        let maxSolutionNum = 0;
         let loadedAnneals = [];
         for (let anneal of annealData) {
             // find the largest anneal number (ex: 4 on 'solution-4')
             let titleNumber = parseInt(anneal.title.split('-')[1]);
             maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
-            // create new shape from saved data to add solution methods back
-            // initialize solution's shapes
-            let initShapes = []
-            for (let shape of anneal.finalSolution.shapes) {
-                let newShape = new Shape();
-                newShape.saveUserInput(shape.data.title, shape.data.highResShape);
-                newShape.posX = shape.posX;
-                newShape.posY = shape.posY;
-                newShape.enabled = shape.enabled;
-                initShapes.push(newShape);
-            }
-            // initialize solution
-            anneal.finalSolution = new Solution(initShapes);
+            // create new solution from saved data to restore class methods
+            anneal.finalSolution = Solution.fromDataObject(anneal.finalSolution);
 
             loadedAnneals.push(anneal);
         }
         // add anneals and the highest solution number
-        designUI.savedAnneals.push(...loadedAnneals);
-        designUI.totalSavedAnneals = maxSolutionNum;
+        appState.savedAnneals.push(...loadedAnneals);
+        appState.totalSavedAnneals = maxSolutionNum;
 
-        //== update UI
+        // reset UI
         this.resetCanvas();
-        // toggle next button
-        if (this.shapes.length >= 2) {
-            this.html.nextButton.removeAttribute('disabled');
-        } else if (this.shapes.length < 2) {
-            this.html.nextButton.attribute('disabled', '');
-        }
+        // notify ui update manager
+        appEvents.emit('stateChanged');
     }
 
     adjustGridSize() {
         // adjust the grid size in inches
-        const newValue = parseInt(this.html.gridSizeInput.value())
+        const newValue = parseInt(this.html.gridSizeInput.value());
 
         let newSize = constrain(newValue, 1, 12);
         this.html.gridSizeInput.value(newSize);
@@ -397,7 +317,6 @@ class InputUI {
         this.resetCanvas();
     }
 
-    //== input grid and display methods
     resetCanvas() {
         background(255);
         this.html.titleInput.value('');
@@ -484,24 +403,44 @@ class InputUI {
     }
 
     displayShapeTitles() {
-        this.clearShapeTitles();
+        // show the list of added shapes
+        if (!htmlRefs.right) return;
+        if (appState.currentScreen !== ScreenState.INPUT) return;
 
-        for (let i = 0; i < this.shapes.length; i++) {
+        // clear the list
+        htmlRefs.right.list.html(''); // Clear all content
+        this.shapeTitleElements = [];
+
+        // create the list
+        for (let i = 0; i < appState.shapes.length; i++) {
             // create item row div
             let titleRow = createDiv().addClass('shape-title');
-            titleRow.parent(this.htmlRef.rightSideList);
+            titleRow.parent(htmlRefs.right.list);
+
+            // create view icon
+            let viewIcon = createImg('img/view.svg', 'View');
+            viewIcon.size(24, 24);
+            viewIcon.style('display', 'inline-block');
+            viewIcon.style('cursor', 'pointer');
+            viewIcon.style('margin-left', '5px');
+            viewIcon.addClass('icon-button');
+            viewIcon.parent(titleRow);
+            viewIcon.mousePressed(() => this.loadShape(i));
+
+            // create shape title
+            let shapeTitle = createP(`${appState.shapes[i].data.title}`);
+            shapeTitle.attribute('data-index', i);
+            shapeTitle.parent(titleRow);
+
             // create trash icon
             let trashIcon = createImg('img/trash.svg', '🗑️'); // emoji backup if svg issue
             trashIcon.size(24, 24);
             trashIcon.style('display', 'inline-block');
             trashIcon.style('cursor', 'pointer');
             trashIcon.style('margin-left', '5px');
+            trashIcon.addClass('icon-button');
             trashIcon.parent(titleRow);
 
-            // create shape title
-            let shapeTitle = createP(`${this.shapes[i].data.title}`);
-            shapeTitle.attribute('data-index', i);
-            shapeTitle.parent(titleRow);
             // save row for removal later
             this.shapeTitleElements.push(titleRow);
 
@@ -509,36 +448,54 @@ class InputUI {
             // removes a shape from the list
             trashIcon.mousePressed(() => {
                 let index = shapeTitle.attribute('data-index');
-                this.shapes.splice(index, 1);
+                appState.shapes.splice(index, 1);
 
-                //update displayed list
-                this.displayShapeTitles();
-
-                // toggle export button
-                if (this.shapes.length >= 1) {
-                    this.html.exportButton.removeAttribute('disabled');
-                } else if (this.shapes.length < 1) {
-                    this.html.exportButton.attribute('disabled', '');
-                }
-                // toggle next button
-                if (this.shapes.length >= 2) {
-                    this.html.nextButton.removeAttribute('disabled');
-                } else if (this.shapes.length < 2) {
-                    this.html.nextButton.attribute('disabled', '');
-                }
+                // notify ui update manager
+                appEvents.emit('stateChanged');
             });
         }
     }
 
-    clearShapeTitles() {
-        for (let element of this.shapeTitleElements) {
-            element.remove();
+    loadShape(index) {
+        // load a saved shape into the input grid for editing
+        const shape = appState.shapes[index];
+
+        // clear current state (preserve grid size but clear content)
+        this.resetInputGrid();
+        this.imgData = {};
+
+        // load shape into grid with bottom-left + horizontal center positioning
+        this.loadShapeIntoGrid(shape);
+
+        // update UI
+        this.html.titleInput.value(shape.data.title);
+        this.drawInputGrid();
+    }
+
+    loadShapeIntoGrid(shape) {
+        // load shape data into input grid with bottom-left + horizontal center positioning
+        const shapeGrid = shape.data.highResShape;
+        const shapeHeight = shapeGrid.length;
+        const shapeWidth = shapeGrid[0].length;
+
+        // calculate positioning:
+        // - horizontal: center in available width
+        // - vertical: align to bottom (row 0 of input grid)
+        const offsetX = Math.floor((this.inputCols - shapeWidth) / 2);
+        const offsetY = 0; // bottom alignment - start at row 0
+
+        // copy shape data to input grid (with bounds checking)
+        for (let y = 0; y < shapeHeight && (offsetY + y) < this.inputRows; y++) {
+            for (let x = 0; x < shapeWidth && (offsetX + x) < this.inputCols; x++) {
+                if (offsetX + x >= 0) { // safety check for negative offset
+                    this.inputGrid[offsetY + y][offsetX + x] = shapeGrid[y][x];
+                }
+            }
         }
-        this.shapeTitleElements = [];
     }
 
     updateGridSize() {
-        // Recalculate grid-related variables
+        // recalculate grid-related variables
         this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
         this.inputCols = this.inputRows;
         this.squareSize = Math.floor((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
@@ -549,7 +506,7 @@ class InputUI {
         this.ySidePadding = (canvasHeight - this.inputGridHeight) / 2;
         this.sidePadding = Math.max(this.xSidePadding, this.ySidePadding);
 
-        // Reset and redraw the input grid
+        // reset and redraw the input grid
         this.resetInputGrid();
         this.drawInputGrid();
     }
@@ -676,8 +633,6 @@ class InputUI {
 
     async setPixelBuffer() {
         if (this.imgData.img) {
-            // Create a mask for the input grid from the image
-
             // setup offscreen buffer if not already created
             if (!this.imgData.maskBuffer) {
                 this.imgData['maskBuffer'] = createGraphics(this.inputGridWidth, this.inputGridHeight);
@@ -732,4 +687,10 @@ class InputUI {
 
         return minBrightness < (255 * 0.5); // 50% threshold
     }
+}
+
+// only export the class when in a Node.js environment (e.g., during Jest tests)
+// ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = InputUI;
 }

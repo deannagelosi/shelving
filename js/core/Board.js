@@ -12,7 +12,7 @@ class Board {
             end: this.orientation === "x" ? "pin" : "slot",
             tJoints: [], // array of x-values for T-joint holes 
             xJoints: [],
-        }
+        };
     }
 
     getLength() {
@@ -51,4 +51,10 @@ class Board {
 
         return { start: startCoord, end: endCoord };
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Board;
 }

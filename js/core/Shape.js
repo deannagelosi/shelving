@@ -11,7 +11,7 @@ class Shape {
             lowResShape: [[]], // 1/4th the width and height as shape, scaled to 1/4th the resolution
             bufferShape: [[]], // low res + one extra square on right and top
             title: '', // title of the shape
-        }
+        };
 
         //== solution specific data
         // - data that is unique to each solution
@@ -140,8 +140,8 @@ class Shape {
         }
     }
 
-    exportShape() {
-        // return copy of shape with only export json
+    toDataObject() {
+        // convert Shape instance to text object (JSON) (export/worker communication)
         return {
             data: {
                 highResShape: this.data.highResShape,
@@ -153,10 +153,74 @@ class Shape {
         };
     }
 
+    static fromDataObject(shapeData) {
+        // convert Shape text object (JSON) to Shape instance (import/worker communication)
+        const newShape = new Shape();
+        newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape);
+
+        // Set position and state properties if provided
+        if (shapeData.posX !== undefined) newShape.posX = shapeData.posX;
+        if (shapeData.posY !== undefined) newShape.posY = shapeData.posY;
+        if (shapeData.enabled !== undefined) newShape.enabled = shapeData.enabled;
+
+        return newShape;
+    }
+
+    perimeterFromMask(mask) {
+        let perimeter = 0;
+        const height = mask.length;
+        if (height === 0) return 0;
+        const width = mask[0].length;
+        if (width === 0) return 0;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (mask[y][x]) {
+                    // canvas is 0,0 at top left, so y is 0 the bottom row
+                    // BOTTOM (skip if row 0, no gap under a shape)
+                    if (y > 0 && !mask[y - 1][x]) perimeter++;
+
+                    // TOP (count if exposed or out of bounds)
+                    if (y === height - 1 || !mask[y + 1][x]) perimeter++;
+
+                    // LEFT (count if exposed or out of bounds)
+                    if (x === 0 || !mask[y][x - 1]) perimeter++;
+
+                    // RIGHT (count if exposed or out of bounds)
+                    if (x === width - 1 || !mask[y][x + 1]) perimeter++;
+                }
+            }
+        }
+        return perimeter;
+    }
+
+    getPerimeter() {
+        return this.perimeterFromMask(this.data.bufferShape);
+    }
+
     // Function to set values to true between two indices
     setTrueBetween(array, startIndex, endIndex) {
         for (let i = startIndex; i <= endIndex; i++) {
             array[i] = true;
         }
     }
+
+    getArea() {
+        // Calculate the area of the shape by counting true values in bufferShape
+        let area = 0;
+        for (let y = 0; y < this.data.bufferShape.length; y++) {
+            for (let x = 0; x < this.data.bufferShape[y].length; x++) {
+                if (this.data.bufferShape[y][x] === true) {
+                    area++;
+                }
+            }
+        }
+        return area;
+    }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Shape;
 }

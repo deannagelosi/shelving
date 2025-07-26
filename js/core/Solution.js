@@ -1,13 +1,35 @@
+// Weights for objective functions in calcScore
+const WEIGHTS = {
+    // ----- Overlap / collision -----
+    overlapShapeExponent: 3,           // shapes^exponent multiplier when any overlap exists
+
+    // ----- Empty-space clustering -----
+    clusterPenaltyExponent: 4,         // (clusters above min)^exponent multiplier
+    clusterLimit: 5,                   // >= this annealScore is considered clustered
+
+    // ----- Floating shapes (gravity) -----
+    bottomLiftExponent: 3,             // shapes^exponent multiplier when any bottom lift exists
+    emptyRowDivisor: 1.5,              // divisor applied to shapes.length for empty-row contribution
+
+    // ----- General wasted space -----
+    spaceScalar: 0.1,                  // linear scaling factor for total empty space
+
+    // ----- Aspect ratio handling -----
+    aspectExponent: 2,                 // (ratio deviation)^exponent
+    targetWideRatio: 2,                // w/h target when aspectRatioPref === 1 (wide)
+    targetTallRatio: 0.5,              // w/h target when aspectRatioPref === -1 (tall)
+    targetSquareRatio: 1               // w/h target when aspectRatioPref === 0 (square)
+};
+
 class Solution {
-    constructor(_shapes, _startID) {
+    constructor(_shapes, _startID, _aspectRatioPref = 0) {
         this.shapes = _shapes; // shapes with position data
         this.startID = _startID; // the multi-start index this solution annealed from
+        this.aspectRatioPref = _aspectRatioPref; // -1 for tall, 0 for square, 1 for wide layouts
         this.layout = [[]]; // 2D array of shapes that occupy the layout
-        this.squareSize;
-        this.buffer; // buffer makes room for line numbers in dev mode
-        this.xPadding; // padding centers the solution in the canvas
-        this.yPadding;
-        this.clusterLimit = 5; // penalize when anneal scores of this and above are clustered (multiples touching)
+
+        // penalize when anneal scores of this and above are clustered (multiples touching)
+        this.clusterLimit = WEIGHTS.clusterLimit;
         this.score;
         this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
     }
@@ -44,17 +66,7 @@ class Solution {
 
     makeBlankLayout(_gridSize) {
         // set default blank values needed to display just the grid
-
         this.layout = new Array(_gridSize).fill(null).map(() => new Array(_gridSize).fill([]));
-
-        let layoutHeight = this.layout.length;
-        let layoutWidth = this.layout[0].length;
-        let squareHeight = canvasHeight / (layoutHeight + 2); // + 2 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / (layoutWidth + 2); // + 2 makes room for left/right buffer
-        this.squareSize = Math.min(squareHeight, squareWidth);
-        this.buffer = this.squareSize;
-        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
-        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.buffer;
     }
 
     makeLayout() {
@@ -152,18 +164,6 @@ class Solution {
             }
         }
 
-        // update squareSize for this layout
-        let layoutHeight = this.layout.length;
-        let layoutWidth = this.layout[0].length;
-        let squareHeight = canvasHeight / (layoutHeight + 2); // + # makes room for top/bottom buffer
-        let squareWidth = canvasWidth / (layoutWidth + 2); // + # makes room for left/right buffer
-        this.squareSize = Math.min(squareHeight, squareWidth);
-        // buffer makes room for the line numbers in dev mode
-        this.buffer = this.squareSize;
-        // padding centers the solution in the canvas
-        this.yPadding = ((canvasHeight - (layoutHeight * this.squareSize)) / 2) - this.buffer;
-        this.xPadding = ((canvasWidth - (layoutWidth * this.squareSize)) / 2) - this.buffer;
-
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
             let shapeID = this.shapes[i].posY.toString() + this.shapes[i].posX.toString();
@@ -230,7 +230,7 @@ class Solution {
                                 // count if the adjacent square is the same score
                                 if (this.layout[localY][localX].annealScore == annealScore) {
                                     // skew larger clustered scores as worse
-                                    clusterPenalty += Math.pow(2, (annealScore - this.clusterLimit));
+                                    clusterPenalty += Math.pow((annealScore - this.clusterLimit + 1), WEIGHTS.clusterPenaltyExponent);
                                 }
                                 checkCount++; // used to see how many out-of-bounds (how many skipped)
                             }
@@ -259,7 +259,7 @@ class Solution {
                 // loop all of the shapes x-vales
                 let rowInBounds = this.layoutInBounds(bottomY - 1, x);
                 if (rowInBounds && this.layout[bottomY - 1][x].shapes.length === 0) {
-                    shapeBottomEmptyRowScore += this.layout[bottomY - 1][x].annealScore
+                    shapeBottomEmptyRowScore += this.layout[bottomY - 1][x].annealScore;
                 } else {
                     shapeBottomEmptyRowScore = 0;
                     isBottomShape = false;
@@ -285,13 +285,13 @@ class Solution {
 
         // adjust penalties
         if (totalBottomLift > 0) {
-            totalBottomLift *= Math.pow(this.shapes.length, 3);
+            totalBottomLift *= Math.pow(this.shapes.length, WEIGHTS.bottomLiftExponent);
         }
         if (overlappingCount > 0) {
-            overlappingCount *= Math.pow(this.shapes.length, 3);
+            overlappingCount *= Math.pow(this.shapes.length, WEIGHTS.overlapShapeExponent);
         }
-        let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / 1.5));
-        let spacePenalty = (totalAnnealScore + totalSquares) * 0.1;
+        let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / WEIGHTS.emptyRowDivisor));
+        let spacePenalty = (totalAnnealScore + totalSquares) * WEIGHTS.spaceScalar;
 
         // check if solution is valid
         if (totalBottomLift == 0 && overlappingCount == 0) {
@@ -301,27 +301,23 @@ class Solution {
         let w = this.layout[0].length;
         let h = this.layout.length;
 
-        let whRatio;
+        let diffRatio;
         if (w === 0 || h === 0) {
-            whRatio = 0;
+            diffRatio = 0;
         } else {
-            // Check for global aspect ratio preference from UI slider.
-            // It is expected to be defined in the global scope (e.g. sketch.js) as: let aspectRatioPref = 0;
-            const pref = (typeof aspectRatioPref !== 'undefined') ? aspectRatioPref : 0;
+            // compare aspect ratio preference to the result
             let targetRatio;
-            if (pref === 1) { // wide
-                targetRatio = 2;
-            } else if (pref === -1) { // tall
-                targetRatio = 0.5;
+            if (this.aspectRatioPref === 1) { // wide
+                targetRatio = WEIGHTS.targetWideRatio;
+            } else if (this.aspectRatioPref === -1) { // tall
+                targetRatio = WEIGHTS.targetTallRatio;
             } else { // square
-                targetRatio = 1;
+                targetRatio = WEIGHTS.targetSquareRatio;
             }
-
-            const currentRatio = w / h;
-            const ratioRatio = currentRatio / targetRatio;
-            whRatio = Math.max(ratioRatio, 1 / ratioRatio) - 1;
+            const currentRatio = Math.max((w / h), (h / w));
+            diffRatio = currentRatio / targetRatio;
         }
-        let aspectRatioPenalty = Math.pow((whRatio * this.shapes.length), 2) * 5.0;
+        let aspectRatioPenalty = Math.pow(diffRatio, WEIGHTS.aspectExponent);
 
         this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + aspectRatioPenalty + spacePenalty);
     }
@@ -330,9 +326,14 @@ class Solution {
         // create a new solution that's a neighbor to the current solution
         // - max shift (movement) amount is based on temperature
 
-        // make a shallow copy of shapes (gives new posX and posY, but uses same shape data)
-        let shapesCopy = this.shapes.map(shape => ({ ...shape }));
-        let newSolution = new Solution(shapesCopy, this.startID);
+        // make a proper copy of shapes that preserves class instances
+        // Create new Shape instances with copied position data but shared shape data
+        let shapesCopy = this.shapes.map(shape => {
+            const newShape = Object.create(Object.getPrototypeOf(shape));
+            Object.assign(newShape, shape);
+            return newShape;
+        });
+        let newSolution = new Solution(shapesCopy, this.startID, this.aspectRatioPref);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
@@ -405,240 +406,6 @@ class Solution {
         return newSolution;
     }
 
-    showLayout() {
-        let colors = {
-            lineColor: "rgb(198, 198, 197)",
-            bkrdColor: "rgb(229, 229, 229)",
-            bufferColor: "rgba(200,200,200, 0.5)",
-            lowResShapeColor: "rgb(229, 229, 229)",
-            highResShapeColor: "rgba(102,102,102, 0.9)",
-            collisionColor: "rgba(135, 160, 103, 0.5)",
-            textColor: "rgb(255,255,255)",
-            numColor: "rgb(102,102,102)"
-        };
-
-        if (devMode) {
-            colors.lineColor = 0;
-            colors.bkrdColor = 255;
-            colors.bufferColor = "rgb(255, 192, 203)";
-            colors.lowResShapeColor = "rgba(140,140,140, 0.5)"; // grey at 50% opacity
-            colors.collisionColor = "rgba(255, 0, 0, 0.5)"; // red at 50% opacity
-        }
-
-        // draw the layout from the bottom layer up
-        this.showGridSquares(colors);
-        // show the side grid numbers
-        if (detailView || devMode) this.showGridNumbers(colors);
-        // display low res grid buffer squares
-        if (detailView || devMode) this.showBuffer(colors);
-        // display low res shape squares
-        if (devMode) this.showLowResShapes(colors);
-        // show the high res shapes
-        this.showHighResShapes(colors);
-        // show the shape titles
-        if (detailView || devMode) this.showTitles(colors);
-        // show the collision squares
-        this.showCollision(colors);
-    }
-
-    showGridSquares(_colors) {
-        // only print the grid squares with background color
-        stroke(_colors.lineColor);
-        strokeWeight(0.75);
-        fill(_colors.bkrdColor);
-
-        for (let y = 0; y < this.layout.length; y++) {
-            for (let x = 0; x < this.layout[y].length; x++) {
-                // buffer makes room for the line numbers in dev mode
-                // padding centers the solution in the canvas
-                let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
-                let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-                rect(rectX, rectY, this.squareSize, this.squareSize);
-            }
-        }
-    }
-
-    showGridNumbers(_colors) {
-        textAlign(CENTER, CENTER);
-        let txtXOffset = this.squareSize / 2.5;
-        let txtYOffset = this.squareSize / 2.5;
-        let txtSize = this.squareSize / 2.5;
-        textSize(txtSize);
-        noStroke();
-
-        let designHeight = this.layout.length;
-        let designWidth = this.layout[0].length;
-        for (let x = 0; x < designWidth; x++) {
-            // display column number
-            fill(devMode && x % 5 === 0 ? "pink" : _colors.numColor);
-            let textX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-            let textY = ((canvasHeight - this.yPadding) - this.buffer) + txtYOffset;
-            text(x + 1, textX, textY);
-
-            for (let y = 0; y < designHeight; y++) {
-                // display row number
-                fill(devMode && y % 5 === 0 ? "pink" : _colors.numColor);
-                let textX = this.xPadding + txtXOffset;
-                let textY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                text(y + 1, textX, textY);
-            }
-        }
-    }
-
-    showBuffer(_colors) {
-        stroke(_colors.lineColor);
-        strokeWeight(0.75);
-        fill(_colors.bufferColor);
-
-        for (let y = 0; y < this.layout.length; y++) {
-            for (let x = 0; x < this.layout[y].length; x++) {
-                // only draw buffer squares
-                if (this.layout[y][x].shapes.length > 0) {
-                    // check if its a buffer square
-                    if (this.layout[y][x].isBuffer.some(s => s === true)) {
-                        // buffer makes room for the line numbers in dev mode
-                        // padding centers the solution in the canvas
-                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
-                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-                        rect(rectX, rectY, this.squareSize, this.squareSize);
-                    }
-                }
-            }
-        }
-    }
-
-    showLowResShapes(_colors) {
-        noStroke();
-        fill(_colors.lowResShapeColor);
-
-        for (let y = 0; y < this.layout.length; y++) {
-            for (let x = 0; x < this.layout[y].length; x++) {
-                // only draw low res shape squares
-                if (this.layout[y][x].shapes.length > 0) {
-                    // check it's a low res shape square
-                    if (this.layout[y][x].isShape.some(s => s === true)) {
-                        // buffer makes room for the line numbers in dev mode
-                        // padding centers the solution in the canvas
-                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
-                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-                        rect(rectX + (this.squareSize / 2), rectY, this.squareSize, this.squareSize);
-                    }
-                }
-            }
-        }
-    }
-
-    showTitles(_colors) {
-        //== show the shape titles
-        noStroke();
-        for (let i = 0; i < this.shapes.length; i++) {
-            let shape = this.shapes[i];
-            let startX = shape.posX;
-            let startY = shape.posY;
-            let smallSquare = this.squareSize / 4;
-
-            let shapeWidth = shape.data.highResShape[0].length * smallSquare;
-            let shapeHeight = shape.data.highResShape.length * smallSquare;
-            let titleX = (startX * this.squareSize) + (this.squareSize / 2) + this.buffer + this.xPadding + (shapeWidth / 2);
-            let titleY = ((canvasHeight - this.yPadding) - this.buffer) - (startY * this.squareSize) - (shapeHeight / 2);
-
-            fill(_colors.textColor);
-            textAlign(CENTER, CENTER);
-            textSize(min(this.squareSize / 2, 14));
-            text(shape.data.title, titleX, titleY);
-        }
-    }
-
-    showHighResShapes(_colors) {
-        //== show the high res shapes
-        noStroke();
-        fill(_colors.highResShapeColor);
-
-        // loop through shapes
-        for (let i = 0; i < this.shapes.length; i++) {
-            let startX = this.shapes[i].posX;
-            let startY = this.shapes[i].posY;
-            let smallSquare = this.squareSize / 4;
-
-            // draw rectangle for each true square in the shape grid
-            for (let y = 0; y < this.shapes[i].data.highResShape.length; y++) {
-                for (let x = 0; x < this.shapes[i].data.highResShape[y].length; x++) {
-                    // only draw high res shape squares
-                    if (this.shapes[i].data.highResShape[y][x]) {
-
-                        // find its position on the canvas and draw the square
-                        let rectX = (startX * this.squareSize) + (x * smallSquare) + this.buffer + this.xPadding;
-                        let yOffset = ((canvasHeight - this.yPadding) - smallSquare - this.buffer);
-                        let yStart = (startY * this.squareSize);
-                        let yRect = (y * smallSquare);
-                        let rectY = yOffset - yStart - yRect;
-                        rect(rectX + (this.squareSize / 2), rectY, smallSquare, smallSquare);
-                    }
-                }
-            }
-        }
-    }
-
-    showCollision(_colors) {
-        noStroke();
-        fill(_colors.collisionColor);
-
-        for (let y = 0; y < this.layout.length; y++) {
-            for (let x = 0; x < this.layout[y].length; x++) {
-                // only draw collision squares
-                if (this.layout[y][x].shapes.length > 1) {
-                    // collision. rules:
-                    // - if devMode, collision for any overlap (buffer/buffer covers all since shape overlays buffer)
-                    // - if not devMode, collision only for shape/shape overlap (not shape/buffer, or buffer/buffer)
-                    let isCollision = false;
-                    if (devMode && this.layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
-                        // 2 or more buffers overlapping
-                        isCollision = true;
-                    } else if (this.layout[y][x].isShape.filter(s => s === true).length >= 2) {
-                        // 2 or more shapes overlapping
-                        isCollision = true;
-                    }
-
-                    if (isCollision) {
-                        // buffer makes room for the line numbers in dev mode
-                        // padding centers the solution in the canvas
-                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding;
-                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize); // draw from bottom up
-                        rect(rectX, rectY, this.squareSize, this.squareSize);
-                    }
-                }
-
-            }
-        }
-    }
-
-    showScores() {
-        if (devMode) {
-            // display the design space grid
-            fill(100)
-            stroke(50);
-            strokeWeight(0.25);
-            textAlign(CENTER, CENTER);
-            let txtXOffset = this.squareSize / 2;
-            let txtYOffset = this.squareSize / 2;
-            let txtSize = this.squareSize / 1.5;
-            textSize(txtSize);
-
-            let designHeight = this.layout.length;
-            let designWidth = this.layout[0].length;
-            for (let x = 0; x < designWidth; x++) {
-                for (let y = 0; y < designHeight; y++) {
-                    // display the anneal score if its empty of shapes
-                    if (this.layout[y][x].annealScore > 0) {
-                        // find position for score or shape title[0] text, finding y from bottom up
-                        let rectX = (x * this.squareSize) + this.buffer + this.xPadding + txtXOffset;
-                        let rectY = ((canvasHeight - this.yPadding) - this.squareSize - this.buffer) - (y * this.squareSize) + txtYOffset;
-                        text(this.layout[y][x].annealScore, rectX, rectY);
-                    }
-                }
-            }
-        }
-    }
 
     exportShapes() {
         // makes a copy of shapes without extra data
@@ -655,14 +422,120 @@ class Solution {
         });
     }
 
-    exportSolution() {
-        // makes a copy of the solution without extra data
+    // NOTE: The old exportSolution() method has been replaced by toDataObject()
+    // which provides better consistency and centralized data serialization logic.
+
+    toDataObject() {
+        // convert Solution instance to text object (JSON) (export/worker communication)
+        // note: layout excluded to keep data size small (easily recalculated)
         return {
-            shapes: this.exportShapes(),
+            shapes: this.shapes.map(shape => shape.toDataObject()),
             startID: this.startID,
             score: this.score,
-            valid: this.valid
+            valid: this.valid,
+            aspectRatioPref: this.aspectRatioPref,
+            clusterLimit: this.clusterLimit
         };
+    }
+
+    static fromDataObject(solutionData) {
+        // convert Solution text object (JSON) to Solution instance (import/worker communication)
+        // note: recalculates layout and score if missing
+        const shapes = solutionData.shapes.map(shapeData => Shape.fromDataObject(shapeData));
+
+        const solution = new Solution(
+            shapes,
+            solutionData.startID,
+            solutionData.aspectRatioPref || 0
+        );
+
+        // set missing properties if they exist
+        if (solutionData.clusterLimit !== undefined) {
+            solution.clusterLimit = solutionData.clusterLimit;
+        }
+
+        // Check if layout data exists (from worker) or needs to be recalculated (from import)
+        if (solutionData.layout && solutionData.score !== undefined && solutionData.valid !== undefined) {
+            // Data includes computed layout (worker result)
+            solution.layout = solutionData.layout;
+            solution.score = solutionData.score;
+            solution.valid = solutionData.valid;
+        } else {
+            // Data lacks computed layout, recalculate (imported file)
+            solution.makeLayout();
+            solution.calcScore();
+        }
+
+        return solution;
+    }
+
+    static createGridBaseline(shapeInstances, aspectRatioPref = 0) {
+        // create a deterministic grid-packing baseline solution
+        // calculate rows and columns for a near-square layout
+        const numShapes = shapeInstances.length;
+        const cols = Math.ceil(Math.sqrt(numShapes));
+        const rows = Math.ceil(numShapes / cols);
+
+        // create copies of shapes to avoid modifying the originals
+        const shapesCopy = shapeInstances.map(shape => {
+            const newShape = Object.create(Object.getPrototypeOf(shape));
+            Object.assign(newShape, shape);
+            return newShape;
+        });
+
+        // calculate column widths and row heights
+        const colWidths = new Array(cols).fill(0);
+        const rowHeights = new Array(rows).fill(0);
+
+        for (let i = 0; i < shapesCopy.length; i++) {
+            const shape = shapesCopy[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            const shapeWidth = shape.data.bufferShape[0].length;
+            const shapeHeight = shape.data.bufferShape.length;
+
+            colWidths[col] = Math.max(colWidths[col], shapeWidth);
+            rowHeights[row] = Math.max(rowHeights[row], shapeHeight);
+        }
+
+        // position shapes in grid
+        for (let i = 0; i < shapesCopy.length; i++) {
+            const shape = shapesCopy[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            // calculate position based on cumulative column widths and row heights
+            shape.posX = colWidths.slice(0, col).reduce((sum, width) => sum + width, 0);
+            shape.posY = rowHeights.slice(0, row).reduce((sum, height) => sum + height, 0);
+        }
+
+        // create solution instance and calculate layout/score
+        const gridSolution = new Solution(shapesCopy, 0, aspectRatioPref);
+        gridSolution.makeLayout();
+        gridSolution.calcScore();
+
+        return gridSolution;
+    }
+
+    calculateEmptySpace() {
+        // calculate the number of empty squares in the layout
+        if (!this.layout || this.layout.length === 0 || this.layout[0].length === 0) {
+            return 0;
+        }
+
+        const totalSquares = this.layout.length * this.layout[0].length;
+        let occupiedSquares = 0;
+
+        for (const row of this.layout) {
+            for (const cell of row) {
+                if (cell.isShape && cell.isShape.some(s => s === true)) {
+                    occupiedSquares++;
+                }
+            }
+        }
+
+        return totalSquares - occupiedSquares;
     }
 
     // helper functions
@@ -676,4 +549,10 @@ class Solution {
             return false;
         }
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Solution;
 }
