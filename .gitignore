@@ -10,4 +10,5 @@ node_modules/
 
 # Project
 examples/
+tasks/
 *.sqlite
