@@ -123,6 +123,19 @@ function keyPressed() {
             numGrow++;
             designUI.displayResult();
         }
+        // Arrow key handling for shape movement
+        else if (keyCode === LEFT_ARROW) {
+            designUI.handleArrowKey('left');
+        }
+        else if (keyCode === RIGHT_ARROW) {
+            designUI.handleArrowKey('right');
+        }
+        else if (keyCode === UP_ARROW) {
+            designUI.handleArrowKey('up');
+        }
+        else if (keyCode === DOWN_ARROW) {
+            designUI.handleArrowKey('down');
+        }
     }
     // Export screen key commands
     else if (appState.currentScreen == ScreenState.EXPORT) {
@@ -137,6 +150,8 @@ function keyPressed() {
 function mousePressed() {
     if (appState.currentScreen == ScreenState.INPUT) {
         inputUI.selectInputSquare(mouseX, mouseY);
+    } else if (appState.currentScreen == ScreenState.DESIGN) {
+        designUI.handleCanvasClick(mouseX, mouseY);
     }
 }
 

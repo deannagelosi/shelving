@@ -58,6 +58,9 @@ class SolutionRenderer {
 
         // display collision squares
         this.renderCollision(solution.layout, canvas, config, colors);
+
+        // display selection highlight (on top of everything else)
+        this.renderShapeSelection(solution.shapes, canvas, config);
     }
 
     renderGridSquares(layout, canvas, config, colors) {
@@ -188,6 +191,42 @@ class SolutionRenderer {
                         let rectY = yOffset - yStart - yRect;
                         rect(rectX + (config.squareSize / 2), rectY, smallSquare, smallSquare);
                     }
+                }
+            }
+        }
+    }
+
+    renderShapeSelection(shapes, canvas, config) {
+        // render blue tint overlay for selected shape
+        if (appState.selectedShapeId === null) {
+            return;
+        }
+
+        // find the selected shape
+        const selectedShape = shapes.find(shape => shape.id === appState.selectedShapeId);
+        if (!selectedShape) {
+            return;
+        }
+
+        noStroke();
+        fill(0, 100, 255, 100); // semi-transparent blue
+
+        let startX = selectedShape.posX;
+        let startY = selectedShape.posY;
+        let smallSquare = config.squareSize / 4;
+
+        // draw blue overlay for each true square in the selected shape
+        for (let y = 0; y < selectedShape.data.highResShape.length; y++) {
+            for (let x = 0; x < selectedShape.data.highResShape[y].length; x++) {
+                // only draw overlay on high res shape squares
+                if (selectedShape.data.highResShape[y][x]) {
+                    // find its position on the canvas (same calculation as renderHighResShapes)
+                    let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
+                    let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
+                    let yStart = (startY * config.squareSize);
+                    let yRect = (y * smallSquare);
+                    let rectY = yOffset - yStart - yRect;
+                    rect(rectX + (config.squareSize / 2), rectY, smallSquare, smallSquare);
                 }
             }
         }

@@ -164,4 +164,75 @@ describe('Solution', () => {
         // Restore Math.random
         Math.random.mockRestore();
     });
+});
+
+describe('Solution.normalizeCoordinates', () => {
+    let shapes;
+
+    beforeEach(() => {
+        // Create fresh shapes for each test to avoid side-effects
+        shapes = [
+            { id: 0, posX: 10, posY: 20 },
+            { id: 1, posX: 30, posY: 40 },
+        ];
+    });
+
+    test('should not change coordinates when all are positive', () => {
+        const solution = new Solution(shapes);
+        const originalPositions = solution.shapes.map(s => ({ posX: s.posX, posY: s.posY }));
+
+        solution.normalizeCoordinates();
+
+        solution.shapes.forEach((shape, i) => {
+            expect(shape.posX).toBe(originalPositions[i].posX);
+            expect(shape.posY).toBe(originalPositions[i].posY);
+        });
+    });
+
+    test('should shift all shapes when one has negative X', () => {
+        shapes[0].posX = -5;
+        const solution = new Solution(shapes);
+
+        const originalPositions = solution.shapes.map(s => ({ posX: s.posX, posY: s.posY }));
+        const expectedShiftX = 5;
+
+        solution.normalizeCoordinates();
+
+        expect(solution.shapes[0].posX).toBe(0);
+        expect(solution.shapes[1].posX).toBe(originalPositions[1].posX + expectedShiftX);
+        expect(solution.shapes[0].posY).toBe(originalPositions[0].posY);
+        expect(solution.shapes[1].posY).toBe(originalPositions[1].posY);
+    });
+
+    test('should shift all shapes when one has negative Y', () => {
+        shapes[1].posY = -10;
+        const solution = new Solution(shapes);
+
+        const originalPositions = solution.shapes.map(s => ({ posX: s.posX, posY: s.posY }));
+        const expectedShiftY = 10;
+
+        solution.normalizeCoordinates();
+
+        expect(solution.shapes[1].posY).toBe(0);
+        expect(solution.shapes[0].posY).toBe(originalPositions[0].posY + expectedShiftY);
+        expect(solution.shapes[0].posX).toBe(originalPositions[0].posX);
+        expect(solution.shapes[1].posX).toBe(originalPositions[1].posX);
+    });
+
+    test('should shift all shapes when there are negative X and Y values', () => {
+        shapes[0].posX = -15;
+        shapes[1].posY = -25;
+        const solution = new Solution(shapes);
+
+        const originalPositions = solution.shapes.map(s => ({ posX: s.posX, posY: s.posY }));
+        const expectedShiftX = 15;
+        const expectedShiftY = 25;
+
+        solution.normalizeCoordinates();
+
+        expect(solution.shapes[0].posX).toBe(0);
+        expect(solution.shapes[1].posY).toBe(0);
+        expect(solution.shapes[1].posX).toBe(originalPositions[1].posX + expectedShiftX);
+        expect(solution.shapes[0].posY).toBe(originalPositions[0].posY + expectedShiftY);
+    });
 }); 

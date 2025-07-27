@@ -19,7 +19,10 @@ class Shape {
         this.posX = 0;
         this.posY = 0;
         this.enabled = true;
+        this.id = Shape.nextId++;
     }
+
+    static nextId = 0;
 
     saveUserInput(_title, _inputGrid) {
         // save the shape and create the rounded up and buffer shape arrays
@@ -147,6 +150,7 @@ class Shape {
                 highResShape: this.data.highResShape,
                 title: this.data.title
             },
+            id: this.id,
             posX: this.posX,
             posY: this.posY,
             enabled: this.enabled
@@ -155,13 +159,31 @@ class Shape {
 
     static fromDataObject(shapeData) {
         // convert Shape text object (JSON) to Shape instance (import/worker communication)
-        const newShape = new Shape();
+        const newShape = Object.create(Shape.prototype);
+        newShape.data = {
+            inputGrid: [[]],
+            highResShape: [[]],
+            lowResShape: [[]],
+            bufferShape: [[]],
+            title: '',
+        };
+
         newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape);
 
+        // Restore ID if provided
+        if (shapeData.id !== undefined) {
+            newShape.id = shapeData.id;
+            // Ensure the static counter is always ahead of any loaded ID
+            Shape.nextId = Math.max(Shape.nextId, shapeData.id + 1);
+        } else {
+            // If no ID is provided, assign a new one.
+            newShape.id = Shape.nextId++;
+        }
+
         // Set position and state properties if provided
-        if (shapeData.posX !== undefined) newShape.posX = shapeData.posX;
-        if (shapeData.posY !== undefined) newShape.posY = shapeData.posY;
-        if (shapeData.enabled !== undefined) newShape.enabled = shapeData.enabled;
+        newShape.posX = shapeData.posX !== undefined ? shapeData.posX : 0;
+        newShape.posY = shapeData.posY !== undefined ? shapeData.posY : 0;
+        newShape.enabled = shapeData.enabled !== undefined ? shapeData.enabled : true;
 
         return newShape;
     }

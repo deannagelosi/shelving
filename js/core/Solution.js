@@ -387,17 +387,7 @@ class Solution {
                 break;
         }
 
-        // if shape shifted negative x or y, move all shapes over that amount
-        // - sets the shape to 0 while moving everyone relative to that change
-        if (selectedShape.posX < 0 || selectedShape.posY < 0) {
-            let adjustX = selectedShape.posX < 0 ? Math.abs(selectedShape.posX) : 0;
-            let adjustY = selectedShape.posY < 0 ? Math.abs(selectedShape.posY) : 0;
-
-            for (let shape of newSolution.shapes) {
-                shape.posX += adjustX;
-                shape.posY += adjustY;
-            }
-        }
+        newSolution.normalizeCoordinates();
 
         // calculate the score of the new solution
         newSolution.makeLayout();
@@ -406,6 +396,21 @@ class Solution {
         return newSolution;
     }
 
+    normalizeCoordinates() {
+        // Check if any shape has negative coordinates and shift all shapes to bring them back into positive space
+        let minX = Math.min(...this.shapes.map(shape => shape.posX));
+        let minY = Math.min(...this.shapes.map(shape => shape.posY));
+
+        if (minX < 0 || minY < 0) {
+            let adjustX = minX < 0 ? Math.abs(minX) : 0;
+            let adjustY = minY < 0 ? Math.abs(minY) : 0;
+
+            for (let shape of this.shapes) {
+                shape.posX += adjustX;
+                shape.posY += adjustY;
+            }
+        }
+    }
 
     exportShapes() {
         // makes a copy of shapes without extra data

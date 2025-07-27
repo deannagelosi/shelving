@@ -28,6 +28,10 @@ class DesignUI {
                 this.hide();
             }
         });
+
+        //== movement debouncing
+        this.moveDebounceTimer = null;
+        this.moveDebounceDelay = 150; // milliseconds
     }
 
     computeState() {
@@ -47,6 +51,11 @@ class DesignUI {
             .addClass('button secondary-button hidden')
             .parent(htmlRefs.left.buttons)
             .mousePressed(() => this.handleBack());
+
+        this.html.restoreButton = createButton('Restore Layout')
+            .addClass('button secondary-button hidden')
+            .parent(htmlRefs.left.buttons)
+            .mousePressed(() => this.handleRestore());
 
         this.html.nextButton = createButton('Next')
             .addClass('button primary-button hidden')
@@ -229,6 +238,8 @@ class DesignUI {
         try {
             // convert the json worker result into a Solution object
             const solution = Solution.fromDataObject(finalSolution);
+            // store a copy of the final solution as the original annealed solution
+            appState.originalAnnealedSolution = Solution.fromDataObject(finalSolution);
 
             const anneal = {
                 finalSolution: solution,
@@ -307,6 +318,9 @@ class DesignUI {
         // show all design screen elements
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
 
+        // keep restore button hidden by default (only show when manual edits are made)
+        this.hideRestoreButton();
+
         // reset the canvas
         clear();
         background(255);
@@ -347,6 +361,173 @@ class DesignUI {
         changeScreen(ScreenState.EXPORT);
     }
 
+    handleRestore() {
+        // Restore the original annealed solution
+        if (!appState.originalAnnealedSolution) {
+            return;
+        }
+
+        // Create a deep copy of the original solution
+        const restoredSolution = Solution.fromDataObject(appState.originalAnnealedSolution.toDataObject());
+
+        // Update the current solution
+        appState.currentAnneal.finalSolution = restoredSolution;
+
+        // Clear selection
+        appState.selectedShapeId = null;
+
+        this.regenerateCellular(restoredSolution);
+        this.hideRestoreButton();
+        this.displayResult();
+
+        // Emit state change event
+        appEvents.emit('stateChanged');
+    }
+
+    handleCanvasClick(mouseX, mouseY) {
+        // Only handle clicks when we have a current solution
+        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
+            return;
+        }
+
+        const solution = appState.currentAnneal.finalSolution;
+        const canvas = { width: canvasWidth, height: canvasHeight };
+
+        // Get the same config values used for rendering
+        const config = this.calculateLayoutProperties(solution);
+
+        // Check each shape to see if the click is within its bounds
+        for (let i = 0; i < solution.shapes.length; i++) {
+            const shape = solution.shapes[i];
+            const startX = shape.posX;
+            const startY = shape.posY;
+            const smallSquare = config.squareSize; // use full low-res square size for bufferShape
+
+            // Calculate the bounding box of the shape footprint (bufferShape)
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+            for (let y = 0; y < shape.data.bufferShape.length; y++) {
+                for (let x = 0; x < shape.data.bufferShape[y].length; x++) {
+                    if (shape.data.bufferShape[y][x]) {
+                        // Calculate canvas position for this buffer pixel (low-res grid square)
+                        let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding + (config.squareSize / 2);
+                        let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
+                        let yStart = (startY * config.squareSize);
+                        let yRect = (y * smallSquare);
+                        let rectY = yOffset - yStart - yRect - (config.squareSize / 2);
+
+                        minX = Math.min(minX, rectX);
+                        maxX = Math.max(maxX, rectX + smallSquare);
+                        minY = Math.min(minY, rectY);
+                        maxY = Math.max(maxY, rectY + smallSquare);
+                    }
+                }
+            }
+
+            // Check if click is within this shape's bounding box
+            if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
+                // Shape clicked - update selection
+                appState.selectedShapeId = shape.id;
+                this.displayResult();
+                appEvents.emit('stateChanged');
+                return;
+            }
+        }
+
+        // No shape was clicked - clear selection
+        appState.selectedShapeId = null;
+        this.displayResult();
+        appEvents.emit('stateChanged');
+    }
+
+    handleArrowKey(direction) {
+        // Only handle arrow keys when a shape is selected
+        if (appState.selectedShapeId === null || !appState.currentAnneal || !appState.currentAnneal.finalSolution) {
+            return;
+        }
+
+        // Debounce the movement to prevent performance issues
+        if (this.moveDebounceTimer) {
+            clearTimeout(this.moveDebounceTimer);
+        }
+
+        this.moveDebounceTimer = setTimeout(() => {
+            this.performShapeMovement(direction);
+        }, this.moveDebounceDelay);
+    }
+
+    performShapeMovement(direction) {
+        const currentSolution = appState.currentAnneal.finalSolution;
+
+        // Find the selected shape
+        const selectedShape = currentSolution.shapes.find(shape => shape.id === appState.selectedShapeId);
+        if (!selectedShape) {
+            return;
+        }
+
+        // Create a new solution from the current state
+        const shapesCopy = currentSolution.shapes.map(shape => {
+            const newShape = Object.create(Object.getPrototypeOf(shape));
+            Object.assign(newShape, shape);
+            return newShape;
+        });
+
+        const newSolution = new Solution(shapesCopy, currentSolution.startID, currentSolution.aspectRatioPref);
+
+        // Find the selected shape in the new solution
+        const newSelectedShape = newSolution.shapes.find(shape => shape.id === appState.selectedShapeId);
+
+        // Update position based on direction (1 unit = 1 inch on low-resolution grid)
+        switch (direction) {
+            case 'left':
+                newSelectedShape.posX -= 1;
+                break;
+            case 'right':
+                newSelectedShape.posX += 1;
+                break;
+            case 'up':
+                newSelectedShape.posY += 1;
+                break;
+            case 'down':
+                newSelectedShape.posY -= 1;
+                break;
+        }
+
+        // Apply coordinate normalization
+        newSolution.normalizeCoordinates();
+
+        // Calculate new layout and score
+        newSolution.makeLayout();
+        newSolution.calcScore();
+
+        // Update the current solution
+        appState.currentAnneal.finalSolution = newSolution;
+
+        // Trigger cellular regeneration
+        this.regenerateCellular(newSolution);
+
+        this.showRestoreButton();
+        this.displayResult();
+    }
+
+    regenerateCellular(solution) {
+        // Create new cellular instance and regenerate walls (pass the entire Solution object)
+        const cellular = new Cellular(solution, devMode, numGrow);
+        cellular.makeInitialCells();
+        cellular.growCells();
+
+        // Update the stored cellular data
+        appState.currentAnneal.cellular = cellular;
+    }
+
+    showRestoreButton() {
+        this.html.restoreButton.removeClass('hidden');
+    }
+
+    hideRestoreButton() {
+        this.html.restoreButton.addClass('hidden');
+    }
+
     handleAspectRatioChange(pref) {
         aspectRatioPref = pref;
 
@@ -380,6 +561,10 @@ class DesignUI {
     }
 
     async handleStartAnneal() {
+        // clear the original annealed solution when starting a new generation
+        appState.originalAnnealedSolution = null;
+        appState.selectedShapeId = null;
+
         // check if worker is available
         if (!this.solutionWorker) {
             alert('Solution worker is not available.');
@@ -462,12 +647,17 @@ class DesignUI {
     handleSaveSolution() {
         // save the current solution to the array
         appState.totalSavedAnneals++;
+
+        // Create deep copy using toDataObject/fromDataObject
+        const dataObject = appState.currentAnneal.finalSolution.toDataObject();
+        const deepCopySolution = Solution.fromDataObject(dataObject);
+
         // save only the necessary data for each anneal
         let savedData = {
             title: `solution-${appState.totalSavedAnneals}`,
             solutionHistory: [], // temporarily set to empty to reduce memory usage
             // solutionHistory: appState.currentAnneal.solutionHistory,
-            finalSolution: appState.currentAnneal.finalSolution,
+            finalSolution: deepCopySolution,
             enabledShapes: appState.shapes.map(shape => shape.enabled)
         };
         appState.savedAnneals.push(savedData);
@@ -687,7 +877,15 @@ class DesignUI {
 
         // display selected saved anneal
         appState.currentViewedAnnealIndex = index;
-        appState.currentAnneal = appState.savedAnneals[index];
+        // Create a deep copy of the saved anneal to prevent modifications
+        const savedAnneal = appState.savedAnneals[index];
+
+        appState.currentAnneal = {
+            title: savedAnneal.title,
+            solutionHistory: savedAnneal.solutionHistory,
+            finalSolution: Solution.fromDataObject(savedAnneal.finalSolution.toDataObject()),
+            enabledShapes: [...savedAnneal.enabledShapes] // shallow copy is fine for boolean array
+        };
 
         // disable shape selection changes while viewing saved anneal
         if (this.shapeElements.length === 0) {

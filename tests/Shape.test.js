@@ -160,4 +160,70 @@ describe('Shape', () => {
         // Title should be preserved
         expect(shape.data.title).toBe('Complex-Shape');
     });
+});
+
+describe('Shape ID Management', () => {
+    beforeEach(() => {
+        // Reset the static ID counter before each test to ensure isolation
+        Shape.nextId = 0;
+    });
+
+    test('should assign unique, auto-incrementing IDs to new shapes', () => {
+        const shape1 = new Shape();
+        const shape2 = new Shape();
+
+        expect(shape1.id).toBe(0);
+        expect(shape2.id).toBe(1);
+        expect(Shape.nextId).toBe(2);
+    });
+
+    test('should restore ID from data object', () => {
+        const shapeData = {
+            data: { title: 'Restored Shape', highResShape: [[true]] },
+            id: 10
+        };
+
+        const shape = Shape.fromDataObject(shapeData);
+
+        expect(shape.id).toBe(10);
+    });
+
+    test('should update nextId counter when restoring an ID', () => {
+        // Restore a shape with an ID of 10
+        const shapeData = {
+            data: { title: 'Restored Shape', highResShape: [[true]] },
+            id: 10
+        };
+        Shape.fromDataObject(shapeData);
+
+        // The nextId should now be 11
+        expect(Shape.nextId).toBe(11);
+
+        // A new shape should get the next sequential ID
+        const newShape = new Shape();
+        expect(newShape.id).toBe(11);
+        expect(Shape.nextId).toBe(12);
+    });
+
+    test('should not let a restored ID be smaller than the current nextId', () => {
+        // Set the counter high
+        Shape.nextId = 20;
+
+        // Restore a shape with a lower ID
+        const shapeData = {
+            data: { title: 'Old Shape', highResShape: [[true]] },
+            id: 5
+        };
+        const shape = Shape.fromDataObject(shapeData);
+
+        // The restored shape should have its original ID
+        expect(shape.id).toBe(5);
+        // The static counter should NOT be updated because it's already higher
+        expect(Shape.nextId).toBe(20);
+
+        // A new shape should get an ID from the higher counter
+        const newShape = new Shape();
+        expect(newShape.id).toBe(20);
+        expect(Shape.nextId).toBe(21);
+    });
 }); 
