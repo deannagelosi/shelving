@@ -693,10 +693,10 @@ class Cellular {
         return newCellular;
     }
 
-    //-- Baseline Growth Functions --//
-    growBaseline(numGrowSteps = -1) {
+    //-- Rectilinear Growth Functions --//
+    growRectilinear(numGrowSteps = -1) {
         // --- Setup ---
-        this.makeInitialCellsBaseline();
+        this.makeInitialCellsRectilinear();
 
         // --- Growth Loop ---
         // In each step, process one tick of horizontal movement and one tick of vertical movement.
@@ -708,8 +708,8 @@ class Cellular {
 
         while (aliveCellsExist && step < loopLimit) {
             step++;
-            this.growHorizontalOnceBaseline();
-            this.growVerticalOnceBaseline();
+            this.growHorizontalOnceRectilinear();
+            this.growVerticalOnceRectilinear();
 
             const currentStats = this.getGrowthStats();
             // Check if any cells are still alive to continue the loop.
@@ -717,12 +717,12 @@ class Cellular {
         }
 
         if (step >= maxSteps) {
-            console.error(`Safety triggered at ${maxSteps} steps. Likely infinite baseline build loop.`);
+            console.error(`Safety triggered at ${maxSteps} steps. Likely infinite rectilinear build loop.`);
         }
     }
 
-    makeInitialCellsBaseline() {
-        // set up the initial state for the baseline algorithm
+    makeInitialCellsRectilinear() {
+        // set up the initial state for the rectilinear algorithm
         this.cellSpace = []; // clear the space
         this.cellID = 0; // reset cell IDs
         for (let y = 0; y < this.layoutHeight + 1; y++) {
@@ -793,7 +793,7 @@ class Cellular {
         }
     }
 
-    growHorizontalOnceBaseline() {
+    growHorizontalOnceRectilinear() {
         // --- Self-Setup Phase ---
         // Calculate allowance for any new horizontal cells that need it.
         for (let y = 0; y < this.cellSpace.length; y++) {
@@ -842,7 +842,7 @@ class Cellular {
 
                 if (opposingCell) {
                     // Create a dead cell at the collision point to complete the wall
-                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    this.addCellRectilinear(y, neighborX, cell, { x, y }, false);
                     // Stop the opposing cell and turn it upwards
                     opposingCell.direction = 'up';
                     opposingCell.allowance = 0;
@@ -851,7 +851,7 @@ class Cellular {
 
                 if (perpendicularCell) {
                     // Create a dead cell at the collision point to complete the wall
-                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    this.addCellRectilinear(y, neighborX, cell, { x, y }, false);
                     // Leave the perpendicular cell alone to continue moving up
                     continue; // This cell's turn is over.
                 }
@@ -864,13 +864,13 @@ class Cellular {
                 const deadCell = neighborCellList.find(c => !c.alive);
                 if (deadCell) {
                     // cell has reached a wall. move to it and die.
-                    this.addCellBaseline(y, neighborX, cell, { x, y }, false);
+                    this.addCellRectilinear(y, neighborX, cell, { x, y }, false);
                     continue;
                 }
 
                 // Move forward if space is available
                 if (this.cellSpaceInBounds(y, neighborX)) {
-                    this.addCellBaseline(y, neighborX, cell, { x, y });
+                    this.addCellRectilinear(y, neighborX, cell, { x, y });
                 } else {
                     // Reached the edge, die
                     cell.alive = false;
@@ -887,7 +887,7 @@ class Cellular {
         }
     }
 
-    addCellBaseline(_y, _x, _parentCell, _parentCoords, _alive = true) {
+    addCellRectilinear(_y, _x, _parentCell, _parentCoords, _alive = true) {
         // kill parent cell when replicating
         if (_parentCell && 'alive' in _parentCell) {
             _parentCell.alive = false;
@@ -906,7 +906,7 @@ class Cellular {
         });
     }
 
-    growVerticalOnceBaseline() {
+    growVerticalOnceRectilinear() {
         const cellsToProcess = [];
         // Collect all alive, upward-moving cells to process in this tick
         for (let y = 0; y < this.cellSpace.length; y++) {
@@ -954,7 +954,7 @@ class Cellular {
                 // Check for collision at the target *before* moving.
                 const isCollision = this.cellSpace[targetY][targetX].length > 0;
                 // Move the cell, and set its alive status based on the collision check.
-                this.addCellBaseline(targetY, targetX, cell, { x, y }, !isCollision);
+                this.addCellRectilinear(targetY, targetX, cell, { x, y }, !isCollision);
             } else {
                 // Hit the top boundary of the cell space.
                 cell.alive = false;

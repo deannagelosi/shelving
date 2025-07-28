@@ -7,6 +7,7 @@ class SolutionWorker {
         // Dependencies are injected for environment compatibility
         this.Anneal = dependencies.Anneal;
         this.Cellular = dependencies.Cellular;
+        this.CurveWall = dependencies.CurveWall;
         this.Solution = dependencies.Solution;
         this.Export = dependencies.Export;
         this.Board = dependencies.Board;
@@ -82,7 +83,10 @@ class SolutionWorker {
             devMode = false,
             annealConfig = {},
             randMin = null,
-            randMax = null
+            randMax = null,
+            wallAlgorithm = 'cellular-organic',
+            curveRadius = 1.0,
+            maxBends = 4
         } = payload;
 
         this.currentJob = { jobId, startId };
@@ -177,13 +181,64 @@ class SolutionWorker {
                 this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-grid', score: gridBaseline.score });
             }
 
-            // Phase 2: Cellular growth
-            this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
+            // Phase 2: Wall generation
+            let cellular;
+            let curveWallData = null; // Decouple curve data from the solution
+            if (wallAlgorithm.startsWith('cellular')) {
+                this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
-            const cellular = new this.Cellular(anneal.finalSolution, devMode);
-            cellular.growCells();
+                cellular = new this.Cellular(anneal.finalSolution, devMode);
 
-            this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
+                // Route to the appropriate cellular algorithm
+                if (wallAlgorithm === 'cellular-organic') {
+                    cellular.growCells();
+                } else if (wallAlgorithm === 'cellular-rectilinear') {
+                    cellular.growRectilinear();
+                } else {
+                    throw new Error(`Unknown cellular algorithm: ${wallAlgorithm}`);
+                }
+
+                this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
+            } else if (wallAlgorithm === 'curve') {
+                this.sendProgress('PHASE_START', { phase: 'curve', message: 'Generating curved walls...' });
+                console.log(`[Worker] Curve generation started. radius=${curveRadius}, maxBends=${maxBends}`);
+
+                // Create CurveWall instance and generate curved walls
+                const curveWall = new this.CurveWall(anneal.finalSolution);
+
+                // Enable debug mode if requested
+                if (devMode) {
+                    curveWall.setDebugMode(true);
+                }
+
+                // Generate the curved wall path
+                const wallPath = curveWall.generate(maxBends, curveRadius);
+                console.log(`[Worker] Curve generation complete. segments=${wallPath.length}`);
+
+                // Store curve wall data in a local variable, not on the solution
+                curveWallData = {
+                    wallPath: wallPath,
+                    groups: curveWall.groups,
+                    debugSteps: curveWall.debugSteps || []
+                };
+
+                // Generate a cellular baseline for statistics even in curve mode
+                cellular = new this.Cellular(anneal.finalSolution, false);
+                cellular.growCells();
+
+                this.sendProgress('PHASE_COMPLETE', {
+                    phase: 'curve',
+                    wallSegments: wallPath.length,
+                    groups: curveWall.groups.length
+                });
+            } else {
+                throw new Error(`Unknown wall generation mode: ${wallAlgorithm}`);
+            }
+
+            // Store selected wall generation parameters on the solution for UI/export persistence
+            anneal.finalSolution.wallAlgorithm = wallAlgorithm;
+            anneal.finalSolution.curveRadius = curveRadius;
+            anneal.finalSolution.maxBends = maxBends;
 
             // Phase 3: Data preparation
             this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing data for storage...' });
@@ -193,6 +248,7 @@ class SolutionWorker {
                 const result = {
                     title: `solution-${this.currentJob.startId + 1}`,
                     finalSolution: anneal.finalSolution.toDataObject(),
+                    curveWallData: curveWallData, // Pass decoupled data here
                     enabledShapes: actualShapes.map(() => true),
                     solutionHistory: [], // Empty for bulk runs to reduce size
                     cellular: {
@@ -438,13 +494,14 @@ function initializeBrowserWorker() {
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',
+        '../core/CurveWall.js',
         '../core/Anneal.js',
         '../core/Export.js',
         '../core/Board.js'
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, Export, Board });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -473,6 +530,7 @@ function initializeNodeWorker() {
     const Shape = require('../core/Shape.js');
     const Anneal = require('../core/Anneal.js');
     const Cellular = require('../core/Cellular.js');
+    const CurveWall = require('../core/CurveWall.js');
     const Export = require('../core/Export.js');
     const Board = require('../core/Board.js');
 
@@ -484,7 +542,7 @@ function initializeNodeWorker() {
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, Export, Board });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;

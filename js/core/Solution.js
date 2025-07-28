@@ -22,11 +22,16 @@ const WEIGHTS = {
 };
 
 class Solution {
-    constructor(_shapes, _startID, _aspectRatioPref = 0) {
+    constructor(_shapes, _startID, _aspectRatioPref = 0, _wallGenerationParams = {}) {
         this.shapes = _shapes; // shapes with position data
         this.startID = _startID; // the multi-start index this solution annealed from
         this.aspectRatioPref = _aspectRatioPref; // -1 for tall, 0 for square, 1 for wide layouts
         this.layout = [[]]; // 2D array of shapes that occupy the layout
+
+        // Wall generation parameters
+        this.wallAlgorithm = _wallGenerationParams.wallAlgorithm || 'cellular-organic';
+        this.curveRadius = _wallGenerationParams.curveRadius || 1.0;
+        this.maxBends = _wallGenerationParams.maxBends || 4;
 
         // penalize when anneal scores of this and above are clustered (multiples touching)
         this.clusterLimit = WEIGHTS.clusterLimit;
@@ -333,7 +338,13 @@ class Solution {
             Object.assign(newShape, shape);
             return newShape;
         });
-        let newSolution = new Solution(shapesCopy, this.startID, this.aspectRatioPref);
+        // Preserve wall generation parameters
+        const wallGenerationParams = {
+            wallAlgorithm: this.wallAlgorithm,
+            curveRadius: this.curveRadius,
+            maxBends: this.maxBends
+        };
+        let newSolution = new Solution(shapesCopy, this.startID, this.aspectRatioPref, wallGenerationParams);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
@@ -439,7 +450,11 @@ class Solution {
             score: this.score,
             valid: this.valid,
             aspectRatioPref: this.aspectRatioPref,
-            clusterLimit: this.clusterLimit
+            clusterLimit: this.clusterLimit,
+            // Wall generation parameters
+            wallAlgorithm: this.wallAlgorithm,
+            curveRadius: this.curveRadius,
+            maxBends: this.maxBends
         };
     }
 
@@ -448,10 +463,18 @@ class Solution {
         // note: recalculates layout and score if missing
         const shapes = solutionData.shapes.map(shapeData => Shape.fromDataObject(shapeData));
 
+        // Prepare wall generation parameters
+        const wallGenerationParams = {
+            wallAlgorithm: solutionData.wallAlgorithm || 'cellular-organic',
+            curveRadius: solutionData.curveRadius || 1.0,
+            maxBends: solutionData.maxBends || 4
+        };
+
         const solution = new Solution(
             shapes,
             solutionData.startID,
-            solutionData.aspectRatioPref || 0
+            solutionData.aspectRatioPref || 0,
+            wallGenerationParams
         );
 
         // set missing properties if they exist

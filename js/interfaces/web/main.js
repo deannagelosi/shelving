@@ -5,6 +5,7 @@ const SQUARE_SIZE = 0.25; // in inches
 
 //== state variables
 let numGrow = 0; // cell growth amount in dev mode
+let curveStep = 0; // curve growth amount in dev mode
 
 //== UI class instances
 let inputUI;
@@ -113,14 +114,20 @@ function keyPressed() {
         if (key === 'd') {
             // toggle dev mode on and off
             devMode = !devMode;
+            // reset step counters
             numGrow = 0;
+            curveStep = 0;
             if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
         }
         else if (key === 'g' && devMode) {
-            // advance one growth at a time in dev mode
-            numGrow++;
+            const wallMode = designUI.html.wallModeSelect ? designUI.html.wallModeSelect.value() : 'cellular';
+            if (wallMode === 'curve') {
+                curveStep++;
+            } else {
+                numGrow++;
+            }
             designUI.displayResult();
         }
         // Arrow key handling for shape movement

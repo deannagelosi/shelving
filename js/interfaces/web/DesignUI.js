@@ -9,6 +9,7 @@ class DesignUI {
         //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
         this.cellularRenderer = new CellularRenderer();
+        this.curveWallRenderer = new CurveWallRenderer();
 
         //== web worker setup
         this.solutionWorker = null;
@@ -279,6 +280,9 @@ class DesignUI {
 
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             this.html.saveButton.removeAttribute('disabled');
+            if (this.html.saveButtonResults) {
+                this.html.saveButtonResults.removeAttribute('disabled');
+            }
         }
 
         // re-enable shape selection
@@ -309,7 +313,7 @@ class DesignUI {
         let yPadding = ((canvasHeight - (layoutHeight * squareSize)) / 2) - buffer;
         let xPadding = ((canvasWidth - (layoutWidth * squareSize)) / 2) - buffer;
 
-        return { squareSize, buffer, xPadding, yPadding };
+        return { squareSize, buffer, xPadding, yPadding, layoutHeight, layoutWidth };
     }
 
     //== show/hide methods
@@ -321,6 +325,9 @@ class DesignUI {
         // keep restore button hidden by default (only show when manual edits are made)
         this.hideRestoreButton();
 
+        // hide the old save button (now moved to Results panel)
+        this.html.saveButton.addClass('hidden');
+
         // reset the canvas
         clear();
         background(255);
@@ -329,6 +336,11 @@ class DesignUI {
         appState.shapes.forEach((shape, index) => {
             appState.shapes[index].enabled = true;
         });
+
+        // Initialize the results panel if not already done
+        if (!this.html.wallModeSelect) {
+            this.initializeResultsPanel();
+        }
 
         // draw the blank grid
         this.drawBlankGrid();
@@ -343,11 +355,16 @@ class DesignUI {
         // update button states based on current appState
         const state = this.computeState();
         updateButton(this.html.nextButton, state.canNext);
+
+        // Update both save buttons (old one hidden, new one in Results panel)
         updateButton(this.html.saveButton, state.canSave);
+        if (this.html.saveButtonResults) {
+            updateButton(this.html.saveButtonResults, state.canSave);
+        }
 
         // update dynamic lists
         this.createShapeList();
-        this.createAnnealList();
+        this.updateSavedSolutionsList();
     }
 
     //== button handlers
@@ -580,6 +597,9 @@ class DesignUI {
 
         //== start the annealing process
         this.html.saveButton.attribute('disabled', '');
+        if (this.html.saveButtonResults) {
+            this.html.saveButtonResults.attribute('disabled', '');
+        }
 
         // check if each shape has all it's grid data
         for (let shape of appState.shapes) {
@@ -607,6 +627,20 @@ class DesignUI {
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
 
+            // get wall generation parameters from UI
+            const wallMode = this.html.wallModeSelect ? this.html.wallModeSelect.value() : 'cellular';
+            const cellularAlgorithm = this.html.cellularAlgorithmSelect ? this.html.cellularAlgorithmSelect.value() : 'organic';
+            const curveRadius = this.html.curveRadiusInput ? parseFloat(this.html.curveRadiusInput.value()) : 1.0;
+            const maxBends = this.html.maxBendsInput ? parseInt(this.html.maxBendsInput.value()) : 4;
+
+            let wallAlgorithm;
+            if (wallMode === 'cellular') {
+                wallAlgorithm = `cellular-${cellularAlgorithm}`;
+            } else {
+                wallAlgorithm = wallMode;
+            }
+            console.log(`[UI] Starting generation. wallAlgorithm=${wallAlgorithm}, radius=${curveRadius}, bends=${maxBends}`);
+
             // send generation request to worker
             this.solutionWorker.postMessage({
                 type: 'GENERATE_SOLUTION',
@@ -616,6 +650,9 @@ class DesignUI {
                     startId: 0,
                     aspectRatioPref: aspectRatioPref,
                     devMode: devMode,
+                    wallAlgorithm: wallAlgorithm,
+                    curveRadius: curveRadius,
+                    maxBends: maxBends,
                     annealConfig: {
                         displayInterval: 30
                     }
@@ -738,45 +775,91 @@ class DesignUI {
             let config = {
                 devMode: devMode,
                 detailView: detailView,
-                ...layoutProps
+                ...layoutProps,
+                canvasHeight: canvas.height // Pass canvas height for renderer calculations
             };
 
             // use renderer to display the layout on the canvas
             this.solutionRenderer.renderLayout(solution, canvas, config);
 
-            // setup case for cellular and boards
-            if (devMode) {
-                // create temporary cellular instance for step-by-step growth preview
-                appState.currCellular = new Cellular(solution, devMode, numGrow);
-                appState.currCellular.growCells();
-            } else if (appState.currentAnneal.cellular) {
-                // worker result, use returned cellular data
-                // convert the cellular data into a full Cellular instance
-                appState.currCellular = Cellular.fromDataObject(appState.currentAnneal.cellular, solution);
-            } else {
-                // imported solution, recalculate cellular data
-                appState.currCellular = new Cellular(solution, devMode, numGrow);
-                appState.currCellular.growCells();
+            // Handle wall generation rendering based on mode
+            const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
 
-                // store cellular data in appState
-                if (appState.savedAnneals.includes(appState.currentAnneal)) {
-                    appState.currentAnneal.cellular = {
-                        cellSpace: appState.currCellular.cellSpace,
-                        maxTerrain: appState.currCellular.maxTerrain,
-                        numAlive: appState.currCellular.numAlive
-                    };
+            console.log(`[DisplayResult] wallAlgorithm=${wallAlgorithm}`);
+
+            if (wallAlgorithm === 'curve') {
+                // Handle curve wall rendering
+                const curveGenerator = new CurveWall(solution);
+                const stepLimit = devMode ? curveStep : -1;
+                if (devMode) {
+                    curveGenerator.setDebugMode(true);
                 }
-            }
+                const wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
 
-            // use renderer to display the cellular lines on the canvas
-            // get formatted line data from the cellular instance
-            const cellLines = appState.currCellular.getCellRenderLines();
-            this.cellularRenderer.renderCellLines(cellLines, canvas, config);
+                // For debug mode, we render the groups and partial path.
+                // For non-debug, we just render the final path.
+                if (devMode) {
+                    this.curveWallRenderer.renderDebugState(
+                        null, // No specific debug state object anymore
+                        curveGenerator.groups,
+                        canvas,
+                        config
+                    );
+                    this.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+                } else {
+                    if (wallPath && wallPath.length > 0) {
+                        this.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+                    } else {
+                        console.warn('[DisplayResult] No curve wall path to render');
+                    }
+                }
+            } else {
+                // Handle cellular wall rendering (existing logic)
+                if (devMode) {
+                    // create temporary cellular instance for step-by-step growth preview
+                    appState.currCellular = new Cellular(solution, devMode, numGrow);
 
-            // display cells and terrain (cellular scores)
-            if (devMode) {
-                this.cellularRenderer.renderTerrain(solution.layout, canvas, { ...config, maxTerrain: appState.currCellular.maxTerrain });
-                this.cellularRenderer.renderCells(appState.currCellular.cellSpace, canvas, config);
+                    // Use the appropriate cellular algorithm
+                    if (wallAlgorithm === 'cellular-rectilinear') {
+                        appState.currCellular.growRectilinear();
+                    } else {
+                        appState.currCellular.growCells();
+                    }
+                } else if (appState.currentAnneal.cellular) {
+                    // worker result, use returned cellular data
+                    // convert the cellular data into a full Cellular instance
+                    appState.currCellular = Cellular.fromDataObject(appState.currentAnneal.cellular, solution);
+                } else {
+                    // imported solution, recalculate cellular data
+                    appState.currCellular = new Cellular(solution, devMode, numGrow);
+
+                    // Use the appropriate cellular algorithm
+                    if (wallAlgorithm === 'cellular-rectilinear') {
+                        appState.currCellular.growRectilinear();
+                    } else {
+                        appState.currCellular.growCells();
+                    }
+
+                    // store cellular data in appState
+                    if (appState.savedAnneals.includes(appState.currentAnneal)) {
+                        appState.currentAnneal.cellular = {
+                            cellSpace: appState.currCellular.cellSpace,
+                            maxTerrain: appState.currCellular.maxTerrain,
+                            numAlive: appState.currCellular.numAlive
+                        };
+                    }
+                }
+
+                // use renderer to display the cellular lines on the canvas
+                // get formatted line data from the cellular instance
+                const cellLines = appState.currCellular.getCellRenderLines();
+                this.cellularRenderer.renderCellLines(cellLines, canvas, config);
+
+                // display cells and terrain (cellular scores)
+                if (devMode) {
+                    this.cellularRenderer.renderTerrain(solution.layout, canvas, { ...config, maxTerrain: appState.currCellular.maxTerrain });
+                    this.cellularRenderer.renderCells(appState.currCellular.cellSpace, canvas, config);
+                }
             }
         }
     }
@@ -812,13 +895,69 @@ class DesignUI {
         this.shapeElements[index].toggleClass('highlighted');
     }
 
-    createAnnealList() {
-        // create list of solutions to select from
+    initializeResultsPanel() {
+        // Initialize the results panel with wall generation controls
         if (!htmlRefs.right) return;
         if (appState.currentScreen !== ScreenState.DESIGN) return;
 
         // clear the list
         htmlRefs.right.list.html('');
+        this.savedAnnealElements = [];
+
+        // Set up flexbox layout for the results panel
+        htmlRefs.right.list
+            .style('display', 'flex')
+            .style('flex-direction', 'column')
+            .style('height', '100%')
+            .style('overflow', 'hidden');
+
+        // Create a fixed controls container
+        this.html.controlsContainer = createDiv()
+            .addClass('controls-container')
+            .style('flex-shrink', '0')
+            .style('padding', '10px')
+            .style('background-color', '#fefefe')
+            .parent(htmlRefs.right.list);
+
+        // create wall generation controls in the fixed container
+        this.createWallGenerationControls();
+
+        // Create scrollable container for solutions
+        this.html.scrollContainer = createDiv()
+            .addClass('scroll-container')
+            .style('flex-grow', '1')
+            .style('overflow-y', 'auto')
+            .style('min-height', '0')
+            .parent(htmlRefs.right.list);
+
+        // create the saved solutions list
+        this.updateSavedSolutionsList();
+    }
+
+    updateSavedSolutionsList() {
+        // Update only the saved solutions list without recreating controls
+        if (!htmlRefs.right) return;
+        if (appState.currentScreen !== ScreenState.DESIGN) return;
+        if (!this.html.scrollContainer) return;
+
+        // Clear the scroll container
+        this.html.scrollContainer.html('');
+
+        // Add the saved solutions label
+        createSpan('Saved Solutions')
+            .addClass('control-label saved-solutions-label')
+            .style('display', 'block')
+            .style('margin-bottom', '10px')
+            .style('font-weight', 'bold')
+            .style('padding', '0 10px')
+            .parent(this.html.scrollContainer);
+
+        // Create the solutions container
+        this.html.solutionsContainer = createDiv()
+            .addClass('solutions-container')
+            .style('padding', '0 10px')
+            .parent(this.html.scrollContainer);
+
         this.savedAnnealElements = [];
 
         // create the list
@@ -827,7 +966,7 @@ class DesignUI {
             if (i === appState.currentViewedAnnealIndex) {
                 savedAnnealItem.addClass('highlighted');
             }
-            savedAnnealItem.parent(htmlRefs.right.list);
+            savedAnnealItem.parent(this.html.solutionsContainer);
 
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
@@ -865,6 +1004,191 @@ class DesignUI {
         }
     }
 
+    createWallGenerationControls() {
+        // create wall generation mode controls in the Results panel
+
+        // Preserve previous selections if they exist
+        const previousWallMode = this.html.wallModeSelect ? this.html.wallModeSelect.value() : 'cellular';
+        const previousCellularAlgorithm = this.html.cellularAlgorithmSelect ? this.html.cellularAlgorithmSelect.value() : 'organic';
+
+        // Master wall generation mode dropdown
+        const modeGroup = createDiv()
+            .addClass('control-group')
+            .style('margin-bottom', '15px')
+            .parent(this.html.controlsContainer);
+        createSpan('Wall Generation Mode')
+            .addClass('control-label')
+            .style('display', 'block')
+            .style('margin-bottom', '5px')
+            .style('font-weight', 'bold')
+            .parent(modeGroup);
+
+        this.html.wallModeSelect = createSelect()
+            .addClass('control-select')
+            .style('width', '100%')
+            .style('padding', '5px')
+            .parent(modeGroup)
+            .changed(() => this.handleWallModeChange());
+        this.html.wallModeSelect.option('Cellular Automata', 'cellular');
+        this.html.wallModeSelect.option('Curve', 'curve');
+        this.html.wallModeSelect.selected(previousWallMode);
+
+        // Cellular Automata sub-options
+        this.html.cellularGroup = createDiv()
+            .addClass('control-group')
+            .style('margin-bottom', '15px')
+            .parent(this.html.controlsContainer);
+        if (previousWallMode !== 'cellular') {
+            this.html.cellularGroup.addClass('hidden');
+        }
+        createSpan('Algorithm')
+            .addClass('control-label')
+            .style('display', 'block')
+            .style('margin-bottom', '5px')
+            .style('font-weight', 'bold')
+            .parent(this.html.cellularGroup);
+
+        this.html.cellularAlgorithmSelect = createSelect()
+            .addClass('control-select')
+            .style('width', '100%')
+            .style('padding', '5px')
+            .parent(this.html.cellularGroup)
+            .changed(() => this.handleCellularAlgorithmChange());
+        this.html.cellularAlgorithmSelect.option('Organic', 'organic');
+        this.html.cellularAlgorithmSelect.option('Rectilinear', 'rectilinear');
+        this.html.cellularAlgorithmSelect.selected(previousCellularAlgorithm);
+
+        // Curve sub-options
+        this.html.curveGroup = createDiv()
+            .addClass('control-group')
+            .parent(this.html.controlsContainer);
+        if (previousWallMode !== 'curve') {
+            this.html.curveGroup.addClass('hidden');
+        }
+
+        // Wrapper for Radius
+        const radiusWrapper = createDiv()
+            .parent(this.html.curveGroup)
+            .style('margin-bottom', '15px');
+        createSpan('Curve Radius (inches)')
+            .addClass('control-label')
+            .style('display', 'block')
+            .style('margin-bottom', '5px')
+            .parent(radiusWrapper);
+        this.html.curveRadiusInput = createInput('1.0', 'number')
+            .addClass('control-input')
+            .style('width', '100%')
+            .parent(radiusWrapper)
+            .attribute('min', '0.1')
+            .attribute('max', '10.0')
+            .attribute('step', '0.1')
+            .input(() => this.handleCurveParameterChange());
+
+        // Wrapper for Bends
+        const bendsWrapper = createDiv()
+            .parent(this.html.curveGroup)
+            .style('margin-bottom', '15px');
+        createSpan('Max Sequential Bends')
+            .addClass('control-label')
+            .style('display', 'block')
+            .style('margin-bottom', '5px')
+            .parent(bendsWrapper);
+        this.html.maxBendsInput = createInput('4', 'number')
+            .addClass('control-input')
+            .style('width', '100%')
+            .parent(bendsWrapper)
+            .attribute('min', '2')
+            .attribute('max', '10')
+            .attribute('step', '1')
+            .input(() => this.handleCurveParameterChange());
+
+        // Save button in Results panel
+        this.html.saveButtonResults = createButton('Save')
+            .addClass('primary-button button')
+            .style('margin-bottom', '20px')
+            .style('width', '100%')
+            .parent(this.html.controlsContainer)
+            .attribute('disabled', '') // until annealing is complete
+            .mousePressed(() => this.handleSaveSolution());
+
+        // No separator needed since we have separate containers now
+    }
+
+    handleWallModeChange() {
+        const selectedMode = this.html.wallModeSelect.value();
+
+        console.log(`[UI] Wall mode changed to: ${selectedMode}`);
+
+        if (selectedMode === 'cellular') {
+            this.html.cellularGroup.removeClass('hidden');
+            this.html.curveGroup.addClass('hidden');
+        } else if (selectedMode === 'curve') {
+            this.html.cellularGroup.addClass('hidden');
+            this.html.curveGroup.removeClass('hidden');
+        }
+
+        // Also update the wall generation mode on the solution object
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
+            const solution = appState.currentAnneal.finalSolution;
+            if (selectedMode === 'cellular') {
+                const cellularAlgorithm = this.html.cellularAlgorithmSelect.value();
+                solution.wallAlgorithm = `cellular-${cellularAlgorithm}`;
+            } else {
+                solution.wallAlgorithm = selectedMode;
+            }
+            this.displayResult(); // Redraw with the new wall type
+        }
+    }
+
+    handleCurveParameterChange() {
+        // Only regenerate if we have a current solution
+        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
+            return;
+        }
+
+        const solution = appState.currentAnneal.finalSolution;
+
+        // Update solution with new values from UI
+        solution.curveRadius = parseFloat(this.html.curveRadiusInput.value());
+        solution.maxBends = parseInt(this.html.maxBendsInput.value());
+
+        // Redraw the canvas with new walls without triggering a full UI update
+        this.displayResult();
+    }
+
+    handleCellularAlgorithmChange() {
+        // Only regenerate if we have a current solution
+        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
+            return;
+        }
+
+        const selectedAlgorithm = this.html.cellularAlgorithmSelect.value();
+        const solution = appState.currentAnneal.finalSolution;
+
+        // Create new cellular instance with the selected algorithm
+        const cellular = new Cellular(solution, devMode, numGrow);
+
+        if (selectedAlgorithm === 'organic') {
+            cellular.growCells();
+        } else if (selectedAlgorithm === 'rectilinear') {
+            cellular.growRectilinear();
+        }
+
+        // Update the stored cellular data
+        appState.currentAnneal.cellular = {
+            cellSpace: cellular.cellSpace,
+            maxTerrain: cellular.maxTerrain,
+            numAlive: cellular.numAlive || 0
+        };
+        appState.currCellular = cellular;
+
+        // also update the wall algorithm on the solution object
+        solution.wallAlgorithm = `cellular-${selectedAlgorithm}`;
+
+        // Redraw the canvas with new walls without triggering a full UI update
+        this.displayResult();
+    }
+
     viewSavedAnneal(index) {
         if (index === null) {
             // clear the viewed anneal
@@ -886,6 +1210,22 @@ class DesignUI {
             finalSolution: Solution.fromDataObject(savedAnneal.finalSolution.toDataObject()),
             enabledShapes: [...savedAnneal.enabledShapes] // shallow copy is fine for boolean array
         };
+
+        // update wall generation UI to match loaded solution
+        const solution = appState.currentAnneal.finalSolution;
+        if (solution.wallAlgorithm) {
+            if (solution.wallAlgorithm.startsWith('cellular')) {
+                const cellularType = solution.wallAlgorithm.split('-')[1] || 'organic';
+                this.html.wallModeSelect.selected('cellular');
+                this.html.cellularAlgorithmSelect.selected(cellularType);
+                this.html.cellularGroup.removeClass('hidden');
+                this.html.curveGroup.addClass('hidden');
+            } else if (solution.wallAlgorithm === 'curve') {
+                this.html.wallModeSelect.selected('curve');
+                this.html.cellularGroup.addClass('hidden');
+                this.html.curveGroup.removeClass('hidden');
+            }
+        }
 
         // disable shape selection changes while viewing saved anneal
         if (this.shapeElements.length === 0) {
