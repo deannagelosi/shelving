@@ -276,32 +276,37 @@ class InputUI {
 
     loadJsonData(_importedData) {
         // handles loading saved shapes from json file
-        let shapeData = _importedData.allShapes;
-        let annealData = _importedData.savedAnneals;
+        const shapeData = _importedData.allShapes || [];
+        const annealData = _importedData.savedAnneals || [];
 
         // process shape data
-        let loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
-        // add shapes
+        const loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
         appState.shapes.push(...loadedShapes);
 
         // process anneal data
         let maxSolutionNum = 0;
-        let loadedAnneals = [];
-        for (let anneal of annealData) {
-            // find the largest anneal number (ex: 4 on 'solution-4')
-            let titleNumber = parseInt(anneal.title.split('-')[1]);
-            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+        const loadedAnneals = annealData.map(anneal => {
+            let titleNumber = 0;
+            if (anneal.title) {
+                const parts = anneal.title.split('-');
+                if (parts.length > 1) {
+                    titleNumber = parseInt(parts[1], 10);
+                }
+            }
+
+            if (!isNaN(titleNumber)) {
+                maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+            }
+
             // create new solution from saved data to restore class methods
             anneal.finalSolution = Solution.fromDataObject(anneal.finalSolution);
+            return anneal;
+        });
 
-            loadedAnneals.push(anneal);
-        }
         // add anneals and the highest solution number
         appState.savedAnneals.push(...loadedAnneals);
-        appState.totalSavedAnneals = maxSolutionNum;
+        appState.totalSavedAnneals = Math.max(appState.totalSavedAnneals || 0, maxSolutionNum);
 
-        // reset UI
-        this.resetCanvas();
         // notify ui update manager
         appEvents.emit('stateChanged');
     }

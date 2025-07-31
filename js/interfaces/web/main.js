@@ -31,6 +31,7 @@ const ScreenState = {
 let detailView = false;
 let devMode = false;
 let aspectRatioPref = 0;
+let fastReloadDev = true; // For dev purposes, loads a test file on start
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -94,6 +95,37 @@ function setup() {
 
     // start on input screen
     changeScreen(ScreenState.INPUT);
+
+    // If fast reload is enabled, load the test data
+    if (fastReloadDev) {
+        loadTestData();
+    }
+}
+
+function loadTestData() {
+    const solutionName = "solution-3";
+    const fileName = "curve_test_both.json";
+    fetch(`examples/${fileName}`)
+        .then(response => response.json())
+        .then(data => {
+            // First, switch to the design screen.
+            changeScreen(ScreenState.DESIGN);
+
+            // Next, load the data using the refactored method, suppressing the UI reset.
+            inputUI.loadJsonData(data);
+
+            // Finally, use setTimeout to ensure the UI has finished its render cycle
+            // before we try to trigger the preview.
+            setTimeout(() => {
+                const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === solutionName);
+                if (targetSolutionIndex !== -1) {
+                    designUI.viewSavedAnneal(targetSolutionIndex);
+                } else {
+                    console.error("Fast Reload Error: Could not find 'solution-3' in the loaded data.");
+                }
+            }, 0);
+        })
+        .catch(error => console.error('Error loading test data:', error));
 }
 
 function draw() {
