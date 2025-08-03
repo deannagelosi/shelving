@@ -44,6 +44,46 @@ class CurveWallRenderer {
             }
         });
 
+        // Render IDs on top of the segments
+        this._renderSegmentIDs(wallPath, config);
+
+        pop();
+    }
+
+    _renderSegmentIDs(wallPath, config) {
+        push();
+        fill('black');
+        stroke('white');
+        strokeWeight(2);
+        textSize(12);
+        textAlign(CENTER, CENTER);
+
+        wallPath.forEach(segment => {
+            let x, y;
+            if (segment.type === 'line') {
+                const canvasStartX = this._layoutToCanvasX(segment.startX, config);
+                const canvasStartY = this._layoutToCanvasY(segment.startY, config);
+                const canvasEndX = this._layoutToCanvasX(segment.endX, config);
+                const canvasEndY = this._layoutToCanvasY(segment.endY, config);
+                x = (canvasStartX + canvasEndX) / 2;
+                y = (canvasStartY + canvasEndY) / 2;
+            } else if (segment.type === 'arc') {
+                // Handle both startDeg/endDeg (from CurveWall) and startAngle/endAngle (from golden path)
+                const startAngleDeg = segment.startDeg !== undefined ? segment.startDeg : segment.startAngle;
+                const endAngleDeg = segment.endDeg !== undefined ? segment.endDeg : segment.endAngle;
+                const midAngle = radians((startAngleDeg + endAngleDeg) / 2);
+                const centerX = this._layoutToCanvasX(segment.centerX, config);
+                const centerY = this._layoutToCanvasY(segment.centerY, config);
+                const radius = segment.radius * config.squareSize;
+                x = centerX + (radius * cos(midAngle));
+                y = centerY + (radius * sin(midAngle));
+            }
+
+            if (x !== undefined && y !== undefined) {
+                text(segment.id, x, y);
+            }
+        });
+
         pop();
     }
 
@@ -139,8 +179,11 @@ class CurveWallRenderer {
         const radius = segment.radius * config.squareSize;
 
         // Convert angles from degrees to radians
-        const startAngle = radians(segment.startAngle);
-        const endAngle = radians(segment.endAngle);
+        // CurveWall generates startDeg/endDeg, but golden path uses startAngle/endAngle
+        const startAngleDeg = segment.startDeg !== undefined ? segment.startDeg : segment.startAngle;
+        const endAngleDeg = segment.endDeg !== undefined ? segment.endDeg : segment.endAngle;
+        const startAngle = radians(startAngleDeg);
+        const endAngle = radians(endAngleDeg);
 
         arc(centerX, centerY, radius * 2, radius * 2, startAngle, endAngle);
     }

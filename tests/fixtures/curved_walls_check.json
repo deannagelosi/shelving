@@ -1,0 +1,132 @@
+[
+    {
+      "id": 0,
+      "type": "line",
+      "startX": 0,
+      "startY": -1,
+      "endX": 13,
+      "endY": -1,
+      "isShelf": true
+    },
+    {
+      "id": 1,
+      "type": "line",
+      "startX": 1,
+      "startY": 4,
+      "endX": 12,
+      "endY": 4,
+      "isShelf": true
+    },
+    {
+      "id": 2,
+      "type": "line",
+      "startX": 6,
+      "startY": 6,
+      "endX": 12,
+      "endY": 6,
+      "isShelf": true
+    },
+    {
+      "id": 3,
+      "type": "line",
+      "startX": 0,
+      "startY": 9,
+      "endX": 13,
+      "endY": 9,
+      "isShelf": true
+    },
+    {
+      "id": 4,
+      "type": "line",
+      "startX": 9,
+      "startY": 12,
+      "endX": 13,
+      "endY": 12,
+      "isShelf": true
+    },
+    {
+      "id": 5,
+      "type": "arc",
+      "centerX": 13,
+      "centerY": 11,
+      "radius": 1,
+      "startAngle": 270,
+      "endAngle": 0
+    },
+    {
+      "id": 6,
+      "type": "line",
+      "startX": 14,
+      "startY": 11,
+      "endX": 14,
+      "endY": 0
+    },
+    {
+      "id": 7,
+      "type": "arc",
+      "centerX": 13,
+      "centerY": 0,
+      "radius": 1,
+      "startAngle": 0,
+      "endAngle": 90
+    },
+    {
+      "id": 8,
+      "type": "arc",
+      "centerX": 0,
+      "centerY": 0,
+      "radius": 1,
+      "startAngle": 90,
+      "endAngle": 180
+    },
+    {
+      "id": 9,
+      "type": "line",
+      "startX": -1,
+      "startY": 0,
+      "endX": -1,
+      "endY": 3
+    },
+    {
+      "id": 10,
+      "type": "line",
+      "startX": 0,
+      "startY": 4,
+      "endX": 2,
+      "endY": 4
+    },
+    {
+      "id": 11,
+      "type": "arc",
+      "centerX": 0,
+      "centerY": 3,
+      "radius": 1,
+      "startAngle": 180,
+      "endAngle": 270
+    },
+    {
+      "id": 12,
+      "type": "line",
+      "startX": 5,
+      "startY": 7,
+      "endX": 5,
+      "endY": 9
+    },
+    {
+      "id": 13,
+      "type": "arc",
+      "centerX": 6,
+      "centerY": 7,
+      "radius": 1,
+      "startAngle": 90,
+      "endAngle": 180
+    },
+    {
+      "id": 14,
+      "type": "line",
+      "startX": 13,
+      "startY": 9,
+      "endX": 14,
+      "endY": 9
+    }
+  ]

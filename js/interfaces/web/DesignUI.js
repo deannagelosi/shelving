@@ -2,6 +2,9 @@ class DesignUI {
     constructor() {
         //== state variables
         this.savedAnnealElements = [];
+
+        // Debug flag for curve wall testing - set to true to use golden path test data
+        this.useGoldenPathDebugData = false;
         // dom elements
         this.html = {};
         this.shapeElements = [];
@@ -10,6 +13,7 @@ class DesignUI {
         this.solutionRenderer = new SolutionRenderer();
         this.cellularRenderer = new CellularRenderer();
         this.curveWallRenderer = new CurveWallRenderer();
+        this.goldenPathData = null;
 
         //== web worker setup
         this.solutionWorker = null;
@@ -33,6 +37,29 @@ class DesignUI {
         //== movement debouncing
         this.moveDebounceTimer = null;
         this.moveDebounceDelay = 150; // milliseconds
+
+        this.loadGoldenPath();
+    }
+
+    loadGoldenPath() {
+        // Load golden path test data for visual validation debugging
+        // To use this data instead of the actual algorithm, set this.useGoldenPathDebugData = true
+        fetch('tests/fixtures/curved_walls_check.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.goldenPathData = data;
+                console.log('[LoadGoldenPath] Golden path test data loaded. Set useGoldenPathDebugData=true to use it for rendering.');
+                // If a solution is already being displayed, re-render it with the new data.
+                if (appState.currentScreen === ScreenState.DESIGN && appState.currentAnneal) {
+                    this.displayResult();
+                }
+            })
+            .catch(error => console.error('Error loading golden path data:', error));
     }
 
     computeState() {
@@ -789,16 +816,29 @@ class DesignUI {
 
             if (wallAlgorithm === 'curve') {
                 // Handle curve wall rendering
-                const curveGenerator = new CurveWall(solution);
-                const stepLimit = devMode ? curveStep : -1;
-                if (devMode) {
-                    curveGenerator.setDebugMode(true);
+                let wallPath;
+
+                if (this.useGoldenPathDebugData && this.goldenPathData) {
+                    // Use test data for visual validation
+                    wallPath = this.goldenPathData;
+                    console.log('[DisplayResult] Using golden path test data for visual validation');
+                } else {
+                    // Use actual algorithm output
+                    const curveGenerator = new CurveWall(solution);
+                    const stepLimit = devMode ? curveStep : -1;
+                    if (devMode) {
+                        curveGenerator.setDebugMode(true);
+                    }
+                    wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
+                    console.log('[DisplayResult] Using actual CurveWall algorithm output');
                 }
-                const wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
 
                 // For debug mode, we render the groups and partial path.
                 // For non-debug, we just render the final path.
                 if (devMode) {
+                    // Create a generator instance just to get the group data for debugging
+                    const curveGenerator = new CurveWall(solution);
+                    curveGenerator._groupShapesByY(solution.shapes); // Run grouping
                     this.curveWallRenderer.renderDebugState(
                         null, // No specific debug state object anymore
                         curveGenerator.groups,

@@ -1,3 +1,21 @@
+// A lazy-loaded, cached reference to the Shape class.
+// This avoids a top-level declaration that causes redeclaration
+// errors in the browser/worker environment.
+let _Shape;
+function getShape() {
+    if (_Shape) {
+        return _Shape;
+    }
+    // In a browser/worker, 'Shape' is loaded via script tag and will be in the global scope.
+    // In Node.js (Jest), it needs to be required.
+    if (typeof Shape !== 'undefined') {
+        _Shape = Shape;
+    } else {
+        _Shape = require('./Shape');
+    }
+    return _Shape;
+}
+
 // Weights for objective functions in calcScore
 const WEIGHTS = {
     // ----- Overlap / collision -----
@@ -461,7 +479,8 @@ class Solution {
     static fromDataObject(solutionData) {
         // convert Solution text object (JSON) to Solution instance (import/worker communication)
         // note: recalculates layout and score if missing
-        const shapes = solutionData.shapes.map(shapeData => Shape.fromDataObject(shapeData));
+        const LocalShape = getShape();
+        const shapes = solutionData.shapes.map(shapeData => LocalShape.fromDataObject(shapeData));
 
         // Prepare wall generation parameters
         const wallGenerationParams = {
