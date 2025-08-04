@@ -334,29 +334,6 @@ class DesignUI {
     }
 
     //== helper methods
-    calculateLayoutProperties(solution) {
-        // calculate display properties for Solutions
-        if (!solution || !solution.layout || solution.layout.length === 0) {
-            // default values for empty/blank layouts
-            return {
-                squareSize: 25,
-                buffer: 25,
-                xPadding: (canvasWidth - (20 * 25)) / 2 - 25,
-                yPadding: (canvasHeight - (20 * 25)) / 2 - 25
-            };
-        }
-
-        let layoutHeight = solution.layout.length;
-        let layoutWidth = solution.layout[0].length;
-        let squareHeight = canvasHeight / (layoutHeight + 2); // + 2 makes room for top/bottom buffer
-        let squareWidth = canvasWidth / (layoutWidth + 2); // + 2 makes room for left/right buffer
-        let squareSize = Math.min(squareHeight, squareWidth);
-        let buffer = squareSize;
-        let yPadding = ((canvasHeight - (layoutHeight * squareSize)) / 2) - buffer;
-        let xPadding = ((canvasWidth - (layoutWidth * squareSize)) / 2) - buffer;
-
-        return { squareSize, buffer, xPadding, yPadding, layoutHeight, layoutWidth };
-    }
 
     //== show/hide methods
     // manage visibility and screen-specific setup
@@ -453,7 +430,7 @@ class DesignUI {
         const canvas = { width: canvasWidth, height: canvasHeight };
 
         // Get the same config values used for rendering
-        const config = this.calculateLayoutProperties(solution);
+        const config = this.solutionRenderer.calculateLayoutProperties(solution, canvasWidth, canvasHeight);
 
         // Check each shape to see if the click is within its bounds
         for (let i = 0; i < solution.shapes.length; i++) {
@@ -821,7 +798,7 @@ class DesignUI {
 
         // use renderer to display blank grid
         let canvas = { height: canvasHeight, width: canvasWidth };
-        let layoutProps = this.calculateLayoutProperties(null); // null will return default values
+        let layoutProps = this.solutionRenderer.calculateLayoutProperties(null, canvasWidth, canvasHeight); // null will return default values
         this.solutionRenderer.renderBlankGrid(canvas, layoutProps, 20);
 
         // notify ui update manager
@@ -830,7 +807,7 @@ class DesignUI {
 
     updateDisplayCallback(_solution) {
         // receives a solution from the web worker and updates the display
-        let layoutProps = this.calculateLayoutProperties(_solution);
+        let layoutProps = this.solutionRenderer.calculateLayoutProperties(_solution, canvasWidth, canvasHeight);
         let canvas = { height: canvasHeight, width: canvasWidth };
         let perimeterConfig = {
             useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
@@ -846,7 +823,7 @@ class DesignUI {
         // show shapes and grid but not annealing scores
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             let solution = appState.currentAnneal.finalSolution;
-            let layoutProps = this.calculateLayoutProperties(solution);
+            let layoutProps = this.solutionRenderer.calculateLayoutProperties(solution, canvasWidth, canvasHeight);
             let canvas = { height: canvasHeight, width: canvasWidth };
 
             let perimeterConfig = {

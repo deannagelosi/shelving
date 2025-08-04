@@ -2,7 +2,7 @@ class Export {
     constructor(_cellData, _spacing, _config) {
         this.cellData = _cellData;
         this.cellLines = this.cellData.getCellRenderLines();
-        this.squareSize = this.cellData.squareSize;
+        this.squareSize = _spacing.squareSize;
         this.buffer = _spacing.buffer;
         this.xPadding = _spacing.xPadding;
         this.yPadding = _spacing.yPadding;
@@ -230,20 +230,38 @@ class Export {
         const endY = (y2) => (((ctx.height - this.yPadding) - this.buffer) - (y2 * this.squareSize));
 
         // draw the cell line segments
-        if (isDevMode && renderer === null) this.cellData.showCellLines("red");
+        if (isDevMode && renderer === null) {
+            const cellLines = this.cellData.getCellRenderLines();
+            // Only use CellularRenderer for on screen renderer
+            if (typeof CellularRenderer !== 'undefined') {
+                const cellularRenderer = new CellularRenderer();
+                const config = {
+                    squareSize: this.squareSize,
+                    buffer: this.buffer,
+                    xPadding: this.xPadding,
+                    yPadding: this.yPadding
+                };
+                cellularRenderer.renderCellLines(cellLines, ctx, config, "red");
+            } else {
+                console.warn('[Export.previewCase] CellularRenderer not available, skipping cell line rendering');
+            }
+        }
 
         // draw the boards
         ctx.strokeWeight(7);
-        for (const board of this.boards) {
-            if (isDevMode && renderer === null) stroke("rgba(175, 141, 117, 0.5)");
+        for (let i = 0; i < this.boards.length; i++) {
+            const board = this.boards[i];
+            if (isDevMode && renderer === null) ctx.stroke("rgba(175, 141, 117, 0.5)");
             if (!isDevMode) ctx.stroke("rgb(175, 141, 117)");
-            ctx.line(
-                startX(board.coords.start.x),
-                startY(board.coords.start.y),
-                endX(board.coords.end.x),
-                endY(board.coords.end.y)
-            );
+
+            const x1 = startX(board.coords.start.x);
+            const y1 = startY(board.coords.start.y);
+            const x2 = endX(board.coords.end.x);
+            const y2 = endY(board.coords.end.y);
+
+            ctx.line(x1, y1, x2, y2);
         }
+
         // draw board labels
         // put text with the board id at the board start coords
         ctx.fill("black");
@@ -252,13 +270,17 @@ class Export {
         ctx.textSize(20);
         const labelOffset = 10;
         for (const board of this.boards) {
+            let textX, textY;
             // if board is x oriented, draw text to the right of the start coords
             if (board.orientation === "x") {
-                ctx.text(board.id, startX(board.coords.start.x) + labelOffset, startY(board.coords.start.y) + 8);
+                textX = startX(board.coords.start.x) + labelOffset;
+                textY = startY(board.coords.start.y) + 8;
             } else {
                 // if board is y oriented, draw text above the start coords
-                ctx.text(board.id, startX(board.coords.start.x) - 8, startY(board.coords.start.y) - labelOffset);
+                textX = startX(board.coords.start.x) - 8;
+                textY = startY(board.coords.start.y) - labelOffset;
             }
+            ctx.text(board.id, textX, textY);
         }
 
         // draw shape names in correct location
@@ -266,52 +288,52 @@ class Export {
 
         if (isDevMode && renderer === null) {
             // draw the end joints by type
-            noStroke();
+            ctx.noStroke();
             // slot ends
             for (const board of this.boards) {
-                fill("salmon");
+                ctx.fill("salmon");
                 if (board.poi.start === "slot") {
-                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 30);
+                    ctx.ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 30);
                 }
                 if (board.poi.end === "slot") {
-                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 30);
+                    ctx.ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 30);
                 }
             }
             // pin ends
             for (const board of this.boards) {
-                fill("pink");
+                ctx.fill("pink");
                 if (board.poi.start === "pin") {
-                    ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 22);
+                    ctx.ellipse(startX(board.coords.start.x), startY(board.coords.start.y), 22);
                 }
                 if (board.poi.end === "pin") {
-                    ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 22);
+                    ctx.ellipse(endX(board.coords.end.x), endY(board.coords.end.y), 22);
                 }
             }
             // t-joints
             for (const board of this.boards) {
                 for (const tJoint of board.poi.tJoints) {
-                    fill("teal");
+                    ctx.fill("teal");
                     if (board.orientation === "x") {
                         // add t-joint on x-axis from start coord
-                        ellipse(startX(board.coords.start.x) + (tJoint * this.squareSize), startY(board.coords.start.y), 14);
+                        ctx.ellipse(startX(board.coords.start.x) + (tJoint * this.squareSize), startY(board.coords.start.y), 14);
                     } else {
                         // subtract t-joint on y-axis from start coord
-                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (tJoint * this.squareSize), 14);
+                        ctx.ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (tJoint * this.squareSize), 14);
                     }
                 }
             }
             // x-joints
             for (const board of this.boards) {
-                fill("white");
-                stroke("black");
-                strokeWeight(0.25);
+                ctx.fill("white");
+                ctx.stroke("black");
+                ctx.strokeWeight(0.25);
                 for (const xJoint of board.poi.xJoints) {
                     if (board.orientation === "x") {
                         // add x-joint on x-axis from start coord
-                        ellipse(startX(board.coords.start.x) + (xJoint * this.squareSize), startY(board.coords.start.y), 10);
+                        ctx.ellipse(startX(board.coords.start.x) + (xJoint * this.squareSize), startY(board.coords.start.y), 10);
                     } else {
                         // add x-joint on y-axis from start coord
-                        ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (xJoint * this.squareSize), 10);
+                        ctx.ellipse(startX(board.coords.start.x), startY(board.coords.start.y) - (xJoint * this.squareSize), 10);
                     }
                 }
             }

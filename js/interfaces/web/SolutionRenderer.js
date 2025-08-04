@@ -514,4 +514,28 @@ class SolutionRenderer {
         // Return the cellular instance for potential state storage
         return currCellular;
     }
+
+    calculateLayoutProperties(solution, canvasWidth, canvasHeight) {
+        // calculate display properties for Solutions
+        if (!solution || !solution.layout || solution.layout.length === 0) {
+            // default values for empty/blank layouts
+            return {
+                squareSize: 25,
+                buffer: 25,
+                xPadding: (canvasWidth - (20 * 25)) / 2 - 25,
+                yPadding: (canvasHeight - (20 * 25)) / 2 - 25
+            };
+        }
+
+        let layoutHeight = solution.layout.length;
+        let layoutWidth = solution.layout[0].length;
+        let squareHeight = canvasHeight / (layoutHeight + 2); // + 2 makes room for top/bottom buffer
+        let squareWidth = canvasWidth / (layoutWidth + 2); // + 2 makes room for left/right buffer
+        let squareSize = Math.min(squareHeight, squareWidth);
+        let buffer = squareSize;
+        let yPadding = ((canvasHeight - (layoutHeight * squareSize)) / 2) - buffer;
+        let xPadding = ((canvasWidth - (layoutWidth * squareSize)) / 2) - buffer;
+
+        return { squareSize, buffer, xPadding, yPadding, layoutHeight, layoutWidth };
+    }
 } 

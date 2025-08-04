@@ -8,6 +8,9 @@ class ExportUI {
         // flags
         this.showingLayout = true;
 
+        //== renderer instance
+        this.solutionRenderer = new SolutionRenderer();
+
         //== initialize UI elements
         this.initSidebarButtons();
         this.initExportSettings();
@@ -426,11 +429,14 @@ class ExportUI {
         };
         // get cellular layout data (case lines)
         const cellData = cellularInstance;
-        // get spacing data
-        const buffer = appState.currentAnneal.finalSolution.buffer;
-        const yPadding = appState.currentAnneal.finalSolution.yPadding;
-        const xPadding = appState.currentAnneal.finalSolution.xPadding;
-        const spacing = { buffer, yPadding, xPadding };
+        // calculate layout properties using SolutionRenderer
+        const layoutProps = this.solutionRenderer.calculateLayoutProperties(appState.currentAnneal.finalSolution, canvasWidth, canvasHeight);
+        const spacing = {
+            buffer: layoutProps.buffer,
+            yPadding: layoutProps.yPadding,
+            xPadding: layoutProps.xPadding,
+            squareSize: layoutProps.squareSize
+        };
 
         // create new export
         this.currExport = new Export(cellData, spacing, config);
