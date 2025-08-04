@@ -21,8 +21,6 @@ class Anneal {
         //== state variables
         this.shapes = _shapes;
         this.multiStartSolutions = []; // step 1 (initial anneal promises)
-        this.multiStartsHistory = {};
-        this.solutionHistory = []; // stores final solution history (...multi-starts, refinement)
         this.finalSolution = null;
         this.stopAnneal = false;
         this.restartAnneal = false;
@@ -41,15 +39,6 @@ class Anneal {
         // == Annealing Complete == //
         // anneal completed with out being stopped
         this.finalSolution = refinedSolution;
-
-        if (this.devMode) {
-            console.log("Refine complete. Score:", this.finalSolution.score);
-        }
-
-        // update final solution history with it's initial start history
-        let winningStartHistory = [...this.multiStartsHistory[bestStartSolution.startID]];
-        this.solutionHistory = [...winningStartHistory, ...this.solutionHistory];
-        this.multiStartsHistory = {}; // clear the multi-start history
     }
 
     async multiStartPhase(progressCallback = null) {
@@ -138,7 +127,6 @@ class Anneal {
         // initialize the annealing process with the given solution and parameters
         let currentSolution = _initialSolution;
         let bestSolution = _initialSolution;
-        this.saveSolutionHistory(bestSolution, config.multiStart);
 
         let iterationsSinceImprovement = 0;
         const coolingRateAdjustment = 0.01; // small adjustment to cooling rate on improvement
@@ -190,7 +178,6 @@ class Anneal {
 
             // update display at specified intervals
             if (iteration % this.displayInterval === 0) {
-                this.saveSolutionHistory(currentSolution, config.multiStart);
                 // only show the first (longest running) multi-start, then all refinements
                 if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
                     // send solution to web worker progress callback
@@ -236,21 +223,6 @@ class Anneal {
         const minRange = 1;
         const normalizedTemp = (currentTemp - this.minTemp) / (initialTemp - this.minTemp);
         return Math.floor(normalizedTemp * (maxRange - minRange) + minRange);
-    }
-
-    saveSolutionHistory(_bestSolution, _multiStart) {
-        // only save the necessary data for the solution history
-        let solutionData = _bestSolution.toDataObject();
-
-        if (_multiStart) {
-            if (!this.multiStartsHistory[_bestSolution.startID]) {
-                this.multiStartsHistory[_bestSolution.startID] = [];
-            }
-            this.multiStartsHistory[_bestSolution.startID].push(solutionData);
-        }
-        else {
-            this.solutionHistory.push(solutionData);
-        }
     }
 
     // handler for button that controls restart

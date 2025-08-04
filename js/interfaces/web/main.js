@@ -263,7 +263,6 @@ function handleFileExport() {
         let annealsCopy = appState.savedAnneals.map(anneal => {
             return {
                 ...anneal,
-                solutionHistory: [], // temporarily set to empty to reduce file size
                 finalSolution: anneal.finalSolution.toDataObject()
             };
         });

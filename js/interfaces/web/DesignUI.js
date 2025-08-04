@@ -271,7 +271,6 @@ class DesignUI {
 
             const anneal = {
                 finalSolution: solution,
-                solutionHistory: [], // empty for now to reduce memory usage
                 cellular: cellular // store pre-computed cellular data from worker
             };
             // store results in appState
@@ -719,8 +718,6 @@ class DesignUI {
         // save only the necessary data for each anneal
         let savedData = {
             title: `solution-${appState.totalSavedAnneals}`,
-            solutionHistory: [], // temporarily set to empty to reduce memory usage
-            // solutionHistory: appState.currentAnneal.solutionHistory,
             finalSolution: deepCopySolution,
             enabledShapes: appState.shapes.map(shape => shape.enabled)
         };
@@ -1246,7 +1243,6 @@ class DesignUI {
 
         appState.currentAnneal = {
             title: savedAnneal.title,
-            solutionHistory: savedAnneal.solutionHistory,
             finalSolution: Solution.fromDataObject(savedAnneal.finalSolution.toDataObject()),
             enabledShapes: [...savedAnneal.enabledShapes] // shallow copy is fine for boolean array
         };

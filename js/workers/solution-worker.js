@@ -250,7 +250,6 @@ class SolutionWorker {
                     finalSolution: anneal.finalSolution.toDataObject(),
                     curveWallData: curveWallData, // Pass decoupled data here
                     enabledShapes: actualShapes.map(() => true),
-                    solutionHistory: [], // Empty for bulk runs to reduce size
                     cellular: {
                         cellSpace: cellular.cellSpace,
                         maxTerrain: cellular.maxTerrain,
@@ -392,8 +391,7 @@ class SolutionWorker {
             savedAnneals: [{
                 title: `solution-${this.currentJob.startId + 1}`,
                 finalSolution: anneal.finalSolution.toDataObject(),
-                enabledShapes: shapeInstances.map(() => true), // All shapes enabled in bulk runs
-                solutionHistory: [] // Empty for bulk runs
+                enabledShapes: shapeInstances.map(() => true) // All shapes enabled in bulk runs
             }],
             allShapes: shapeInstances.map(shape => shape.toDataObject())
         };

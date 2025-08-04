@@ -32,7 +32,6 @@ describe('Anneal', () => {
         expect(anneal.initialTemp).toBe(10000);
         expect(anneal.minTemp).toBe(0.1);
         expect(anneal.multiStartSolutions).toEqual([]);
-        expect(anneal.solutionHistory).toEqual([]);
         expect(anneal.finalSolution).toBe(null);
         expect(anneal.stopAnneal).toBe(false);
         expect(anneal.restartAnneal).toBe(false);
@@ -92,37 +91,6 @@ describe('Anneal', () => {
         Math.random.mockReturnValue(0.9); // High random value
         const highRandomAcceptance = anneal.acceptSolution(10, 1000);
         expect(typeof highRandomAcceptance).toBe('boolean');
-    });
-
-    test('saveSolutionHistory should store solution data appropriately', () => {
-        // 1. Setup
-        const shapes = allFixtureShapes.slice(0, 1);
-
-        const anneal = new Anneal(shapes);
-
-        // Create a mock solution with toDataObject method
-        const mockSolution = {
-            startID: 0,
-            toDataObject: jest.fn().mockReturnValue({
-                shapes: [],
-                startID: 0,
-                score: 100,
-                valid: true
-            })
-        };
-
-        // 2. Execute
-        // Test multi-start history
-        anneal.saveSolutionHistory(mockSolution, true);
-        expect(anneal.multiStartsHistory[0]).toBeDefined();
-        expect(anneal.multiStartsHistory[0].length).toBe(1);
-
-        // Test refinement history
-        anneal.saveSolutionHistory(mockSolution, false);
-        expect(anneal.solutionHistory.length).toBe(1);
-
-        // 3. Assert
-        expect(mockSolution.toDataObject).toHaveBeenCalledTimes(2);
     });
 
     test('button handlers should set appropriate flags', () => {
