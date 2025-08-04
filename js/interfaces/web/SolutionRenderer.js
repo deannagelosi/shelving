@@ -14,10 +14,11 @@ class SolutionRenderer {
         let colors = {
             lineColor: "rgb(198, 198, 197)",
             bkrdColor: "rgb(229, 229, 229)",
+            darkenedBkrdColor: "rgb(170, 170, 170)", // Made darker for better visibility
             bufferColor: "rgba(200,200,200, 0.5)",
             lowResShapeColor: "rgb(229, 229, 229)",
             highResShapeColor: "rgba(102,102,102, 0.9)",
-            collisionColor: "rgba(135, 160, 103, 0.5)",
+            collisionColor: "rgba(184, 64, 64, 0.55)",
             textColor: "rgb(255,255,255)",
             numColor: "rgb(102,102,102)"
         };
@@ -34,7 +35,7 @@ class SolutionRenderer {
         }
 
         // draw layout from bottom layer up
-        this.renderGridSquares(solution.layout, canvas, config, colors);
+        this.renderGridSquares(solution.layout, canvas, config, colors, solution);
 
         // show grid numbers
         if (detailView || isDevMode) {
@@ -64,16 +65,31 @@ class SolutionRenderer {
 
         // display selection highlight (on top of everything else)
         this.renderShapeSelection(solution.shapes, canvas, config);
+
+        // display custom perimeter box (on top of everything else)
+        if (solution.useCustomPerimeter) {
+            this.renderPerimeterBox(solution, canvas, config);
+        }
     }
 
-    renderGridSquares(layout, canvas, config, colors) {
+    renderGridSquares(layout, canvas, config, colors, solution) {
         // draw grid squares with background color
         stroke(colors.lineColor);
         strokeWeight(0.75);
-        fill(colors.bkrdColor);
 
         for (let y = 0; y < layout.length; y++) {
             for (let x = 0; x < layout[y].length; x++) {
+                // Default to the standard background color
+                fill(colors.bkrdColor);
+
+                // If in custom perimeter mode, check if the square is out of bounds
+                if (solution && solution.useCustomPerimeter && solution.goalPerimeter) {
+                    const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = solution.goalPerimeter;
+                    if (x < goalX || x >= goalX + goalWidth || y < goalY || y >= goalY + goalHeight) {
+                        fill(colors.darkenedBkrdColor);
+                    }
+                }
+
                 let rectX = (x * config.squareSize) + config.buffer + config.xPadding;
                 let rectY = ((canvas.height - config.yPadding) - config.squareSize - config.buffer) - (y * config.squareSize);
                 rect(rectX, rectY, config.squareSize, config.squareSize);
@@ -248,26 +264,33 @@ class SolutionRenderer {
 
         for (let y = 0; y < layout.length; y++) {
             for (let x = 0; x < layout[y].length; x++) {
-                // only draw collision squares
+                let shouldHighlight = false;
+
+                // Check for out-of-bounds cells (always highlight these)
+                if (layout[y][x].isOutOfBounds) {
+                    shouldHighlight = true;
+                }
+
+                // Check for collision cells (overlapping shapes)
                 if (layout[y][x].shapes.length > 1) {
                     // collision. rules:
                     // - if dev mode OR detail view, any overlapping buffer squares is a collision
                     // - always show overlapping shape squares as collisions
                     if ((isDevMode || detailView) && layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
                         // 2 or more buffers overlapping
-                        isCollision = true;
+                        shouldHighlight = true;
                     } else if (layout[y][x].isShape.filter(s => s === true).length >= 2) {
                         // 2 or more shapes overlapping
-                        isCollision = true;
+                        shouldHighlight = true;
                     }
+                }
 
-                    if (isCollision) {
-                        // buffer makes room for line numbers in dev mode
-                        // padding centers the solution in the canvas
-                        let rectX = (x * config.squareSize) + config.buffer + config.xPadding;
-                        let rectY = ((canvas.height - config.yPadding) - config.squareSize - config.buffer) - (y * config.squareSize); // draw from bottom up
-                        rect(rectX, rectY, config.squareSize, config.squareSize);
-                    }
+                if (shouldHighlight) {
+                    // buffer makes room for line numbers in dev mode
+                    // padding centers the solution in the canvas
+                    let rectX = (x * config.squareSize) + config.buffer + config.xPadding;
+                    let rectY = ((canvas.height - config.yPadding) - config.squareSize - config.buffer) - (y * config.squareSize); // draw from bottom up
+                    rect(rectX, rectY, config.squareSize, config.squareSize);
                 }
             }
         }
@@ -302,5 +325,194 @@ class SolutionRenderer {
                 }
             }
         }
+    }
+
+    renderPerimeterBox(solution, canvas, config) {
+        if (!solution.goalPerimeter) return;
+
+        const { x, y, width, height } = solution.goalPerimeter;
+        const { squareSize, buffer, xPadding, yPadding } = config;
+
+        // Calculate the coordinates and dimensions on the canvas
+        const rectX = (x * squareSize) + buffer + xPadding;
+        const rectY = ((canvas.height - yPadding) - (y + height) * squareSize) - buffer;
+        const rectWidth = width * squareSize;
+        const rectHeight = height * squareSize;
+
+        // Draw the rectangle with enhanced visibility
+        noFill();
+        stroke(0, 100, 255); // Bright blue color for the perimeter
+        strokeWeight(3); // Thicker stroke for better visibility
+        rect(rectX, rectY, rectWidth, rectHeight);
+    }
+
+    renderBlankGrid(canvas, layoutProps, gridSize = 20) {
+        // create empty solution and display grid only
+        // this method encapsulates the creation and rendering of a blank grid
+
+        clear();
+        background(255);
+
+        let emptySolution = new Solution();
+        emptySolution.makeBlankLayout(gridSize);
+
+        // set up config for renderer
+        let config = {
+            ...layoutProps
+        };
+        let colors = {
+            lineColor: "rgb(198, 198, 197)",
+            bkrdColor: "rgb(229, 229, 229)"
+        };
+
+        // render the grid
+        this.renderGridSquares(emptySolution.layout, canvas, config, colors);
+
+        return emptySolution;
+    }
+
+    renderSolutionProgress(solution, canvas, layoutProps, perimeterConfig, showScores = true) {
+        // renders solution during annealing progress with perimeter handling
+
+        clear();
+        background(255);
+
+        // Set up config for renderer
+        let config = {
+            ...layoutProps
+        };
+
+        // Render the solution
+        this.renderLayout(solution, canvas, config);
+
+        if (showScores) {
+            this.renderScores(solution.layout, canvas, config);
+        }
+    }
+
+    renderCompleteSolution(solution, canvas, layoutProps, perimeterConfig, wallRenderers, wallRenderData) {
+        // renders complete solution with walls and perimeter handling
+        // wallRenderers: { curveWallRenderer, cellularRenderer }
+        // wallRenderData: { currCellular, goldenPathData, useGoldenPathDebugData}
+
+        clear();
+        background(255);
+
+        // Note: centerGoalPerimeter() and calcScore() are handled during solution generation,
+        // not in the renderer. The renderer only displays the current state.
+
+        // Set up config for renderer
+        let config = {
+            ...layoutProps,
+            canvasHeight: canvas.height
+        };
+
+        // Render the basic solution layout
+        this.renderLayout(solution, canvas, config);
+
+        // Handle wall generation and rendering
+        return this.renderWalls(solution, canvas, config, wallRenderers, wallRenderData);
+    }
+
+    renderWalls(solution, canvas, config, wallRenderers, wallRenderData) {
+        // handles wall generation and rendering logic
+
+        const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
+        console.log(`[SolutionRenderer] wallAlgorithm=${wallAlgorithm}`);
+
+        if (wallAlgorithm === 'curve') {
+            this.renderCurveWalls(solution, canvas, config, wallRenderers, wallRenderData);
+            return null; // Curve walls don't generate cellular data
+        } else {
+            return this.renderCellularWalls(solution, canvas, config, wallRenderers, wallRenderData);
+        }
+    }
+
+    renderCurveWalls(solution, canvas, config, wallRenderers, wallRenderData) {
+        // handles curve wall rendering
+
+        let wallPath;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+
+        if (wallRenderData.useGoldenPathDebugData && wallRenderData.goldenPathData) {
+            // Use test data for visual validation
+            wallPath = wallRenderData.goldenPathData;
+            console.log('[SolutionRenderer] Using golden path test data for visual validation');
+        } else {
+            // Use actual algorithm output
+            const curveGenerator = new CurveWall(solution);
+            const stepLimit = isDevMode ? (typeof appState !== 'undefined' && appState.display ? appState.display.curveStep : 0) : -1;
+            if (isDevMode) {
+                curveGenerator.setDebugMode(true);
+            }
+            wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
+            console.log('[SolutionRenderer] Using actual CurveWall algorithm output');
+        }
+
+        // Render debug state or final path
+        if (isDevMode) {
+            // Create a generator instance just to get the group data for debugging
+            const curveGenerator = new CurveWall(solution);
+            curveGenerator._groupShapesByY(solution.shapes); // Run grouping
+            wallRenderers.curveWallRenderer.renderDebugState(
+                null, // No specific debug state object anymore
+                curveGenerator.groups,
+                canvas,
+                config
+            );
+            wallRenderers.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+        } else {
+            if (wallPath && wallPath.length > 0) {
+                wallRenderers.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+            } else {
+                console.warn('[SolutionRenderer] No curve wall path to render');
+            }
+        }
+    }
+
+    renderCellularWalls(solution, canvas, config, wallRenderers, wallRenderData) {
+        // handles cellular wall rendering
+
+        const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
+        let currCellular = wallRenderData.currCellular;
+
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+
+        if (isDevMode) {
+            // create temporary cellular instance for step-by-step growth preview
+            currCellular = new Cellular(solution);
+
+            // Use the appropriate cellular algorithm
+            if (wallAlgorithm === 'cellular-rectilinear') {
+                currCellular.growRectilinear();
+            } else {
+                currCellular.growCells();
+            }
+        } else {
+            // create fresh cellular instance to show complete growth
+            currCellular = new Cellular(solution);
+
+            // Use the appropriate cellular algorithm to grow to completion
+            if (wallAlgorithm === 'cellular-rectilinear') {
+                currCellular.growRectilinear();
+            } else {
+                currCellular.growCells();
+            }
+        }
+
+        // Render cellular walls
+        const cellLines = currCellular.getCellRenderLines();
+        wallRenderers.cellularRenderer.renderCellLines(cellLines, canvas, config);
+
+        // Display cells and terrain in dev mode
+        if (isDevMode) {
+            wallRenderers.cellularRenderer.renderTerrain(solution.layout, canvas, { ...config, maxTerrain: currCellular.maxTerrain });
+            wallRenderers.cellularRenderer.renderCells(currCellular.cellSpace, canvas, config);
+        }
+
+        // Return the cellular instance for potential state storage
+        return currCellular;
     }
 } 

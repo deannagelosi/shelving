@@ -31,6 +31,7 @@ const WEIGHTS = {
 
     // ----- General wasted space -----
     spaceScalar: 0.1,                  // linear scaling factor for total empty space
+    areaDifferenceScalar: 100.0,         // scales the penalty for deviating from target area
 
     // ----- Aspect ratio handling -----
     aspectExponent: 2,                 // (ratio deviation)^exponent
@@ -57,10 +58,10 @@ class Solution {
         this.curveRadius = _wallConfig.curveRadius || 1.0;
         this.maxBends = _wallConfig.maxBends || 4;
 
-        // penalize when anneal scores of this and above are clustered (multiples touching)
-        this.clusterLimit = WEIGHTS.clusterLimit;
         this.score;
-        this.valid = false; // a solution valid if no overlapping shapes or bottom shape float
+        this.valid = false;
+
+        this.initialLayoutAreaModifier = 1.5;
     }
 
     randomLayout() {
@@ -77,7 +78,7 @@ class Solution {
             totalArea += (shapeHeight * shapeWidth);
         }
         // give extra space and find the closest rectangle that can hold that area
-        let layoutArea = totalArea * 2;
+        let layoutArea = totalArea * this.initialLayoutAreaModifier;
         let width = Math.ceil(Math.sqrt(layoutArea));
         let height = Math.ceil(layoutArea / width);
 
@@ -90,6 +91,12 @@ class Solution {
 
         // make the layout using the random positions and calculate the score
         this.makeLayout();
+
+        // Initialize goal perimeter once at the beginning of annealing (not during neighbor creation)
+        if (this.useCustomPerimeter) {
+            this.centerGoalPerimeter();
+        }
+
         this.calcScore();
     }
 
@@ -163,41 +170,201 @@ class Solution {
             }
         }
 
-        // trim layout and remove empty rows
-        // trim the last row if it's empty
-        while (this.layout.length > 0 && this.layout[this.layout.length - 1].every(posData => posData.shapes.length == 0)) {
-            this.layout.pop();
+        // Calculate the natural bounding box of shapes
+        const naturalBounds = this.calculateNaturalBounds();
+        const naturalWidth = naturalBounds.right - naturalBounds.left + 1;
+        const naturalHeight = naturalBounds.bottom - naturalBounds.top + 1;
+
+        // Determine target dimensions: use larger of natural bounds or user preference
+        let targetWidth, targetHeight;
+        if (this.useCustomPerimeter) {
+            targetWidth = Math.max(naturalWidth, this.perimeterWidth);
+            targetHeight = Math.max(naturalHeight, this.perimeterHeight);
+        } else {
+            targetWidth = naturalWidth;
+            targetHeight = naturalHeight;
         }
-        // trim the first row if it's empty
-        while (this.layout.length > 0 && this.layout[0].every(posData => posData.shapes.length == 0)) {
-            this.layout.shift();
-            // update shape.posY with new position for every shape
-            for (let i = 0; i < this.shapes.length; i++) {
-                this.shapes[i].posY--;
-            }
-        }
-        // Remove all-zero columns from the right
-        while (this.layout[0].length > 0 && this.layout.every(row => row[row.length - 1].shapes.length == 0)) {
-            for (let i = 0; i < this.layout.length; i++) {
-                this.layout[i].pop();
-            }
-        }
-        // Remove all-zero columns from the left
-        while (this.layout[0].length > 0 && this.layout.every(row => row[0].shapes.length == 0)) {
-            for (let i = 0; i < this.layout.length; i++) {
-                this.layout[i].shift();
-            }
-            // update shape.posX with new position for every shape
-            for (let i = 0; i < this.shapes.length; i++) {
-                this.shapes[i].posX--;
-            }
-        }
+
+        // Resize layout to bounding box of shapes or target dimensions
+        this.resizeLayoutToExactDimensions(targetWidth, targetHeight, naturalBounds);
 
         // assign IDs to shapes based on position
         for (let i = 0; i < this.shapes.length; i++) {
             let shapeID = this.shapes[i].posY.toString() + this.shapes[i].posX.toString();
             this.shapes[i].shapeID = shapeID;
         }
+    }
+
+    // Calculate what the natural bounding box would be (without actually trimming)
+    calculateNaturalBounds() {
+        if (this.layout.length === 0 || this.layout[0].length === 0) {
+            return { top: 0, bottom: 0, left: 0, right: 0 };
+        }
+
+        let top = 0;
+        let bottom = this.layout.length - 1;
+        let left = 0;
+        let right = this.layout[0].length - 1;
+
+        // Find first non-empty row from top
+        while (top < this.layout.length && this.layout[top].every(posData => posData.shapes.length == 0)) {
+            top++;
+        }
+
+        // Find first non-empty row from bottom
+        while (bottom >= 0 && this.layout[bottom].every(posData => posData.shapes.length == 0)) {
+            bottom--;
+        }
+
+        // Find first non-empty column from left
+        while (left < this.layout[0].length && this.layout.every(row => row[left].shapes.length == 0)) {
+            left++;
+        }
+
+        // Find first non-empty column from right
+        while (right >= 0 && this.layout.every(row => row[right].shapes.length == 0)) {
+            right--;
+        }
+
+        return { top, bottom, left, right };
+    }
+
+    // Helper methods for layout manipulation
+    isRowEmpty(y) {
+        if (y < 0 || y >= this.layout.length) return true;
+        return this.layout[y].every(posData => posData.shapes.length === 0);
+    }
+
+    isColumnEmpty(x) {
+        if (this.layout.length === 0) return true;
+        return this.layout.every(row => {
+            // Return true if column doesn't exist (treat as empty) or if it exists and is empty
+            return x >= row.length || row[x].shapes.length === 0;
+        });
+    }
+
+    createEmptyCell() {
+        return {
+            shapes: [],
+            isShape: [],
+            isBuffer: [],
+            annealScore: 0,
+            terrainValue: 0
+        };
+    }
+
+    expandLayoutToSize(targetWidth, targetHeight) {
+        // Add columns to the right if needed
+        if (this.layout[0].length < targetWidth) {
+            for (let y = 0; y < this.layout.length; y++) {
+                while (this.layout[y].length < targetWidth) {
+                    this.layout[y].push(this.createEmptyCell());
+                }
+            }
+        }
+
+        // Add rows to the bottom if needed
+        if (this.layout.length < targetHeight) {
+            const currentWidth = this.layout[0].length; // Use actual current width, not target
+            while (this.layout.length < targetHeight) {
+                const newRow = [];
+                for (let x = 0; x < currentWidth; x++) {
+                    newRow.push(this.createEmptyCell());
+                }
+                this.layout.push(newRow);
+            }
+        }
+    }
+
+    trimToTargetSize(targetWidth, targetHeight) {
+        // Find the actual bounding box of content in the current layout
+        const currentBounds = this.calculateCurrentLayoutBounds();
+
+        if (!currentBounds) {
+            // No content found, resize to target dimensions
+            this.layout = [];
+            for (let y = 0; y < targetHeight; y++) {
+                const newRow = [];
+                for (let x = 0; x < targetWidth; x++) {
+                    newRow.push(this.createEmptyCell());
+                }
+                this.layout.push(newRow);
+            }
+            return;
+        }
+
+        // Calculate the dimensions we need: larger of content bounds or target
+        const contentWidth = currentBounds.right - currentBounds.left + 1;
+        const contentHeight = currentBounds.bottom - currentBounds.top + 1;
+        const finalWidth = Math.max(contentWidth, targetWidth);
+        const finalHeight = Math.max(contentHeight, targetHeight);
+
+        // Trim from left
+        while (currentBounds.left > 0 && this.isColumnEmpty(0)) {
+            for (let y = 0; y < this.layout.length; y++) {
+                this.layout[y].shift();
+            }
+            // Update shape positions and bounds
+            for (let shape of this.shapes) {
+                shape.posX--;
+            }
+            currentBounds.left--;
+            currentBounds.right--;
+        }
+
+        // Trim from top
+        while (currentBounds.top > 0 && this.isRowEmpty(0)) {
+            this.layout.shift();
+            // Update shape positions and bounds
+            for (let shape of this.shapes) {
+                shape.posY--;
+            }
+            currentBounds.top--;
+            currentBounds.bottom--;
+        }
+
+        // Trim from right
+        while (this.layout[0].length > finalWidth && this.isColumnEmpty(this.layout[0].length - 1)) {
+            for (let y = 0; y < this.layout.length; y++) {
+                this.layout[y].pop();
+            }
+        }
+
+        // Trim from bottom
+        while (this.layout.length > finalHeight && this.isRowEmpty(this.layout.length - 1)) {
+            this.layout.pop();
+        }
+    }
+
+    calculateCurrentLayoutBounds() {
+        // Find the actual bounds of non-empty cells in the current layout
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        let hasContent = false;
+
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                if (this.layout[y][x].shapes.length > 0) {
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                    hasContent = true;
+                }
+            }
+        }
+
+        return hasContent ? { left: minX, right: maxX, top: minY, bottom: maxY } : null;
+    }
+
+    // Resize layout to exact target dimensions
+    resizeLayoutToExactDimensions(targetWidth, targetHeight, naturalBounds) {
+        if (this.layout.length === 0) {
+            return;
+        }
+
+        // First expand if needed, then trim to proper bounds
+        this.expandLayoutToSize(targetWidth, targetHeight);
+        this.trimToTargetSize(targetWidth, targetHeight);
     }
 
     calcScore() {
@@ -248,7 +415,7 @@ class Solution {
                 let annealScore = this.layout[y][x].annealScore;
                 totalAnnealScore += annealScore;
 
-                if (annealScore >= this.clusterLimit) {
+                if (annealScore >= WEIGHTS.clusterLimit) {
                     // look at all the squares surrounding this one and count the number's that are the same 
                     let checkCount = 0;
                     // check the 8 possible adjacent squares
@@ -259,7 +426,7 @@ class Solution {
                                 // count if the adjacent square is the same score
                                 if (this.layout[localY][localX].annealScore == annealScore) {
                                     // skew larger clustered scores as worse
-                                    clusterPenalty += Math.pow((annealScore - this.clusterLimit + 1), WEIGHTS.clusterPenaltyExponent);
+                                    clusterPenalty += Math.pow((annealScore - WEIGHTS.clusterLimit + 1), WEIGHTS.clusterPenaltyExponent);
                                 }
                                 checkCount++; // used to see how many out-of-bounds (how many skipped)
                             }
@@ -313,6 +480,10 @@ class Solution {
         }
 
         // adjust penalties
+        if (this.useCustomPerimeter) {
+            overlappingCount += this.calculateOutOfBoundsPenalty();
+        }
+
         if (totalBottomLift > 0) {
             totalBottomLift *= Math.pow(this.shapes.length, WEIGHTS.bottomLiftExponent);
         }
@@ -320,10 +491,21 @@ class Solution {
             overlappingCount *= Math.pow(this.shapes.length, WEIGHTS.overlapShapeExponent);
         }
         let bottomPenalty = totalBottomLift + (totalBottomEmptyRow * (this.shapes.length / WEIGHTS.emptyRowDivisor));
-        let spacePenalty = (totalAnnealScore + totalSquares) * WEIGHTS.spaceScalar;
+
+        let spacePenalty;
+        if (this.useCustomPerimeter) {
+            const currentArea = this.layout.length * this.layout[0].length;
+            const targetArea = this.perimeterWidth * this.perimeterHeight;
+            // This rewards shrinking toward the target without overshooting
+            const areaDifference = Math.abs(currentArea - targetArea);
+            spacePenalty = areaDifference * WEIGHTS.areaDifferenceScalar;
+        } else {
+            spacePenalty = (totalAnnealScore + totalSquares) * WEIGHTS.spaceScalar;
+        }
 
         // check if solution is valid
-        if (totalBottomLift == 0 && overlappingCount == 0) {
+        // if (totalBottomLift == 0 && overlappingCount == 0) {
+        if (overlappingCount == 0) {
             this.valid = true;
         }
         // calc the "aspect ratio penalty" of the result
@@ -349,6 +531,56 @@ class Solution {
         let aspectRatioPenalty = Math.pow(diffRatio, WEIGHTS.aspectExponent);
 
         this.score = Math.floor(overlappingCount + clusterPenalty + bottomPenalty + aspectRatioPenalty + spacePenalty);
+    }
+
+    clearOutOfBoundsMarkers() {
+        // Clear all out-of-bounds flags from the layout
+        // This ensures a clean state before recalculating
+        for (let y = 0; y < this.layout.length; y++) {
+            for (let x = 0; x < this.layout[y].length; x++) {
+                this.layout[y][x].isOutOfBounds = false;
+            }
+        }
+    }
+
+    calculateOutOfBoundsPenalty() {
+        // This method serves two purposes:
+        // 1. Calculate penalty for scoring (return value)
+        // 2. Mark out-of-bounds cells for debug visualization (layout mutation)
+        // The marking ensures debug visualization exactly matches scoring logic
+
+        if (!this.useCustomPerimeter || !this.goalPerimeter) {
+            return 0;
+        }
+
+        // Clear any existing out-of-bounds flags first
+        this.clearOutOfBoundsMarkers();
+
+        let outOfBoundsCount = 0;
+        const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = this.goalPerimeter;
+
+        for (let shape of this.shapes) {
+            for (let y = 0; y < shape.data.bufferShape.length; y++) {
+                for (let x = 0; x < shape.data.bufferShape[y].length; x++) {
+                    if (shape.data.bufferShape[y][x]) {
+                        const cellX = shape.posX + x;
+                        const cellY = shape.posY + y;
+
+                        // Check if the cell is outside the goal perimeter
+                        if (cellX < goalX || cellX >= goalX + goalWidth || cellY < goalY || cellY >= goalY + goalHeight) {
+                            outOfBoundsCount++;
+
+                            // Mark the cell in layout for debug visualization
+                            // This ensures debug highlighting exactly matches what scoring considers out-of-bounds
+                            if (this.layout[cellY] && this.layout[cellY][cellX]) {
+                                this.layout[cellY][cellX].isOutOfBounds = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return outOfBoundsCount;
     }
 
     createNeighbor(_maxShift) {
@@ -430,8 +662,15 @@ class Solution {
 
         newSolution.normalizeCoordinates();
 
-        // calculate the score of the new solution
+        // calculate the layout for the new solution
         newSolution.makeLayout();
+
+        // Recalculate goal perimeter to center it on the new layout
+        if (newSolution.useCustomPerimeter) {
+            newSolution.centerGoalPerimeter();
+        }
+
+        // calculate the score of the new solution
         newSolution.calcScore();
 
         return newSolution;
@@ -451,6 +690,31 @@ class Solution {
                 shape.posY += adjustY;
             }
         }
+    }
+
+    centerGoalPerimeter() {
+        if (!this.useCustomPerimeter || !this.layout || this.layout.length === 0) {
+            this.goalPerimeter = null;
+            return;
+        }
+
+        const layoutWidth = this.layout[0].length;
+        const layoutHeight = this.layout.length;
+
+        // Calculate the center of the current layout
+        const layoutCenterX = layoutWidth / 2;
+        const layoutCenterY = layoutHeight / 2;
+
+        // Calculate the top-left corner of the goal perimeter to center it
+        const goalX = Math.floor(layoutCenterX - (this.perimeterWidth / 2));
+        const goalY = Math.floor(layoutCenterY - (this.perimeterHeight / 2));
+
+        this.goalPerimeter = {
+            x: goalX,
+            y: goalY,
+            width: this.perimeterWidth,
+            height: this.perimeterHeight
+        };
     }
 
     exportShapes() {
@@ -480,7 +744,6 @@ class Solution {
             score: this.score,
             valid: this.valid,
             aspectRatioPref: this.aspectRatioPref,
-            clusterLimit: this.clusterLimit,
             // Perimeter parameters
             useCustomPerimeter: this.useCustomPerimeter,
             perimeterWidth: this.perimeterWidth,

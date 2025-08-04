@@ -757,9 +757,6 @@ class DesignUI {
     //== end button handlers
 
     drawBlankGrid() {
-        clear();
-        background(255);
-
         // reset ui to cleared initial state
         // clear current selection
         appState.currentViewedAnnealIndex = null;
@@ -770,25 +767,11 @@ class DesignUI {
             element.removeClass('disabled');
         });
 
-        // create empty solution and display grid only
-        let emptySolution = new Solution([], 0, aspectRatioPref);
-        emptySolution.makeBlankLayout(20);
 
-        // calculate layout properties and set up config for renderer
-        let layoutProps = this.calculateLayoutProperties(emptySolution);
+        // use renderer to display blank grid
         let canvas = { height: canvasHeight, width: canvasWidth };
-        let config = {
-            devMode: false,
-            detailView: false,
-            ...layoutProps
-        };
-        let colors = {
-            lineColor: "rgb(198, 198, 197)",
-            bkrdColor: "rgb(229, 229, 229)"
-        };
-
-        // use renderer to display the grid on the canvas
-        this.solutionRenderer.renderGridSquares(emptySolution.layout, canvas, config, colors);
+        let layoutProps = this.calculateLayoutProperties(null); // null will return default values
+        this.solutionRenderer.renderBlankGrid(canvas, layoutProps, 20);
 
         // notify ui update manager
         appEvents.emit('stateChanged');
@@ -796,32 +779,63 @@ class DesignUI {
 
     updateDisplayCallback(_solution) {
         // receives a solution from the web worker and updates the display
-        clear();
-        background(255);
-        // calculate layout properties and set up config for renderer
         let layoutProps = this.calculateLayoutProperties(_solution);
         let canvas = { height: canvasHeight, width: canvasWidth };
-        let config = {
-            devMode: devMode,
-            detailView: detailView,
-            ...layoutProps
+        let perimeterConfig = {
+            useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
+            perimeterWidth: appState.generationConfig.perimeterWidth,
+            perimeterHeight: appState.generationConfig.perimeterHeight
         };
 
-        // use renderer to display the layout on the canvas
-        this.solutionRenderer.renderLayout(_solution, canvas, config);
-        this.solutionRenderer.renderScores(_solution.layout, canvas, config);
+        // use renderer to display the solution with perimeter handling
+        this.solutionRenderer.renderSolutionProgress(_solution, canvas, layoutProps, perimeterConfig, true);
     }
 
     displayResult() {
         // show shapes and grid but not annealing scores
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
-            clear();
-            background(255);
-
-            // calculate layout properties and set up config for renderer
             let solution = appState.currentAnneal.finalSolution;
             let layoutProps = this.calculateLayoutProperties(solution);
             let canvas = { height: canvasHeight, width: canvasWidth };
+
+            let perimeterConfig = {
+                useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
+                perimeterWidth: appState.generationConfig.perimeterWidth,
+                perimeterHeight: appState.generationConfig.perimeterHeight
+            };
+
+            let wallRenderers = {
+                curveWallRenderer: this.curveWallRenderer,
+                cellularRenderer: this.cellularRenderer
+            };
+
+            let wallRenderData = {
+                currCellular: appState.currentAnneal.cellular ? Cellular.fromDataObject(appState.currentAnneal.cellular, solution) : appState.currCellular,
+                goldenPathData: this.goldenPathData,
+                useGoldenPathDebugData: this.useGoldenPathDebugData
+            };
+
+            // Use renderer to display complete solution with walls
+            const updatedCellular = this.solutionRenderer.renderCompleteSolution(
+                solution, canvas, layoutProps, perimeterConfig, wallRenderers, wallRenderData
+            );
+
+            // Update app state if cellular data was generated
+            if (updatedCellular) {
+                appState.currCellular = updatedCellular;
+
+                // Store cellular data in appState if it's a saved anneal
+                if (appState.savedAnneals.includes(appState.currentAnneal)) {
+                    appState.currentAnneal.cellular = {
+                        cellSpace: updatedCellular.cellSpace,
+                        maxTerrain: updatedCellular.maxTerrain,
+                        numAlive: updatedCellular.numAlive
+                    };
+                }
+            }
+        }
+    }
+
     createShapeList() {
         // create list of shapes to select from
         if (!htmlRefs.left) return;

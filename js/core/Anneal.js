@@ -12,7 +12,7 @@ class Anneal {
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 10; // how often to update the display with a new solution
+        this.displayInterval = 25; // how often to update the display with a new solution
 
         //== configuration
         this.layoutConfig = _layoutConfig;
@@ -50,7 +50,7 @@ class Anneal {
             const multiConfig = {
                 multiStart: true,
                 initialTemp: this.initialTemp * (1 - (startID / this.numStarts)),
-                initialCoolingRate: this.initialCoolingRate * 0.75,
+                initialCoolingRate: this.initialCoolingRate,
                 progressCallback: progressCallback
             };
 
@@ -83,7 +83,6 @@ class Anneal {
 
         let bestSolution = await this.anneal(_bestStartSolution, refineConfig);
         if (this.stopAnneal) return null; // re-anneal clicked
-
 
         // continue to refine if the solution is not valid
         while (bestSolution.valid == false) {
