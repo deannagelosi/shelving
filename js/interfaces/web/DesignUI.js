@@ -133,7 +133,7 @@ class DesignUI {
             .mousePressed(() => this.handleAspectRatioChange(-1));
 
         this.html.squareButton = createDiv()
-            .addClass('orientation-button square selected')
+            .addClass('orientation-button square')
             .parent(this.html.orientationButtons)
             .mousePressed(() => this.handleAspectRatioChange(0));
 
@@ -141,6 +141,9 @@ class DesignUI {
             .addClass('orientation-button wide')
             .parent(this.html.orientationButtons)
             .mousePressed(() => this.handleAspectRatioChange(1));
+
+        // Initialize selected state based on appState
+        this.handleAspectRatioChange(appState.generationConfig.aspectRatioPref);
     }
 
     initBottomUI() {
@@ -819,124 +822,69 @@ class DesignUI {
             let solution = appState.currentAnneal.finalSolution;
             let layoutProps = this.calculateLayoutProperties(solution);
             let canvas = { height: canvasHeight, width: canvasWidth };
-            let config = {
-                devMode: devMode,
-                detailView: detailView,
-                ...layoutProps,
-                canvasHeight: canvas.height // Pass canvas height for renderer calculations
-            };
-
-            // use renderer to display the layout on the canvas
-            this.solutionRenderer.renderLayout(solution, canvas, config);
-
-            // Handle wall generation rendering based on mode
-            const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
-
-            console.log(`[DisplayResult] wallAlgorithm=${wallAlgorithm}`);
-
-            if (wallAlgorithm === 'curve') {
-                // Handle curve wall rendering
-                let wallPath;
-
-                if (this.useGoldenPathDebugData && this.goldenPathData) {
-                    // Use test data for visual validation
-                    wallPath = this.goldenPathData;
-                    console.log('[DisplayResult] Using golden path test data for visual validation');
-                } else {
-                    // Use actual algorithm output
-                    const curveGenerator = new CurveWall(solution);
-                    const stepLimit = devMode ? curveStep : -1;
-                    if (devMode) {
-                        curveGenerator.setDebugMode(true);
-                    }
-                    wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
-                    console.log('[DisplayResult] Using actual CurveWall algorithm output');
-                }
-
-                // For debug mode, we render the groups and partial path.
-                // For non-debug, we just render the final path.
-                if (devMode) {
-                    // Create a generator instance just to get the group data for debugging
-                    const curveGenerator = new CurveWall(solution);
-                    curveGenerator._groupShapesByY(solution.shapes); // Run grouping
-                    this.curveWallRenderer.renderDebugState(
-                        null, // No specific debug state object anymore
-                        curveGenerator.groups,
-                        canvas,
-                        config
-                    );
-                    this.curveWallRenderer.renderWallPath(wallPath, canvas, config);
-                } else {
-                    if (wallPath && wallPath.length > 0) {
-                        this.curveWallRenderer.renderWallPath(wallPath, canvas, config);
-                    } else {
-                        console.warn('[DisplayResult] No curve wall path to render');
-                    }
-                }
-            } else {
-                // Handle cellular wall rendering (existing logic)
-                if (devMode) {
-                    // create temporary cellular instance for step-by-step growth preview
-                    appState.currCellular = new Cellular(solution, devMode, numGrow);
-
-                    // Use the appropriate cellular algorithm
-                    if (wallAlgorithm === 'cellular-rectilinear') {
-                        appState.currCellular.growRectilinear();
-                    } else {
-                        appState.currCellular.growCells();
-                    }
-                } else if (appState.currentAnneal.cellular) {
-                    // worker result, use returned cellular data
-                    // convert the cellular data into a full Cellular instance
-                    appState.currCellular = Cellular.fromDataObject(appState.currentAnneal.cellular, solution);
-                } else {
-                    // imported solution, recalculate cellular data
-                    appState.currCellular = new Cellular(solution, devMode, numGrow);
-
-                    // Use the appropriate cellular algorithm
-                    if (wallAlgorithm === 'cellular-rectilinear') {
-                        appState.currCellular.growRectilinear();
-                    } else {
-                        appState.currCellular.growCells();
-                    }
-
-                    // store cellular data in appState
-                    if (appState.savedAnneals.includes(appState.currentAnneal)) {
-                        appState.currentAnneal.cellular = {
-                            cellSpace: appState.currCellular.cellSpace,
-                            maxTerrain: appState.currCellular.maxTerrain,
-                            numAlive: appState.currCellular.numAlive
-                        };
-                    }
-                }
-
-                // use renderer to display the cellular lines on the canvas
-                // get formatted line data from the cellular instance
-                const cellLines = appState.currCellular.getCellRenderLines();
-                this.cellularRenderer.renderCellLines(cellLines, canvas, config);
-
-                // display cells and terrain (cellular scores)
-                if (devMode) {
-                    this.cellularRenderer.renderTerrain(solution.layout, canvas, { ...config, maxTerrain: appState.currCellular.maxTerrain });
-                    this.cellularRenderer.renderCells(appState.currCellular.cellSpace, canvas, config);
-                }
-            }
-        }
-    }
-
     createShapeList() {
         // create list of shapes to select from
         if (!htmlRefs.left) return;
         if (appState.currentScreen !== ScreenState.DESIGN) return;
 
-        // clear the list
+        // Only recreate the entire sidebar structure if it doesn't exist
+        if (!this.html.leftControlsContainer) {
+            this.initializeLeftSidebar();
+        }
+
+        // Always update the shapes list
+        this.updateShapesList();
+    }
+
+    initializeLeftSidebar() {
+        // Clear the sidebar and set up flexbox layout (same pattern as right sidebar)
         htmlRefs.left.list.html('');
         this.shapeElements = [];
 
-        // create the list
+        // Set up flexbox layout for the left sidebar - inherits from .sidebar-list base styles
+        htmlRefs.left.list.addClass('sidebar-with-controls');
+
+        // Create a fixed controls container for perimeter settings
+        this.html.leftControlsContainer = createDiv()
+            .addClass('sidebar-controls')
+            .parent(htmlRefs.left.list);
+
+        // Create the perimeter controls in the fixed container
+        this.createPerimeterControls();
+
+        // Create scrollable container for shapes
+        this.html.leftScrollContainer = createDiv()
+            .addClass('sidebar-scroll')
+            .parent(htmlRefs.left.list);
+    }
+
+    updateShapesList() {
+        // Update only the shapes list without recreating controls
+        if (!htmlRefs.left) return;
+        if (appState.currentScreen !== ScreenState.DESIGN) return;
+        if (!this.html.leftScrollContainer) return;
+
+        // Clear the scroll container
+        this.html.leftScrollContainer.html('');
+
+        // Add the shapes label
+        createSpan('Shapes')
+            .addClass('settings-label')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
+
+        // Create the shapes container
+        this.html.shapesContainer = createDiv()
+            .addClass('shapes-container')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
+
+        this.shapeElements = [];
+
+        // Create the shapes list
         appState.shapes.forEach((shape, index) => {
             let shapeItem = createDiv()
-                .parent(htmlRefs.left.list)
+                .parent(this.html.shapesContainer)
                 .addClass(shape.enabled ? 'shape-item highlighted' : 'shape-item')
                 .mousePressed(() => this.toggleShapeSelection(index));
 
@@ -946,6 +894,88 @@ class DesignUI {
 
             this.shapeElements.push(shapeItem);
         });
+    }
+
+    createPerimeterControls() {
+        // Custom Perimeter section using clean, semantic CSS classes
+        const perimeterGroup = createDiv()
+            .addClass('settings-group')
+            .parent(this.html.leftControlsContainer);
+
+        createSpan('Custom Perimeter')
+            .addClass('settings-label')
+            .parent(perimeterGroup);
+
+        // Checkbox for enabling/disabling
+        const checkboxContainer = createDiv()
+            .addClass('checkbox-group')
+            .parent(perimeterGroup);
+
+        this.html.usePerimeterCheckbox = createCheckbox(' Use Custom Perimeter', appState.generationConfig.useCustomPerimeter)
+            .parent(checkboxContainer)
+            .changed(() => { this.togglePerimeterInputs() });
+
+        // Ensure checkbox state is always synchronized with appState
+        this.html.usePerimeterCheckbox.checked(appState.generationConfig.useCustomPerimeter);
+
+        // Container for the width/height inputs (initially hidden)
+        this.html.perimeterInputsContainer = createDiv()
+            .addClass(appState.generationConfig.useCustomPerimeter ? '' : 'hidden')
+            .parent(perimeterGroup);
+
+        // Two-column container for width and height
+        const dimensionsRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.perimeterInputsContainer);
+
+        // Width input column
+        const widthColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(dimensionsRow);
+        createSpan('Target Width')
+            .addClass('dimension-label')
+            .parent(widthColumn);
+        this.html.perimeterWidthInput = createInput(appState.generationConfig.perimeterWidth.toString(), 'number')
+            .addClass('dimension-input')
+            .parent(widthColumn)
+            .attribute('min', '1')
+            .changed(() => this.updatePerimeterWidth());
+
+        // Height input column
+        const heightColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(dimensionsRow);
+        createSpan('Target Height')
+            .addClass('dimension-label')
+            .parent(heightColumn);
+        this.html.perimeterHeightInput = createInput(appState.generationConfig.perimeterHeight.toString(), 'number')
+            .addClass('dimension-input')
+            .parent(heightColumn)
+            .attribute('min', '1')
+            .changed(() => this.updatePerimeterHeight());
+    }
+
+    togglePerimeterInputs() {
+        appState.generationConfig.useCustomPerimeter = this.html.usePerimeterCheckbox.checked();
+        if (appState.generationConfig.useCustomPerimeter) {
+            this.html.perimeterInputsContainer.removeClass('hidden');
+        } else {
+            this.html.perimeterInputsContainer.addClass('hidden');
+        }
+    }
+
+    updatePerimeterWidth() {
+        const value = parseInt(this.html.perimeterWidthInput.value());
+        if (!isNaN(value) && value >= 1) {
+            appState.generationConfig.perimeterWidth = value;
+        }
+    }
+
+    updatePerimeterHeight() {
+        const value = parseInt(this.html.perimeterHeightInput.value());
+        if (!isNaN(value) && value >= 1) {
+            appState.generationConfig.perimeterHeight = value;
+        }
     }
 
     toggleShapeSelection(index) {
@@ -964,19 +994,12 @@ class DesignUI {
         htmlRefs.right.list.html('');
         this.savedAnnealElements = [];
 
-        // Set up flexbox layout for the results panel
-        htmlRefs.right.list
-            .style('display', 'flex')
-            .style('flex-direction', 'column')
-            .style('height', '100%')
-            .style('overflow', 'hidden');
+        // Set up flexbox layout for the results panel - inherits from .sidebar-list base styles
+        htmlRefs.right.list.addClass('sidebar-with-controls');
 
         // Create a fixed controls container
         this.html.controlsContainer = createDiv()
-            .addClass('controls-container')
-            .style('flex-shrink', '0')
-            .style('padding', '10px')
-            .style('background-color', '#fefefe')
+            .addClass('sidebar-controls')
             .parent(htmlRefs.right.list);
 
         // create wall generation controls in the fixed container
@@ -984,10 +1007,7 @@ class DesignUI {
 
         // Create scrollable container for solutions
         this.html.scrollContainer = createDiv()
-            .addClass('scroll-container')
-            .style('flex-grow', '1')
-            .style('overflow-y', 'auto')
-            .style('min-height', '0')
+            .addClass('sidebar-scroll')
             .parent(htmlRefs.right.list);
 
         // create the saved solutions list
@@ -1005,10 +1025,7 @@ class DesignUI {
 
         // Add the saved solutions label
         createSpan('Saved Solutions')
-            .addClass('control-label saved-solutions-label')
-            .style('display', 'block')
-            .style('margin-bottom', '10px')
-            .style('font-weight', 'bold')
+            .addClass('settings-label')
             .style('padding', '0 10px')
             .parent(this.html.scrollContainer);
 
@@ -1073,20 +1090,14 @@ class DesignUI {
 
         // Master wall generation mode dropdown
         const modeGroup = createDiv()
-            .addClass('control-group')
-            .style('margin-bottom', '15px')
+            .addClass('settings-group')
             .parent(this.html.controlsContainer);
         createSpan('Wall Generation Mode')
-            .addClass('control-label')
-            .style('display', 'block')
-            .style('margin-bottom', '5px')
-            .style('font-weight', 'bold')
+            .addClass('settings-label')
             .parent(modeGroup);
 
         this.html.wallModeSelect = createSelect()
-            .addClass('control-select')
-            .style('width', '100%')
-            .style('padding', '5px')
+            .addClass('settings-select')
             .parent(modeGroup)
             .changed(() => this.handleWallModeChange());
         this.html.wallModeSelect.option('Cellular Automata', 'cellular');
@@ -1095,23 +1106,17 @@ class DesignUI {
 
         // Cellular Automata sub-options
         this.html.cellularGroup = createDiv()
-            .addClass('control-group')
-            .style('margin-bottom', '15px')
+            .addClass('settings-group')
             .parent(this.html.controlsContainer);
         if (previousWallMode !== 'cellular') {
             this.html.cellularGroup.addClass('hidden');
         }
         createSpan('Algorithm')
-            .addClass('control-label')
-            .style('display', 'block')
-            .style('margin-bottom', '5px')
-            .style('font-weight', 'bold')
+            .addClass('settings-label')
             .parent(this.html.cellularGroup);
 
         this.html.cellularAlgorithmSelect = createSelect()
-            .addClass('control-select')
-            .style('width', '100%')
-            .style('padding', '5px')
+            .addClass('settings-select')
             .parent(this.html.cellularGroup)
             .changed(() => this.handleCellularAlgorithmChange());
         this.html.cellularAlgorithmSelect.option('Organic', 'organic');
@@ -1120,7 +1125,7 @@ class DesignUI {
 
         // Curve sub-options
         this.html.curveGroup = createDiv()
-            .addClass('control-group')
+            .addClass('settings-group')
             .parent(this.html.controlsContainer);
         if (previousWallMode !== 'curve') {
             this.html.curveGroup.addClass('hidden');
@@ -1128,16 +1133,13 @@ class DesignUI {
 
         // Wrapper for Radius
         const radiusWrapper = createDiv()
-            .parent(this.html.curveGroup)
-            .style('margin-bottom', '15px');
+            .addClass('settings-group')
+            .parent(this.html.curveGroup);
         createSpan('Curve Radius (inches)')
-            .addClass('control-label')
-            .style('display', 'block')
-            .style('margin-bottom', '5px')
+            .addClass('settings-label')
             .parent(radiusWrapper);
         this.html.curveRadiusInput = createInput('1.0', 'number')
-            .addClass('control-input')
-            .style('width', '100%')
+            .addClass('settings-input')
             .parent(radiusWrapper)
             .attribute('min', '0.1')
             .attribute('max', '10.0')
@@ -1146,16 +1148,13 @@ class DesignUI {
 
         // Wrapper for Bends
         const bendsWrapper = createDiv()
-            .parent(this.html.curveGroup)
-            .style('margin-bottom', '15px');
+            .addClass('settings-group')
+            .parent(this.html.curveGroup);
         createSpan('Max Sequential Bends')
-            .addClass('control-label')
-            .style('display', 'block')
-            .style('margin-bottom', '5px')
+            .addClass('settings-label')
             .parent(bendsWrapper);
         this.html.maxBendsInput = createInput('4', 'number')
-            .addClass('control-input')
-            .style('width', '100%')
+            .addClass('settings-input')
             .parent(bendsWrapper)
             .attribute('min', '2')
             .attribute('max', '10')
@@ -1164,9 +1163,7 @@ class DesignUI {
 
         // Save button in Results panel
         this.html.saveButtonResults = createButton('Save')
-            .addClass('primary-button button')
-            .style('margin-bottom', '20px')
-            .style('width', '100%')
+            .addClass('primary-button button settings-button')
             .parent(this.html.controlsContainer)
             .attribute('disabled', '') // until annealing is complete
             .mousePressed(() => this.handleSaveSolution());

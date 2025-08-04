@@ -80,6 +80,7 @@ body {
   background-color: #f0f0f0;
   text-align: center;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .sidebar-list {
@@ -97,6 +98,7 @@ body {
   text-align: center;
   justify-content: center;
   min-height: 30px;
+  flex-shrink: 0;
 }
 
 .button {
