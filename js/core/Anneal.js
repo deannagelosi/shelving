@@ -10,7 +10,7 @@ class Anneal {
         this.reheatCounter = 100; // max failed to improve iterations before reheating
         this.initialTemp = 10000;
         this.minTemp = 0.1; // temperature to stop annealing at
-        this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
+        this.initialCoolingRate = 0.90; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
         this.displayInterval = 25; // how often to update the display with a new solution
 
@@ -174,7 +174,14 @@ class Anneal {
                 if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
                     // send solution to web worker progress callback
                     if (config.progressCallback) {
-                        config.progressCallback(currentSolution);
+                        // Show current accepted solution normally
+                        // If dev mode, show the solution being attempted
+                        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+                        if (isDevMode) {
+                            config.progressCallback(neighbor);
+                        } else {
+                            config.progressCallback(currentSolution);
+                        }
                     }
                 }
             }

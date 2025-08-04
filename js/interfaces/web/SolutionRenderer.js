@@ -418,7 +418,6 @@ class SolutionRenderer {
         // handles wall generation and rendering logic
 
         const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
-        console.log(`[SolutionRenderer] wallAlgorithm=${wallAlgorithm}`);
 
         if (wallAlgorithm === 'curve') {
             this.renderCurveWalls(solution, canvas, config, wallRenderers, wallRenderData);

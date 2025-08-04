@@ -8,6 +8,7 @@ class DesignUI {
         // dom elements
         this.html = {};
         this.shapeElements = [];
+        this.shapesDisabled = false;
 
         //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
@@ -320,9 +321,16 @@ class DesignUI {
         }
 
         // re-enable shape selection
+        this.shapesDisabled = false;
+        // Ensure shapes list exists before trying to enable it
+        if (this.shapeElements.length === 0) {
+            this.updateShapesList();
+        }
         this.shapeElements.forEach(element => {
             element.removeClass('disabled');
         });
+
+        // Note: Perimeter and aspect ratio controls remain locked until 'Clear' is clicked
     }
 
     //== helper methods
@@ -371,10 +379,10 @@ class DesignUI {
             appState.shapes[index].enabled = true;
         });
 
-        // Initialize the results panel if not already done
-        if (!this.html.wallModeSelect) {
-            this.initializeResultsPanel();
-        }
+
+        // Initialize the sidebars to ensure all DOM elements exist before use.
+        this.createShapeList();
+        this.initializeResultsPanel();
 
         // draw the blank grid
         this.drawBlankGrid();
@@ -397,7 +405,7 @@ class DesignUI {
         }
 
         // update dynamic lists
-        this.createShapeList();
+        this.updateShapesList();
         this.updateSavedSolutionsList();
     }
 
@@ -635,7 +643,28 @@ class DesignUI {
             return;
         }
 
+        // Disable perimeter controls during generation
+        if (this.html.usePerimeterCheckbox) {
+            this.html.usePerimeterCheckbox.attribute('disabled', true);
+        }
+        if (this.html.perimeterWidthInput) {
+            this.html.perimeterWidthInput.attribute('disabled', '');
+        }
+        if (this.html.perimeterHeightInput) {
+            this.html.perimeterHeightInput.attribute('disabled', '');
+        }
+
+        // Disable aspect ratio controls during generation
+        this.html.tallButton.addClass('disabled');
+        this.html.squareButton.addClass('disabled');
+        this.html.wideButton.addClass('disabled');
+
         // disable shape selection changes while annealing
+        this.shapesDisabled = true;
+        // Ensure shapes list exists before trying to disable it
+        if (this.shapeElements.length === 0) {
+            this.updateShapesList();
+        }
         this.shapeElements.forEach(element => {
             element.addClass('disabled');
         });
@@ -746,6 +775,7 @@ class DesignUI {
             title: `solution-${appState.totalSavedAnneals}`,
             finalSolution: deepCopySolution,
             enabledShapes: appState.shapes.map(shape => shape.enabled)
+            // Note: Generation config is stored in the Solution object itself
         };
         appState.savedAnneals.push(savedData);
 
@@ -762,7 +792,28 @@ class DesignUI {
         appState.currentViewedAnnealIndex = null;
         appState.currentAnneal = null;
 
+        // Re-enable perimeter controls
+        if (this.html.usePerimeterCheckbox) {
+            this.html.usePerimeterCheckbox.removeAttribute('disabled');
+        }
+        if (this.html.perimeterWidthInput) {
+            this.html.perimeterWidthInput.removeAttribute('disabled');
+        }
+        if (this.html.perimeterHeightInput) {
+            this.html.perimeterHeightInput.removeAttribute('disabled');
+        }
+
+        // Re-enable aspect ratio controls
+        this.html.tallButton.removeClass('disabled');
+        this.html.squareButton.removeClass('disabled');
+        this.html.wideButton.removeClass('disabled');
+
         // enable shape selection
+        this.shapesDisabled = false;
+        // Ensure shapes list exists before trying to enable it
+        if (this.shapeElements.length === 0) {
+            this.updateShapesList();
+        }
         this.shapeElements.forEach(element => {
             element.removeClass('disabled');
         });
@@ -841,10 +892,8 @@ class DesignUI {
         if (!htmlRefs.left) return;
         if (appState.currentScreen !== ScreenState.DESIGN) return;
 
-        // Only recreate the entire sidebar structure if it doesn't exist
-        if (!this.html.leftControlsContainer) {
-            this.initializeLeftSidebar();
-        }
+        // Always recreate the sidebar structure to ensure a clean state.
+        this.initializeLeftSidebar();
 
         // Always update the shapes list
         this.updateShapesList();
@@ -908,6 +957,13 @@ class DesignUI {
 
             this.shapeElements.push(shapeItem);
         });
+
+        // Preserve disabled state if shapes should be disabled
+        if (this.shapesDisabled) {
+            this.shapeElements.forEach(element => {
+                element.addClass('disabled');
+            });
+        }
     }
 
     createPerimeterControls() {
@@ -970,6 +1026,13 @@ class DesignUI {
     }
 
     togglePerimeterInputs() {
+        // Don't allow changes if the checkbox is disabled
+        if (this.html.usePerimeterCheckbox.attribute('disabled')) {
+            // Reset checkbox to its previous state
+            this.html.usePerimeterCheckbox.checked(appState.generationConfig.useCustomPerimeter);
+            return;
+        }
+
         appState.generationConfig.useCustomPerimeter = this.html.usePerimeterCheckbox.checked();
         if (appState.generationConfig.useCustomPerimeter) {
             this.html.perimeterInputsContainer.removeClass('hidden');
@@ -1297,7 +1360,42 @@ class DesignUI {
             }
         }
 
+        // Restore generation configuration from the Solution object
+        // Update aspect ratio preference and UI
+        this.handleAspectRatioChange(solution.aspectRatioPref);
+
+        // Update perimeter settings in appState (but UI will show locked values)
+        appState.generationConfig.useCustomPerimeter = solution.useCustomPerimeter;
+        appState.generationConfig.perimeterWidth = solution.perimeterWidth;
+        appState.generationConfig.perimeterHeight = solution.perimeterHeight;
+
+        // Update perimeter UI to show the saved values (but keep them disabled)
+        if (this.html.usePerimeterCheckbox) {
+            this.html.usePerimeterCheckbox.checked(solution.useCustomPerimeter);
+        }
+        if (this.html.perimeterWidthInput) {
+            this.html.perimeterWidthInput.value(solution.perimeterWidth.toString());
+        }
+        if (this.html.perimeterHeightInput) {
+            this.html.perimeterHeightInput.value(solution.perimeterHeight.toString());
+        }
+
+        // Disable generation controls while viewing saved anneal
+        if (this.html.usePerimeterCheckbox) {
+            this.html.usePerimeterCheckbox.attribute('disabled', true);
+        }
+        if (this.html.perimeterWidthInput) {
+            this.html.perimeterWidthInput.attribute('disabled', '');
+        }
+        if (this.html.perimeterHeightInput) {
+            this.html.perimeterHeightInput.attribute('disabled', '');
+        }
+        this.html.tallButton.addClass('disabled');
+        this.html.squareButton.addClass('disabled');
+        this.html.wideButton.addClass('disabled');
+
         // disable shape selection changes while viewing saved anneal
+        this.shapesDisabled = true;
         if (this.shapeElements.length === 0) {
             this.createShapeList();
         }
