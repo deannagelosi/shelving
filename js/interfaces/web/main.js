@@ -30,8 +30,8 @@ const ScreenState = {
 //== flags
 let detailView = false;
 let devMode = false;
-let aspectRatioPref = 0;
 let fastReloadDev = true; // For dev purposes, loads a test file on start
+let loadPreview = false;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -116,14 +116,16 @@ function loadTestData() {
 
             // Finally, use setTimeout to ensure the UI has finished its render cycle
             // before we try to trigger the preview.
-            setTimeout(() => {
-                const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === solutionName);
-                if (targetSolutionIndex !== -1) {
-                    designUI.viewSavedAnneal(targetSolutionIndex);
-                } else {
-                    console.error("Fast Reload Error: Could not find 'solution-3' in the loaded data.");
-                }
-            }, 0);
+            if (loadPreview) {
+                setTimeout(() => {
+                    const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === solutionName);
+                    if (targetSolutionIndex !== -1) {
+                        designUI.viewSavedAnneal(targetSolutionIndex);
+                    } else {
+                        console.error("Fast Reload Error: Could not find 'solution-3' in the loaded data.");
+                    }
+                }, 0);
+            }
         })
         .catch(error => console.error('Error loading test data:', error));
 }

@@ -12,7 +12,7 @@ class Anneal {
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 30; // how often to update the display with a new solution
+        this.displayInterval = 10; // how often to update the display with a new solution
 
         //== configuration
         this.layoutConfig = _layoutConfig;
@@ -85,7 +85,7 @@ class Anneal {
         if (this.stopAnneal) return null; // re-anneal clicked
 
 
-        // if solution is not valid (overlapping or floating shapes), continue to refine
+        // continue to refine if the solution is not valid
         while (bestSolution.valid == false) {
             // stop refining if re-anneal button clicked
 
