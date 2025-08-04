@@ -1,5 +1,5 @@
 class Anneal {
-    constructor(_shapes, _devMode = false, _aspectRatioPref = 0) {
+    constructor(_shapes, _layoutConfig = {}) {
         //== anneal strategy variables
         // annealing strategy:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -12,11 +12,10 @@ class Anneal {
         this.minTemp = 0.1; // temperature to stop annealing at
         this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 10; // how often to update the display with a new solution
+        this.displayInterval = 30; // how often to update the display with a new solution
 
         //== configuration
-        this.devMode = _devMode; // enable debug logging
-        this.aspectRatioPref = _aspectRatioPref; // aspect ratio preference
+        this.layoutConfig = _layoutConfig;
 
         //== state variables
         this.shapes = _shapes;
@@ -56,7 +55,7 @@ class Anneal {
             };
 
             // create new solution with random layout.
-            let initialSolution = new Solution(this.shapes, startID, this.aspectRatioPref);
+            let initialSolution = new Solution(this.shapes, startID, this.layoutConfig);
             initialSolution.randomLayout();
 
             // start concurrent anneals (pass which iteration number for multi-start)
@@ -69,10 +68,6 @@ class Anneal {
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
-        if (this.devMode) {
-            console.log("Multi-start results: ", results.map(s => s.score).join(', '));
-            console.log("Best solution:", bestStartSolution.score);
-        }
 
         return bestStartSolution;
     }
@@ -99,7 +94,6 @@ class Anneal {
                 initialCoolingRate: 0.99, // slower cooling
                 progressCallback: progressCallback
             };
-            if (this.devMode) console.log("additional refining...");
 
             bestSolution = await this.anneal(bestSolution, refineConfig);
             if (this.stopAnneal) return null; // re-anneal clicked
@@ -166,7 +160,6 @@ class Anneal {
             temperature *= coolingRate;
 
             if (iterationsSinceImprovement > config.reheatCounter) {
-                if (this.devMode) console.log("Reheating...");
                 // adaptive cooling: if stuck, reheat the system
                 // - increasing the temperature causes more exploration, helping to escape a local minima
                 // increase temperature, but don't exceed initial temp
@@ -193,10 +186,6 @@ class Anneal {
             // add a small delay to prevent blocking the main thread
             await new Promise(resolve => setTimeout(resolve, 0));
             totalIterations++;
-        }
-
-        if (this.devMode) {
-            console.log("iterations completed:", Math.round((totalIterations / maxIterations) * 10000) / 100, "%");
         }
 
         // return the best solution found during this annealing process

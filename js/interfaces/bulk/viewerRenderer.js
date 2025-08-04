@@ -1,6 +1,8 @@
 class ViewerRenderer {
     constructor(state) {
         this.state = state;
+        this.isDevMode = false;
+        this.numGrow = 0;
 
         // Canvas dimensions
         this.CANVAS_WIDTH = 1200;
@@ -81,10 +83,10 @@ class ViewerRenderer {
 
     handleKeyPress(key) {
         if (key === 'd') {
-            this.state.devMode = !this.state.devMode;
-            this.state.numGrow = 0;
-        } else if (key === 'g' && this.state.devMode) {
-            this.state.numGrow++;
+            this.isDevMode = !this.isDevMode;
+            this.numGrow = 0;
+        } else if (key === 'g' && this.isDevMode) {
+            this.numGrow++;
         }
     }
 
@@ -111,9 +113,9 @@ class ViewerRenderer {
 
             // Create Cellular instances from the raw data
             let optimizedCellular;
-            if (this.state.devMode) {
+            if (this.isDevMode) {
                 // In dev mode, always regenerate to calculate terrain to allow step-through
-                optimizedCellular = new Cellular(optimizedSolution, this.state.devMode, this.state.numGrow);
+                optimizedCellular = new Cellular(optimizedSolution, this.isDevMode, this.state.numGrow);
                 optimizedCellular.growCells();
             } else if (this.isLegacyCellularData(cellularData)) {
                 // legacy version, regenerating with updated algorithm
@@ -153,7 +155,6 @@ class ViewerRenderer {
 
             const optimizedConfig = this.calculateRenderConfig(optimizedSolution, this.optimizedBuffer);
             const gridConfig = this.calculateRenderConfig(gridSolution, this.gridBuffer);
-            optimizedConfig.devMode = this.state.devMode;
 
             const optimizedCanvas = { height: this.BUFFER_HEIGHT, width: this.BUFFER_WIDTH };
             const gridCanvas = { height: this.BUFFER_HEIGHT, width: this.BUFFER_WIDTH };
@@ -165,10 +166,10 @@ class ViewerRenderer {
                 this.solutionRenderer.renderLayout(optimizedSolution, optimizedCanvas, optimizedConfig);
                 const optimizedCellLines = optimizedCellular.getCellRenderLines();
                 this.cellularRenderer.renderCellLines(optimizedCellLines, optimizedCanvas, optimizedConfig);
-                if (!optimizedConfig.devMode) {
+                if (!this.isDevMode) {
                     this.boardRenderer.renderBoards(optimizedBoardData, optimizedCanvas, optimizedConfig, { showLabels: true });
                 }
-                if (optimizedConfig.devMode) {
+                if (this.isDevMode) {
                     this.cellularRenderer.renderTerrain(optimizedSolution.layout, optimizedCanvas, { ...optimizedConfig, maxTerrain: optimizedCellular.maxTerrain });
                     this.cellularRenderer.renderCells(optimizedCellular.cellSpace, optimizedCanvas, optimizedConfig);
                     this.cellularRenderer.renderFloodFillVisualization(cubbyAreasOptimized, optimizedCanvas, optimizedConfig);
@@ -217,7 +218,7 @@ class ViewerRenderer {
 
     calculateRenderConfig(solution, buffer) {
         if (!solution || !solution.layout || solution.layout.length === 0) {
-            return { squareSize: 15, buffer: 15, xPadding: 10, yPadding: 10, devMode: false, detailView: false };
+            return { squareSize: 15, buffer: 15, xPadding: 10, yPadding: 10, detailView: false };
         }
         let layoutHeight = solution.layout.length;
         let layoutWidth = solution.layout[0].length;
@@ -227,7 +228,7 @@ class ViewerRenderer {
         let bufferSize = squareSize * 0.5;
         let yPadding = ((this.BUFFER_HEIGHT - (layoutHeight * squareSize)) / 2) - bufferSize;
         let xPadding = ((this.BUFFER_WIDTH - (layoutWidth * squareSize)) / 2) - bufferSize;
-        return { squareSize, buffer: bufferSize, xPadding, yPadding, devMode: false, detailView: false };
+        return { squareSize, buffer: bufferSize, xPadding, yPadding, detailView: false };
     }
 
     isLegacyCellularData(cellularData) {

@@ -36,7 +36,8 @@ class CellularRenderer {
 
             // set line color based on strain
             let lineColor;
-            if (config.devMode) {
+            let isDevMode = (typeof devMode !== 'undefined') ? devMode : false; // check for global var
+            if (isDevMode) {
                 lineColor = this.strainColor(strain);
             } else {
                 lineColor = "rgb(175, 141, 117)";
@@ -132,7 +133,7 @@ class CellularRenderer {
                     stroke(r, g, b, 255); // Use same color as fill but fully opaque
                     strokeWeight(3);
                     rect(canvasX, canvasY, config.squareSize, config.squareSize);
-                    
+
                     // Reset stroke settings for next iteration
                     noStroke();
                     fill(r, g, b, a);

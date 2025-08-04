@@ -241,7 +241,12 @@ class DesignUI {
                             layout: visualData.layout,
                             shapes: visualData.shapes,
                             score: score,
-                            valid: valid
+                            valid: valid,
+                            // Include perimeter properties from visualData
+                            useCustomPerimeter: visualData.useCustomPerimeter,
+                            perimeterWidth: visualData.perimeterWidth,
+                            perimeterHeight: visualData.perimeterHeight,
+                            goalPerimeter: visualData.goalPerimeter
                         };
                         // call the display update with the minimal solution
                         this.updateDisplayCallback(minimalSolution);
@@ -515,7 +520,20 @@ class DesignUI {
             return newShape;
         });
 
-        const newSolution = new Solution(shapesCopy, currentSolution.startID, currentSolution.aspectRatioPref);
+        // Prepare configuration using current UI settings and solution wall settings
+        const layoutConfig = {
+            aspectRatioPref: currentSolution.aspectRatioPref,
+            useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
+            perimeterWidth: appState.generationConfig.perimeterWidth,
+            perimeterHeight: appState.generationConfig.perimeterHeight
+        };
+        const wallConfig = {
+            algorithm: currentSolution.wallAlgorithm,
+            curveRadius: currentSolution.curveRadius,
+            maxBends: currentSolution.maxBends
+        };
+
+        const newSolution = new Solution(shapesCopy, currentSolution.startID, layoutConfig, wallConfig);
 
         // Find the selected shape in the new solution
         const newSelectedShape = newSolution.shapes.find(shape => shape.id === appState.selectedShapeId);
@@ -555,7 +573,7 @@ class DesignUI {
 
     regenerateCellular(solution) {
         // Create new cellular instance and regenerate walls (pass the entire Solution object)
-        const cellular = new Cellular(solution, devMode, numGrow);
+        const cellular = new Cellular(solution);
         cellular.makeInitialCells();
         cellular.growCells();
 
@@ -572,7 +590,7 @@ class DesignUI {
     }
 
     handleAspectRatioChange(pref) {
-        aspectRatioPref = pref;
+        appState.generationConfig.aspectRatioPref = pref;
 
         // Update selected state
         this.html.tallButton.removeClass('selected');
@@ -653,19 +671,23 @@ class DesignUI {
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
 
-            // get wall generation parameters from UI
+            // get wall generation parameters from UI to appState
             const wallMode = this.html.wallModeSelect ? this.html.wallModeSelect.value() : 'cellular';
             const cellularAlgorithm = this.html.cellularAlgorithmSelect ? this.html.cellularAlgorithmSelect.value() : 'organic';
-            const curveRadius = this.html.curveRadiusInput ? parseFloat(this.html.curveRadiusInput.value()) : 1.0;
-            const maxBends = this.html.maxBendsInput ? parseInt(this.html.maxBendsInput.value()) : 4;
 
-            let wallAlgorithm;
             if (wallMode === 'cellular') {
-                wallAlgorithm = `cellular-${cellularAlgorithm}`;
+                appState.generationConfig.wallAlgorithm = `cellular-${cellularAlgorithm}`;
             } else {
-                wallAlgorithm = wallMode;
+                appState.generationConfig.wallAlgorithm = wallMode;
             }
-            console.log(`[UI] Starting generation. wallAlgorithm=${wallAlgorithm}, radius=${curveRadius}, bends=${maxBends}`);
+
+            // Update curve parameters if they exist
+            if (this.html.curveRadiusInput) {
+                appState.generationConfig.curveRadius = parseFloat(this.html.curveRadiusInput.value());
+            }
+            if (this.html.maxBendsInput) {
+                appState.generationConfig.maxBends = parseInt(this.html.maxBendsInput.value());
+            }
 
             // send generation request to worker
             this.solutionWorker.postMessage({
@@ -674,14 +696,15 @@ class DesignUI {
                     shapes: shapesData,
                     jobId: `single-${Date.now()}`,
                     startId: 0,
-                    aspectRatioPref: aspectRatioPref,
-                    devMode: devMode,
-                    wallAlgorithm: wallAlgorithm,
-                    curveRadius: curveRadius,
-                    maxBends: maxBends,
-                    annealConfig: {
-                        displayInterval: 30
-                    }
+                    aspectRatioPref: appState.generationConfig.aspectRatioPref,
+                    // Perimeter
+                    useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
+                    perimeterWidth: appState.generationConfig.perimeterWidth,
+                    perimeterHeight: appState.generationConfig.perimeterHeight,
+                    // Walls
+                    wallAlgorithm: appState.generationConfig.wallAlgorithm,
+                    curveRadius: appState.generationConfig.curveRadius,
+                    maxBends: appState.generationConfig.maxBends
                 }
             });
 
@@ -1203,7 +1226,7 @@ class DesignUI {
         const solution = appState.currentAnneal.finalSolution;
 
         // Create new cellular instance with the selected algorithm
-        const cellular = new Cellular(solution, devMode, numGrow);
+        const cellular = new Cellular(solution);
 
         if (selectedAlgorithm === 'organic') {
             cellular.growCells();

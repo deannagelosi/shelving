@@ -9,7 +9,7 @@ class SolutionRenderer {
         // renders the layout, shapes, and scores on the canvas
         // solution: Solution instance with layout, shapes, etc.
         // canvas: object with height, width, and drawing context
-        // config: object with devMode, detailView, squareSize, buffer, padding values
+        // config: object with detailView, squareSize, buffer, padding values
 
         let colors = {
             lineColor: "rgb(198, 198, 197)",
@@ -22,7 +22,9 @@ class SolutionRenderer {
             numColor: "rgb(102,102,102)"
         };
 
-        if (config.devMode) {
+        // check for global devMode variable
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        if (isDevMode) {
             colors.lineColor = 0;
             colors.bkrdColor = 255;
             colors.bufferColor = "rgb(255, 192, 203)";
@@ -34,17 +36,17 @@ class SolutionRenderer {
         this.renderGridSquares(solution.layout, canvas, config, colors);
 
         // show grid numbers
-        if (config.detailView || config.devMode) {
+        if (config.detailView || isDevMode) {
             this.renderGridNumbers(solution.layout, canvas, config, colors);
         }
 
         // display buffer squares
-        if (config.detailView || config.devMode) {
+        if (config.detailView || isDevMode) {
             this.renderBuffer(solution.layout, canvas, config, colors);
         }
 
         // display low res shape squares
-        if (config.devMode) {
+        if (isDevMode) {
             this.renderLowResShapes(solution.layout, canvas, config, colors);
         }
 
@@ -52,7 +54,7 @@ class SolutionRenderer {
         this.renderHighResShapes(solution.shapes, canvas, config, colors);
 
         // display shape titles
-        if (config.detailView || config.devMode) {
+        if (config.detailView || isDevMode) {
             this.renderTitles(solution.shapes, canvas, config, colors);
         }
 
@@ -89,16 +91,19 @@ class SolutionRenderer {
         let designHeight = layout.length;
         let designWidth = layout[0].length;
 
+        // check for global devMode variable
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+
         for (let x = 0; x < designWidth; x++) {
             // display column number
-            fill(config.devMode && x % 5 === 0 ? "pink" : colors.numColor);
+            fill(isDevMode && x % 5 === 0 ? "pink" : colors.numColor);
             let textX = (x * config.squareSize) + config.buffer + config.xPadding + txtXOffset;
             let textY = ((canvas.height - config.yPadding) - config.buffer) + txtYOffset;
             text(x + 1, textX, textY);
 
             for (let y = 0; y < designHeight; y++) {
                 // display row number
-                fill(config.devMode && y % 5 === 0 ? "pink" : colors.numColor);
+                fill(isDevMode && y % 5 === 0 ? "pink" : colors.numColor);
                 let textX = config.xPadding + txtXOffset;
                 let textY = ((canvas.height - config.yPadding) - config.squareSize - config.buffer) - (y * config.squareSize) + txtYOffset;
                 text(y + 1, textX, textY);
@@ -236,6 +241,9 @@ class SolutionRenderer {
         noStroke();
         fill(colors.collisionColor);
 
+        // check for global devMode variable
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+
         for (let y = 0; y < layout.length; y++) {
             for (let x = 0; x < layout[y].length; x++) {
                 // only draw collision squares
@@ -244,7 +252,7 @@ class SolutionRenderer {
                     // - if dev mode, any overlapping buffer squares is a collision
                     // - if not dev mode, any overlapping shape squares is a collision
                     let isCollision = false;
-                    if (config.devMode && layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
+                    if (isDevMode && layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
                         // 2 or more buffers overlapping
                         isCollision = true;
                     } else if (layout[y][x].isShape.filter(s => s === true).length >= 2) {
@@ -265,7 +273,10 @@ class SolutionRenderer {
     }
 
     renderScores(layout, canvas, config) {
-        if (config.devMode) {
+        // check for global devMode variable
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+
+        if (isDevMode) {
             // display anneal scores on grid
             fill(100);
             stroke(50);

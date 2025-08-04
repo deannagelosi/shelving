@@ -218,6 +218,8 @@ class Export {
         // confirm boards created correctly by displaying them in correct orientation
         // if an offscreen renderer is passed in, use that to create a png for download
         const ctx = renderer || window;
+        // check for global devMode variable
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
 
         ctx.clear();
         ctx.background(255);
@@ -228,13 +230,13 @@ class Export {
         const endY = (y2) => (((ctx.height - this.yPadding) - this.buffer) - (y2 * this.squareSize));
 
         // draw the cell line segments
-        if (devMode && renderer === null) this.cellData.showCellLines("red");
+        if (isDevMode && renderer === null) this.cellData.showCellLines("red");
 
         // draw the boards
         ctx.strokeWeight(7);
         for (const board of this.boards) {
-            if (devMode && renderer === null) stroke("rgba(175, 141, 117, 0.5)");
-            if (!devMode) ctx.stroke("rgb(175, 141, 117)");
+            if (isDevMode && renderer === null) stroke("rgba(175, 141, 117, 0.5)");
+            if (!isDevMode) ctx.stroke("rgb(175, 141, 117)");
             ctx.line(
                 startX(board.coords.start.x),
                 startY(board.coords.start.y),
@@ -262,7 +264,7 @@ class Export {
         // draw shape names in correct location
 
 
-        if (devMode && renderer === null) {
+        if (isDevMode && renderer === null) {
             // draw the end joints by type
             noStroke();
             // slot ends

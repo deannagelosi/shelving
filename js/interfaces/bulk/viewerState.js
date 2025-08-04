@@ -7,10 +7,6 @@ const viewerState = {
     solutions: [],
     selectedSolution: null,
 
-    // UI and debug state
-    devMode: false,
-    numGrow: 0,
-
     // Statistics for the selected solution
     stats: {
         rRmse: null,

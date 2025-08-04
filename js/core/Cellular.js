@@ -1,5 +1,5 @@
 class Cellular {
-    constructor(_solution, _devMode = false, _numGrow = 1) {
+    constructor(_solution) {
         this.cellSpace = [[]]; // 2D array of intersections on the layout grid where cells live
         this.pathValues = [[]]; // 2D array of each path's (lines on the layout) height value
 
@@ -8,10 +8,6 @@ class Cellular {
         this.layoutHeight = this.layout.length;
         this.layoutWidth = this.layout[0].length;
         this.shapes = _solution.shapes; // array of shapes and their positions
-
-        // debug config
-        this.devMode = _devMode; // show step-by-step growth
-        this.numGrow = _numGrow; // number of growth steps to take in debug mode
 
         this.maxTerrain = 0; // maximum terrain height for the layout, gets assigned to shapes
         this.scoreRecursion = 4; // how many extra steps to look ahead when calculating opportunity score
@@ -232,9 +228,12 @@ class Cellular {
         this.makeInitialCells();
 
         // grow alive cells until no more cells are alive
-        if (this.devMode) {
+        // access the global variables if in web app mode
+        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        let currentNumGrow = (typeof numGrow !== 'undefined') ? numGrow : 0;
+        if (isDevMode) {
             // grow one at a time on keypress
-            for (let i = 0; i < this.numGrow; i++) {
+            for (let i = 0; i < currentNumGrow; i++) {
                 this.growOnce();
             }
         } else {

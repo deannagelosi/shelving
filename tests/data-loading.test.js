@@ -310,7 +310,8 @@ describe('Data Loading & Export Tests', () => {
         describe('Solution.toDataObject()', () => {
             test('should export Solution without layout', () => {
                 const shapes = [Shape.fromDataObject(sampleShapesData.allShapes[0])];
-                const solution = new Solution(shapes, 0, 1);
+                const layoutConfig = { aspectRatioPref: 1 };
+                const solution = new Solution(shapes, 0, layoutConfig);
                 solution.makeLayout();
                 solution.calcScore();
 

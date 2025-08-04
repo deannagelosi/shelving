@@ -80,14 +80,30 @@ class SolutionWorker {
             jobId,
             startId = 0,
             aspectRatioPref = 0,
-            devMode = false,
-            annealConfig = {},
             randMin = null,
             randMax = null,
             wallAlgorithm = 'cellular-organic',
             curveRadius = 1.0,
-            maxBends = 4
+            maxBends = 4,
+            useCustomPerimeter = false,
+            perimeterWidth = 0,
+            perimeterHeight = 0
         } = payload;
+
+        // Create configuration objects
+        // Re-enabled perimeter config to test if this breaks UI updates
+        const layoutConfig = {
+            aspectRatioPref: aspectRatioPref,
+            useCustomPerimeter: useCustomPerimeter,
+            perimeterWidth: perimeterWidth,
+            perimeterHeight: perimeterHeight
+        };
+
+        const wallConfig = {
+            algorithm: wallAlgorithm,
+            curveRadius: curveRadius,
+            maxBends: maxBends
+        };
 
         this.currentJob = { jobId, startId };
 
@@ -127,11 +143,7 @@ class SolutionWorker {
             this.sendProgress('PHASE_START', { phase: 'anneal', message: 'Starting annealing process...' });
 
             // create Anneal instance
-            const anneal = new this.Anneal(
-                actualShapes,
-                devMode,
-                aspectRatioPref
-            );
+            const anneal = new this.Anneal(actualShapes, layoutConfig);
 
             // create progress callback for worker messaging
             const progressCallback = (solution) => {
@@ -151,7 +163,12 @@ class SolutionWorker {
                                     title: shape.data.title,
                                     highResShape: shape.data.highResShape
                                 }
-                            }))
+                            })),
+                            // Include perimeter properties for proper progress rendering
+                            useCustomPerimeter: solution.useCustomPerimeter,
+                            perimeterWidth: solution.perimeterWidth,
+                            perimeterHeight: solution.perimeterHeight,
+                            goalPerimeter: solution.goalPerimeter
                         }
                     });
                 } else {
@@ -187,7 +204,7 @@ class SolutionWorker {
             if (wallAlgorithm.startsWith('cellular')) {
                 this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
-                cellular = new this.Cellular(anneal.finalSolution, devMode);
+                cellular = new this.Cellular(anneal.finalSolution);
 
                 // Route to the appropriate cellular algorithm
                 if (wallAlgorithm === 'cellular-organic') {
@@ -201,18 +218,13 @@ class SolutionWorker {
                 this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
             } else if (wallAlgorithm === 'curve') {
                 this.sendProgress('PHASE_START', { phase: 'curve', message: 'Generating curved walls...' });
-                console.log(`[Worker] Curve generation started. radius=${curveRadius}, maxBends=${maxBends}`);
+                console.log(`[Worker] Curve generation started. radius=${wallConfig.curveRadius}, maxBends=${wallConfig.maxBends}`);
 
                 // Create CurveWall instance and generate curved walls
                 const curveWall = new this.CurveWall(anneal.finalSolution);
 
-                // Enable debug mode if requested
-                if (devMode) {
-                    curveWall.setDebugMode(true);
-                }
-
                 // Generate the curved wall path
-                const wallPath = curveWall.generate(maxBends, curveRadius);
+                const wallPath = curveWall.generate(wallConfig.maxBends, wallConfig.curveRadius);
                 console.log(`[Worker] Curve generation complete. segments=${wallPath.length}`);
 
                 // Store curve wall data in a local variable, not on the solution
@@ -258,7 +270,6 @@ class SolutionWorker {
                     metadata: {
                         timestamp: Date.now(),
                         mode: this.mode,
-                        devMode: devMode,
                         aspectRatioPref: aspectRatioPref
                     }
                 };
@@ -407,7 +418,6 @@ class SolutionWorker {
         const metadata = {
             timestamp: Date.now(),
             mode: this.mode,
-            devMode: false, // Always false in bulk mode
             aspectRatioPref: anneal.finalSolution.aspectRatioPref
         };
 

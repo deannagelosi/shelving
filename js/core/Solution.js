@@ -40,16 +40,22 @@ const WEIGHTS = {
 };
 
 class Solution {
-    constructor(_shapes, _startID, _aspectRatioPref = 0, _wallGenerationParams = {}) {
+    constructor(_shapes = [], _startID = 0, _layoutConfig = {}, _wallConfig = {}) {
         this.shapes = _shapes; // shapes with position data
         this.startID = _startID; // the multi-start index this solution annealed from
-        this.aspectRatioPref = _aspectRatioPref; // -1 for tall, 0 for square, 1 for wide layouts
         this.layout = [[]]; // 2D array of shapes that occupy the layout
 
-        // Wall generation parameters
-        this.wallAlgorithm = _wallGenerationParams.wallAlgorithm || 'cellular-organic';
-        this.curveRadius = _wallGenerationParams.curveRadius || 1.0;
-        this.maxBends = _wallGenerationParams.maxBends || 4;
+        // Layout configuration
+        this.aspectRatioPref = _layoutConfig.aspectRatioPref || 0; // -1 for tall, 0 for square, 1 for wide layouts
+        this.useCustomPerimeter = _layoutConfig.useCustomPerimeter || false;
+        this.perimeterWidth = _layoutConfig.perimeterWidth || 0;
+        this.perimeterHeight = _layoutConfig.perimeterHeight || 0;
+        this.goalPerimeter = null; // will be {x, y, width, height}
+
+        // Wall generation configuration
+        this.wallAlgorithm = _wallConfig.algorithm || 'cellular-organic';
+        this.curveRadius = _wallConfig.curveRadius || 1.0;
+        this.maxBends = _wallConfig.maxBends || 4;
 
         // penalize when anneal scores of this and above are clustered (multiples touching)
         this.clusterLimit = WEIGHTS.clusterLimit;
@@ -356,13 +362,19 @@ class Solution {
             Object.assign(newShape, shape);
             return newShape;
         });
-        // Preserve wall generation parameters
-        const wallGenerationParams = {
-            wallAlgorithm: this.wallAlgorithm,
+        // Preserve configuration
+        const layoutConfig = {
+            aspectRatioPref: this.aspectRatioPref,
+            useCustomPerimeter: this.useCustomPerimeter,
+            perimeterWidth: this.perimeterWidth,
+            perimeterHeight: this.perimeterHeight
+        };
+        const wallConfig = {
+            algorithm: this.wallAlgorithm,
             curveRadius: this.curveRadius,
             maxBends: this.maxBends
         };
-        let newSolution = new Solution(shapesCopy, this.startID, this.aspectRatioPref, wallGenerationParams);
+        let newSolution = new Solution(shapesCopy, this.startID, layoutConfig, wallConfig);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
@@ -469,6 +481,10 @@ class Solution {
             valid: this.valid,
             aspectRatioPref: this.aspectRatioPref,
             clusterLimit: this.clusterLimit,
+            // Perimeter parameters
+            useCustomPerimeter: this.useCustomPerimeter,
+            perimeterWidth: this.perimeterWidth,
+            perimeterHeight: this.perimeterHeight,
             // Wall generation parameters
             wallAlgorithm: this.wallAlgorithm,
             curveRadius: this.curveRadius,
@@ -482,19 +498,22 @@ class Solution {
         const LocalShape = getShape();
         const shapes = solutionData.shapes.map(shapeData => LocalShape.fromDataObject(shapeData));
 
+        // Prepare layout configuration
+        const layoutConfig = {
+            aspectRatioPref: solutionData.aspectRatioPref || 0,
+            useCustomPerimeter: solutionData.useCustomPerimeter || false,
+            perimeterWidth: solutionData.perimeterWidth || 0,
+            perimeterHeight: solutionData.perimeterHeight || 0
+        };
+
         // Prepare wall generation parameters
-        const wallGenerationParams = {
-            wallAlgorithm: solutionData.wallAlgorithm || 'cellular-organic',
+        const wallConfig = {
+            algorithm: solutionData.wallAlgorithm || 'cellular-organic',
             curveRadius: solutionData.curveRadius || 1.0,
             maxBends: solutionData.maxBends || 4
         };
 
-        const solution = new Solution(
-            shapes,
-            solutionData.startID,
-            solutionData.aspectRatioPref || 0,
-            wallGenerationParams
-        );
+        const solution = new Solution(shapes, solutionData.startID, layoutConfig, wallConfig);
 
         // set missing properties if they exist
         if (solutionData.clusterLimit !== undefined) {
@@ -558,7 +577,8 @@ class Solution {
         }
 
         // create solution instance and calculate layout/score
-        const gridSolution = new Solution(shapesCopy, 0, aspectRatioPref);
+        const layoutConfig = { aspectRatioPref: aspectRatioPref };
+        const gridSolution = new Solution(shapesCopy, 0, layoutConfig);
         gridSolution.makeLayout();
         gridSolution.calcScore();
 

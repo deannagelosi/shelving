@@ -15,7 +15,8 @@ describe('Cellular', () => {
         shapes[1].posX = 3;
         shapes[1].posY = 0;
 
-        const solution = new Solution(shapes, 0, 0);
+        const layoutConfig = { aspectRatioPref: 0 };
+        const solution = new Solution(shapes, 0, layoutConfig);
         solution.makeLayout();
         solution.calcScore();
         return solution;
@@ -37,9 +38,6 @@ describe('Cellular', () => {
         expect(cellular.cellID).toBe(0);
         expect(Array.isArray(cellular.cellSpace)).toBe(true);
         expect(Array.isArray(cellular.pathValues)).toBe(true);
-        // Check devMode defaults
-        expect(cellular.devMode).toBe(false);
-        expect(cellular.numGrow).toBe(1);
     });
 
     test('createTerrain should assign terrain values based on distance from shapes', () => {
