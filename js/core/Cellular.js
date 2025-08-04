@@ -229,8 +229,8 @@ class Cellular {
 
         // grow alive cells until no more cells are alive
         // access the global variables if in web app mode
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
-        let currentNumGrow = (typeof numGrow !== 'undefined') ? numGrow : 0;
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        let currentNumGrow = (typeof appState !== 'undefined' && appState.display) ? appState.display.numGrow : 0;
         if (isDevMode) {
             // grow one at a time on keypress
             for (let i = 0; i < currentNumGrow; i++) {

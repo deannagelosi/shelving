@@ -21,5 +21,13 @@ const appState = {
         wallAlgorithm: 'cellular-organic',  // 'cellular-organic', 'cellular-rectilinear', 'curve'
         curveRadius: 1.0,
         maxBends: 4
+    },
+
+    // Display/rendering configuration
+    display: {
+        detailView: false,  // show detailed buffer zones and grid info
+        devMode: false,     // show debug information and step-by-step controls
+        numGrow: 0,         // current cellular growth step in dev mode
+        curveStep: 0        // current curve growth step in dev mode
     }
 };

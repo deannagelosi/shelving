@@ -9,7 +9,7 @@ class SolutionRenderer {
         // renders the layout, shapes, and scores on the canvas
         // solution: Solution instance with layout, shapes, etc.
         // canvas: object with height, width, and drawing context
-        // config: object with detailView, squareSize, buffer, padding values
+        // config: object with squareSize, buffer, padding values
 
         let colors = {
             lineColor: "rgb(198, 198, 197)",
@@ -22,8 +22,9 @@ class SolutionRenderer {
             numColor: "rgb(102,102,102)"
         };
 
-        // check for global devMode variable
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        let detailView = (typeof appState !== 'undefined' && appState.display) ? appState.display.detailView : false;
         if (isDevMode) {
             colors.lineColor = 0;
             colors.bkrdColor = 255;
@@ -36,12 +37,12 @@ class SolutionRenderer {
         this.renderGridSquares(solution.layout, canvas, config, colors);
 
         // show grid numbers
-        if (config.detailView || isDevMode) {
+        if (detailView || isDevMode) {
             this.renderGridNumbers(solution.layout, canvas, config, colors);
         }
 
         // display buffer squares
-        if (config.detailView || isDevMode) {
+        if (detailView || isDevMode) {
             this.renderBuffer(solution.layout, canvas, config, colors);
         }
 
@@ -54,7 +55,7 @@ class SolutionRenderer {
         this.renderHighResShapes(solution.shapes, canvas, config, colors);
 
         // display shape titles
-        if (config.detailView || isDevMode) {
+        if (detailView || isDevMode) {
             this.renderTitles(solution.shapes, canvas, config, colors);
         }
 
@@ -91,8 +92,8 @@ class SolutionRenderer {
         let designHeight = layout.length;
         let designWidth = layout[0].length;
 
-        // check for global devMode variable
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
 
         for (let x = 0; x < designWidth; x++) {
             // display column number
@@ -241,18 +242,18 @@ class SolutionRenderer {
         noStroke();
         fill(colors.collisionColor);
 
-        // check for global devMode variable
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        let detailView = (typeof appState !== 'undefined' && appState.display) ? appState.display.detailView : false;
 
         for (let y = 0; y < layout.length; y++) {
             for (let x = 0; x < layout[y].length; x++) {
                 // only draw collision squares
                 if (layout[y][x].shapes.length > 1) {
                     // collision. rules:
-                    // - if dev mode, any overlapping buffer squares is a collision
-                    // - if not dev mode, any overlapping shape squares is a collision
-                    let isCollision = false;
-                    if (isDevMode && layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
+                    // - if dev mode OR detail view, any overlapping buffer squares is a collision
+                    // - always show overlapping shape squares as collisions
+                    if ((isDevMode || detailView) && layout[y][x].isBuffer.filter(s => s === true).length >= 2) {
                         // 2 or more buffers overlapping
                         isCollision = true;
                     } else if (layout[y][x].isShape.filter(s => s === true).length >= 2) {
@@ -273,8 +274,8 @@ class SolutionRenderer {
     }
 
     renderScores(layout, canvas, config) {
-        // check for global devMode variable
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
 
         if (isDevMode) {
             // display anneal scores on grid

@@ -36,7 +36,7 @@ class CellularRenderer {
 
             // set line color based on strain
             let lineColor;
-            let isDevMode = (typeof devMode !== 'undefined') ? devMode : false; // check for global var
+            let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
             if (isDevMode) {
                 lineColor = this.strainColor(strain);
             } else {

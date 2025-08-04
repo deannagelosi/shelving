@@ -615,10 +615,10 @@ class DesignUI {
         // toggle the slider value
         if (toggle.value() === 0) {
             toggle.value(1);
-            detailView = true;
+            appState.display.detailView = true;
         } else {
             toggle.value(0);
-            detailView = false;
+            appState.display.detailView = false;
         }
         // update the screen
         this.displayResult();

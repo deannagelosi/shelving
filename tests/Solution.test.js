@@ -8,9 +8,6 @@ const allFixtureShapes = loadShapesFromFixture();
 beforeEach(() => {
     global.canvasWidth = 800;
     global.canvasHeight = 600;
-    global.aspectRatioPref = 0; // Square preference
-    global.devMode = false;
-    global.detailView = false;
 });
 
 describe('Solution', () => {

@@ -3,10 +3,6 @@ const canvasWidth = 650;
 const canvasHeight = 650;
 const SQUARE_SIZE = 0.25; // in inches
 
-//== state variables
-let numGrow = 0; // cell growth amount in dev mode
-let curveStep = 0; // curve growth amount in dev mode
-
 //== UI class instances
 let inputUI;
 let designUI;
@@ -28,10 +24,10 @@ const ScreenState = {
 };
 
 //== flags
-let detailView = false;
-let devMode = false;
-let fastReloadDev = true; // For dev purposes, loads a test file on start
-let loadPreview = false;
+const fastReloadDev = true; // loads a test file on start
+const loadPreview = false; // auto previews a solution from the test file
+const testFileName = "curve_test_both.json";
+const testSolutionName = "solution-3";
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -103,9 +99,7 @@ function setup() {
 }
 
 function loadTestData() {
-    const solutionName = "solution-3";
-    const fileName = "curve_test_both.json";
-    fetch(`examples/${fileName}`)
+    fetch(`examples/${testFileName}`)
         .then(response => response.json())
         .then(data => {
             // First, switch to the design screen.
@@ -118,7 +112,7 @@ function loadTestData() {
             // before we try to trigger the preview.
             if (loadPreview) {
                 setTimeout(() => {
-                    const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === solutionName);
+                    const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
                     if (targetSolutionIndex !== -1) {
                         designUI.viewSavedAnneal(targetSolutionIndex);
                     } else {
@@ -147,20 +141,20 @@ function keyPressed() {
     else if (appState.currentScreen == ScreenState.DESIGN) {
         if (key === 'd') {
             // toggle dev mode on and off
-            devMode = !devMode;
+            appState.display.devMode = !appState.display.devMode;
             // reset step counters
-            numGrow = 0;
-            curveStep = 0;
+            appState.display.numGrow = 0;
+            appState.display.curveStep = 0;
             if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
         }
-        else if (key === 'g' && devMode) {
+        else if (key === 'g' && appState.display.devMode) {
             const wallMode = designUI.html.wallModeSelect ? designUI.html.wallModeSelect.value() : 'cellular';
             if (wallMode === 'curve') {
-                curveStep++;
+                appState.display.curveStep++;
             } else {
-                numGrow++;
+                appState.display.numGrow++;
             }
             designUI.displayResult();
         }
@@ -182,7 +176,7 @@ function keyPressed() {
     else if (appState.currentScreen == ScreenState.EXPORT) {
         if (key === 'd') {
             // toggle dev mode on and off
-            devMode = !devMode;
+            appState.display.devMode = !appState.display.devMode;
             appEvents.emit('resetToLayoutView');
         }
     }

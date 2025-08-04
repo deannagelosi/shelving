@@ -218,8 +218,8 @@ class Export {
         // confirm boards created correctly by displaying them in correct orientation
         // if an offscreen renderer is passed in, use that to create a png for download
         const ctx = renderer || window;
-        // check for global devMode variable
-        let isDevMode = (typeof devMode !== 'undefined') ? devMode : false;
+        // check for display state (with worker context fallback)
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
 
         ctx.clear();
         ctx.background(255);

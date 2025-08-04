@@ -64,8 +64,6 @@ global.self = {
 // Mock global variables that the core classes expect
 global.canvasWidth = 800;
 global.canvasHeight = 600;
-global.aspectRatioPref = 0;
-global.detailView = false;
 
 // Mock importScripts to work in Node.js environment
 global.importScripts = jest.fn();
