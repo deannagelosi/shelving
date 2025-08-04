@@ -23,6 +23,7 @@ class ExportUI {
         });
 
         // listen for requests from Export.js for additional sheets
+        // Updates the hidden numSheets input when export system needs more sheets
         appEvents.on('addSheetRequested', () => {
             let numSheets = parseInt(this.html.numSheetsInput.value());
             this.html.numSheetsInput.value(numSheets + 1);
@@ -67,99 +68,154 @@ class ExportUI {
 
         // bind prepareExportData to this instance of the input values
         this.prepareExportData = this.prepareExportData.bind(this);
-        // Material Thickness Input
-        this.html.sheetThicknessGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.sheetThicknessLabel = createSpan('Material Thickness (in)')
-            .parent(this.html.sheetThicknessGroup)
-            .addClass('input-label');
+
+        // Material Type dropdown (full width)
+        this.html.materialTypeGroup = createDiv()
+            .addClass('settings-group hidden');
+        this.html.materialTypeLabel = createSpan('Material Type')
+            .parent(this.html.materialTypeGroup)
+            .addClass('settings-label');
+        this.html.materialTypeSelect = createSelect()
+            .parent(this.html.materialTypeGroup)
+            .addClass('settings-select')
+            .changed(() => this.handleMaterialTypeChange());
+        this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
+        this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
+
+        // Material Properties (grouped)
+        this.html.materialPropsGroup = createDiv()
+            .addClass('settings-group hidden');
+        this.html.materialPropsLabel = createSpan('Material Properties')
+            .parent(this.html.materialPropsGroup)
+            .addClass('settings-label');
+
+        // Two-column container for thickness and kerf
+        const materialRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.materialPropsGroup);
+
+        // Material Thickness column
+        const thicknessColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(materialRow);
+        createSpan('Thickness (in)')
+            .addClass('dimension-label')
+            .parent(thicknessColumn);
         this.html.sheetThicknessInput = createInput('0.23')
-            .parent(this.html.sheetThicknessGroup)
-            .addClass('input-field')
+            .addClass('dimension-input')
+            .parent(thicknessColumn)
             .attribute('type', 'number')
             .attribute('min', '0.13')
             .attribute('max', '0.5')
             .attribute('step', '0.01')
             .input(this.prepareExportData);
 
-        // Case Depth Input
-        this.html.caseDepthGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.caseDepthLabel = createSpan('Case Depth (in)')
-            .parent(this.html.caseDepthGroup)
-            .addClass('input-label');
-        this.html.caseDepthInput = createInput('3')
-            .parent(this.html.caseDepthGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('max', '10')
-            .attribute('step', '0.5')
-            .input(this.prepareExportData);
-
-        // Kerf Input
-        this.html.kerfGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.kerfLabel = createSpan('Kerf Width')
-            .parent(this.html.kerfGroup)
-            .addClass('input-label');
+        // Kerf Width column
+        const kerfColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(materialRow);
+        createSpan('Kerf Width (in)')
+            .addClass('dimension-label')
+            .parent(kerfColumn);
         this.html.kerfInput = createInput('0')
-            .parent(this.html.kerfGroup)
-            .addClass('input-field')
+            .addClass('dimension-input')
+            .parent(kerfColumn)
             .attribute('type', 'number')
             .attribute('min', '0')
             .attribute('max', '.04')
             .attribute('step', '0.01')
             .input(this.prepareExportData);
 
-        // Number of Pin/Slots Selector
-        this.html.pinSlotGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.pinSlotLabel = createSpan('# of pin/slots')
-            .parent(this.html.pinSlotGroup)
-            .addClass('input-label');
+        // Case Properties (grouped)
+        this.html.casePropsGroup = createDiv()
+            .addClass('settings-group hidden');
+        this.html.casePropsLabel = createSpan('Case Properties')
+            .parent(this.html.casePropsGroup)
+            .addClass('settings-label');
+
+        // Two-column container for case depth and pin slots
+        const caseRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.casePropsGroup);
+
+        // Case Depth column
+        const depthColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(caseRow);
+        createSpan('Depth (in)')
+            .addClass('dimension-label')
+            .parent(depthColumn);
+        this.html.caseDepthInput = createInput('3')
+            .addClass('dimension-input')
+            .parent(depthColumn)
+            .attribute('type', 'number')
+            .attribute('min', '1')
+            .attribute('max', '10')
+            .attribute('step', '0.5')
+            .input(this.prepareExportData);
+
+        // Pin/Slots column
+        const pinSlotColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(caseRow);
+        createSpan('# Pin/Slots')
+            .addClass('dimension-label')
+            .parent(pinSlotColumn);
         this.html.pinSlotSelect = createSelect()
-            .parent(this.html.pinSlotGroup)
-            .addClass('input-field')
+            .parent(pinSlotColumn)
+            .addClass('dimension-input')
             .changed(this.prepareExportData);
         this.html.pinSlotSelect.option('2', '2');
         this.html.pinSlotSelect.option('1', '1');
 
-        // Sheet Dimensions Input
-        this.html.sheetDimensionsGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.sheetDimensionsLabel = createSpan('Sheet Dimensions (width x height)')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-label');
+        // Sheet Dimensions (grouped)
+        this.html.sheetGroup = createDiv()
+            .addClass('settings-group hidden');
+        this.html.sheetLabel = createSpan('Sheet Dimensions')
+            .parent(this.html.sheetGroup)
+            .addClass('settings-label');
+
+        // Two-column container for width and height
+        const dimensionsRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.sheetGroup);
+
+        // Width input column
+        const widthColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(dimensionsRow);
+        createSpan('Width')
+            .addClass('dimension-label')
+            .parent(widthColumn);
         this.html.sheetWidthInput = createInput('30')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
-        this.html.sheetHeightInput = createInput('28')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-field')
+            .addClass('dimension-input')
+            .parent(widthColumn)
             .attribute('type', 'number')
             .attribute('min', '1')
             .attribute('step', '1')
             .input(this.prepareExportData);
 
-        // Number of Sheets Input
-        this.html.numSheetsGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.numSheetsLabel = createSpan('Number of Sheets')
-            .parent(this.html.numSheetsGroup)
-            .addClass('input-label');
-        this.html.numSheetsInput = createInput('1')
-            .parent(this.html.numSheetsGroup)
-            .addClass('input-field')
+        // Height input column
+        const heightColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(dimensionsRow);
+        createSpan('Height')
+            .addClass('dimension-label')
+            .parent(heightColumn);
+        this.html.sheetHeightInput = createInput('28')
+            .addClass('dimension-input')
+            .parent(heightColumn)
             .attribute('type', 'number')
             .attribute('min', '1')
-            .attribute('max', '10')
             .attribute('step', '1')
             .input(this.prepareExportData);
+
+        // Number of Sheets (hidden - automatically managed by export system)
+        this.html.numSheetsInput = createInput('1')
+            .style('display', 'none') // Completely hidden from user but accessible to automatic system
+            .attribute('type', 'hidden') // Change to hidden input type
+            .attribute('min', '1')
+            .attribute('max', '50');
 
         // buttons for settings
         this.html.buttonList = createDiv()
@@ -189,6 +245,10 @@ class ExportUI {
     show() {
         // show all export screen elements
         Object.values(this.html).forEach(element => element.removeClass('hidden'));
+
+        // initialize default material type selection
+        this.html.materialTypeSelect.selected('acrylic-laser');
+        this.handleMaterialTypeChange();
 
         // reset the canvas
         clear();
@@ -227,13 +287,29 @@ class ExportUI {
         htmlRefs.right.list.html('');
 
         // add all settings elements to the right sidebar list section
-        this.html.sheetThicknessGroup.parent(htmlRefs.right.list);
-        this.html.caseDepthGroup.parent(htmlRefs.right.list);
-        this.html.kerfGroup.parent(htmlRefs.right.list);
-        this.html.pinSlotGroup.parent(htmlRefs.right.list);
-        this.html.sheetDimensionsGroup.parent(htmlRefs.right.list);
-        this.html.numSheetsGroup.parent(htmlRefs.right.list);
+        this.html.materialTypeGroup.parent(htmlRefs.right.list);
+        this.html.materialPropsGroup.parent(htmlRefs.right.list);
+        this.html.casePropsGroup.parent(htmlRefs.right.list);
+        this.html.sheetGroup.parent(htmlRefs.right.list);
         this.html.buttonList.parent(htmlRefs.right.list);
+    }
+
+    handleMaterialTypeChange() {
+        const selectedMaterial = this.html.materialTypeSelect.value();
+
+        console.log(`[ExportUI] Material type changed to: ${selectedMaterial}`);
+
+        // Update default values based on material type
+        if (selectedMaterial === 'plywood-laser') {
+            this.html.sheetThicknessInput.value('0.23');
+            this.html.kerfInput.value('0');
+        } else if (selectedMaterial === 'acrylic-laser') {
+            this.html.sheetThicknessInput.value('0.375');
+            this.html.kerfInput.value('0.01');
+        }
+
+        // Trigger export data preparation with new material settings
+        this.prepareExportData();
     }
 
     //== button handlers
@@ -330,7 +406,7 @@ class ExportUI {
         const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
         const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
         const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
-        const numSheets = parseInt(this.html.numSheetsInput.value());
+        const numSheets = parseInt(this.html.numSheetsInput.value()); // Hidden but automatically managed
         const numPinSlots = parseInt(this.html.pinSlotSelect.value());
         const kerf = parseFloat(this.html.kerfInput.value());
 
