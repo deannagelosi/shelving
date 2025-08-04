@@ -462,19 +462,22 @@ class Export {
         clear();
         background(255);
 
+        // Draw the sheets (green to match DXF layer)
         noFill();
-        stroke(0);
+        stroke('green');
         strokeWeight(1 / scaleValue);
-        // Draw the sheets
         for (let sheet of this.sheetOutline) {
             rect(sheet.x, sheet.y, sheet.w, sheet.h);
         }
-        // Draw the cuts
+
+        // Draw the cuts (red to match DXF layer)
+        stroke('red');
         for (let cut of this.cutList) {
             rect(cut.x, cut.y, cut.w, cut.h);
         }
-        // Draw the label etches
-        fill(0);
+
+        // Draw the label etches (blue to match DXF layer)
+        fill('blue');
         noStroke();
         textSize(5 / scaleValue);
         for (let etch of this.etchList) {
