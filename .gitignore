@@ -1,6 +1,7 @@
 # IDE
 .vscode/
 .cursor/
+CLAUDE.md
 
 # System
 .DS_Store
