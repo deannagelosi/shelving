@@ -398,7 +398,7 @@ class ExportUI {
         // Extract board data with exact values used for DXF generation
         const boardData = this.currExport.boards.map(board => ({
             id: board.id,
-            length: board.len,
+            length: board.getLength(),
             orientation: board.orientation,
             poi: {
                 start: board.poi.start,
@@ -456,7 +456,7 @@ class ExportUI {
         textSize(16);
         text(
             `Error: Board #${longestBoard.id} is too long for the current sheet.\n\n` +
-            `Board Length: ${longestBoard.len.toFixed(2)} inches\n` +
+            `Board Length: ${longestBoard.getLength().toFixed(2)} inches\n` +
             `Sheet Width: ${sheetWidth.toFixed(2)} inches\n\n` +
             `Please increase the sheet width in the settings to continue.`,
             width / 2,
@@ -550,7 +550,7 @@ class ExportUI {
 
         // Check if any board is longer than the sheet width
         const longestBoard = this.currExport.getLongestBoard();
-        if (longestBoard && longestBoard.len > sheetWidth) {
+        if (longestBoard && longestBoard.getLength() > sheetWidth) {
             this.showBoardTooLongError(longestBoard, sheetWidth);
             updateButton(this.html.showButton, false);
             updateButton(this.html.downloadDXFButton, false);

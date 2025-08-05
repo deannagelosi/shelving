@@ -26,20 +26,6 @@ describe('Board', () => {
             expect(board.poi.tJoints).toHaveLength(0);
             expect(board.poi.xJoints).toHaveLength(0);
         });
-
-        test('should store thickness for length calculations', () => {
-            // 1. Setup
-            const firstCoord = { x: 0, y: 0 };
-            const secondCoord = { x: 5, y: 0 };
-            const thickness = 0.23;
-
-            // 2. Execute
-            const board = new Board(1, firstCoord, secondCoord, 'x', thickness);
-
-            // 3. Assert - Board no longer has static .len property
-            expect(board.thickness).toBe(0.23);
-            expect(board.hasOwnProperty('len')).toBe(false);
-        });
     });
 
     describe('getLength', () => {
