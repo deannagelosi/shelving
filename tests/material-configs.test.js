@@ -286,7 +286,7 @@ describe('Material Configurations', () => {
             expect(jointTypes.corner.horizontal).toBe('etch-line');
             expect(jointTypes.corner.vertical).toBe('short');
             expect(jointTypes.tJoint.ending).toBe('short');
-            expect(jointTypes.tJoint.intersected).toBe('etch-alignment');
+            expect(jointTypes.tJoint.intersected).toBe('etch-line');
             expect(jointTypes.xJoint.intersected).toBe('half-lap');
         });
     });

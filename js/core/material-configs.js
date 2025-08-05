@@ -105,13 +105,7 @@ const MATERIAL_CONFIGS = {
         // BOARD ASSIGNMENT LOGIC - Determines initial end types for each board
         // ============================================================================
         assignBoardEnds: function (board) {
-            if (board.orientation === 'x') {
-                board.poi.start = this.jointTypes.corner.horizontal;
-                board.poi.end = this.jointTypes.corner.horizontal;
-            } else {
-                board.poi.start = this.jointTypes.corner.vertical;
-                board.poi.end = this.jointTypes.corner.vertical;
-            }
+            assignBoardEnds(board, this.jointTypes);
         },
 
         // ============================================================================
@@ -271,7 +265,7 @@ const MATERIAL_CONFIGS = {
             },
             tJoint: {
                 ending: 'short',
-                intersected: 'etch-alignment'
+                intersected: 'etch-line'
             },
             xJoint: {
                 intersected: 'half-lap'
@@ -289,13 +283,7 @@ const MATERIAL_CONFIGS = {
         // BOARD ASSIGNMENT LOGIC - Determines initial end types for each board
         // ============================================================================
         assignBoardEnds: function (board) {
-            if (board.orientation === 'x') {
-                board.poi.start = this.jointTypes.corner.horizontal;
-                board.poi.end = this.jointTypes.corner.horizontal;
-            } else {
-                board.poi.start = this.jointTypes.corner.vertical;
-                board.poi.end = this.jointTypes.corner.vertical;
-            }
+            assignBoardEnds(board, this.jointTypes);
         },
 
         // ============================================================================
@@ -378,6 +366,17 @@ const MATERIAL_CONFIGS = {
 // ============================================================================
 // SHARED FUNCTIONS - Used by multiple material configurations
 // ============================================================================
+
+// Board end assignment based on orientation and joint types
+function assignBoardEnds(board, jointTypes) {
+    if (board.orientation === 'x') {
+        board.poi.start = jointTypes.corner.horizontal;
+        board.poi.end = jointTypes.corner.horizontal;
+    } else {
+        board.poi.start = jointTypes.corner.vertical;
+        board.poi.end = jointTypes.corner.vertical;
+    }
+}
 
 // Half-lap (X-joint) cuts
 function generateHalfLapCut(board, xJointPosition, config, boardStartX, boardStartY, cutList) {
