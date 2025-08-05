@@ -93,7 +93,7 @@ class InputUI {
         // grid size input
         this.html.gridSizeInput = createInput(String(this.maxInputInches), 'number')
             .attribute('min', '1')
-            .attribute('max', '12')
+            .attribute('max', '25')
             .parent(gridSizeDiv)
             .input(() => this.adjustGridSize());
 
@@ -315,7 +315,7 @@ class InputUI {
         // adjust the grid size in inches
         const newValue = parseInt(this.html.gridSizeInput.value());
 
-        let newSize = constrain(newValue, 1, 12);
+        let newSize = constrain(newValue, 1, 25);
         this.html.gridSizeInput.value(newSize);
         this.maxInputInches = newSize;
         this.updateGridSize();
