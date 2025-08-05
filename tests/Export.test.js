@@ -1,7 +1,5 @@
 // tests/Export.test.js
 
-// Mock Board class
-jest.mock('../js/core/Board');
 const Board = require('../js/core/Board');
 
 // Make Board available globally (Export.js expects it as global)
@@ -55,7 +53,6 @@ describe('Export', () => {
     beforeEach(() => {
         // Reset all mocks
         jest.clearAllMocks();
-        Board.mockClear();
         mockMaterialConfigs['plywood-laser'].generateJointCuts.mockClear();
         mockMaterialConfigs['plywood-laser'].generateBoardEtches.mockClear();
 
@@ -86,23 +83,6 @@ describe('Export', () => {
             xPadding: 1,
             yPadding: 1
         };
-
-        // Configure Board mock to return realistic values
-        Board.mockImplementation((id, firstCoord, secondCoord, orientation, thickness) => ({
-            id: id,
-            orientation: orientation,
-            coords: {
-                start: firstCoord,
-                end: secondCoord
-            },
-            len: Math.abs(secondCoord.x - firstCoord.x) + Math.abs(secondCoord.y - firstCoord.y) + thickness,
-            poi: {
-                start: 'unassigned',
-                end: 'unassigned',
-                tJoints: [],
-                xJoints: []
-            }
-        }));
     });
 
     describe('Constructor', () => {
@@ -158,30 +138,21 @@ describe('Export', () => {
 
             // 3. Assert
             expect(mockCellular.getCellRenderLines).toHaveBeenCalled();
-            expect(Board).toHaveBeenCalled();
             expect(exportInstance.boards.length).toBeGreaterThan(0);
+            expect(exportInstance.boards[0]).toBeInstanceOf(Board);
         });
 
         test('should sort boards by length descending', () => {
-            // 1. Setup
+            // 1. Setup - using real Board objects with real cellular data
             const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-
-            // Mock Board constructor to return different lengths
-            Board.mockImplementation((id, firstCoord, secondCoord, orientation, thickness) => ({
-                id: id,
-                orientation: orientation,
-                coords: { start: firstCoord, end: secondCoord },
-                len: id === 0 ? 5 : id === 1 ? 10 : 3, // Different lengths for sorting test
-                poi: { start: 'unassigned', end: 'unassigned', tJoints: [], xJoints: [] }
-            }));
 
             // 2. Execute
             exportInstance.makeBoards();
 
-            // 3. Assert
+            // 3. Assert - verify boards are sorted by length
             if (exportInstance.boards.length > 1) {
                 for (let i = 0; i < exportInstance.boards.length - 1; i++) {
-                    expect(exportInstance.boards[i].len).toBeGreaterThanOrEqual(exportInstance.boards[i + 1].len);
+                    expect(exportInstance.boards[i].getLength()).toBeGreaterThanOrEqual(exportInstance.boards[i + 1].getLength());
                 }
             }
         });
@@ -191,11 +162,8 @@ describe('Export', () => {
         test('should delegate to material configuration', () => {
             // 1. Setup
             const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-            const mockBoard = {
-                orientation: 'x',
-                poi: { start: 'unassigned', end: 'unassigned' }
-            };
-            exportInstance.boards = [mockBoard];
+            const realBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
+            exportInstance.boards = [realBoard];
 
             // Spy on the assignBoardEnds method
             const assignBoardEndsSpy = jest.spyOn(mockMaterialConfigs['plywood-laser'], 'assignBoardEnds');
@@ -204,7 +172,7 @@ describe('Export', () => {
             exportInstance.assignBoardEndTypes();
 
             // 3. Assert
-            expect(assignBoardEndsSpy).toHaveBeenCalledWith(mockBoard);
+            expect(assignBoardEndsSpy).toHaveBeenCalledWith(realBoard);
         });
     });
 
@@ -212,16 +180,16 @@ describe('Export', () => {
         test('should delegate to material configuration functions', () => {
             // 1. Setup
             const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-            const mockBoard = { id: 1, orientation: 'x' };
+            const realBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             const boardStartX = 5;
             const boardStartY = 10;
 
             // 2. Execute
-            exportInstance.prepJoints(mockBoard, boardStartX, boardStartY);
+            exportInstance.prepJoints(realBoard, boardStartX, boardStartY);
 
             // 3. Assert
             expect(mockMaterialConfigs['plywood-laser'].generateJointCuts).toHaveBeenCalledWith(
-                mockBoard,
+                realBoard,
                 expect.objectContaining({
                     caseDepth: mockConfig.caseDepth,
                     sheetThickness: mockConfig.sheetThickness,
@@ -233,7 +201,7 @@ describe('Export', () => {
             );
 
             expect(mockMaterialConfigs['plywood-laser'].generateBoardEtches).toHaveBeenCalledWith(
-                mockBoard,
+                realBoard,
                 expect.objectContaining({
                     caseDepth: mockConfig.caseDepth,
                     sheetThickness: mockConfig.sheetThickness,

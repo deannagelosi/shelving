@@ -65,7 +65,7 @@ class Export {
         ];
 
         // Sort boards by length
-        this.boards.sort((a, b) => b.len - a.len);
+        this.boards.sort((a, b) => b.getLength() - a.getLength());
 
         // Assign board end types based on material configuration
         this.assignBoardEndTypes();
@@ -224,7 +224,7 @@ class Export {
 
     getTotalBoardLength() {
         // calculate total length of all boards for statistical analysis
-        return this.boards.reduce((total, board) => total + board.len, 0);
+        return this.boards.reduce((total, board) => total + board.getLength(), 0);
     }
 
     previewCase(renderer = null) {
@@ -371,25 +371,34 @@ class Export {
         // Get boards, joints, and labels
         for (let board of this.boards) {
             // calculate the true board length
-            let [sheet, row] = this.findBoardPosition(board.len);
-            if (sheet === null && row === null) {
-                // not enough space, request a new sheet and restart layout
-                appEvents.emit('addSheetRequested');
-                appEvents.emit('layoutRefreshRequested');
-                break;
-            };
+            let boardLength = board.getLength();
 
-            let boardStartX = this.sheets[sheet][row] - board.len;
+            let [sheet, row] = this.findBoardPosition(boardLength);
+            if (sheet === null && row === null) {
+                console.error(`LAYOUT ISSUE: Board ${board.id} (length: ${boardLength}) cannot fit on any sheet`, {
+                    boardLength: boardLength,
+                    sheetWidth: this.sheetWidth,
+                    numSheets: this.sheets.length
+                });
+                // not enough space, request a new sheet and restart layout
+                if (typeof appEvents !== 'undefined') {
+                    appEvents.emit('addSheetRequested');
+                    appEvents.emit('layoutRefreshRequested');
+                }
+                break;
+            }
+
+            let boardStartX = this.sheets[sheet][row] - boardLength;
             let boardStartY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
 
             // Draw board
-            this.cutList.push({ x: boardStartX, y: boardStartY, w: board.len, h: this.caseDepth });
+            this.cutList.push({ x: boardStartX, y: boardStartY, w: boardLength, h: this.caseDepth });
 
             // Draw joints
             this.prepJoints(board, boardStartX, boardStartY);
 
             // Draw board id
-            this.etchList.push({ text: board.id, x: boardStartX, y: boardStartY - this.fontOffset });
+            this.etchList.push({ type: 'text', text: board.id, x: boardStartX, y: boardStartY - this.fontOffset });
         }
     }
 
@@ -444,11 +453,20 @@ class Export {
         }
 
         // Draw the label etches (blue to match DXF layer)
-        fill('blue');
-        noStroke();
-        textSize(5 / scaleValue);
         for (let etch of this.etchList) {
-            text(etch.text, etch.x, etch.y);
+            if (etch.type === 'text' || !etch.type) {
+                // Text labels (board IDs)
+                fill('blue');
+                noStroke();
+                textSize(5 / scaleValue);
+                text(etch.text, etch.x, etch.y);
+            } else if (etch.type === 'line') {
+                // Etch lines (alignment guides)
+                stroke('blue');
+                strokeWeight(0.5 / scaleValue);
+                noFill();
+                line(etch.x1, etch.y1, etch.x2, etch.y2);
+            }
         }
 
         pop();
@@ -508,12 +526,21 @@ class Export {
         const etchLayer = this.materialConfig.dxfLayers.find(layer => layer.content === 'etches');
         if (etchLayer) {
             dxf.setActiveLayer(etchLayer.name);
-            for (let label of this.etchList) {
-                const text = String(label.text);
-                const x = Number(label.x);
-                const y = this.totalHeight - Number(label.y);
-
-                dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+            for (let item of this.etchList) {
+                if (item.type === 'text' || !item.type) {
+                    // Handle text etching (labels)
+                    const text = String(item.text);
+                    const x = Number(item.x);
+                    const y = this.totalHeight - Number(item.y);
+                    dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+                } else if (item.type === 'line') {
+                    // Handle line etching (alignment guides)
+                    const x1 = Number(item.x1);
+                    const y1 = this.totalHeight - Number(item.y1);
+                    const x2 = Number(item.x2);
+                    const y2 = this.totalHeight - Number(item.y2);
+                    dxf.drawLine(x1, y1, x2, y2); // x1, y1, x2, y2
+                }
             }
         }
     }

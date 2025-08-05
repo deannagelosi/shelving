@@ -24,6 +24,9 @@ const mockDXFWriter = {
     drawText: function (x, y, height, rotation, text) {
         this.calls.push({ method: 'drawText', args: [x, y, height, rotation, text] });
     },
+    drawLine: function (x1, y1, x2, y2) {
+        this.calls.push({ method: 'drawLine', args: [x1, y1, x2, y2] });
+    },
     toDxfString: function () {
         // Generate a deterministic DXF output based on calls
         let dxfOutput = 'MOCK_DXF_HEADER\n';

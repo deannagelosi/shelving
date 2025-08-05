@@ -164,12 +164,6 @@ class DesignUI {
             .parent(this.html.buttonRow).addClass('primary-button button')
             .mousePressed(() => this.handleStartAnneal());
 
-        // Save button
-        this.html.saveButton = createButton('Save')
-            .parent(this.html.buttonRow).addClass('primary-button button')
-            .attribute('disabled', '') // until annealing is complete
-            .mousePressed(() => this.handleSaveSolution());
-
         // Clear + Stop button
         this.html.clearButton = createButton('Clear')
             .parent(this.html.buttonRow).addClass('secondary-button button')
@@ -315,9 +309,6 @@ class DesignUI {
 
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             this.html.saveButton.removeAttribute('disabled');
-            if (this.html.saveButtonResults) {
-                this.html.saveButtonResults.removeAttribute('disabled');
-            }
         }
 
         // re-enable shape selection
@@ -344,9 +335,6 @@ class DesignUI {
         // keep restore button hidden by default (only show when manual edits are made)
         this.hideRestoreButton();
 
-        // hide the old save button (now moved to Results panel)
-        this.html.saveButton.addClass('hidden');
-
         // reset the canvas
         clear();
         background(255);
@@ -361,8 +349,12 @@ class DesignUI {
         this.createShapeList();
         this.initializeResultsPanel();
 
-        // draw the blank grid
-        this.drawBlankGrid();
+        // Draw current state - either blank grid or current solution
+        if (appState.currentViewedAnnealIndex !== null && appState.currentAnneal) {
+            this.displayResult();
+        } else {
+            this.drawBlankGrid();
+        }
     }
 
     hide() {
@@ -375,11 +367,8 @@ class DesignUI {
         const state = this.computeState();
         updateButton(this.html.nextButton, state.canNext);
 
-        // Update both save buttons (old one hidden, new one in Results panel)
+        // Update save button in Results panel
         updateButton(this.html.saveButton, state.canSave);
-        if (this.html.saveButtonResults) {
-            updateButton(this.html.saveButtonResults, state.canSave);
-        }
 
         // update dynamic lists
         this.updateShapesList();
@@ -650,9 +639,6 @@ class DesignUI {
 
         //== start the annealing process
         this.html.saveButton.attribute('disabled', '');
-        if (this.html.saveButtonResults) {
-            this.html.saveButtonResults.attribute('disabled', '');
-        }
 
         // check if each shape has all it's grid data
         for (let shape of appState.shapes) {
@@ -848,7 +834,7 @@ class DesignUI {
                 solution, canvas, layoutProps, perimeterConfig, wallRenderers, wallRenderData
             );
 
-            // Update app state if cellular data was generated
+            // updates app state when cellular data is generated
             if (updatedCellular) {
                 appState.currCellular = updatedCellular;
 
@@ -1117,7 +1103,7 @@ class DesignUI {
                     if (confirm(`Are you sure you want to delete "${appState.savedAnneals[i].title}"?`)) {
                         appState.savedAnneals.splice(i, 1);
                         if (i === appState.currentViewedAnnealIndex) {
-                            // currently viewed anneal was deleted, display blank grid
+                            // displays blank grid when currently viewed anneal is deleted
                             appState.currentViewedAnnealIndex = null;
                             appState.currentAnneal = null;
                             this.drawBlankGrid();
@@ -1216,7 +1202,7 @@ class DesignUI {
             .input(() => this.handleCurveParameterChange());
 
         // Save button in Results panel
-        this.html.saveButtonResults = createButton('Save')
+        this.html.saveButton = createButton('Save')
             .addClass('primary-button button settings-button')
             .parent(this.html.controlsContainer)
             .attribute('disabled', '') // until annealing is complete
@@ -1405,7 +1391,7 @@ class DesignUI {
 
     updateSavedAnnealHighlight() {
         for (let i = 0; i < this.savedAnnealElements.length; i++) {
-            if (appState.currentAnneal === appState.savedAnneals[i]) {
+            if (i === appState.currentViewedAnnealIndex) {
                 this.savedAnnealElements[i].addClass('highlighted');
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');

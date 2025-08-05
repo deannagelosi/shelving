@@ -3,34 +3,57 @@ class Board {
         // state variables
         this.id = _id;
         this.orientation = _orientation; // horizontal ('x') or vertical ('y')
+        this.thickness = _thickness; // Store thickness for length calculations
         this.coords = this.setBoardDirection(_firstCoord, _secondCoord, this.orientation);
-        this.len = this.getLength() + _thickness; // length of the board, including thickness offset
         this.boardLabel;
 
         this.poi = { // points of interest
             start: "unassigned", // assigned later by material configuration
             end: "unassigned", // assigned later by material configuration
-            tJoints: [], // array of x-values for T-joint holes 
-            xJoints: [],
+            tJoints: [], // array of positions for T-joint intersections
+            xJoints: [], // array of positions for X-joint (half-lap) intersections
         };
     }
 
     getLength() {
-        // return the length of the board
-        // check if the board is horizontal or vertical
+        // Start with geometric distance between structural center lines
+        // (wall lines represent the midpoint of board thickness)
+        let baseLength = this.getGeometricLength();
+
+        // Add full thickness to extend from centerline to actual board ends
+        // This accounts for the board extending half-thickness beyond centerline at each end
+        // (geometric distance is as if board went halfway through on each end already)
+        let length = baseLength + this.thickness;
+
+        // Material-specific end adjustments based on connection method:
+        // - 'pin'/'slot' ends: no adjustment (board goes all the way through, material cut around joints)
+        // - 'short' ends: subtract thickness (board stops at surface for welding, doesn't go through)
+        // - 'etch-line' ends: no adjustment (board goes all the way through, etch shows alignment)
+        if (this.poi.start === 'short') length -= this.thickness;
+        if (this.poi.end === 'short') length -= this.thickness;
+
+        // Safety check: ensure board length is always valid
+        if (length <= 0) {
+            console.error(`Board ${this.id} calculated invalid length: ${length}`);
+            return 0;
+        }
+
+        return length;
+    }
+
+    getGeometricLength() {
+        // Return the pure geometric distance between coordinates
         if (this.coords.start.y == this.coords.end.y) {
-            // same y, horizontal board
-            // return x distance as length
+            // Horizontal board
             return this.coords.end.x - this.coords.start.x;
         }
         else if (this.coords.start.x == this.coords.end.x) {
-            // same x, vertical board
-            // return y distance as length
+            // Vertical board
             return this.coords.end.y - this.coords.start.y;
         }
 
         console.error("Board length error. start: ", this.coords.start, "end: ", this.coords.end);
-        return null;
+        return 0;
     }
 
     setBoardDirection(_firstCoord, _secondCoord, _orientation) {

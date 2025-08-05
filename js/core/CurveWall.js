@@ -694,8 +694,6 @@ class CurveWall {
             const connectionSide = !lowGroup.connectedSides?.left ? 'left' : 'right';
 
             // Count current arcs in the chain for bend limit check
-            // For now, implementing a simple limit to match golden path behavior
-            // TODO: Implement full chain arc counting as per pseudocode
             if (queue.length >= 2) {
                 // If we've reached bend limit, create simplified connections for remaining groups
                 if (this.showConsoleLogs) {

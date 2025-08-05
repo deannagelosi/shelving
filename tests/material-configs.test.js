@@ -19,7 +19,6 @@ describe('Material Configurations', () => {
             // 3. Assert
             expect(plywoodConfig).toBeDefined();
             expect(plywoodConfig.jointTypes).toBeDefined();
-            expect(plywoodConfig.adjustBoardLength).toBe(true);
             expect(plywoodConfig.dxfLayers).toBeDefined();
             expect(typeof plywoodConfig.assignBoardEnds).toBe('function');
             expect(typeof plywoodConfig.generateJointCuts).toBe('function');
@@ -109,13 +108,14 @@ describe('Material Configurations', () => {
             mockBoard = {
                 id: 1,
                 orientation: 'x',
-                len: 10,
+                thickness: 0.23,
                 poi: {
                     start: 'pin',
                     end: 'pin',
                     tJoints: [3, 7], // Two T-joints
                     xJoints: [5] // One X-joint
-                }
+                },
+                getLength: function () { return 10; } // Mock fixed length for testing
             };
             mockConfig = {
                 caseDepth: 3,
@@ -247,6 +247,7 @@ describe('Material Configurations', () => {
             // 3. Assert
             expect(etchList).toHaveLength(1);
             expect(etchList[0]).toEqual({
+                type: 'text',
                 text: 'Board123',
                 x: boardStartX,
                 y: boardStartY - mockConfig.fontOffset
@@ -269,7 +270,6 @@ describe('Material Configurations', () => {
             // 3. Assert
             expect(acrylicConfig).toBeDefined();
             expect(acrylicConfig.jointTypes).toBeDefined();
-            expect(acrylicConfig.adjustBoardLength).toBe(false);
             expect(acrylicConfig.dxfLayers).toBeDefined();
             expect(typeof acrylicConfig.assignBoardEnds).toBe('function');
             expect(typeof acrylicConfig.generateJointCuts).toBe('function');

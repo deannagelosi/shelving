@@ -232,23 +232,42 @@ class ExportUI {
     //== show/hide functions
     // manage visibility and screen-specific setup
     show() {
+        // show sidebar buttons
+        this.html.backButton.removeClass('hidden');
+        this.html.exportButton.removeClass('hidden');
+
         // show basic UI elements (material type dropdown and buttons)
         this.html.materialTypeGroup.removeClass('hidden');
         this.html.buttonList.removeClass('hidden');
 
         // initialize default material type selection and build UI
         this.html.materialTypeSelect.selected('acrylic-laser');
-        this.handleMaterialTypeChange();
+        this.handleMaterialTypeChange(); // calls prepareExportData()
 
         // reset the canvas
         clear();
         background(255);
 
-        // prepare active solution for export
-        this.prepareExportData();
+        // create the saved solutions list in left sidebar
+        this.createAnnealList();
+        
+        // Update highlights to show current selection
+        this.updateSavedAnnealHighlight();
+        
+        // If there's a selected solution, prepare its export data
+        if (appState.currentViewedAnnealIndex !== null) {
+            // Use setTimeout to ensure UI is fully built
+            setTimeout(() => {
+                this.prepareExportData();
+            }, 0);
+        }
     }
 
     hide() {
+        // hide sidebar buttons
+        this.html.backButton.addClass('hidden');
+        this.html.exportButton.addClass('hidden');
+        
         // hide basic UI elements
         this.html.materialTypeGroup.addClass('hidden');
         this.html.buttonList.addClass('hidden');
@@ -435,11 +454,18 @@ class ExportUI {
     }
 
     prepareExportData() {
-        // if no current anneal, set to first saved anneal
-        if (!appState.currentAnneal) {
-            let validIndex = appState.currentViewedAnnealIndex != null;
-            let index = validIndex ? appState.currentViewedAnnealIndex : 0;
-
+        // Check if there are any saved anneals
+        if (appState.savedAnneals.length === 0) {
+            console.log("No saved solutions to export");
+            return;
+        }
+        
+        // Ensure we're using the currently viewed anneal if one is selected
+        if (appState.currentViewedAnnealIndex !== null && appState.savedAnneals[appState.currentViewedAnnealIndex]) {
+            appState.currentAnneal = appState.savedAnneals[appState.currentViewedAnnealIndex];
+        } else if (!appState.currentAnneal) {
+            // if no current anneal, set to first saved anneal
+            let index = 0;
             appState.currentViewedAnnealIndex = index;
             appState.currentAnneal = appState.savedAnneals[index];
         }
@@ -548,7 +574,7 @@ class ExportUI {
         // create the list
         for (let i = 0; i < appState.savedAnneals.length; i++) {
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
-            if (appState.currentAnneal === appState.savedAnneals[i]) {
+            if (i === appState.currentViewedAnnealIndex) {
                 savedAnnealItem.addClass('highlighted');
             }
             savedAnnealItem.parent(htmlRefs.left.list);
@@ -582,7 +608,7 @@ class ExportUI {
 
     updateSavedAnnealHighlight() {
         for (let i = 0; i < this.savedAnnealElements.length; i++) {
-            if (appState.currentAnneal === appState.savedAnneals[i]) {
+            if (i === appState.currentViewedAnnealIndex) {
                 this.savedAnnealElements[i].addClass('highlighted');
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');

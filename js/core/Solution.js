@@ -732,9 +732,6 @@ class Solution {
         });
     }
 
-    // NOTE: The old exportSolution() method has been replaced by toDataObject()
-    // which provides better consistency and centralized data serialization logic.
-
     toDataObject() {
         // convert Solution instance to text object (JSON) (export/worker communication)
         // note: layout excluded to keep data size small (easily recalculated)
