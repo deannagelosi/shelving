@@ -101,6 +101,64 @@ body {
   flex-shrink: 0;
 }
 
+.settings-group {
+    margin-bottom: 5px;
+}
+
+.settings-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.settings-input {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.settings-select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.dimensions-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.dimension-column {
+    flex: 1;
+    text-align: center;
+}
+
+.dimension-label {
+    display: block;
+    font-size: 12px;
+    font-weight: normal;
+    color: #535353;
+    margin-bottom: 4px;
+}
+
+.dimension-input {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
 .button {
   font-size: 15px;
   padding: 6px 15px;

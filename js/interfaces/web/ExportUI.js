@@ -76,8 +76,19 @@ class ExportUI {
         this.html.materialTypeLabel = createSpan('Material Type')
             .parent(this.html.materialTypeGroup)
             .addClass('settings-label');
+
+        // Create layout row for material type select
+        const materialTypeRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.materialTypeGroup);
+
+        // Create column for the select
+        const materialTypeColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(materialTypeRow);
+
         this.html.materialTypeSelect = createSelect()
-            .parent(this.html.materialTypeGroup)
+            .parent(materialTypeColumn)
             .addClass('settings-select')
             .changed(() => this.handleMaterialTypeChange());
         this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
@@ -250,10 +261,10 @@ class ExportUI {
 
         // create the saved solutions list in left sidebar
         this.createAnnealList();
-        
+
         // Update highlights to show current selection
         this.updateSavedAnnealHighlight();
-        
+
         // If there's a selected solution, prepare its export data
         if (appState.currentViewedAnnealIndex !== null) {
             // Use setTimeout to ensure UI is fully built
@@ -267,7 +278,7 @@ class ExportUI {
         // hide sidebar buttons
         this.html.backButton.addClass('hidden');
         this.html.exportButton.addClass('hidden');
-        
+
         // hide basic UI elements
         this.html.materialTypeGroup.addClass('hidden');
         this.html.buttonList.addClass('hidden');
@@ -459,7 +470,7 @@ class ExportUI {
             console.log("No saved solutions to export");
             return;
         }
-        
+
         // Ensure we're using the currently viewed anneal if one is selected
         if (appState.currentViewedAnnealIndex !== null && appState.savedAnneals[appState.currentViewedAnnealIndex]) {
             appState.currentAnneal = appState.savedAnneals[appState.currentViewedAnnealIndex];
