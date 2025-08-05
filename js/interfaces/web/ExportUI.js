@@ -112,6 +112,12 @@ class ExportUI {
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadCase());
 
+        this.html.downloadBoardDataButton = createButton('Download Board Data')
+            .parent(this.html.buttonList)
+            .addClass('button secondary-button')
+            .attribute('disabled', '')
+            .mousePressed(() => this.handleDownloadBoardData());
+
         // Initialize with empty containers and element maps
         this.html.materialContainers = {};
         this.materialElementMaps = {};
@@ -262,6 +268,7 @@ class ExportUI {
         updateButton(this.html.showButton, state.canShowDownload);
         updateButton(this.html.downloadDXFButton, state.canShowDownload);
         updateButton(this.html.downloadCaseButton, state.canShowDownload);
+        updateButton(this.html.downloadBoardDataButton, state.canShowDownload);
 
         // update dynamic lists
         this.createAnnealList();
@@ -355,6 +362,59 @@ class ExportUI {
 
         // todo: file name  based on solution name
         imageBuffer.save('case_preview.png');
+    }
+
+    handleDownloadBoardData() {
+        // Extract board data with exact values used for DXF generation
+        const boardData = this.currExport.boards.map(board => ({
+            id: board.id,
+            length: board.len,
+            orientation: board.orientation,
+            poi: {
+                start: board.poi.start,
+                end: board.poi.end,
+                tJoints: [...board.poi.tJoints], // Copy arrays to avoid references
+                xJoints: [...board.poi.xJoints]
+            },
+            // Include original coordinates for verification
+            coords: {
+                start: { ...board.coords.start },
+                end: { ...board.coords.end }
+            }
+        }));
+
+        // Include material settings for context
+        const debugData = {
+            timestamp: new Date().toISOString(),
+            materialType: this.currExport.materialType,
+            config: {
+                caseDepth: this.currExport.caseDepth,
+                sheetThickness: this.currExport.sheetThickness,
+                kerf: this.currExport.kerf,
+                numPinSlots: this.currExport.numPinSlots
+            },
+            boards: boardData,
+            // Include summary stats for quick verification
+            summary: {
+                totalBoards: boardData.length,
+                horizontalBoards: boardData.filter(b => b.orientation === 'x').length,
+                verticalBoards: boardData.filter(b => b.orientation === 'y').length,
+                totalTJoints: boardData.reduce((sum, b) => sum + b.poi.tJoints.length, 0),
+                totalXJoints: boardData.reduce((sum, b) => sum + b.poi.xJoints.length, 0)
+            }
+        };
+
+        // Download as JSON
+        const jsonString = JSON.stringify(debugData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'board_debug_data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
     //== end button handlers
 
