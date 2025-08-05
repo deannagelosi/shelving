@@ -162,7 +162,21 @@ const MATERIAL_CONFIGS = {
             for (let tJoint of board.poi.tJoints) {
                 for (let i = 0; i < jointConfig.numSlotCuts; i++) {
                     let ratio = i === 0 ? 1 : 3;
-                    let x = boardStartX + tJoint;
+                    // Finding x position of tJoint:
+                    // 1) Geometric Offset:
+                    // - tJoint value is the geometric distance, so no board thickness considered
+                    // - geometric location is a centerline in the middle of the board thickness
+                    // - all start coords are half a thickness wrong when including real board length
+                    let geometricOffset = (config.sheetThickness / 2);
+
+                    // 2) P5.rect() Offset:
+                    // - p5.rect() is drawn from the top left corner, not centerline
+                    // - so we need to offset the x-coord left by half a thickness
+                    let p5Offset = -(config.sheetThickness / 2);
+
+                    let totalOffset = geometricOffset + p5Offset;
+
+                    let x = boardStartX + tJoint; // + totalOffset (cancels out so we ignore it)
                     let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
                     cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
                 }
@@ -339,23 +353,49 @@ const MATERIAL_CONFIGS = {
 
             // Handle T-joint alignment etches - two lines showing where board edges will be
             for (let tJoint of board.poi.tJoints) {
-                let centerX = boardStartX + tJoint;
+                // Finding x position of tJoint:
+                // 1) Geometric Offset:
+                // - tJoint value is the geometric distance, so no board thickness considered
+                // - geometric location is a centerline in the middle of the board thickness
+                // - all start coords are half a thickness wrong when including real board length
+                let geometricOffset = (config.sheetThickness / 2);
 
-                // Top edge guide line (left side of intersecting board)
+                // 2) Short End Offset:
+                // - for acrylic, boards are welded so no slots or pins
+                // - plywood slot end boards (vertical, T ends) are shorter instead
+                // - plywood pin end boards (horizontal) have etch lines instead (not shorter)
+                // - the end type of the board effects length, which affects our t-joint etch position
+                // - find x-coord from the start end of the board by checking the start end type
+                let startEndType = board.poi.start;
+                let shortOffset = 0;
+                if (startEndType === 'short') {
+                    // board is shorter by 1 thickness, so lines are closer to the start end
+                    shortOffset = -config.sheetThickness;
+                }
+
+                let totalOffset = shortOffset + geometricOffset;
+
+                let centerX = boardStartX + tJoint + totalOffset;
+                // - draw the lines for the board edges, not the centerline
+                // - draw lines a half thickness from the centerline in either direction
+                let leftX = centerX - (config.sheetThickness / 2);
+                let rightX = centerX + (config.sheetThickness / 2);
+
+                // Left edge guide line (left side of intersecting board)
                 etchList.push({
                     type: 'line',
-                    x1: centerX - (config.sheetThickness / 2),
+                    x1: leftX,
                     y1: boardStartY,
-                    x2: centerX - (config.sheetThickness / 2),
+                    x2: leftX,
                     y2: boardStartY + config.caseDepth
                 });
 
-                // Bottom edge guide line (right side of intersecting board)
+                // Right edge guide line (right side of intersecting board)
                 etchList.push({
                     type: 'line',
-                    x1: centerX + (config.sheetThickness / 2),
+                    x1: rightX,
                     y1: boardStartY,
-                    x2: centerX + (config.sheetThickness / 2),
+                    x2: rightX,
                     y2: boardStartY + config.caseDepth
                 });
             }
