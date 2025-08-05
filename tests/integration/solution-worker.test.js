@@ -3,9 +3,9 @@ const mockExit = jest.fn();
 jest.spyOn(process, 'exit').mockImplementation(mockExit);
 
 // Mock the slow annealing process to make tests fast and predictable
-jest.mock('../js/core/Anneal', () => {
+jest.mock('../../js/core/Anneal', () => {
     const MockAnneal = jest.fn().mockImplementation((shapes, aspectRatioPref) => {
-        const solution = new (jest.requireActual('../js/core/Solution'))(shapes);
+        const solution = new (jest.requireActual('../../js/core/Solution'))(shapes);
         solution.randomLayout();
         solution.calcScore();
         solution.valid = true;
@@ -31,7 +31,7 @@ jest.mock('../js/core/Anneal', () => {
 });
 
 // Mock Cellular to make it fast and predictable  
-jest.mock('../js/core/Cellular', () => {
+jest.mock('../../js/core/Cellular', () => {
     const MockCellular = jest.fn().mockImplementation((solution) => {
         return {
             solution: solution,
@@ -51,7 +51,7 @@ jest.mock('../js/core/Cellular', () => {
     return MockCellular;
 });
 
-const { loadShapesFromFixture } = require('./fixtures/loader');
+const { loadShapesFromFixture } = require('../fixtures/loader');
 
 // Mock the web worker environment for testing
 global.self = {
@@ -69,13 +69,13 @@ global.canvasHeight = 600;
 global.importScripts = jest.fn();
 
 // Import core classes directly for Node.js testing
-const EventEmitter = require('../js/core/EventEmitter');
-const Shape = require('../js/core/Shape');
-const Solution = require('../js/core/Solution');
-const Cellular = require('../js/core/Cellular');
-const Anneal = require('../js/core/Anneal');
-const Board = require('../js/core/Board');
-const Export = require('../js/core/Export');
+const EventEmitter = require('../../js/core/EventEmitter');
+const Shape = require('../../js/core/Shape');
+const Solution = require('../../js/core/Solution');
+const Cellular = require('../../js/core/Cellular');
+const Anneal = require('../../js/core/Anneal');
+const Board = require('../../js/core/Board');
+const Export = require('../../js/core/Export');
 
 // Make core classes available globally (as importScripts would do in browser)
 global.EventEmitter = EventEmitter;
@@ -87,7 +87,7 @@ global.Board = Board;
 global.Export = Export;
 
 // Import the worker after setting up the environment
-const SolutionWorker = require('../js/workers/solution-worker');
+const SolutionWorker = require('../../js/workers/solution-worker');
 
 describe('Solution Worker - Web Worker Pipeline Tests', () => {
     let worker;

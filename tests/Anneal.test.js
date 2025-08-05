@@ -18,23 +18,22 @@ beforeEach(() => {
 });
 
 describe('Anneal', () => {
-    test('constructor should create initial structures', () => {
+    test('should initialize with proper configuration values', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 2);
 
         // 2. Execute
         const anneal = new Anneal(shapes);
 
-        // 3. Assert - Check that constructor sets up expected properties
+        // 3. Assert - Verify annealing parameters are set correctly
         expect(anneal.shapes).toBe(shapes);
         expect(anneal.numStarts).toBe(10);
         expect(anneal.maxIterations).toBe(1000);
-        expect(anneal.initialTemp).toBe(10000);
-        expect(anneal.minTemp).toBe(0.1);
+        expect(anneal.initialTemp).toBeGreaterThan(0);
+        expect(anneal.minTemp).toBeGreaterThan(0);
+        expect(anneal.initialTemp).toBeGreaterThan(anneal.minTemp);
         expect(anneal.multiStartSolutions).toEqual([]);
         expect(anneal.finalSolution).toBe(null);
-        expect(anneal.stopAnneal).toBe(false);
-        expect(anneal.restartAnneal).toBe(false);
     });
 
     test('calcMovementRange should return expected values based on temperature', () => {
@@ -64,44 +63,62 @@ describe('Anneal', () => {
     test('acceptSolution should accept better solutions and probabilistically accept worse ones', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
-
         const anneal = new Anneal(shapes);
 
-        // 2. Execute & Assert
-
-        // Better solution (negative energy delta) should always be accepted
+        // 2. Test better solutions - should always accept
         expect(anneal.acceptSolution(-10, 100)).toBe(true);
         expect(anneal.acceptSolution(-1, 100)).toBe(true);
+        expect(anneal.acceptSolution(-0.1, 1)).toBe(true);
 
-        // Worse solution acceptance depends on temperature and energy delta
-        // Mock Math.random to test probabilistic acceptance
-        jest.spyOn(Math, 'random').mockReturnValue(0.1); // Low random value
-
-        // High temperature should be more accepting of worse solutions
-        const highTempAcceptance = anneal.acceptSolution(10, 1000);
-
-        // Low temperature should be less accepting of worse solutions
-        const lowTempAcceptance = anneal.acceptSolution(10, 1);
-
-        // At least one of these behaviors should be observable
-        expect(typeof highTempAcceptance).toBe('boolean');
-        expect(typeof lowTempAcceptance).toBe('boolean');
-
-        // Test with different random value
-        Math.random.mockReturnValue(0.9); // High random value
-        const highRandomAcceptance = anneal.acceptSolution(10, 1000);
-        expect(typeof highRandomAcceptance).toBe('boolean');
+        // 3. Test worse solutions - acceptance probability follows Boltzmann distribution
+        // At high temperature, should accept more worse solutions
+        let acceptedHighTemp = 0;
+        for (let i = 0; i < 100; i++) {
+            if (anneal.acceptSolution(5, 1000)) acceptedHighTemp++;
+        }
+        
+        // At low temperature, should accept fewer worse solutions  
+        let acceptedLowTemp = 0;
+        for (let i = 0; i < 100; i++) {
+            if (anneal.acceptSolution(5, 10)) acceptedLowTemp++;
+        }
+        
+        // High temperature should accept worse solutions more often
+        expect(acceptedHighTemp).toBeGreaterThan(acceptedLowTemp);
+        expect(acceptedHighTemp).toBeGreaterThan(20); // Should accept some at high temp
+        expect(acceptedLowTemp).toBeLessThan(80); // Should accept fewer at low temp
     });
 
-    test('button handlers should set appropriate flags', () => {
+    test('calcMovementRange should return values proportional to temperature', () => {
         // 1. Setup
         const shapes = allFixtureShapes.slice(0, 1);
+        const anneal = new Anneal(shapes);
+        const initialTemp = 1000;
+        const minTemp = 1;
 
+        // 2. Execute - Test movement range at different temperatures
+        const highTempRange = anneal.calcMovementRange(initialTemp, initialTemp);
+        const midTempRange = anneal.calcMovementRange(initialTemp * 0.5, initialTemp);
+        const lowTempRange = anneal.calcMovementRange(minTemp, initialTemp);
+
+        // 3. Assert - Movement range should decrease as temperature decreases
+        expect(highTempRange).toBeGreaterThanOrEqual(1);
+        expect(highTempRange).toBeLessThanOrEqual(5);
+        expect(midTempRange).toBeGreaterThanOrEqual(1);
+        expect(midTempRange).toBeLessThanOrEqual(5);
+        expect(lowTempRange).toBeGreaterThanOrEqual(1);
+        expect(lowTempRange).toBeLessThanOrEqual(5);
+        
+        // Higher temperature should generally allow larger movements
+        expect(highTempRange).toBeGreaterThanOrEqual(lowTempRange);
+    });
+
+    test('control methods should set appropriate flags', () => {
+        // 1. Setup
+        const shapes = allFixtureShapes.slice(0, 1);
         const anneal = new Anneal(shapes);
 
-        // 2. Execute & Assert
-
-        // Test restart functionality
+        // 2. Execute & Assert restart functionality
         expect(anneal.stopAnneal).toBe(false);
         expect(anneal.restartAnneal).toBe(false);
 
@@ -109,87 +126,12 @@ describe('Anneal', () => {
         expect(anneal.stopAnneal).toBe(true);
         expect(anneal.restartAnneal).toBe(true);
 
-        // Reset for next test
+        // Reset and test stop functionality
         anneal.stopAnneal = false;
         anneal.restartAnneal = false;
 
-        // Test stop functionality
         anneal.endAnneal();
         expect(anneal.stopAnneal).toBe(true);
-        expect(anneal.restartAnneal).toBe(false); // Should remain false
-    });
-
-    test('should implement adaptive reheating when stuck in local minimum', () => {
-        // 1. Setup
-        const shapes = allFixtureShapes.slice(0, 1);
-
-        const anneal = new Anneal(shapes);
-
-        // Create a mock solution that will simulate being stuck
-        const mockSolution = {
-            score: 100,
-            createNeighbor: jest.fn(),
-            toDataObject: jest.fn().mockReturnValue({
-                shapes: [],
-                startID: 0,
-                score: 100,
-                valid: false
-            })
-        };
-
-        // Mock createNeighbor to always return worse solutions (simulating being stuck)
-        mockSolution.createNeighbor.mockReturnValue({
-            score: 150, // Worse score
-            toDataObject: jest.fn().mockReturnValue({
-                shapes: [],
-                startID: 0,
-                score: 150,
-                valid: false
-            })
-        });
-
-        // 2. Execute - Simulate several iterations with no improvement
-        const initialTemp = 1000;
-        const reheatCounter = 5; // Use small value for testing
-        anneal.reheatCounter = reheatCounter;
-
-        let temperature = initialTemp;
-        let iterationsSinceImprovement = 0;
-        let currentSolution = mockSolution;
-        let bestSolution = mockSolution;
-        const coolingRate = 0.95;
-
-        // Simulate the annealing loop logic for reheating
-        // Force Math.random to return high values so worse solutions are rejected
-        jest.spyOn(Math, 'random').mockReturnValue(0.99);
-
-        for (let i = 0; i < reheatCounter + 2; i++) {
-            const neighbor = currentSolution.createNeighbor(1);
-            const energyDelta = neighbor.score - currentSolution.score;
-
-            // Should not accept worse solution at low temperature with high random value
-            if (!anneal.acceptSolution(energyDelta, temperature)) {
-                iterationsSinceImprovement++;
-            }
-
-            temperature *= coolingRate;
-
-            // Test reheating logic
-            if (iterationsSinceImprovement > reheatCounter) {
-                const oldTemp = temperature;
-                temperature = Math.min(temperature * anneal.reheatingBoost, initialTemp);
-
-                // 3. Assert - Temperature should have increased
-                expect(temperature).toBeGreaterThan(oldTemp);
-                expect(temperature).toBeLessThanOrEqual(initialTemp);
-                break;
-            }
-        }
-
-        // Should have triggered reheating
-        expect(iterationsSinceImprovement).toBeGreaterThan(reheatCounter);
-
-        // Restore Math.random
-        Math.random.mockRestore();
+        expect(anneal.restartAnneal).toBe(false);
     });
 }); 

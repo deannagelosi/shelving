@@ -1,10 +1,10 @@
 // tests/dxf-snapshots.test.js
 
-const MATERIAL_CONFIGS = require('../js/core/material-configs');
+const MATERIAL_CONFIGS = require('../../js/core/material-configs');
 global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
 
 // Import Export class after setting up globals
-const Export = require('../js/core/Export');
+const Export = require('../../js/core/Export');
 
 // Mock DXFWriter to capture DXF output
 const mockDXFWriter = {
@@ -54,7 +54,7 @@ global.DXFWriter = function () {
 global.DXFWriter.ACI = mockDXFWriter.ACI;
 
 // Make Board available globally (Export.js expects it as global)
-const Board = require('../js/core/Board');
+const Board = require('../../js/core/Board');
 global.Board = Board;
 
 describe('DXF Snapshot Tests', () => {

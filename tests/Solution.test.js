@@ -11,40 +11,49 @@ beforeEach(() => {
 });
 
 describe('Solution', () => {
-    test('should correctly calculate score for a simple layout', () => {
-        // 1. Setup - Use a simple shape from fixtures
-        const shape = allFixtureShapes.slice(0, 1); // Take first shape only
-        const solution = new Solution(shape);
+    test('should calculate specific scores based on layout dimensions and overlaps', () => {
+        // 1. Setup - Create shapes with known positions for predictable scoring
+        const shapes = allFixtureShapes.slice(0, 2);
+        shapes[0].posX = 0;
+        shapes[0].posY = 0;
+        shapes[1].posX = 20; // Far apart to avoid overlap
+        shapes[1].posY = 0;
+        const solution = new Solution(shapes);
 
         // 2. Execute
-        solution.randomLayout();
+        solution.makeLayout();
         solution.calcScore();
 
-        // 3. Assert - Score should be a number and solution should have basic properties
-        expect(typeof solution.score).toBe('number');
-        expect(solution.score).toBeGreaterThanOrEqual(0);
-        expect(typeof solution.valid).toBe('boolean');
+        // 3. Assert - With no overlaps, score should be based on layout dimensions
+        expect(solution.valid).toBe(true); // No overlaps
+        expect(solution.score).toBeGreaterThan(0); // Has area component
+        expect(solution.score).toBeLessThan(100000); // Score can be large due to area calculations
+        
+        // Score should include width * height component
+        const layoutArea = solution.layout.length * (solution.layout[0]?.length || 0);
+        expect(layoutArea).toBeGreaterThan(0);
     });
 
-    test('should correctly trim layout and update coordinates', () => {
-        // 1. Setup - Create shapes with specific positions that will need trimming
-        const shapes = allFixtureShapes.slice(0, 2);
-        shapes[0].posX = 5; // Place first shape away from origin
-        shapes[0].posY = 5;
-        shapes[1].posX = 7;
-        shapes[1].posY = 7;
+    test('should trim empty space from layout edges', () => {
+        // 1. Setup - Create shapes with positions that leave empty space
+        const shapes = allFixtureShapes.slice(0, 1);
+        const originalPosX = shapes[0].posX;
+        const originalPosY = shapes[0].posY;
+        shapes[0].posX = 10;
+        shapes[0].posY = 10;
         const solution = new Solution(shapes);
 
         // 2. Execute
         solution.makeLayout();
 
-        // 3. Assert - Layout should be trimmed and coordinates adjusted
+        // 3. Assert - Layout should be created and shapes should be repositioned
         expect(solution.layout.length).toBeGreaterThan(0);
         expect(solution.layout[0].length).toBeGreaterThan(0);
-
-        // At least one shape should have had its coordinates adjusted (moved closer to origin)
-        const hasAdjustedCoords = shapes.some(shape => shape.posX < 5 || shape.posY < 5);
-        expect(hasAdjustedCoords).toBe(true);
+        
+        // After layout creation with trimming, the shape positions should be adjusted
+        const shapeMovedX = shapes[0].posX !== 10;
+        const shapeMovedY = shapes[0].posY !== 10;
+        expect(shapeMovedX || shapeMovedY).toBe(true);
     });
 
     test('should penalize overlapping shapes', () => {
@@ -109,57 +118,45 @@ describe('Solution', () => {
         expect(hasChanged).toBe(true);
     });
 
-    test('should execute specific movement cases in createNeighbor', () => {
+    test('createNeighbor should produce valid neighboring solutions', () => {
         // 1. Setup
-        const shapes = allFixtureShapes.slice(0, 2);
+        const shapes = allFixtureShapes.slice(0, 3);
         const solution = new Solution(shapes);
         solution.randomLayout();
-
-        // Store original positions
-        const originalPosX = solution.shapes[0].posX;
-        const originalPosY = solution.shapes[0].posY;
-
-        // 2. Execute & Assert different movement cases
-
-        // Test case 1: Left movement (randOption = 1)
-        jest.spyOn(Math, 'random')
-            .mockReturnValueOnce(0) // Shape selection (first shape)
-            .mockReturnValueOnce(0.05); // Movement option (case 1 = left)
-
-        const leftNeighbor = solution.createNeighbor(2);
-        expect(leftNeighbor.shapes[0].posX).toBeLessThanOrEqual(originalPosX);
-
-        // Test case 3: Up movement (randOption = 3)
-        Math.random
-            .mockReturnValueOnce(0) // Shape selection
-            .mockReturnValueOnce(0.25); // Movement option (case 3 = up)
-
-        const upNeighbor = solution.createNeighbor(2);
-        expect(upNeighbor.shapes[0].posY).toBeGreaterThanOrEqual(originalPosY);
-
-        // Test case 5: Right movement (randOption = 5)
-        Math.random
-            .mockReturnValueOnce(0) // Shape selection
-            .mockReturnValueOnce(0.45); // Movement option (case 5 = right)
-
-        const rightNeighbor = solution.createNeighbor(2);
-        expect(rightNeighbor.shapes[0].posX).toBeGreaterThanOrEqual(originalPosX);
-
-        // Test case 9: Swap positions (randOption = 9)
-        Math.random
-            .mockReturnValueOnce(0) // First shape selection
-            .mockReturnValueOnce(0.95) // Movement option (case 9 = swap)
-            .mockReturnValueOnce(0.9); // Second shape selection (different from first)
-
-        const swapNeighbor = solution.createNeighbor(2);
-        // After swap, positions should be different from original
-        const positionsChanged = swapNeighbor.shapes.some((shape, i) =>
-            shape.posX !== solution.shapes[i].posX || shape.posY !== solution.shapes[i].posY
-        );
-        expect(positionsChanged).toBe(true);
-
-        // Restore Math.random
-        Math.random.mockRestore();
+        
+        // 2. Create multiple neighbors and verify they are valid variations
+        const neighbors = [];
+        for (let i = 0; i < 10; i++) {
+            neighbors.push(solution.createNeighbor(3));
+        }
+        
+        // 3. Assert - All neighbors should be valid Solution objects
+        neighbors.forEach(neighbor => {
+            expect(neighbor).toBeInstanceOf(Solution);
+            expect(neighbor.shapes.length).toBe(solution.shapes.length);
+            expect(neighbor.startID).toBe(solution.startID);
+            
+            // Neighbor should be different from original (at least one shape moved)
+            const isDifferent = neighbor.shapes.some((shape, i) => 
+                shape.posX !== solution.shapes[i].posX || 
+                shape.posY !== solution.shapes[i].posY
+            );
+            expect(isDifferent).toBe(true);
+            
+            // Movement should be bounded by maxShift parameter
+            neighbor.shapes.forEach((shape, i) => {
+                const dx = Math.abs(shape.posX - solution.shapes[i].posX);
+                const dy = Math.abs(shape.posY - solution.shapes[i].posY);
+                // Either positions were swapped or movement is within maxShift
+                const wasSwapped = neighbor.shapes.some((s, j) => 
+                    j !== i && s.posX === solution.shapes[i].posX && s.posY === solution.shapes[i].posY
+                );
+                if (!wasSwapped) {
+                    expect(dx).toBeLessThanOrEqual(3);
+                    expect(dy).toBeLessThanOrEqual(3);
+                }
+            });
+        });
     });
 });
 

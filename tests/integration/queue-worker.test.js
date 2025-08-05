@@ -1,5 +1,5 @@
 // Mock Result.js database operations BEFORE any imports
-jest.mock('../js/models/Result', () => {
+jest.mock('../../js/models/Result', () => {
     return jest.fn().mockImplementation(() => ({
         init: jest.fn().mockResolvedValue(true),
         createBulkJob: jest.fn().mockResolvedValue('mock-job-id'),
@@ -18,7 +18,7 @@ jest.mock('fs', () => ({
     }
 }));
 
-const { loadShapesFromFixture } = require('./fixtures/loader');
+const { loadShapesFromFixture } = require('../fixtures/loader');
 
 // Mock the Node.js worker_threads environment for testing
 const mockParentPort = {
@@ -31,7 +31,7 @@ jest.mock('worker_threads', () => ({
 }));
 
 // Import the queue worker after setting up mocks
-const QueueWorker = require('../js/workers/queue-worker');
+const QueueWorker = require('../../js/workers/queue-worker');
 const fs = require('fs');
 
 describe('Queue Worker - Drain-and-Process Pattern Tests', () => {
@@ -72,7 +72,7 @@ describe('Queue Worker - Drain-and-Process Pattern Tests', () => {
             const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => { });
 
             // Create a spy on the Result constructor that will fail for this specific test
-            const Result = require('../js/models/Result');
+            const Result = require('../../js/models/Result');
             const mockFailingResult = {
                 init: jest.fn().mockRejectedValue(initError),
                 createBulkJob: jest.fn(),

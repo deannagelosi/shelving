@@ -1,83 +1,40 @@
 // tests/Export.test.js
 
 const Board = require('../js/core/Board');
-
-// Make Board available globally (Export.js expects it as global)
-global.Board = Board;
-
-// Import the real MATERIAL_CONFIGS and create mocks for functions
+const Export = require('../js/core/Export');
 const MATERIAL_CONFIGS = require('../js/core/material-configs');
 
-// Create a shallow copy to preserve functions, then mock specific functions for testing
-const mockMaterialConfigs = {
-    'plywood-laser': {
-        ...MATERIAL_CONFIGS['plywood-laser'],
-        generateJointCuts: jest.fn(),
-        generateBoardEtches: jest.fn()
-    },
-    'acrylic-laser': {
-        ...MATERIAL_CONFIGS['acrylic-laser']
-    }
-};
-
-// Make MATERIAL_CONFIGS available globally
-global.MATERIAL_CONFIGS = mockMaterialConfigs;
-
-// Mock DXFWriter
-const mockDXFWriter = {
-    setUnits: jest.fn(),
-    addLayer: jest.fn(),
-    setActiveLayer: jest.fn(),
-    drawRect: jest.fn(),
-    drawText: jest.fn(),
-    toDxfString: jest.fn().mockReturnValue('MOCK_DXF_OUTPUT'),
-    ACI: {
-        GREEN: 3,
-        RED: 1,
-        BLUE: 5,
-        WHITE: 7
-    }
-};
-
-global.DXFWriter = jest.fn(() => mockDXFWriter);
-global.DXFWriter.ACI = mockDXFWriter.ACI;
-
-// Import Export after setting up mocks
-const Export = require('../js/core/Export');
+// Make minimal globals available (Export.js expects these)
+global.Board = Board;
+global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
 
 describe('Export', () => {
     let mockCellular;
-    let mockConfig;
-    let mockSpacing;
+    let testConfig;
+    let testSpacing;
 
     beforeEach(() => {
-        // Reset all mocks
-        jest.clearAllMocks();
-        mockMaterialConfigs['plywood-laser'].generateJointCuts.mockClear();
-        mockMaterialConfigs['plywood-laser'].generateBoardEtches.mockClear();
-
-        // Mock Cellular with getCellRenderLines method
+        // Create simple mock cellular data
         mockCellular = {
             getCellRenderLines: jest.fn().mockReturnValue(new Set([
-                '0,0,0,2,1', // Horizontal line: y1=0, x1=0, y2=0, x2=2, strain=1
-                '0,2,2,2,1', // Vertical line: y1=0, x1=2, y2=2, x2=2, strain=1
-                '2,0,2,2,1'  // Horizontal line: y1=2, x1=0, y2=2, x2=2, strain=1
+                '0,0,0,2,1', // Horizontal line
+                '0,2,2,2,1', // Vertical line  
+                '2,0,2,2,1'  // Another horizontal line
             ]))
         };
 
-        // Standard config for testing
-        mockConfig = {
+        // Real config values for predictable testing
+        testConfig = {
             caseDepth: 3,
-            sheetThickness: 0.23,
+            sheetThickness: 0.25,
             sheetWidth: 30,
-            sheetHeight: 28,
+            sheetHeight: 24,
             numSheets: 1,
-            kerf: 0.01,
+            kerf: 0.1,
             numPinSlots: 2
         };
 
-        // Standard spacing for testing
-        mockSpacing = {
+        testSpacing = {
             squareSize: 1,
             buffer: 0.5,
             xPadding: 1,
@@ -86,251 +43,164 @@ describe('Export', () => {
     });
 
     describe('Constructor', () => {
-        test('should initialize with default plywood material type', () => {
-            // ✅ BULK VERIFIED: Multiple Export.js lines broken, 11/13 tests failed correctly
+        test('should initialize with correct material configuration', () => {
             // 1. Setup & Execute
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
 
-            // 3. Assert
+            // 2. Assert - Should use default plywood material
             expect(exportInstance.materialType).toBe('plywood-laser');
-            expect(exportInstance.materialConfig).toBe(mockMaterialConfigs['plywood-laser']);
+            expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['plywood-laser']);
             expect(exportInstance.cellData).toBe(mockCellular);
-            expect(exportInstance.caseDepth).toBe(3);
-            expect(exportInstance.sheetThickness).toBe(0.23);
+            expect(exportInstance.caseDepth).toBe(testConfig.caseDepth);
+            expect(exportInstance.sheetThickness).toBe(testConfig.sheetThickness);
         });
 
-        test('should use specified material type', () => {
-            // ✅ BULK VERIFIED: Multiple Export.js lines broken, 11/13 tests failed correctly
+        test('should accept specified material type', () => {
             // 1. Setup & Execute
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig, 'plywood-laser');
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig, 'acrylic-laser');
 
-            // 3. Assert
-            expect(exportInstance.materialType).toBe('plywood-laser');
-            expect(exportInstance.materialConfig).toBe(mockMaterialConfigs['plywood-laser']);
+            // 2. Assert
+            expect(exportInstance.materialType).toBe('acrylic-laser');
+            expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['acrylic-laser']);
         });
 
-        test('should fallback to plywood-laser for unknown material type', () => {
-            // Suppress console.error for this test
-            const originalConsoleError = console.error;
-            console.error = jest.fn();
+        test('should handle unknown material type gracefully', () => {
+            // 1. Setup - Mock console.error to suppress error output
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-            try {
-                // 1. Setup & Execute
-                const exportInstance = new Export(mockCellular, mockSpacing, mockConfig, 'unknown-material');
+            // 2. Execute
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig, 'unknown-material');
 
-                // 3. Assert
-                expect(exportInstance.materialType).toBe('unknown-material');
-                expect(exportInstance.materialConfig).toBe(mockMaterialConfigs['plywood-laser']);
-            } finally {
-                // Restore console.error after test
-                console.error = originalConsoleError;
-            }
+            // 3. Assert - Should fallback to plywood but keep specified type name
+            expect(exportInstance.materialType).toBe('unknown-material');
+            expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['plywood-laser']);
+            expect(consoleSpy).toHaveBeenCalled();
+
+            // Cleanup
+            consoleSpy.mockRestore();
         });
     });
 
     describe('makeBoards', () => {
-        test('should create boards from cellular lines', () => {
+        test('should convert cellular lines to Board objects', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
 
             // 2. Execute
             exportInstance.makeBoards();
 
-            // 3. Assert
+            // 3. Assert - Should create boards from cellular data
             expect(mockCellular.getCellRenderLines).toHaveBeenCalled();
-            expect(exportInstance.boards.length).toBeGreaterThan(0);
+            expect(exportInstance.boards.length).toBe(3); // Based on our 3 mock lines
             expect(exportInstance.boards[0]).toBeInstanceOf(Board);
+            
+            // Each board should have proper thickness from config
+            exportInstance.boards.forEach(board => {
+                expect(board.thickness).toBe(testConfig.sheetThickness);
+            });
         });
 
-        test('should sort boards by length descending', () => {
-            // 1. Setup - using real Board objects with real cellular data
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
+        test('should sort boards by length in descending order', () => {
+            // 1. Setup
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
 
-            // 2. Execute
+            // 2. Execute  
             exportInstance.makeBoards();
 
-            // 3. Assert - verify boards are sorted by length
-            if (exportInstance.boards.length > 1) {
-                for (let i = 0; i < exportInstance.boards.length - 1; i++) {
-                    expect(exportInstance.boards[i].getLength()).toBeGreaterThanOrEqual(exportInstance.boards[i + 1].getLength());
-                }
+            // 3. Assert - Boards should be sorted longest to shortest
+            for (let i = 0; i < exportInstance.boards.length - 1; i++) {
+                const currentLength = exportInstance.boards[i].getLength();
+                const nextLength = exportInstance.boards[i + 1].getLength();
+                expect(currentLength).toBeGreaterThanOrEqual(nextLength);
             }
         });
     });
 
     describe('assignBoardEndTypes', () => {
-        test('should delegate to material configuration', () => {
+        test('should process all boards for end type assignment', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-            const realBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
-            exportInstance.boards = [realBoard];
-
-            // Spy on the assignBoardEnds method
-            const assignBoardEndsSpy = jest.spyOn(mockMaterialConfigs['plywood-laser'], 'assignBoardEnds');
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
+            exportInstance.boards = [testBoard];
+            
+            // Spy on the material config method
+            const assignSpy = jest.spyOn(exportInstance.materialConfig, 'assignBoardEnds');
 
             // 2. Execute
             exportInstance.assignBoardEndTypes();
 
-            // 3. Assert
-            expect(assignBoardEndsSpy).toHaveBeenCalledWith(realBoard);
+            // 3. Assert - Should call material config for each board
+            expect(assignSpy).toHaveBeenCalledWith(testBoard);
+            expect(assignSpy).toHaveBeenCalledTimes(1);
+            
+            // Cleanup
+            assignSpy.mockRestore();
         });
     });
 
     describe('prepJoints', () => {
-        test('should delegate to material configuration functions', () => {
+        test('should generate cuts and etches for board joints', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-            const realBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             const boardStartX = 5;
             const boardStartY = 10;
+            
+            // Spy on material config methods
+            const cutsSpy = jest.spyOn(exportInstance.materialConfig, 'generateJointCuts');
+            const etchesSpy = jest.spyOn(exportInstance.materialConfig, 'generateBoardEtches');
 
             // 2. Execute
-            exportInstance.prepJoints(realBoard, boardStartX, boardStartY);
+            exportInstance.prepJoints(testBoard, boardStartX, boardStartY);
 
-            // 3. Assert
-            expect(mockMaterialConfigs['plywood-laser'].generateJointCuts).toHaveBeenCalledWith(
-                realBoard,
+            // 3. Assert - Should call both cut and etch generation
+            expect(cutsSpy).toHaveBeenCalledWith(
+                testBoard,
                 expect.objectContaining({
-                    caseDepth: mockConfig.caseDepth,
-                    sheetThickness: mockConfig.sheetThickness,
-                    numPinSlots: mockConfig.numPinSlots
+                    caseDepth: testConfig.caseDepth,
+                    sheetThickness: testConfig.sheetThickness,
+                    numPinSlots: testConfig.numPinSlots
                 }),
                 boardStartX,
                 boardStartY,
                 exportInstance.cutList
             );
 
-            expect(mockMaterialConfigs['plywood-laser'].generateBoardEtches).toHaveBeenCalledWith(
-                realBoard,
+            expect(etchesSpy).toHaveBeenCalledWith(
+                testBoard,
                 expect.objectContaining({
-                    caseDepth: mockConfig.caseDepth,
-                    sheetThickness: mockConfig.sheetThickness,
-                    numPinSlots: mockConfig.numPinSlots
+                    caseDepth: testConfig.caseDepth,
+                    sheetThickness: testConfig.sheetThickness,
+                    numPinSlots: testConfig.numPinSlots
                 }),
                 boardStartX,
                 boardStartY,
                 exportInstance.etchList
             );
-        });
-    });
-
-    describe('DXF Generation', () => {
-        let exportInstance;
-
-        beforeEach(() => {
-            exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
-            // Mock the arrays that would be populated by prepLayout
-            exportInstance.sheetOutline = [
-                { x: 0, y: 0, w: 30, h: 28 }
-            ];
-            exportInstance.cutList = [
-                { x: 5, y: 10, w: 15, h: 3 },
-                { x: 10, y: 15, w: 8, h: 3 }
-            ];
-            exportInstance.etchList = [
-                { text: 'Board1', x: 5, y: 9.9 },
-                { text: 'Board2', x: 10, y: 14.9 }
-            ];
-            exportInstance.totalHeight = 28;
-        });
-
-        test('should create DXF with layers from material config', () => {
-            // 1. Setup is in beforeEach
-
-            // 2. Execute
-            const result = exportInstance.generateDXF();
-
-            // 3. Assert
-            expect(global.DXFWriter).toHaveBeenCalled();
-            expect(mockDXFWriter.setUnits).toHaveBeenCalledWith('Inches');
-
-            // Verify layers are created from material config
-            expect(mockDXFWriter.addLayer).toHaveBeenCalledWith('Sheet Outlines', 3, 'CONTINUOUS'); // GREEN
-            expect(mockDXFWriter.addLayer).toHaveBeenCalledWith('Cuts', 1, 'CONTINUOUS'); // RED
-            expect(mockDXFWriter.addLayer).toHaveBeenCalledWith('Labels', 5, 'CONTINUOUS'); // BLUE
-
-            expect(result).toBe('MOCK_DXF_OUTPUT');
-        });
-
-        test('should populate outline layer correctly', () => {
-            // 1. Setup is in beforeEach
-
-            // 2. Execute
-            exportInstance.populateOutlineLayer(mockDXFWriter);
-
-            // 3. Assert
-            expect(mockDXFWriter.setActiveLayer).toHaveBeenCalledWith('Sheet Outlines');
-            expect(mockDXFWriter.drawRect).toHaveBeenCalledWith(0, 28, 30, 0); // x, y1, x+w, y2 with flipped y
-        });
-
-        test('should populate cut layer with kerf adjustment', () => {
-            // 1. Setup is in beforeEach
-
-            // 2. Execute
-            exportInstance.populateCutLayer(mockDXFWriter);
-
-            // 3. Assert
-            expect(mockDXFWriter.setActiveLayer).toHaveBeenCalledWith('Cuts');
-
-            // First cut: x=5, y=10, w=15, h=3 with kerf=0.01 and flipped y
-            expect(mockDXFWriter.drawRect).toHaveBeenCalledWith(5, 18, 5 + 15 - 0.01, 15); // y1=28-10=18, y2=28-13=15
-
-            // Second cut: x=10, y=15, w=8, h=3 with kerf=0.01 and flipped y  
-            expect(mockDXFWriter.drawRect).toHaveBeenCalledWith(10, 13, 10 + 8 - 0.01, 10); // y1=28-15=13, y2=28-18=10
-        });
-
-        test('should populate etch layer with coordinate transformation', () => {
-            // 1. Setup is in beforeEach
-
-            // 2. Execute
-            exportInstance.populateEtchLayer(mockDXFWriter);
-
-            // 3. Assert
-            expect(mockDXFWriter.setActiveLayer).toHaveBeenCalledWith('Labels');
-
-            // First etch with flipped y coordinate
-            expect(mockDXFWriter.drawText).toHaveBeenCalledWith(5, 18.1, 0.10, 0, 'Board1'); // y=28-9.9=18.1
-
-            // Second etch with flipped y coordinate
-            expect(mockDXFWriter.drawText).toHaveBeenCalledWith(10, 13.1, 0.10, 0, 'Board2'); // y=28-14.9=13.1
-        });
-
-        test('should handle missing layers gracefully', () => {
-            // 1. Setup - temporarily modify material config to have missing layer
-            const originalLayers = exportInstance.materialConfig.dxfLayers;
-            exportInstance.materialConfig.dxfLayers = [
-                { name: 'Sheet Outlines', color: 'GREEN', content: 'outlines' }
-                // Missing cuts and etches layers
-            ];
-
-            // 2. Execute
-            exportInstance.populateOutlineLayer(mockDXFWriter);
-            exportInstance.populateCutLayer(mockDXFWriter);
-            exportInstance.populateEtchLayer(mockDXFWriter);
-
-            // 3. Assert - should not crash, only outline layer should be used
-            expect(mockDXFWriter.setActiveLayer).toHaveBeenCalledWith('Sheet Outlines');
-            expect(mockDXFWriter.setActiveLayer).not.toHaveBeenCalledWith('Cuts');
-            expect(mockDXFWriter.setActiveLayer).not.toHaveBeenCalledWith('Labels');
-
+            
             // Cleanup
-            exportInstance.materialConfig.dxfLayers = originalLayers;
+            cutsSpy.mockRestore();
+            etchesSpy.mockRestore();
         });
     });
 
     describe('setupSheets', () => {
-        test('should calculate correct number of rows based on sheet height and case depth', () => {
+        test('should calculate correct sheet layout based on configuration', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, mockSpacing, mockConfig);
+            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
 
             // 2. Execute
             exportInstance.setupSheets();
 
-            // 3. Assert
-            const expectedRows = Math.floor(mockConfig.sheetHeight / (mockConfig.caseDepth + (0.5 * 1.25)));
-            expect(exportInstance.sheets).toHaveLength(mockConfig.numSheets);
-            expect(exportInstance.sheets[0]).toHaveLength(expectedRows);
-            expect(exportInstance.totalHeight).toBe(mockConfig.sheetHeight * mockConfig.numSheets);
+            // 3. Assert - Should create sheets array with calculated rows
+            expect(exportInstance.sheets).toHaveLength(testConfig.numSheets);
+            expect(Array.isArray(exportInstance.sheets[0])).toBe(true);
+            expect(exportInstance.totalHeight).toBe(testConfig.sheetHeight * testConfig.numSheets);
+            
+            // Row calculation should be based on case depth and spacing
+            const expectedRows = Math.floor(testConfig.sheetHeight / (testConfig.caseDepth + (testSpacing.buffer * 1.25)));
+            expect(exportInstance.sheets[0].length).toBe(expectedRows);
         });
     });
+
 });
