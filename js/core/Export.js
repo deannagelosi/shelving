@@ -1,5 +1,5 @@
 class Export {
-    constructor(_cellData, _spacing, _config) {
+    constructor(_cellData, _spacing, _config, _materialType = 'plywood-laser') {
         this.cellData = _cellData;
         this.cellLines = this.cellData.getCellRenderLines();
         this.squareSize = _spacing.squareSize;
@@ -9,6 +9,14 @@ class Export {
         this.boards = [];
         this.boardCounter = 0;
 
+        // Material configuration
+        this.materialType = _materialType;
+        this.materialConfig = MATERIAL_CONFIGS[_materialType];
+        if (!this.materialConfig) {
+            console.error(`Unknown material type: ${_materialType}. Using plywood-laser as fallback.`);
+            this.materialConfig = MATERIAL_CONFIGS['plywood-laser'];
+        }
+
         // User-defined config
         this.caseDepth = _config.caseDepth;
         this.sheetThickness = _config.sheetThickness;
@@ -16,13 +24,7 @@ class Export {
         this.sheetHeight = _config.sheetHeight;
         this.numSheets = _config.numSheets;
         this.kerf = _config.kerf; // for vertical cuts in the joints
-        // Joint configuration
         this.numPinSlots = _config.numPinSlots || 2;
-        this.jointConfig = {
-            numSlotCuts: this.numPinSlots,
-            numPinCuts: this.numPinSlots + 1,
-            totalCuts: (this.numPinSlots * 2) + 1
-        };
 
         // Configuration for laser cutting
         this.gap = 0.5; // inch gap between boards
@@ -64,6 +66,9 @@ class Export {
 
         // Sort boards by length
         this.boards.sort((a, b) => b.len - a.len);
+
+        // Assign board end types based on material configuration
+        this.assignBoardEndTypes();
 
         // Detect joints
         this.detectJoints();
@@ -108,6 +113,13 @@ class Export {
 
         this.boardCounter++;
         return new Board(this.boardCounter, startCoord, endCoord, orientation, this.sheetThickness);
+    }
+
+    assignBoardEndTypes() {
+        // Assign board end types based on material configuration
+        for (let board of this.boards) {
+            this.materialConfig.assignBoardEnds.call(this.materialConfig, board);
+        }
     }
 
     detectJoints() {
@@ -168,8 +180,9 @@ class Export {
     }
 
     markTJoint(endTouchBoard, middleTouchBoard, endType) {
-        // Change the end of the intersecting board to a pin
-        endTouchBoard.poi[endType] = 'pin';
+        // Change the end of the intersecting board based on material configuration
+        // For T-joints, the ending board type is the same regardless of orientation
+        endTouchBoard.poi[endType] = this.materialConfig.jointTypes.tJoint.ending;
 
         // Mark the T-joint on the intersected board
         let jointPos;
@@ -381,65 +394,19 @@ class Export {
     }
 
     prepJoints(board, boardStartX, boardStartY) {
-        // add all the joints to the cut list
-        // - 1 pin needs 2 cuts, 1 slot needs 1 cut
-        // - 2 pins needs 3 cuts, 2 slots needs 2 cuts
-        const numJoints = this.jointConfig.totalCuts;
-        const cutoutRatio = (1 / numJoints);
-        const jointHeight = cutoutRatio * this.caseDepth;
+        // Use material-specific cut generation
+        const config = {
+            caseDepth: this.caseDepth,
+            sheetThickness: this.sheetThickness,
+            numPinSlots: this.numPinSlots,
+            fontOffset: this.fontOffset
+        };
 
-        // Start joint
-        if (board.poi.start === "slot") {
-            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
-                let ratio = i === 0 ? 1 : 3;
-                let x = boardStartX;
-                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
-                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
-            }
-        } else if (board.poi.start === "pin") {
-            for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
-                let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                let x = boardStartX;
-                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
-                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
-            }
-        }
-        // End joint
-        if (board.poi.end === "slot") {
-            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
-                let ratio = i === 0 ? 1 : 3;
-                let x = boardStartX + board.len - this.sheetThickness;
-                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
-                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
-            }
-        } else if (board.poi.end === "pin") {
-            for (let i = 0; i < this.jointConfig.numPinCuts; i++) {
-                let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                let x = boardStartX + board.len - this.sheetThickness;
-                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
-                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
-            }
-        }
-        // T-joints
-        for (let tJoint of board.poi.tJoints) {
-            for (let i = 0; i < this.jointConfig.numSlotCuts; i++) {
-                let ratio = i === 0 ? 1 : 3;
-                let x = boardStartX + tJoint;
-                let y = boardStartY + this.caseDepth * (ratio * cutoutRatio);
-                this.cutList.push({ x, y, w: this.sheetThickness, h: jointHeight });
-            }
-        }
-        // X-joints
-        for (let xJoint of board.poi.xJoints) {
-            let xJointX = boardStartX + xJoint;
-            if (board.orientation == "y") {
-                // cut from top of board
-                this.cutList.push({ x: xJointX, y: boardStartY, w: this.sheetThickness, h: this.caseDepth / 2 });
-            } else {
-                // cut from bottom of board
-                this.cutList.push({ x: xJointX, y: (boardStartY + (this.caseDepth / 2)), w: this.sheetThickness, h: this.caseDepth / 2 });
-            }
-        }
+        // Generate cuts using material configuration
+        this.materialConfig.generateJointCuts.call(this.materialConfig, board, config, boardStartX, boardStartY, this.cutList);
+
+        // Generate etches using material configuration
+        this.materialConfig.generateBoardEtches.call(this.materialConfig, board, config, boardStartX, boardStartY, this.etchList);
     }
 
     previewLayout() {
@@ -488,54 +455,66 @@ class Export {
     }
 
     generateDXF() {
-        // Generates a DXF file for laser cutting
-        //  - Three separate layers:
-        //    - 'Sheet Outlines' for sheet boundaries(this.sheetOutline)
-        //    - 'Cuts' for board and joint cutouts (this.cutList)
-        //    - 'Labels' for board labels(this.etchList)
+        // Generates a DXF file for laser cutting using material-specific layer configuration
         //  - Kerf adjustment is subtracted from each rectangle cut width
         //  - 1 pixel = 1 inch scale
         //  - Flips y-axis to correct p5.js coordinates to DXF coordinates
         const dxf = new DXFWriter();
         dxf.setUnits('Inches');
-        // Create layers
-        dxf.addLayer('Sheet Outlines', DXFWriter.ACI.GREEN, 'CONTINUOUS');
-        dxf.addLayer('Cuts', DXFWriter.ACI.RED, 'CONTINUOUS');
-        dxf.addLayer('Labels', DXFWriter.ACI.BLUE, 'CONTINUOUS');
-        // Add elements
+
+        // Create layers based on material configuration
+        for (const layerDef of this.materialConfig.dxfLayers) {
+            const colorConstant = DXFWriter.ACI[layerDef.color] || DXFWriter.ACI.WHITE;
+            dxf.addLayer(layerDef.name, colorConstant, 'CONTINUOUS');
+        }
+
+        // Add elements to appropriate layers
         this.populateOutlineLayer(dxf);
         this.populateCutLayer(dxf);
         this.populateEtchLayer(dxf);
+
         // return dxf string
         return dxf.toDxfString();
     }
 
     populateOutlineLayer(dxf) {
-        dxf.setActiveLayer('Sheet Outlines');
-        for (let sheet of this.sheetOutline) {
-            const y1 = this.totalHeight - sheet.y;
-            const y2 = this.totalHeight - (sheet.y + sheet.h);
-            dxf.drawRect(sheet.x, y1, sheet.x + sheet.w, y2); // x, y, width, height
+        // Find the outline layer from material config
+        const outlineLayer = this.materialConfig.dxfLayers.find(layer => layer.content === 'outlines');
+        if (outlineLayer) {
+            dxf.setActiveLayer(outlineLayer.name);
+            for (let sheet of this.sheetOutline) {
+                const y1 = this.totalHeight - sheet.y;
+                const y2 = this.totalHeight - (sheet.y + sheet.h);
+                dxf.drawRect(sheet.x, y1, sheet.x + sheet.w, y2); // x, y, width, height
+            }
         }
     }
 
     populateCutLayer(dxf) {
-        dxf.setActiveLayer('Cuts');
-        for (let cut of this.cutList) {
-            const y1 = this.totalHeight - cut.y;
-            const y2 = this.totalHeight - (cut.y + cut.h);
-            dxf.drawRect(cut.x, y1, cut.x + cut.w - this.kerf, y2); // x, y, width, height
+        // Find the cuts layer from material config
+        const cutLayer = this.materialConfig.dxfLayers.find(layer => layer.content === 'cuts');
+        if (cutLayer) {
+            dxf.setActiveLayer(cutLayer.name);
+            for (let cut of this.cutList) {
+                const y1 = this.totalHeight - cut.y;
+                const y2 = this.totalHeight - (cut.y + cut.h);
+                dxf.drawRect(cut.x, y1, cut.x + cut.w - this.kerf, y2); // x, y, width, height
+            }
         }
     }
 
     populateEtchLayer(dxf) {
-        dxf.setActiveLayer('Labels');
-        for (let label of this.etchList) {
-            const text = String(label.text);
-            const x = Number(label.x);
-            const y = this.totalHeight - Number(label.y);
+        // Find the etch layer from material config
+        const etchLayer = this.materialConfig.dxfLayers.find(layer => layer.content === 'etches');
+        if (etchLayer) {
+            dxf.setActiveLayer(etchLayer.name);
+            for (let label of this.etchList) {
+                const text = String(label.text);
+                const x = Number(label.x);
+                const y = this.totalHeight - Number(label.y);
 
-            dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+                dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+            }
         }
     }
 

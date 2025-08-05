@@ -67,12 +67,10 @@ class ExportUI {
     }
 
     initExportSettings() {
-        // create settings elements (hidden until screen is shown)
-
         // bind prepareExportData to this instance of the input values
         this.prepareExportData = this.prepareExportData.bind(this);
 
-        // Material Type dropdown (full width)
+        // Material Type dropdown (full width) - always present
         this.html.materialTypeGroup = createDiv()
             .addClass('settings-group hidden');
         this.html.materialTypeLabel = createSpan('Material Type')
@@ -85,142 +83,14 @@ class ExportUI {
         this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
         this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
 
-        // Material Properties (grouped)
-        this.html.materialPropsGroup = createDiv()
-            .addClass('settings-group hidden');
-        this.html.materialPropsLabel = createSpan('Material Properties')
-            .parent(this.html.materialPropsGroup)
-            .addClass('settings-label');
-
-        // Two-column container for thickness and kerf
-        const materialRow = createDiv()
-            .addClass('dimensions-row')
-            .parent(this.html.materialPropsGroup);
-
-        // Material Thickness column
-        const thicknessColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(materialRow);
-        createSpan('Thickness (in)')
-            .addClass('dimension-label')
-            .parent(thicknessColumn);
-        this.html.sheetThicknessInput = createInput('0.23')
-            .addClass('dimension-input')
-            .parent(thicknessColumn)
-            .attribute('type', 'number')
-            .attribute('min', '0.13')
-            .attribute('max', '0.5')
-            .attribute('step', '0.01')
-            .input(this.prepareExportData);
-
-        // Kerf Width column
-        const kerfColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(materialRow);
-        createSpan('Kerf Width (in)')
-            .addClass('dimension-label')
-            .parent(kerfColumn);
-        this.html.kerfInput = createInput('0')
-            .addClass('dimension-input')
-            .parent(kerfColumn)
-            .attribute('type', 'number')
-            .attribute('min', '0')
-            .attribute('max', '.04')
-            .attribute('step', '0.01')
-            .input(this.prepareExportData);
-
-        // Case Properties (grouped)
-        this.html.casePropsGroup = createDiv()
-            .addClass('settings-group hidden');
-        this.html.casePropsLabel = createSpan('Case Properties')
-            .parent(this.html.casePropsGroup)
-            .addClass('settings-label');
-
-        // Two-column container for case depth and pin slots
-        const caseRow = createDiv()
-            .addClass('dimensions-row')
-            .parent(this.html.casePropsGroup);
-
-        // Case Depth column
-        const depthColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(caseRow);
-        createSpan('Depth (in)')
-            .addClass('dimension-label')
-            .parent(depthColumn);
-        this.html.caseDepthInput = createInput('3')
-            .addClass('dimension-input')
-            .parent(depthColumn)
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('max', '10')
-            .attribute('step', '0.5')
-            .input(this.prepareExportData);
-
-        // Pin/Slots column
-        const pinSlotColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(caseRow);
-        createSpan('# Pin/Slots')
-            .addClass('dimension-label')
-            .parent(pinSlotColumn);
-        this.html.pinSlotSelect = createSelect()
-            .parent(pinSlotColumn)
-            .addClass('dimension-input')
-            .changed(this.prepareExportData);
-        this.html.pinSlotSelect.option('2', '2');
-        this.html.pinSlotSelect.option('1', '1');
-
-        // Sheet Dimensions (grouped)
-        this.html.sheetGroup = createDiv()
-            .addClass('settings-group hidden');
-        this.html.sheetLabel = createSpan('Sheet Dimensions')
-            .parent(this.html.sheetGroup)
-            .addClass('settings-label');
-
-        // Two-column container for width and height
-        const dimensionsRow = createDiv()
-            .addClass('dimensions-row')
-            .parent(this.html.sheetGroup);
-
-        // Width input column
-        const widthColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(dimensionsRow);
-        createSpan('Width')
-            .addClass('dimension-label')
-            .parent(widthColumn);
-        this.html.sheetWidthInput = createInput('30')
-            .addClass('dimension-input')
-            .parent(widthColumn)
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
-
-        // Height input column
-        const heightColumn = createDiv()
-            .addClass('dimension-column')
-            .parent(dimensionsRow);
-        createSpan('Height')
-            .addClass('dimension-label')
-            .parent(heightColumn);
-        this.html.sheetHeightInput = createInput('28')
-            .addClass('dimension-input')
-            .parent(heightColumn)
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
-
         // Number of Sheets (hidden - automatically managed by export system)
         this.html.numSheetsInput = createInput('1')
-            .style('display', 'none') // Completely hidden from user but accessible to automatic system
-            .attribute('type', 'hidden') // Change to hidden input type
+            .style('display', 'none')
+            .attribute('type', 'hidden')
             .attribute('min', '1')
             .attribute('max', '50');
 
-        // buttons for settings
+        // Buttons for settings - always present
         this.html.buttonList = createDiv()
             .addClass('export-button-list hidden');
 
@@ -241,15 +111,126 @@ class ExportUI {
             .addClass('button secondary-button')
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadCase());
+
+        // Initialize with empty containers and element maps
+        this.html.materialContainers = {};
+        this.materialElementMaps = {};
+    }
+
+    buildUIForMaterial(materialType) {
+        // Clear existing material-specific UI
+        this.clearMaterialUI();
+
+        if (!MATERIAL_CONFIGS || !MATERIAL_CONFIGS[materialType]) {
+            console.error(`Material config not found for: ${materialType}`);
+            return;
+        }
+
+        const materialConfig = MATERIAL_CONFIGS[materialType];
+        this.materialElementMaps[materialType] = {};
+
+        // Build containers first
+        this.buildContainers(materialType, materialConfig.containers);
+
+        // Build settings within containers
+        this.buildSettings(materialType, materialConfig.settings);
+    }
+
+    buildContainers(materialType, containerDefinitions) {
+        for (const [containerName, containerDef] of Object.entries(containerDefinitions)) {
+            // Create container group
+            const containerGroup = createDiv()
+                .addClass(containerDef.cssClass + ' hidden');
+
+            // Create container label
+            createSpan(containerDef.label)
+                .parent(containerGroup)
+                .addClass('settings-label');
+
+            // Create layout row for settings
+            const layoutRow = createDiv()
+                .addClass('dimensions-row')
+                .parent(containerGroup);
+
+            // Store references
+            this.html.materialContainers[containerName] = {
+                group: containerGroup,
+                row: layoutRow
+            };
+        }
+    }
+
+    buildSettings(materialType, settingsDefinitions) {
+        for (const setting of settingsDefinitions) {
+            const container = this.html.materialContainers[setting.container];
+            if (!container) {
+                console.error(`Container not found: ${setting.container}`);
+                continue;
+            }
+
+            // Create column for this setting
+            const column = createDiv()
+                .addClass('dimension-column')
+                .parent(container.row);
+
+            // Create label
+            createSpan(setting.label)
+                .addClass('dimension-label')
+                .parent(column);
+
+            // Create input element
+            let inputElement;
+            if (setting.inputType === 'select') {
+                inputElement = createSelect()
+                    .parent(column)
+                    .addClass(setting.cssClass)
+                    .changed(this.prepareExportData);
+
+                // Add options for select
+                if (setting.options) {
+                    for (const option of setting.options) {
+                        inputElement.option(option.text, option.value);
+                    }
+                }
+                inputElement.value(setting.defaultValue);
+            } else {
+                inputElement = createInput(setting.defaultValue.toString())
+                    .parent(column)
+                    .addClass(setting.cssClass)
+                    .attribute('type', setting.inputType)
+                    .input(this.prepareExportData);
+
+                // Add validation attributes
+                if (setting.validation) {
+                    for (const [attr, value] of Object.entries(setting.validation)) {
+                        inputElement.attribute(attr, value);
+                    }
+                }
+            }
+
+            // Store element reference
+            this.materialElementMaps[materialType][setting.name] = inputElement;
+        }
+    }
+
+    clearMaterialUI() {
+        // Remove all existing material containers
+        for (const containerName of Object.keys(this.html.materialContainers)) {
+            if (this.html.materialContainers[containerName].group) {
+                this.html.materialContainers[containerName].group.remove();
+            }
+        }
+        this.html.materialContainers = {};
     }
 
     //== show/hide functions
     // manage visibility and screen-specific setup
     show() {
-        // show all export screen elements
-        Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        // show basic UI elements (material type dropdown and buttons)
+        this.html.materialTypeGroup.removeClass('hidden');
+        this.html.buttonList.removeClass('hidden');
 
-        // initialize default material type selection
+        // initialize default material type selection and build UI
         this.html.materialTypeSelect.selected('acrylic-laser');
         this.handleMaterialTypeChange();
 
@@ -262,8 +243,16 @@ class ExportUI {
     }
 
     hide() {
-        // hide all export screen elements
-        Object.values(this.html).forEach(element => element.addClass('hidden'));
+        // hide basic UI elements
+        this.html.materialTypeGroup.addClass('hidden');
+        this.html.buttonList.addClass('hidden');
+
+        // hide all material-specific containers
+        for (const containerData of Object.values(this.html.materialContainers)) {
+            if (containerData.group) {
+                containerData.group.addClass('hidden');
+            }
+        }
     }
 
     update() {
@@ -289,11 +278,18 @@ class ExportUI {
         // clear the list to ensure clean state
         htmlRefs.right.list.html('');
 
-        // add all settings elements to the right sidebar list section
+        // add material type dropdown
         this.html.materialTypeGroup.parent(htmlRefs.right.list);
-        this.html.materialPropsGroup.parent(htmlRefs.right.list);
-        this.html.casePropsGroup.parent(htmlRefs.right.list);
-        this.html.sheetGroup.parent(htmlRefs.right.list);
+
+        // add all material-specific containers to the right sidebar
+        for (const containerData of Object.values(this.html.materialContainers)) {
+            if (containerData.group) {
+                containerData.group.parent(htmlRefs.right.list);
+                containerData.group.removeClass('hidden');
+            }
+        }
+
+        // add buttons
         this.html.buttonList.parent(htmlRefs.right.list);
     }
 
@@ -302,14 +298,11 @@ class ExportUI {
 
         console.log(`[ExportUI] Material type changed to: ${selectedMaterial}`);
 
-        // Update default values based on material type
-        if (selectedMaterial === 'plywood-laser') {
-            this.html.sheetThicknessInput.value('0.23');
-            this.html.kerfInput.value('0');
-        } else if (selectedMaterial === 'acrylic-laser') {
-            this.html.sheetThicknessInput.value('0.375');
-            this.html.kerfInput.value('0.01');
-        }
+        // Build UI for the selected material
+        this.buildUIForMaterial(selectedMaterial);
+
+        // Display the new settings in the sidebar
+        this.displaySettings();
 
         // Trigger export data preparation with new material settings
         this.prepareExportData();
@@ -405,22 +398,35 @@ class ExportUI {
             cellularInstance = Cellular.fromDataObject(appState.currentAnneal.cellular, appState.currentAnneal.finalSolution);
         }
 
-        const caseDepth = parseFloat(this.html.caseDepthInput.value());
-        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
-        const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
-        const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
-        const numSheets = parseInt(this.html.numSheetsInput.value()); // Hidden but automatically managed
-        const numPinSlots = parseInt(this.html.pinSlotSelect.value());
-        const kerf = parseFloat(this.html.kerfInput.value());
+        const materialType = this.html.materialTypeSelect.value();
+        const elementMap = this.materialElementMaps[materialType];
 
-        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets) || isNaN(numPinSlots) || isNaN(kerf)) {
+        if (!elementMap) {
+            console.error(`No element map found for material: ${materialType}`);
+            return;
+        }
+
+        // Get values from dynamic element map
+        const thickness = elementMap['thickness'] ? parseFloat(elementMap['thickness'].value()) : 0.23;
+        const kerf = elementMap['kerf'] ? parseFloat(elementMap['kerf'].value()) : 0;
+        const caseDepth = elementMap['caseDepth'] ? parseFloat(elementMap['caseDepth'].value()) : 3;
+        const sheetWidth = elementMap['sheetWidth'] ? parseFloat(elementMap['sheetWidth'].value()) : 30;
+        const sheetHeight = elementMap['sheetHeight'] ? parseFloat(elementMap['sheetHeight'].value()) : 28;
+        const numPinSlots = elementMap['pinSlots'] ? parseInt(elementMap['pinSlots'].value()) : 2;
+        const numSheets = parseInt(this.html.numSheetsInput.value()); // Hidden but automatically managed
+
+        // Validate inputs
+        const invalidInputs = [thickness, kerf, caseDepth, sheetWidth, sheetHeight, numSheets].some(val => isNaN(val));
+        const invalidPinSlots = elementMap['pinSlots'] && isNaN(numPinSlots);
+
+        if (invalidInputs || invalidPinSlots) {
             alert("Invalid input for one or more fields");
             return;
         }
         // get laser config
         const config = {
             caseDepth,
-            sheetThickness,
+            sheetThickness: thickness,
             sheetWidth,
             sheetHeight,
             numSheets,
@@ -438,8 +444,8 @@ class ExportUI {
             squareSize: layoutProps.squareSize
         };
 
-        // create new export
-        this.currExport = new Export(cellData, spacing, config);
+        // create new export with material type
+        this.currExport = new Export(cellData, spacing, config, materialType);
         this.currExport.makeBoards();
 
         // log the number of boards created
