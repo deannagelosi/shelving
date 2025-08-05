@@ -25,11 +25,10 @@ class ExportUI {
             }
         });
 
-        // listen for requests from Export.js for additional sheets
-        // Updates the hidden numSheets input when export system needs more sheets
-        appEvents.on('addSheetRequested', () => {
-            let numSheets = parseInt(this.html.numSheetsInput.value());
-            this.html.numSheetsInput.value(numSheets + 1);
+        // listen for requests from Export.js to adjust sheet count
+        // Updates the hidden numSheets input when export system calculates optimal count
+        appEvents.on('adjustSheetsRequested', ({ optimalSheets }) => {
+            this.html.numSheetsInput.value(optimalSheets);
         });
 
         // listen for requests from Export.js to refresh layout
@@ -451,14 +450,22 @@ class ExportUI {
     showBoardTooLongError(longestBoard, sheetWidth) {
         clear();
         background(255);
+
+        // Set text stroke and fill
+        stroke(0);
+        strokeWeight(1);
         fill('red');
         textAlign(CENTER, CENTER);
         textSize(16);
+
+        // Show the error message
+        const spaceNeeded = longestBoard.getLength() + (this.currExport.gap * 2); // board + gaps
         text(
             `Error: Board #${longestBoard.id} is too long for the current sheet.\n\n` +
             `Board Length: ${longestBoard.getLength().toFixed(2)} inches\n` +
+            `Space Needed (including gaps): ${spaceNeeded.toFixed(2)} inches\n` +
             `Sheet Width: ${sheetWidth.toFixed(2)} inches\n\n` +
-            `Please increase the sheet width in the settings to continue.`,
+            `Please increase the sheet width to at least ${Math.ceil(spaceNeeded)} inches.`,
             width / 2,
             height / 2
         );
@@ -548,9 +555,9 @@ class ExportUI {
         // log the number of boards created
         console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
 
-        // Check if any board is longer than the sheet width
+        // Check if any board is longer than the sheet width (accounting for gaps)
         const longestBoard = this.currExport.getLongestBoard();
-        if (longestBoard && longestBoard.getLength() > sheetWidth) {
+        if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidth) {
             this.showBoardTooLongError(longestBoard, sheetWidth);
             updateButton(this.html.showButton, false);
             updateButton(this.html.downloadDXFButton, false);

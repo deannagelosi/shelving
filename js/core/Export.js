@@ -359,6 +359,14 @@ class Export {
         this.cutList = [];
         this.etchList = [];
 
+        // calculate optimal sheet count and request adjustment if needed
+        const optimalSheets = this.calculateOptimalSheetCount();
+        if (optimalSheets !== this.numSheets && typeof appEvents !== 'undefined') {
+            appEvents.emit('adjustSheetsRequested', { optimalSheets });
+            appEvents.emit('layoutRefreshRequested');
+            return; // layout will restart with correct sheet count
+        }
+
         // find the number of rows that can fit on a sheet
         this.setupSheets();
 
@@ -380,10 +388,18 @@ class Export {
                     sheetWidth: this.sheetWidth,
                     numSheets: this.sheets.length
                 });
-                // not enough space, request a new sheet and restart layout
-                if (typeof appEvents !== 'undefined') {
-                    appEvents.emit('addSheetRequested');
-                    appEvents.emit('layoutRefreshRequested');
+                // calculate optimal number of sheets and request adjustment if needed
+                const spaceNeeded = boardLength + (this.gap * 2);
+                if (spaceNeeded <= this.sheetWidth && typeof appEvents !== 'undefined') {
+                    // Board could fit, calculate optimal sheet count needed
+                    const optimalSheets = this.calculateOptimalSheetCount();
+                    if (optimalSheets !== this.numSheets) {
+                        appEvents.emit('adjustSheetsRequested', { optimalSheets });
+                        appEvents.emit('layoutRefreshRequested');
+                    }
+                } else {
+                    // Board is too long for sheet width
+                    console.error(`Board ${board.id} is too long for sheet width. Cannot proceed with layout.`);
                 }
                 break;
             }
@@ -552,6 +568,48 @@ class Export {
 
         this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0));
         this.totalHeight = this.sheetHeight * this.numSheets;
+    }
+
+    calculateOptimalSheetCount() {
+        // calculate the minimum number of sheets needed for all boards
+        const numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
+        if (numRows <= 0) return 1; // At least one sheet needed
+
+        // Simulate packing boards to find minimum sheets needed
+        let sheets = [Array(numRows).fill(0)]; // Start with one sheet
+
+        // Sort boards by length (descending) for better packing
+        const sortedBoards = [...this.boards].sort((a, b) => b.getLength() - a.getLength());
+
+        for (const board of sortedBoards) {
+            const boardLength = board.getLength();
+            const spaceNeeded = boardLength + (this.gap * 2);
+
+            // Try to find a spot on existing sheets
+            let placed = false;
+            for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
+                for (let rowIndex = 0; rowIndex < sheets[sheetIndex].length; rowIndex++) {
+                    const rowOccupiedWidth = sheets[sheetIndex][rowIndex];
+                    const rowRemainingWidth = this.sheetWidth - rowOccupiedWidth;
+
+                    if (rowRemainingWidth >= spaceNeeded) {
+                        sheets[sheetIndex][rowIndex] += boardLength + this.gap;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (placed) break;
+            }
+
+            // if board couldn't be placed, add a new sheet
+            if (!placed) {
+                sheets.push(Array(numRows).fill(0));
+                const newSheetIndex = sheets.length - 1;
+                sheets[newSheetIndex][0] = boardLength + this.gap;
+            }
+        }
+
+        return sheets.length;
     }
 
     findBoardPosition(_boardLength) {
