@@ -21,7 +21,6 @@ class DesignUI {
         this.initializeWorker();
 
         //== initialize UI elements
-        this.initHeaderUI();
         this.initBottomUI();
         this.initSidebarButtons();
 
@@ -90,61 +89,6 @@ class DesignUI {
             .addClass('button primary-button hidden')
             .parent(htmlRefs.right.buttons)
             .mousePressed(() => this.handleNext());
-    }
-
-    initHeaderUI() {
-        // create header elements (hidden until screen is shown)
-        // slider toggle
-        this.html.sliderDiv = createDiv()
-            .id('slider-div')
-            .addClass('hidden')
-            .parent(htmlRefs.headerControls)
-            .mousePressed(this.handleSlider.bind(this));
-
-        // Simple label
-        this.html.simpleLabel = createSpan('Simple')
-            .addClass('toggle-label')
-            .parent(this.html.sliderDiv);
-
-        // create and append the slider
-        // min, max, default, step
-        this.html.toggleSlider = createSlider(0, 1, 0, 1)
-            .id('toggleSlider')
-            .addClass('toggle-slider')
-            .parent(this.html.sliderDiv);
-
-        // Detail label
-        this.html.detailLabel = createSpan('Detail')
-            .addClass('toggle-label')
-            .parent(this.html.sliderDiv);
-
-        // Orientation buttons
-        this.html.orientationDiv = createDiv()
-            .id('orientation-div')
-            .addClass('hidden')
-            .parent(htmlRefs.headerControls);
-
-        this.html.orientationButtons = createDiv()
-            .addClass('orientation-buttons')
-            .parent(this.html.orientationDiv);
-
-        this.html.tallButton = createDiv()
-            .addClass('orientation-button tall')
-            .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleAspectRatioChange(-1));
-
-        this.html.squareButton = createDiv()
-            .addClass('orientation-button square')
-            .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleAspectRatioChange(0));
-
-        this.html.wideButton = createDiv()
-            .addClass('orientation-button wide')
-            .parent(this.html.orientationButtons)
-            .mousePressed(() => this.handleAspectRatioChange(1));
-
-        // Initialize selected state based on appState
-        this.handleAspectRatioChange(appState.generationConfig.aspectRatioPref);
     }
 
     initBottomUI() {
@@ -875,7 +819,8 @@ class DesignUI {
             .addClass('sidebar-controls')
             .parent(htmlRefs.left.list);
 
-        // Create the perimeter controls in the fixed container
+        // Create the aspect ratio controls and perimeter controls in the fixed container
+        this.createAspectRatioControls();
         this.createPerimeterControls();
 
         // Create scrollable container for shapes
@@ -927,6 +872,40 @@ class DesignUI {
                 element.addClass('disabled');
             });
         }
+    }
+
+    createAspectRatioControls() {
+        // Target Aspect Ratio section
+        const aspectRatioGroup = createDiv()
+            .addClass('settings-group')
+            .parent(this.html.leftControlsContainer);
+
+        createSpan('Target Aspect Ratio')
+            .addClass('settings-label')
+            .parent(aspectRatioGroup);
+
+        // Orientation buttons container
+        this.html.orientationButtons = createDiv()
+            .addClass('orientation-buttons')
+            .parent(aspectRatioGroup);
+
+        this.html.tallButton = createDiv()
+            .addClass('orientation-button tall')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleAspectRatioChange(-1));
+
+        this.html.squareButton = createDiv()
+            .addClass('orientation-button square')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleAspectRatioChange(0));
+
+        this.html.wideButton = createDiv()
+            .addClass('orientation-button wide')
+            .parent(this.html.orientationButtons)
+            .mousePressed(() => this.handleAspectRatioChange(1));
+
+        // Initialize selected state based on appState
+        this.handleAspectRatioChange(appState.generationConfig.aspectRatioPref);
     }
 
     createPerimeterControls() {
@@ -1042,7 +1021,8 @@ class DesignUI {
             .addClass('sidebar-controls')
             .parent(htmlRefs.right.list);
 
-        // create wall generation controls in the fixed container
+        // create detail toggle and wall generation controls in the fixed container
+        this.createDetailToggleControls();
         this.createWallGenerationControls();
 
         // Create scrollable container for solutions
@@ -1119,6 +1099,36 @@ class DesignUI {
 
             this.savedAnnealElements.push(savedAnnealItem);
         }
+    }
+
+    createDetailToggleControls() {
+        // Detail View Toggle section
+        const detailToggleGroup = createDiv()
+            .addClass('settings-group')
+            .parent(this.html.controlsContainer);
+
+        // slider toggle
+        this.html.sliderDiv = createDiv()
+            .id('slider-div')
+            .parent(detailToggleGroup)
+            .mousePressed(this.handleSlider.bind(this));
+
+        // Simple label
+        this.html.simpleLabel = createSpan('Simple')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
+
+        // create and append the slider
+        // min, max, default, step
+        this.html.toggleSlider = createSlider(0, 1, 0, 1)
+            .id('toggleSlider')
+            .addClass('toggle-slider')
+            .parent(this.html.sliderDiv);
+
+        // Detail label
+        this.html.detailLabel = createSpan('Detail')
+            .addClass('toggle-label')
+            .parent(this.html.sliderDiv);
     }
 
     createWallGenerationControls() {
