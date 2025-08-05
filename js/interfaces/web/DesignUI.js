@@ -39,7 +39,7 @@ class DesignUI {
         this.moveDebounceTimer = null;
         this.moveDebounceDelay = 150; // milliseconds
 
-        this.loadGoldenPath();
+        // this.loadGoldenPath();
     }
 
     loadGoldenPath() {

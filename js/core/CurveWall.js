@@ -15,6 +15,8 @@ class CurveWall {
         // Generated wall path data
         this.wallPath = [];
         this.groups = [];
+
+        this.showConsoleLogs = false;
     }
 
     /**
@@ -506,21 +508,29 @@ class CurveWall {
         }
         // Groups with connections but at middle level get no additional segments
 
-        console.log(`Simplified connection for group-${group.id} generated ${segments.length} segments`);
+        if (this.showConsoleLogs) {
+            console.log(`Simplified connection for group-${group.id} generated ${segments.length} segments`);
+        }
         return segments;
     }
 
     _connectGroups(group1, group2, startSide, turnRadius, baseId = 0) {
-        console.log(`=== DEBUG: _connectGroups ===`);
+        if (this.showConsoleLogs) {
+            console.log(`=== DEBUG: _connectGroups ===`);
+        }
 
         // Handle simplified connections for bend limit cases
         if (group2 === null && startSide === 'simple') {
-            console.log(`Creating simplified connection for group-${group1.id} (y=${group1.y})`);
+            if (this.showConsoleLogs) {
+                console.log(`Creating simplified connection for group-${group1.id} (y=${group1.y})`);
+            }
             return this._createSimplifiedConnection(group1, turnRadius, baseId);
         }
 
-        console.log(`Connecting group-${group1.id} (y=${group1.y}) -> group-${group2.id} (y=${group2.y}) on ${startSide} side`);
-        console.log(`Starting baseId: ${baseId}`);
+        if (this.showConsoleLogs) {
+            console.log(`Connecting group-${group1.id} (y=${group1.y}) -> group-${group2.id} (y=${group2.y}) on ${startSide} side`);
+            console.log(`Starting baseId: ${baseId}`);
+        }
 
         const segments = [];
         const startY = group1.y - 1;
@@ -532,8 +542,10 @@ class CurveWall {
 
         const isTopDown = group1.y > group2.y;
 
-        console.log(`Connection coordinates: (${startX},${startY}) -> (${targetX},${targetY})`);
-        console.log(`Direction: ${isTopDown ? 'top-down' : 'bottom-up'}`);
+        if (this.showConsoleLogs) {
+            console.log(`Connection coordinates: (${startX},${startY}) -> (${targetX},${targetY})`);
+            console.log(`Direction: ${isTopDown ? 'top-down' : 'bottom-up'}`);
+        }
 
         // 1. First Arc
         const dirOut = (startSide === 'left') ? 'W' : 'E';
@@ -542,7 +554,9 @@ class CurveWall {
         const arc1 = this._computeQuarterArc(startX, startY, dirOut, turnDir1, turnRadius);
         const arc1Segment = { id: baseId++, type: 'arc', ...arc1, radius: turnRadius };
         segments.push(arc1Segment);
-        console.log(`Arc 1 (id=${arc1Segment.id}):`, arc1Segment);
+        if (this.showConsoleLogs) {
+            console.log(`Arc 1 (id=${arc1Segment.id}):`, arc1Segment);
+        }
 
         // 2. Vertical Line  
         // For top-down: extend down towards target, leaving room for final arc
@@ -565,7 +579,9 @@ class CurveWall {
         }
         const verticalLine = { id: baseId++, type: 'line', startX: arc1.endX, startY: arc1.endY, endX: arc1.endX, endY: verticalEndY };
         segments.push(verticalLine);
-        console.log(`Vertical Line (id=${verticalLine.id}):`, verticalLine);
+        if (this.showConsoleLogs) {
+            console.log(`Vertical Line (id=${verticalLine.id}):`, verticalLine);
+        }
 
         // 3. Second Arc
         const inDir2 = isTopDown ? 'S' : 'N';
@@ -582,7 +598,9 @@ class CurveWall {
         const arc2 = this._computeQuarterArc(arc1.endX, verticalEndY, inDir2, turnDir2, turnRadius);
         const arc2Segment = { id: baseId++, type: 'arc', ...arc2, radius: turnRadius };
         segments.push(arc2Segment);
-        console.log(`Arc 2 (id=${arc2Segment.id}):`, arc2Segment);
+        if (this.showConsoleLogs) {
+            console.log(`Arc 2 (id=${arc2Segment.id}):`, arc2Segment);
+        }
 
         // 4. Final Horizontal Connector
         // Skip horizontal lines for top-down connections
@@ -602,16 +620,22 @@ class CurveWall {
                 // Connect from group's right edge to wall boundary + 1
                 horizontalStartX = group2.rightX + 1;
                 horizontalEndX = horizontalStartX + 1;
-                console.log(`Special wall connection detected for group-${group2.id}`);
+                if (this.showConsoleLogs) {
+                    console.log(`Special wall connection detected for group-${group2.id}`);
+                }
             }
 
             const horizontalLine = { id: baseId++, type: 'line', startX: horizontalStartX, startY: horizontalY, endX: horizontalEndX, endY: horizontalY };
             segments.push(horizontalLine);
-            console.log(`Horizontal Line (id=${horizontalLine.id}):`, horizontalLine);
+            if (this.showConsoleLogs) {
+                console.log(`Horizontal Line (id=${horizontalLine.id}):`, horizontalLine);
+            }
         }
 
-        console.log(`Total segments generated: ${segments.length}`);
-        console.log(`=== END _connectGroups ===`);
+        if (this.showConsoleLogs) {
+            console.log(`Total segments generated: ${segments.length}`);
+            console.log(`=== END _connectGroups ===`);
+        }
         return segments;
     }
 
@@ -624,19 +648,25 @@ class CurveWall {
             g.connectedSides = {};
         });
 
-        console.log("=== DEBUG: Building Connection Queue ===");
-        console.log("Groups:", groups.map(g => ({ id: g.id, y: g.y, leftX: g.leftX, rightX: g.rightX })));
+        if (this.showConsoleLogs) {
+            console.log("=== DEBUG: Building Connection Queue ===");
+            console.log("Groups:", groups.map(g => ({ id: g.id, y: g.y, leftX: g.leftX, rightX: g.rightX })));
+        }
 
         if (groups.length < 2) return queue;
 
         const minX = Math.min(...groups.map(g => g.leftX));
         const maxX = Math.max(...groups.map(g => g.rightX));
-        console.log("Wall boundaries - minX:", minX, "maxX:", maxX);
+        if (this.showConsoleLogs) {
+            console.log("Wall boundaries - minX:", minX, "maxX:", maxX);
+        }
 
         const topGroup = groups[groups.length - 1];
         const bottomGroup = groups[0];
         const side = this._chooseSideCloserToWall(topGroup, minX, maxX);
-        console.log("First connection (top-to-bottom):", { from: `group-${topGroup.id} (y=${topGroup.y})`, to: `group-${bottomGroup.id} (y=${bottomGroup.y})`, side });
+        if (this.showConsoleLogs) {
+            console.log("First connection (top-to-bottom):", { from: `group-${topGroup.id} (y=${topGroup.y})`, to: `group-${bottomGroup.id} (y=${bottomGroup.y})`, side });
+        }
         queue.push({ from: topGroup, to: bottomGroup, side });
 
         topGroup.isComplete = true;
@@ -644,13 +674,17 @@ class CurveWall {
         const bottomTargetSide = (Math.abs(bottomTargetX - bottomGroup.leftX) < Math.abs(bottomTargetX - (bottomGroup.rightX + 1))) ? 'left' : 'right';
         topGroup.connectedSides = { [side]: true };
         bottomGroup.connectedSides = { [bottomTargetSide]: true };
-        console.log("After first connection - topGroup marked complete, bottomGroup connected on", bottomTargetSide, "side");
+        if (this.showConsoleLogs) {
+            console.log("After first connection - topGroup marked complete, bottomGroup connected on", bottomTargetSide, "side");
+        }
 
         let safety = 0;
         while (safety < this.maxIterations) {
             safety++;
             const incomplete = groups.filter(g => !g.isComplete).sort((a, b) => a.y - b.y);
-            console.log("Remaining incomplete groups:", incomplete.map(g => ({ id: g.id, y: g.y, connectedSides: g.connectedSides })));
+            if (this.showConsoleLogs) {
+                console.log("Remaining incomplete groups:", incomplete.map(g => ({ id: g.id, y: g.y, connectedSides: g.connectedSides })));
+            }
             if (incomplete.length < 2) break;
 
             const lowGroup = incomplete[0];
@@ -664,7 +698,9 @@ class CurveWall {
             // TODO: Implement full chain arc counting as per pseudocode
             if (queue.length >= 2) {
                 // If we've reached bend limit, create simplified connections for remaining groups
-                console.log("Bend limit reached - creating simplified connections");
+                if (this.showConsoleLogs) {
+                    console.log("Bend limit reached - creating simplified connections");
+                }
 
                 // Add remaining groups as simple connections (no full arc patterns)
                 incomplete.forEach(group => {
@@ -675,7 +711,9 @@ class CurveWall {
                 });
                 break;
             }
-            console.log("Bottom-up connection:", { from: `group-${lowGroup.id} (y=${lowGroup.y})`, to: `group-${highGroup.id} (y=${highGroup.y})`, side: connectionSide });
+            if (this.showConsoleLogs) {
+                console.log("Bottom-up connection:", { from: `group-${lowGroup.id} (y=${lowGroup.y})`, to: `group-${highGroup.id} (y=${highGroup.y})`, side: connectionSide });
+            }
 
             queue.push({ from: lowGroup, to: highGroup, side: connectionSide });
 
@@ -688,17 +726,21 @@ class CurveWall {
             const highTargetSide = (Math.abs(highTargetX - highGroup.leftX) < Math.abs(highTargetX - (highGroup.rightX + 1))) ? 'left' : 'right';
             if (!highGroup.connectedSides) highGroup.connectedSides = {};
             highGroup.connectedSides[highTargetSide] = true;
-            console.log("After connection - lowGroup marked complete, highGroup connected on", highTargetSide, "side");
+            if (this.showConsoleLogs) {
+                console.log("After connection - lowGroup marked complete, highGroup connected on", highTargetSide, "side");
+            }
         }
 
-        console.log("=== Final Connection Queue ===");
-        queue.forEach((connection, i) => {
-            if (connection.to === null) {
-                console.log(`${i}: group-${connection.from.id} (y=${connection.from.y}) -> SIMPLIFIED on ${connection.side} side`);
-            } else {
-                console.log(`${i}: group-${connection.from.id} (y=${connection.from.y}) -> group-${connection.to.id} (y=${connection.to.y}) on ${connection.side} side`);
-            }
-        });
+        if (this.showConsoleLogs) {
+            console.log("=== Final Connection Queue ===");
+            queue.forEach((connection, i) => {
+                if (connection.to === null) {
+                    console.log(`${i}: group-${connection.from.id} (y=${connection.from.y}) -> SIMPLIFIED on ${connection.side} side`);
+                } else {
+                    console.log(`${i}: group-${connection.from.id} (y=${connection.from.y}) -> group-${connection.to.id} (y=${connection.to.y}) on ${connection.side} side`);
+                }
+            });
+        }
 
         return queue;
     }

@@ -50,10 +50,6 @@ describe('CurveWall Algorithm', () => {
         const goldenLines = goldenPath.filter(s => s.type === 'line');
         const goldenArcs = goldenPath.filter(s => s.type === 'arc');
 
-        console.log("--- COMPREHENSIVE SEGMENT COMPARISON ---");
-        console.log(`Generated: ${generatedLines.length} lines, ${generatedArcs.length} arcs`);
-        console.log(`Expected:  ${goldenLines.length} lines, ${goldenArcs.length} arcs`);
-
         // Validate segment counts first
         expect(generatedLines.length).toEqual(goldenLines.length);
         expect(generatedArcs.length).toEqual(goldenArcs.length);
@@ -62,7 +58,6 @@ describe('CurveWall Algorithm', () => {
         const unmatchedGoldenLines = [...goldenLines];
         const unmatchedGeneratedLines = [...generatedLines];
 
-        console.log("\n--- LINE MATCHING ---");
         goldenLines.forEach((goldenLine, index) => {
             const matchIndex = unmatchedGeneratedLines.findIndex(gl =>
                 Math.abs(gl.startX - goldenLine.startX) < 0.01 &&
@@ -72,27 +67,15 @@ describe('CurveWall Algorithm', () => {
             );
 
             if (matchIndex >= 0) {
-                const match = unmatchedGeneratedLines[matchIndex];
-                console.log(`✅ Golden Line ${goldenLine.id}: (${goldenLine.startX},${goldenLine.startY})→(${goldenLine.endX},${goldenLine.endY}) matches Generated Line ${match.id}`);
                 unmatchedGeneratedLines.splice(matchIndex, 1);
                 unmatchedGoldenLines.splice(unmatchedGoldenLines.findIndex(l => l.id === goldenLine.id), 1);
-            } else {
-                console.log(`❌ Golden Line ${goldenLine.id}: (${goldenLine.startX},${goldenLine.startY})→(${goldenLine.endX},${goldenLine.endY}) - NO MATCH FOUND`);
             }
         });
-
-        if (unmatchedGeneratedLines.length > 0) {
-            console.log("❌ Extra generated lines:");
-            unmatchedGeneratedLines.forEach(line => {
-                console.log(`   Generated Line ${line.id}: (${line.startX},${line.startY})→(${line.endX},${line.endY})`);
-            });
-        }
 
         // Create comprehensive matching for arcs  
         const unmatchedGoldenArcs = [...goldenArcs];
         const unmatchedGeneratedArcs = [...generatedArcs];
 
-        console.log("\n--- ARC MATCHING ---");
         goldenArcs.forEach((goldenArc, index) => {
             const matchIndex = unmatchedGeneratedArcs.findIndex(ga =>
                 Math.abs(ga.centerX - goldenArc.centerX) < 0.01 &&
@@ -103,12 +86,9 @@ describe('CurveWall Algorithm', () => {
             );
 
             if (matchIndex >= 0) {
-                const match = unmatchedGeneratedArcs[matchIndex];
-                console.log(`✅ Golden Arc ${goldenArc.id}: center(${goldenArc.centerX},${goldenArc.centerY}) ${goldenArc.startAngle}°→${goldenArc.endAngle}° matches Generated Arc ${match.id}`);
                 unmatchedGeneratedArcs.splice(matchIndex, 1);
                 unmatchedGoldenArcs.splice(unmatchedGoldenArcs.findIndex(a => a.id === goldenArc.id), 1);
             } else {
-                console.log(`❌ Golden Arc ${goldenArc.id}: center(${goldenArc.centerX},${goldenArc.centerY}) ${goldenArc.startAngle}°→${goldenArc.endAngle}° - NO MATCH FOUND`);
                 // Find closest generated arc for debugging
                 const closest = generatedArcs.reduce((best, ga) => {
                     const dist = Math.sqrt(
@@ -117,18 +97,8 @@ describe('CurveWall Algorithm', () => {
                     );
                     return (!best || dist < best.distance) ? { arc: ga, distance: dist } : best;
                 }, null);
-                if (closest) {
-                    console.log(`   Closest: Generated Arc ${closest.arc.id}: center(${closest.arc.centerX},${closest.arc.centerY}) ${closest.arc.startDeg}°→${closest.arc.endDeg}°`);
-                }
             }
         });
-
-        if (unmatchedGeneratedArcs.length > 0) {
-            console.log("❌ Extra generated arcs:");
-            unmatchedGeneratedArcs.forEach(arc => {
-                console.log(`   Generated Arc ${arc.id}: center(${arc.centerX},${arc.centerY}) ${arc.startDeg}°→${arc.endDeg}°`);
-            });
-        }
 
         // Final assertions - all segments must match exactly
         expect(unmatchedGoldenLines.length).toBe(0);
