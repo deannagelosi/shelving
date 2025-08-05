@@ -585,9 +585,27 @@ class ExportUI {
         // create list of solutions to select
         if (!htmlRefs.left) return;
 
-        // clear the list
+        // clear the list and set up scrollable container structure
         htmlRefs.left.list.html('');
+        htmlRefs.left.list.addClass('sidebar-with-controls');
         this.savedAnnealElements = [];
+
+        // Create scrollable container for solutions
+        this.html.leftScrollContainer = createDiv()
+            .addClass('sidebar-scroll')
+            .parent(htmlRefs.left.list);
+
+        // Add the solutions label
+        createSpan('Solutions')
+            .addClass('settings-label')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
+
+        // Create the solutions container
+        this.html.solutionsContainer = createDiv()
+            .addClass('solutions-container')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
 
         // create the list
         for (let i = 0; i < appState.savedAnneals.length; i++) {
@@ -595,7 +613,7 @@ class ExportUI {
             if (i === appState.currentViewedAnnealIndex) {
                 savedAnnealItem.addClass('highlighted');
             }
-            savedAnnealItem.parent(htmlRefs.left.list);
+            savedAnnealItem.parent(this.html.solutionsContainer);
 
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
