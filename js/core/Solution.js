@@ -747,6 +747,8 @@ class Solution {
             perimeterHeight: this.perimeterHeight,
             // Wall generation parameters
             wallAlgorithm: this.wallAlgorithm,
+            fabricationType: this.fabricationType,
+            cornerRadius: this.cornerRadius,
             curveRadius: this.curveRadius,
             maxBends: this.maxBends
         };
@@ -779,6 +781,10 @@ class Solution {
         if (solutionData.clusterLimit !== undefined) {
             solution.clusterLimit = solutionData.clusterLimit;
         }
+
+        // set fabrication type and related properties
+        solution.fabricationType = solutionData.fabricationType;
+        solution.cornerRadius = solutionData.cornerRadius;
 
         // Check if layout data exists (from worker) or needs to be recalculated (from import)
         if (solutionData.layout && solutionData.score !== undefined && solutionData.valid !== undefined) {

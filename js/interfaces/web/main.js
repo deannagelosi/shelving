@@ -24,9 +24,8 @@ const ScreenState = {
 };
 
 //== flags
-const fastReloadDev = true; // loads a test file on start
-const fastReloadScreen = ScreenState.EXPORT;
-const loadPreview = true; // auto previews a solution from the test file
+const fastReloadDev = true; // loads a test file and solution on start
+const fastReloadScreen = ScreenState.DESIGN;
 const testFileName = "curve_test_both.json";
 const testSolutionName = "solution-3";
 
@@ -110,19 +109,17 @@ function loadTestData() {
             changeScreen(fastReloadScreen);
 
             // Use setTimeout to ensure the UI has finished its render cycle
-            if (loadPreview) {
-                setTimeout(() => {
-                    let uiClass = (fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
-                    if (uiClass) {
-                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
-                        if (targetSolutionIndex !== -1) {
-                            uiClass.viewSavedAnneal(targetSolutionIndex);
-                        } else {
-                            console.error(`Fast Reload Error: Could not find '${testSolutionName}' in the loaded data.`);
-                        }
+            setTimeout(() => {
+                let uiClass = (fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
+                if (uiClass) {
+                    const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
+                    if (targetSolutionIndex !== -1) {
+                        uiClass.viewSavedAnneal(targetSolutionIndex);
+                    } else {
+                        console.error(`Fast Reload Error: Could not find '${testSolutionName}' in the loaded data.`);
                     }
-                }, 0);
-            }
+                }
+            }, 0);
         })
         .catch(error => console.error('Error loading test data:', error));
 }
@@ -153,8 +150,8 @@ function keyPressed() {
             }
         }
         else if (key === 'g' && appState.display.devMode) {
-            const wallMode = designUI.html.wallModeSelect ? designUI.html.wallModeSelect.value() : 'cellular';
-            if (wallMode === 'curve') {
+            const fabricationType = appState.generationConfig.fabricationType;
+            if (fabricationType === 'curved') {
                 appState.display.curveStep++;
             } else {
                 appState.display.numGrow++;

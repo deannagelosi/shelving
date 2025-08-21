@@ -34,6 +34,11 @@ class DesignUI {
             }
         });
 
+        // listen for fabrication type changes to update UI
+        appEvents.on('fabricationTypeChanged', ({ fabricationType }) => {
+            this.updateFabricationTypeUI(fabricationType);
+        });
+
         //== movement debouncing
         this.moveDebounceTimer = null;
         this.moveDebounceDelay = 150; // milliseconds
@@ -282,6 +287,24 @@ class DesignUI {
         // reset the canvas
         clear();
         background(255);
+
+        // Sync UI with appState (single source of truth)
+        if (this.html.fabricationTypeSelect) {
+            const fabricationType = appState.generationConfig.fabricationType;
+            console.log(`[DesignUI.show] Setting dropdown to appState value: ${fabricationType}`);
+            
+            // Force update using both p5 method and direct DOM access
+            this.html.fabricationTypeSelect.selected(fabricationType);
+            
+            // Double-check and force if needed using underlying element
+            if (this.html.fabricationTypeSelect.value() !== fabricationType) {
+                console.log(`[DesignUI.show] Dropdown didn't update, forcing via DOM`);
+                this.html.fabricationTypeSelect.elt.value = fabricationType;
+            }
+            
+            // Update UI visibility to match current fabrication type
+            this.updateFabricationTypeUI(fabricationType);
+        }
 
         // start with all shapes enabled in the select list
         appState.shapes.forEach((shape, index) => {
@@ -610,14 +633,21 @@ class DesignUI {
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
 
-            // get wall generation parameters from UI to appState
-            const wallMode = this.html.wallModeSelect ? this.html.wallModeSelect.value() : 'cellular';
-            const cellularAlgorithm = this.html.cellularAlgorithmSelect ? this.html.cellularAlgorithmSelect.value() : 'organic';
+            // get fabrication and wall generation parameters from UI to appState
+            const fabricationType = this.html.fabricationTypeSelect ? this.html.fabricationTypeSelect.value() : 'boards';
+            const wallAlgorithm = this.html.wallAlgorithmSelect ? this.html.wallAlgorithmSelect.value() : 'cellular';
 
-            if (wallMode === 'cellular') {
-                appState.generationConfig.wallAlgorithm = `cellular-${cellularAlgorithm}`;
+            appState.setFabricationType(fabricationType);
+            
+            if (fabricationType === 'boards' || fabricationType === 'cubbies') {
+                appState.generationConfig.wallAlgorithm = wallAlgorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
             } else {
-                appState.generationConfig.wallAlgorithm = wallMode;
+                appState.generationConfig.wallAlgorithm = 'curve';
+            }
+
+            // Update corner radius for cubbies
+            if (fabricationType === 'cubbies' && this.html.cornerRadiusInput) {
+                appState.generationConfig.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
             }
 
             // Update curve parameters if they exist
@@ -640,8 +670,10 @@ class DesignUI {
                     useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
                     perimeterWidth: appState.generationConfig.perimeterWidth,
                     perimeterHeight: appState.generationConfig.perimeterHeight,
-                    // Walls
+                    // Fabrication and Walls
+                    fabricationType: appState.generationConfig.fabricationType,
                     wallAlgorithm: appState.generationConfig.wallAlgorithm,
+                    cornerRadius: appState.generationConfig.cornerRadius,
                     curveRadius: appState.generationConfig.curveRadius,
                     maxBends: appState.generationConfig.maxBends
                 }
@@ -1132,54 +1164,64 @@ class DesignUI {
     }
 
     createWallGenerationControls() {
-        // create wall generation mode controls in the Results panel
+        // create fabrication type controls in the Results panel
 
-        // Preserve previous selections if they exist
-        const previousWallMode = this.html.wallModeSelect ? this.html.wallModeSelect.value() : 'cellular';
-        const previousCellularAlgorithm = this.html.cellularAlgorithmSelect ? this.html.cellularAlgorithmSelect.value() : 'organic';
-
-        // Master wall generation mode dropdown
+        // Master fabrication type dropdown
         const modeGroup = createDiv()
             .addClass('settings-group')
             .parent(this.html.controlsContainer);
-        createSpan('Wall Generation Mode')
+        createSpan('Fabrication Type')
             .addClass('settings-label')
             .parent(modeGroup);
 
-        this.html.wallModeSelect = createSelect()
+        this.html.fabricationTypeSelect = createSelect()
             .addClass('settings-select')
             .parent(modeGroup)
-            .changed(() => this.handleWallModeChange());
-        this.html.wallModeSelect.option('Cellular Automata', 'cellular');
-        this.html.wallModeSelect.option('Curve', 'curve');
-        this.html.wallModeSelect.selected(previousWallMode);
+            .changed(() => this.handleFabricationTypeChange());
+        this.html.fabricationTypeSelect.option('Boards (Laser Cut)', 'boards');
+        this.html.fabricationTypeSelect.option('Cubbies (3D Print)', 'cubbies');
+        this.html.fabricationTypeSelect.option('Curved Wall', 'curved');
+        // Set to appState value or default to ensure it has a valid value
+        this.html.fabricationTypeSelect.selected(appState.generationConfig.fabricationType || 'boards');
 
-        // Cellular Automata sub-options
-        this.html.cellularGroup = createDiv()
+        // Wall Algorithm sub-options (for Boards and Cubbies)
+        this.html.algorithmGroup = createDiv()
             .addClass('settings-group')
             .parent(this.html.controlsContainer);
-        if (previousWallMode !== 'cellular') {
-            this.html.cellularGroup.addClass('hidden');
-        }
-        createSpan('Algorithm')
+        createSpan('Wall Algorithm')
             .addClass('settings-label')
-            .parent(this.html.cellularGroup);
+            .parent(this.html.algorithmGroup);
 
-        this.html.cellularAlgorithmSelect = createSelect()
+        this.html.wallAlgorithmSelect = createSelect()
             .addClass('settings-select')
-            .parent(this.html.cellularGroup)
-            .changed(() => this.handleCellularAlgorithmChange());
-        this.html.cellularAlgorithmSelect.option('Organic', 'organic');
-        this.html.cellularAlgorithmSelect.option('Rectilinear', 'rectilinear');
-        this.html.cellularAlgorithmSelect.selected(previousCellularAlgorithm);
+            .parent(this.html.algorithmGroup)
+            .changed(() => this.handleWallAlgorithmChange());
+        this.html.wallAlgorithmSelect.option('Cellular (Organic)', 'cellular');
+        this.html.wallAlgorithmSelect.option('Rectilinear (Grid)', 'rectilinear');
+        this.html.wallAlgorithmSelect.selected('cellular'); // Default to cellular
+
+        // Corner Radius for Cubbies
+        this.html.cubbyGroup = createDiv()
+            .addClass('settings-group hidden') // Start hidden
+            .parent(this.html.controlsContainer);
+        const cornerRadiusWrapper = createDiv()
+            .addClass('settings-group')
+            .parent(this.html.cubbyGroup);
+        createSpan('Corner Radius')
+            .addClass('settings-label')
+            .parent(cornerRadiusWrapper);
+        this.html.cornerRadiusInput = createInput('0.5', 'number')
+            .addClass('settings-input')
+            .parent(cornerRadiusWrapper)
+            .attribute('min', '0')
+            .attribute('max', '1.0')
+            .attribute('step', '0.1')
+            .input(() => this.handleCornerRadiusChange());
 
         // Curve sub-options
         this.html.curveGroup = createDiv()
-            .addClass('settings-group')
+            .addClass('settings-group hidden') // Start hidden
             .parent(this.html.controlsContainer);
-        if (previousWallMode !== 'curve') {
-            this.html.curveGroup.addClass('hidden');
-        }
 
         // Wrapper for Radius
         const radiusWrapper = createDiv()
@@ -1221,29 +1263,58 @@ class DesignUI {
         // No separator needed since we have separate containers now
     }
 
-    handleWallModeChange() {
-        const selectedMode = this.html.wallModeSelect.value();
+    handleFabricationTypeChange() {
+        const selectedType = this.html.fabricationTypeSelect.value();
 
-        console.log(`[UI] Wall mode changed to: ${selectedMode}`);
+        // Update appState using centralized method
+        appState.setFabricationType(selectedType);
 
-        if (selectedMode === 'cellular') {
-            this.html.cellularGroup.removeClass('hidden');
-            this.html.curveGroup.addClass('hidden');
-        } else if (selectedMode === 'curve') {
-            this.html.cellularGroup.addClass('hidden');
-            this.html.curveGroup.removeClass('hidden');
-        }
-
-        // Also update the wall generation mode on the solution object
+        // If there's a current solution, update its fabrication type
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             const solution = appState.currentAnneal.finalSolution;
-            if (selectedMode === 'cellular') {
-                const cellularAlgorithm = this.html.cellularAlgorithmSelect.value();
-                solution.wallAlgorithm = `cellular-${cellularAlgorithm}`;
+            solution.fabricationType = selectedType;
+            
+            if (selectedType === 'boards' || selectedType === 'cubbies') {
+                const algorithm = this.html.wallAlgorithmSelect.value();
+                solution.wallAlgorithm = algorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
             } else {
-                solution.wallAlgorithm = selectedMode;
+                solution.wallAlgorithm = 'curve';
             }
-            this.displayResult(); // Redraw with the new wall type
+            
+            if (selectedType === 'cubbies') {
+                solution.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
+            }
+            
+            this.displayResult(); // Redraw with the new fabrication type
+        }
+    }
+
+    updateFabricationTypeUI(fabricationType) {
+        // Update dropdown to match state (in case changed from elsewhere)
+        if (this.html.fabricationTypeSelect) {
+            this.html.fabricationTypeSelect.selected(fabricationType);
+            
+            // Force update if p5.js didn't update properly
+            if (this.html.fabricationTypeSelect.value() !== fabricationType) {
+                this.html.fabricationTypeSelect.elt.value = fabricationType;
+            }
+        }
+
+        // Show/hide appropriate sub-options based on fabrication type
+        if (fabricationType === 'boards' || fabricationType === 'cubbies') {
+            this.html.algorithmGroup.removeClass('hidden');
+            this.html.curveGroup.addClass('hidden');
+            
+            // Show corner radius only for cubbies
+            if (fabricationType === 'cubbies') {
+                this.html.cubbyGroup.removeClass('hidden');
+            } else {
+                this.html.cubbyGroup.addClass('hidden');
+            }
+        } else if (fabricationType === 'curved') {
+            this.html.algorithmGroup.addClass('hidden');
+            this.html.cubbyGroup.addClass('hidden');
+            this.html.curveGroup.removeClass('hidden');
         }
     }
 
@@ -1263,21 +1334,31 @@ class DesignUI {
         this.displayResult();
     }
 
-    handleCellularAlgorithmChange() {
+    handleWallAlgorithmChange() {
         // Only regenerate if we have a current solution
         if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
             return;
         }
 
-        const selectedAlgorithm = this.html.cellularAlgorithmSelect.value();
+        console.log('[UI] Wall algorithm changed');
+
         const solution = appState.currentAnneal.finalSolution;
+        const selectedAlgorithm = this.html.wallAlgorithmSelect.value();
+        const fabricationType = this.html.fabricationTypeSelect.value();
+
+        // Update the wall algorithm
+        solution.wallAlgorithm = selectedAlgorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
+        solution.fabricationType = fabricationType;
 
         // Create new cellular instance with the selected algorithm
-        const cellular = new Cellular(solution);
+        const cellular = new Cellular(solution, false, 1);
 
-        if (selectedAlgorithm === 'organic') {
+        // Run appropriate growth algorithm
+        console.log(`Regenerating walls with ${selectedAlgorithm} algorithm`);
+
+        if (selectedAlgorithm === 'cellular') {
             cellular.growCells();
-        } else if (selectedAlgorithm === 'rectilinear') {
+        } else {
             cellular.growRectilinear();
         }
 
@@ -1289,11 +1370,33 @@ class DesignUI {
         };
         appState.currCellular = cellular;
 
-        // also update the wall algorithm on the solution object
-        solution.wallAlgorithm = `cellular-${selectedAlgorithm}`;
-
-        // Redraw the canvas with new walls without triggering a full UI update
+        // Redraw with new cellular walls
         this.displayResult();
+    }
+
+    handleCornerRadiusChange() {
+        // Only update if we have a current solution and are in cubbies mode
+        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
+            return;
+        }
+
+        const fabricationType = this.html.fabricationTypeSelect.value();
+        if (fabricationType !== 'cubbies') {
+            return;
+        }
+
+        const solution = appState.currentAnneal.finalSolution;
+        solution.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
+
+        console.log(`[UI] Corner radius changed to: ${solution.cornerRadius}`);
+
+        // Redraw with new corner radius
+        this.displayResult();
+    }
+
+    handleCellularAlgorithmChange() {
+        // Delegate to the wall algorithm handler
+        this.handleWallAlgorithmChange();
     }
 
     viewSavedAnneal(index) {
@@ -1317,19 +1420,36 @@ class DesignUI {
             enabledShapes: [...savedAnneal.enabledShapes] // shallow copy is fine for boolean array
         };
 
-        // update wall generation UI to match loaded solution
+        // update fabrication UI to match loaded solution
         const solution = appState.currentAnneal.finalSolution;
-        if (solution.wallAlgorithm) {
-            if (solution.wallAlgorithm.startsWith('cellular')) {
-                const cellularType = solution.wallAlgorithm.split('-')[1] || 'organic';
-                this.html.wallModeSelect.selected('cellular');
-                this.html.cellularAlgorithmSelect.selected(cellularType);
-                this.html.cellularGroup.removeClass('hidden');
-                this.html.curveGroup.addClass('hidden');
-            } else if (solution.wallAlgorithm === 'curve') {
-                this.html.wallModeSelect.selected('curve');
-                this.html.cellularGroup.addClass('hidden');
-                this.html.curveGroup.removeClass('hidden');
+        
+        // Ensure solution has fabricationType set (for backward compatibility with old saves)
+        if (!solution.fabricationType) {
+            // Infer from wall algorithm for old saves
+            if (solution.wallAlgorithm === 'curve') {
+                solution.fabricationType = 'curved';
+            } else {
+                solution.fabricationType = 'boards'; // default for old cellular saves
+            }
+        }
+        
+        if (this.html.fabricationTypeSelect) {
+            // Use centralized method to update appState and trigger events
+            // This will set appState.generationConfig.fabricationType and emit the event
+            appState.loadSolutionConfig(solution);
+            
+            // Set solution-specific UI values (the general UI visibility is handled by the event)
+            if (solution.fabricationType === 'boards' || solution.fabricationType === 'cubbies') {
+                // Set wall algorithm from solution
+                if (this.html.wallAlgorithmSelect && solution.wallAlgorithm) {
+                    const isRectilinear = solution.wallAlgorithm.includes('rectilinear');
+                    this.html.wallAlgorithmSelect.selected(isRectilinear ? 'rectilinear' : 'cellular');
+                }
+                
+                // Set corner radius for cubbies
+                if (solution.fabricationType === 'cubbies' && this.html.cornerRadiusInput && solution.cornerRadius !== undefined) {
+                    this.html.cornerRadiusInput.value(solution.cornerRadius.toString());
+                }
             }
         }
 

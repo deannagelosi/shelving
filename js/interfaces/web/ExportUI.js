@@ -41,6 +41,11 @@ class ExportUI {
             this.showingLayout = true;
             this.handleShow();
         });
+
+        // listen for material type changes to update UI
+        appEvents.on('materialTypeChanged', ({ materialType }) => {
+            this.updateMaterialTypeUI(materialType);
+        });
     }
 
     computeState() {
@@ -92,6 +97,7 @@ class ExportUI {
             .changed(() => this.handleMaterialTypeChange());
         this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
         this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
+        this.html.materialTypeSelect.option('Clay/Plastic (3D Printer)', 'clay-plastic-3d');
 
         // Number of Sheets (hidden - automatically managed by export system)
         this.html.numSheetsInput = createInput('1')
@@ -250,9 +256,13 @@ class ExportUI {
         this.html.materialTypeGroup.removeClass('hidden');
         this.html.buttonList.removeClass('hidden');
 
-        // initialize default material type selection and build UI
-        this.html.materialTypeSelect.selected('acrylic-laser');
-        this.handleMaterialTypeChange(); // calls prepareExportData()
+        // initialize material type selection from appState and build UI
+        const currentMaterialType = appState.generationConfig.materialType;
+        this.html.materialTypeSelect.selected(currentMaterialType);
+        
+        // build UI for current material type (setup phase, not triggered by user change)
+        this.buildUIForMaterial(currentMaterialType);
+        this.displaySettings();
 
         // reset the canvas
         clear();
@@ -332,10 +342,18 @@ class ExportUI {
     handleMaterialTypeChange() {
         const selectedMaterial = this.html.materialTypeSelect.value();
 
-        console.log(`[ExportUI] Material type changed to: ${selectedMaterial}`);
+        // Update appState using centralized method
+        appState.setMaterialType(selectedMaterial);
+    }
+
+    updateMaterialTypeUI(materialType) {
+        // Update dropdown to match state (in case changed from elsewhere)
+        if (this.html.materialTypeSelect) {
+            this.html.materialTypeSelect.selected(materialType);
+        }
 
         // Build UI for the selected material
-        this.buildUIForMaterial(selectedMaterial);
+        this.buildUIForMaterial(materialType);
 
         // Display the new settings in the sidebar
         this.displaySettings();
@@ -527,7 +545,11 @@ class ExportUI {
             alert("Invalid input for one or more fields");
             return;
         }
-        // get laser config
+        
+        // get solution for accessing fabrication type and other properties
+        const solution = appState.currentAnneal.finalSolution;
+        
+        // get export config (includes all parameters for different fabrication types)
         const config = {
             caseDepth,
             sheetThickness: thickness,
@@ -535,7 +557,11 @@ class ExportUI {
             sheetHeight,
             numSheets,
             numPinSlots,
-            kerf
+            kerf,
+            // 3D printing specific
+            cornerRadius: solution.cornerRadius || 0.5,
+            wallThickness: elementMap['wallThickness'] ? parseFloat(elementMap['wallThickness'].value()) : 0.25,
+            shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0
         };
         // get cellular layout data (case lines)
         const cellData = cellularInstance;
@@ -548,26 +574,44 @@ class ExportUI {
             squareSize: layoutProps.squareSize
         };
 
-        // create new export with material type
-        this.currExport = new Export(cellData, spacing, config, materialType);
-        this.currExport.makeBoards();
+        // Export screen is independent - determine exporter type based on selected material, not solution's fabricationType
+        // This allows viewing any solution in any export format
+        const exporterType = this.getExporterTypeForMaterial(materialType);
+        
+        // Create appropriate exporter based on material type selection
+        const exportConfig = {
+            materialType: materialType,
+            spacing: spacing,
+            ...config // spread all config properties
+        };
 
-        // log the number of boards created
-        console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
+        if (exporterType === 'cubbies') {
+            this.currExport = new CubbyExporter(cellData, exportConfig);
+            this.currExport.detectCubbies();
+            console.log(`📊 Export: ${this.currExport.cubbies.length} cubbies detected for solution "${appState.currentAnneal.title}"`);
+        } else {
+            // Use boards exporter for laser cut materials
+            this.currExport = new BoardExporter(cellData, exportConfig);
+            this.currExport.generateBoards();
+            console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
 
-        // Check if any board is longer than the sheet width (accounting for gaps)
-        const longestBoard = this.currExport.getLongestBoard();
-        if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidth) {
-            this.showBoardTooLongError(longestBoard, sheetWidth);
-            updateButton(this.html.showButton, false);
-            updateButton(this.html.downloadDXFButton, false);
-            updateButton(this.html.downloadCaseButton, false);
-            return;
+            // Check if any board is longer than the sheet width (accounting for gaps)
+            const longestBoard = this.currExport.getLongestBoard();
+            if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidth) {
+                this.showBoardTooLongError(longestBoard, sheetWidth);
+                updateButton(this.html.showButton, false);
+                updateButton(this.html.downloadDXFButton, false);
+                updateButton(this.html.downloadCaseButton, false);
+                return;
+            }
         }
 
-        this.currExport.prepLayout();
+        // Setup layout if the exporter supports it
+        if (typeof this.currExport.setupSheets === 'function') {
+            this.currExport.setupSheets();
+        }
 
-        // preview the layout or chase
+        // preview the layout or case
         if (this.showingLayout) {
             this.currExport.previewLayout();
         } else {
@@ -649,6 +693,22 @@ class ExportUI {
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');
             }
+        }
+    }
+
+    getExporterTypeForMaterial(materialType) {
+        // Determine which exporter to use based on selected material type
+        // Export screen is independent of design screen's fabrication type
+        switch (materialType) {
+            case 'plywood-laser':
+            case 'acrylic-laser':
+                return 'boards';  // Use BoardExporter for laser cut materials
+            
+            case 'clay-plastic-3d':
+                return 'cubbies'; // Use CubbyExporter for 3D printed materials
+            
+            default:
+                return 'boards';
         }
     }
 }

@@ -9,7 +9,7 @@ class SolutionWorker {
         this.Cellular = dependencies.Cellular;
         this.CurveWall = dependencies.CurveWall;
         this.Solution = dependencies.Solution;
-        this.Export = dependencies.Export;
+        this.BoardExporter = dependencies.BoardExporter;
         this.Board = dependencies.Board;
 
         this.mode = null; // 'single' or 'bulk'
@@ -383,11 +383,12 @@ class SolutionWorker {
         const spacing = {
             buffer: anneal.buffer,
             xPadding: anneal.xPadding,
-            yPadding: anneal.yPadding
+            yPadding: anneal.yPadding,
+            squareSize: 25 // Default squareSize for worker calculations
         };
 
         // Calculate board counts, lengths, and render data for optimized solution
-        const optimizedExport = new this.Export(cellular, spacing, exportConfig);
+        const optimizedExport = new this.BoardExporter(cellular, exportConfig, spacing);
         optimizedExport.makeBoards();
         statistics.boardCountOptimized = optimizedExport.boards.length;
         statistics.totalBoardLengthOptimized = optimizedExport.getTotalBoardLength();
@@ -504,12 +505,12 @@ function initializeBrowserWorker() {
         '../core/Cellular.js',
         '../core/CurveWall.js',
         '../core/Anneal.js',
-        '../core/Export.js',
+        '../core/BoardExporter.js',
         '../core/Board.js'
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, BoardExporter, Board });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -539,7 +540,7 @@ function initializeNodeWorker() {
     const Anneal = require('../core/Anneal.js');
     const Cellular = require('../core/Cellular.js');
     const CurveWall = require('../core/CurveWall.js');
-    const Export = require('../core/Export.js');
+    const BoardExporter = require('../core/BoardExporter.js');
     const Board = require('../core/Board.js');
 
     // Make dependencies available in global scope
@@ -550,7 +551,7 @@ function initializeNodeWorker() {
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, CurveWall, Solution, BoardExporter, Board });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;
