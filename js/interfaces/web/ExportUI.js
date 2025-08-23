@@ -550,6 +550,13 @@ class ExportUI {
         const solution = appState.currentAnneal.finalSolution;
         
         // get export config (includes all parameters for different fabrication types)
+        const cubbyCurveRadius = elementMap['cubbyCurveRadius'] ? parseFloat(elementMap['cubbyCurveRadius'].value()) : 0.5;
+        
+        // Update appState curve radius for clay-plastic-3d materials (for consistent preview)
+        if (materialType === 'clay-plastic-3d') {
+            appState.generationConfig.cubbyCurveRadius = cubbyCurveRadius;
+        }
+        
         const config = {
             caseDepth,
             sheetThickness: thickness,
@@ -559,7 +566,7 @@ class ExportUI {
             numPinSlots,
             kerf,
             // 3D printing specific
-            cornerRadius: solution.cornerRadius || 0.5,
+            cubbyCurveRadius: cubbyCurveRadius,
             wallThickness: elementMap['wallThickness'] ? parseFloat(elementMap['wallThickness'].value()) : 0.25,
             shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0
         };

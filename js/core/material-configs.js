@@ -426,6 +426,15 @@ const MATERIAL_CONFIGS = {
                 validation: { min: 0.1, max: 1.0, step: 0.05 }
             },
             {
+                name: 'cubbyCurveRadius',
+                defaultValue: 0.5,
+                container: 'caseProps',
+                inputType: 'number',
+                label: 'Curve Radius',
+                cssClass: 'dimension-input',
+                validation: { min: 0, max: 1.0, step: 0.1 }
+            },
+            {
                 name: 'printBedWidth',
                 defaultValue: 12,
                 container: 'printBedDimensions',

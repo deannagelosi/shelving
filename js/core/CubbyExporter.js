@@ -15,7 +15,7 @@ class CubbyExporter {
         }
 
         // 3D printing specific configuration
-        this.cornerRadius = config.cornerRadius || 0.5;
+        this.cubbyCurveRadius = config.cubbyCurveRadius || 0.5;
         this.wallThickness = config.wallThickness || 0.25;
         this.shrinkFactor = config.shrinkFactor || 0;
         this.printBedWidth = config.printBedWidth || 12;
@@ -48,28 +48,25 @@ class CubbyExporter {
             const cubbyData = cubbyAreas[i];
             
             if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
-                const cubby = {
-                    id: cubbyData.shape_id,
-                    shapeId: cubbyData.shape_id,
-                    cells: cubbyData.visitedCells,
-                    area: cubbyData.cubbyArea,
-                    perimeter: [],
-                    corners: []
-                };
-
-                // Generate perimeter and corners for 3D printing
-                cubby.perimeter = this.extractPerimeterFromCells(cubby.cells);
-                cubby.corners = this.detectCorners(cubby.perimeter);
-
+                // Create a Cubby instance with all line data
+                const cubby = new Cubby(
+                    cubbyData.shape_id,
+                    cubbyData.visitedCells,
+                    this.wallThickness,
+                    this.cubbyCurveRadius
+                );
+                
+                // Generate all three line types (no perimeter detection needed)
+                cubby.generateCenterLines();
+                cubby.generateInteriorLines();
+                cubby.generateExteriorLines();
+                
                 this.cubbies.push(cubby);
             }
         }
 
         // Apply shrink factor if needed
         this.applyShrinkFactor();
-
-        // Apply corner softening
-        this.applySoftCorners();
 
         // TODO: Re-enable print bed validation later
         // const warnings = this.validatePrintBedDimensions();
@@ -89,98 +86,6 @@ class CubbyExporter {
     // Note: buildWallSet() and floodFill() methods removed - we now use Cellular.calculateAllCubbyAreas() 
     // which contains the proven implementation of these algorithms
 
-    extractPerimeterFromCells(cells) {
-        // Convert cubby cells to perimeter line segments
-        const edges = new Set();
-        
-        // For each cell, add its edges if they're on the perimeter
-        for (const cell of cells) {
-            const { x, y } = cell;
-            
-            // Check each edge of the cell
-            const neighbors = [
-                { x: x + 1, y: y, edge: `v-${x + 1}-${y}` }, // Right edge
-                { x: x - 1, y: y, edge: `v-${x}-${y}` },     // Left edge  
-                { x: x, y: y + 1, edge: `h-${x}-${y + 1}` }, // Top edge
-                { x: x, y: y - 1, edge: `h-${x}-${y}` }      // Bottom edge
-            ];
-            
-            for (const neighbor of neighbors) {
-                const neighborInCubby = cells.some(c => c.x === neighbor.x && c.y === neighbor.y);
-                if (!neighborInCubby) {
-                    // This edge is on the perimeter
-                    edges.add(neighbor.edge);
-                }
-            }
-        }
-        
-        return this.convertEdgesToLineSegments(edges);
-    }
-
-    convertEdgesToLineSegments(edges) {
-        // Convert edge set to line segments
-        const segments = [];
-        
-        for (const edge of edges) {
-            const [type, x, y] = edge.split('-');
-            const xNum = parseInt(x);
-            const yNum = parseInt(y);
-            
-            if (type === 'h') {
-                // Horizontal edge
-                segments.push({
-                    type: 'horizontal',
-                    x1: xNum, y1: yNum,
-                    x2: xNum + 1, y2: yNum
-                });
-            } else {
-                // Vertical edge
-                segments.push({
-                    type: 'vertical',
-                    x1: xNum, y1: yNum,
-                    x2: xNum, y2: yNum + 1
-                });
-            }
-        }
-        
-        return segments;
-    }
-
-    detectCorners(perimeter) {
-        // Find corners where line segments meet at angles
-        const corners = [];
-        
-        for (let i = 0; i < perimeter.length; i++) {
-            const current = perimeter[i];
-            
-            // Find segments that share an endpoint with current segment
-            for (let j = i + 1; j < perimeter.length; j++) {
-                const other = perimeter[j];
-                
-                // Check if segments share an endpoint
-                const sharedPoint = this.findSharedPoint(current, other);
-                if (sharedPoint && current.type !== other.type) {
-                    corners.push({
-                        x: sharedPoint.x,
-                        y: sharedPoint.y,
-                        segments: [current, other],
-                        angle: 90 // Assume 90-degree corners for now
-                    });
-                }
-            }
-        }
-        
-        return corners;
-    }
-
-    findSharedPoint(seg1, seg2) {
-        // Find if two segments share an endpoint
-        if (seg1.x1 === seg2.x1 && seg1.y1 === seg2.y1) return { x: seg1.x1, y: seg1.y1 };
-        if (seg1.x1 === seg2.x2 && seg1.y1 === seg2.y2) return { x: seg1.x1, y: seg1.y1 };
-        if (seg1.x2 === seg2.x1 && seg1.y2 === seg2.y1) return { x: seg1.x2, y: seg1.y2 };
-        if (seg1.x2 === seg2.x2 && seg1.y2 === seg2.y2) return { x: seg1.x2, y: seg1.y2 };
-        return null;
-    }
 
     applyShrinkFactor() {
         // Apply shrink factor to compensate for material shrinkage
@@ -199,181 +104,6 @@ class CubbyExporter {
         }
     }
 
-    applySoftCorners() {
-        // Apply corner softening using bezier curves
-        if (this.cornerRadius === 0) return;
-        
-        for (let cubby of this.cubbies) {
-            cubby.softPerimeter = this.createSoftPerimeter(cubby.perimeter, this.cornerRadius);
-        }
-    }
-
-    createSoftPerimeter(perimeter, radius) {
-        if (perimeter.length === 0 || radius === 0) {
-            return perimeter;
-        }
-        
-        // Create a smoothed perimeter using bezier curves at corners
-        const softSegments = [];
-        
-        // First, organize perimeter segments into a continuous path
-        const orderedSegments = this.orderPerimeterSegments(perimeter);
-        
-        for (let i = 0; i < orderedSegments.length; i++) {
-            const current = orderedSegments[i];
-            const next = orderedSegments[(i + 1) % orderedSegments.length];
-            
-            // Find the connection point between current and next segment
-            const connectionPoint = this.findConnectionPoint(current, next);
-            
-            if (connectionPoint && this.isRightAngleCorner(current, next)) {
-                // Apply corner rounding
-                const roundedCorner = this.createRoundedCorner(current, next, connectionPoint, radius);
-                softSegments.push(...roundedCorner);
-            } else {
-                // Keep original segment
-                softSegments.push({
-                    type: 'line',
-                    x1: current.x1, y1: current.y1,
-                    x2: current.x2, y2: current.y2
-                });
-            }
-        }
-        
-        return softSegments;
-    }
-
-    orderPerimeterSegments(segments) {
-        // Order perimeter segments to form a continuous path
-        if (segments.length === 0) return [];
-        
-        const ordered = [segments[0]];
-        const remaining = [...segments.slice(1)];
-        
-        while (remaining.length > 0) {
-            const last = ordered[ordered.length - 1];
-            const lastPoint = { x: last.x2, y: last.y2 };
-            
-            // Find next segment that connects to the last point
-            let nextIndex = -1;
-            for (let i = 0; i < remaining.length; i++) {
-                const seg = remaining[i];
-                if ((seg.x1 === lastPoint.x && seg.y1 === lastPoint.y) ||
-                    (seg.x2 === lastPoint.x && seg.y2 === lastPoint.y)) {
-                    nextIndex = i;
-                    break;
-                }
-            }
-            
-            if (nextIndex >= 0) {
-                let nextSegment = remaining.splice(nextIndex, 1)[0];
-                
-                // Flip segment if needed to maintain direction
-                if (nextSegment.x2 === lastPoint.x && nextSegment.y2 === lastPoint.y) {
-                    const temp = { x: nextSegment.x1, y: nextSegment.y1 };
-                    nextSegment.x1 = nextSegment.x2;
-                    nextSegment.y1 = nextSegment.y2;
-                    nextSegment.x2 = temp.x;
-                    nextSegment.y2 = temp.y;
-                }
-                
-                ordered.push(nextSegment);
-            } else {
-                // Can't connect remaining segments, add them as-is
-                ordered.push(...remaining);
-                break;
-            }
-        }
-        
-        return ordered;
-    }
-
-    findConnectionPoint(seg1, seg2) {
-        // Find where two segments connect
-        if (seg1.x2 === seg2.x1 && seg1.y2 === seg2.y1) {
-            return { x: seg1.x2, y: seg1.y2 };
-        }
-        if (seg1.x1 === seg2.x2 && seg1.y1 === seg2.y2) {
-            return { x: seg1.x1, y: seg1.y1 };
-        }
-        // Check other combinations
-        if (seg1.x1 === seg2.x1 && seg1.y1 === seg2.y1) {
-            return { x: seg1.x1, y: seg1.y1 };
-        }
-        if (seg1.x2 === seg2.x2 && seg1.y2 === seg2.y2) {
-            return { x: seg1.x2, y: seg1.y2 };
-        }
-        return null;
-    }
-
-    isRightAngleCorner(seg1, seg2) {
-        // Check if two segments form a right angle (90 degrees)
-        const dx1 = seg1.x2 - seg1.x1;
-        const dy1 = seg1.y2 - seg1.y1;
-        const dx2 = seg2.x2 - seg2.x1;
-        const dy2 = seg2.y2 - seg2.y1;
-        
-        // Vectors are perpendicular if dot product is 0
-        const dotProduct = dx1 * dx2 + dy1 * dy2;
-        return Math.abs(dotProduct) < 0.001; // Account for floating point precision
-    }
-
-    createRoundedCorner(seg1, seg2, corner, radius) {
-        // Create bezier curve to round a corner
-        const radiusInGrid = radius; // radius in grid units
-        
-        // Calculate direction vectors
-        const dir1 = this.normalizeVector({
-            x: seg1.x2 - seg1.x1,
-            y: seg1.y2 - seg1.y1
-        });
-        const dir2 = this.normalizeVector({
-            x: seg2.x2 - seg2.x1,
-            y: seg2.y2 - seg2.y1
-        });
-        
-        // Calculate start and end points of the curve
-        const curveStart = {
-            x: corner.x - dir1.x * radiusInGrid,
-            y: corner.y - dir1.y * radiusInGrid
-        };
-        const curveEnd = {
-            x: corner.x + dir2.x * radiusInGrid,
-            y: corner.y + dir2.y * radiusInGrid
-        };
-        
-        return [
-            // Line from seg1 start to curve start
-            {
-                type: 'line',
-                x1: seg1.x1, y1: seg1.y1,
-                x2: curveStart.x, y2: curveStart.y
-            },
-            // Bezier curve at corner
-            {
-                type: 'bezier',
-                x1: curveStart.x, y1: curveStart.y,
-                cp1x: corner.x, cp1y: corner.y,
-                cp2x: corner.x, cp2y: corner.y,
-                x2: curveEnd.x, y2: curveEnd.y
-            },
-            // Line from curve end to seg2 end
-            {
-                type: 'line',
-                x1: curveEnd.x, y1: curveEnd.y,
-                x2: seg2.x2, y2: seg2.y2
-            }
-        ];
-    }
-
-    normalizeVector(vector) {
-        const length = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
-        if (length === 0) return { x: 0, y: 0 };
-        return {
-            x: vector.x / length,
-            y: vector.y / length
-        };
-    }
 
     validatePrintBedDimensions() {
         // Check if cubbies fit within print bed dimensions
@@ -499,10 +229,14 @@ class CubbyExporter {
         
         console.log(`[CubbyExporter] Drawing ${this.cubbies.length} cubbies`);
         
+        // Use push/pop to isolate rendering state changes
+        push();
+        
         if (this.cubbies.length === 0) {
             fill('red');
             textAlign(CENTER, CENTER);
             text('No cubbies detected', width / 2, height / 2);
+            pop();
             return;
         }
         
@@ -511,7 +245,7 @@ class CubbyExporter {
         const padding = 50;
         const cubbySpacing = 100; // Space between cubbies
         
-        // Draw each cubby as an individual piece
+        // Draw each cubby as perimeter walls instead of cells
         const colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray'];
         
         for (let i = 0; i < this.cubbies.length; i++) {
@@ -528,23 +262,43 @@ class CubbyExporter {
             const bounds = this.getCubbyBounds(cubby);
             const scale = Math.min(80 / bounds.width, 80 / bounds.height); // Fit in 80px square
             
-            fill(color);
-            stroke('black');
-            strokeWeight(1);
+            // Draw perimeter walls instead of cells
+            stroke(color);
+            strokeWeight(2);
+            noFill();
             
-            // Draw cells relative to their bounds
-            for (const cell of cubby.cells) {
-                const relativeX = (cell.x - bounds.minX) * scale;
-                const relativeY = (cell.y - bounds.minY) * scale;
-                const screenX = offsetX + relativeX;
-                const screenY = offsetY + relativeY;
-                rect(screenX, screenY, scale, scale);
+            // Render all three line types for the cubby (all 1px with distinct colors)
+            // Exterior lines
+            stroke('#FF8C00');  // Bright Orange
+            strokeWeight(1);
+            if (cubby.exteriorLines && cubby.exteriorLines.length > 0) {
+                this.renderCubbyPerimeter(cubby.exteriorLines, bounds, offsetX, offsetY, scale);
+            }
+            
+            // Center lines
+            stroke('#333333');  // Dark Gray
+            strokeWeight(1);
+            if (cubby.centerLines && cubby.centerLines.length > 0) {
+                this.renderCubbyPerimeter(cubby.centerLines, bounds, offsetX, offsetY, scale);
+            }
+            
+            // Interior lines
+            stroke('#00CC66');  // Bright Green
+            strokeWeight(1);
+            if (cubby.interiorLines && cubby.interiorLines.length > 0) {
+                this.renderCubbyPerimeter(cubby.interiorLines, bounds, offsetX, offsetY, scale);
+            } else {
+                // Fallback: draw simple bounding box if no perimeter data
+                const rectX = offsetX;
+                const rectY = offsetY;
+                const rectW = bounds.width * scale;
+                const rectH = bounds.height * scale;
+                rect(rectX, rectY, rectW, rectH);
             }
             
             // Label cubby
-            fill('white');
-            stroke('black');
-            strokeWeight(1);
+            fill(color);
+            noStroke();
             textAlign(CENTER, CENTER);
             textSize(12);
             const labelX = offsetX + (bounds.width * scale) / 2;
@@ -557,6 +311,8 @@ class CubbyExporter {
         textAlign(LEFT, TOP);
         textSize(14);
         text(`Detected ${this.cubbies.length} cubbies`, 10, 10);
+        
+        pop(); // Restore original rendering state
     }
 
     previewCase() {
@@ -691,6 +447,33 @@ class CubbyExporter {
         }
         
         return points;
+    }
+
+    renderCubbyPerimeter(perimeter, bounds, offsetX, offsetY, scale) {
+        // Render cubby perimeter with Y-flip to match CubbyRenderer coordinate system
+        for (const segment of perimeter) {
+            if (segment.type === 'bezier') {
+                // Render bezier curve for rounded corners - flip Y coordinates
+                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
+                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
+                const cp1x = offsetX + (segment.cp1x - bounds.minX) * scale;
+                const cp1y = offsetY + (bounds.maxY - segment.cp1y) * scale;  // Y-flip
+                const cp2x = offsetX + (segment.cp2x - bounds.minX) * scale;
+                const cp2y = offsetY + (bounds.maxY - segment.cp2y) * scale;  // Y-flip
+                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
+                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
+                
+                bezier(x1, y1, cp1x, cp1y, cp2x, cp2y, x2, y2);
+            } else {
+                // Render regular line segment - flip Y coordinates
+                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
+                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
+                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
+                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
+                
+                line(x1, y1, x2, y2);
+            }
+        }
     }
 
     getCubbyBounds(cubby) {

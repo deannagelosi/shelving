@@ -3,7 +3,7 @@ class DesignUI {
         //== state variables
         this.savedAnnealElements = [];
 
-        // Debug flag for curve wall testing - set to true to use golden path test data
+        // Debug flag for bent wall testing - set to true to use golden path test data
         this.useGoldenPathDebugData = false;
         // dom elements
         this.html = {};
@@ -13,7 +13,8 @@ class DesignUI {
         //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
         this.cellularRenderer = new CellularRenderer();
-        this.curveWallRenderer = new CurveWallRenderer();
+        this.bendWallRenderer = new BendWallRenderer();
+        this.cubbyRenderer = new CubbyRenderer();
         this.goldenPathData = null;
 
         //== web worker setup
@@ -473,7 +474,7 @@ class DesignUI {
         };
         const wallConfig = {
             algorithm: currentSolution.wallAlgorithm,
-            curveRadius: currentSolution.curveRadius,
+            bendRadius: currentSolution.bendRadius,
             maxBends: currentSolution.maxBends
         };
 
@@ -642,17 +643,17 @@ class DesignUI {
             if (fabricationType === 'boards' || fabricationType === 'cubbies') {
                 appState.generationConfig.wallAlgorithm = wallAlgorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
             } else {
-                appState.generationConfig.wallAlgorithm = 'curve';
+                appState.generationConfig.wallAlgorithm = 'bend';
             }
 
-            // Update corner radius for cubbies
-            if (fabricationType === 'cubbies' && this.html.cornerRadiusInput) {
-                appState.generationConfig.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
+            // Update curve radius for cubbies
+            if (fabricationType === 'cubbies' && this.html.cubbyCurveRadiusInput) {
+                appState.generationConfig.cubbyCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
             }
 
-            // Update curve parameters if they exist
-            if (this.html.curveRadiusInput) {
-                appState.generationConfig.curveRadius = parseFloat(this.html.curveRadiusInput.value());
+            // Update bend parameters if they exist
+            if (this.html.bendRadiusInput) {
+                appState.generationConfig.bendRadius = parseFloat(this.html.bendRadiusInput.value());
             }
             if (this.html.maxBendsInput) {
                 appState.generationConfig.maxBends = parseInt(this.html.maxBendsInput.value());
@@ -673,8 +674,8 @@ class DesignUI {
                     // Fabrication and Walls
                     fabricationType: appState.generationConfig.fabricationType,
                     wallAlgorithm: appState.generationConfig.wallAlgorithm,
-                    cornerRadius: appState.generationConfig.cornerRadius,
-                    curveRadius: appState.generationConfig.curveRadius,
+                    cubbyCurveRadius: appState.generationConfig.cubbyCurveRadius,
+                    wallBendRadius: appState.generationConfig.bendRadius,
                     maxBends: appState.generationConfig.maxBends
                 }
             });
@@ -795,8 +796,9 @@ class DesignUI {
             };
 
             let wallRenderers = {
-                curveWallRenderer: this.curveWallRenderer,
-                cellularRenderer: this.cellularRenderer
+                bendWallRenderer: this.bendWallRenderer,
+                cellularRenderer: this.cellularRenderer,
+                cubbyRenderer: this.cubbyRenderer
             };
 
             let wallRenderData = {
@@ -1180,7 +1182,7 @@ class DesignUI {
             .changed(() => this.handleFabricationTypeChange());
         this.html.fabricationTypeSelect.option('Boards (Laser Cut)', 'boards');
         this.html.fabricationTypeSelect.option('Cubbies (3D Print)', 'cubbies');
-        this.html.fabricationTypeSelect.option('Curved Wall', 'curved');
+        this.html.fabricationTypeSelect.option('Bent Wall', 'bent');
         // Set to appState value or default to ensure it has a valid value
         this.html.fabricationTypeSelect.selected(appState.generationConfig.fabricationType || 'boards');
 
@@ -1204,19 +1206,19 @@ class DesignUI {
         this.html.cubbyGroup = createDiv()
             .addClass('settings-group hidden') // Start hidden
             .parent(this.html.controlsContainer);
-        const cornerRadiusWrapper = createDiv()
+        const cubbyCurveRadiusWrapper = createDiv()
             .addClass('settings-group')
             .parent(this.html.cubbyGroup);
-        createSpan('Corner Radius')
+        createSpan('Curve Radius')
             .addClass('settings-label')
-            .parent(cornerRadiusWrapper);
-        this.html.cornerRadiusInput = createInput('0.5', 'number')
+            .parent(cubbyCurveRadiusWrapper);
+        this.html.cubbyCurveRadiusInput = createInput(appState.generationConfig.cubbyCurveRadius.toString(), 'number')
             .addClass('settings-input')
-            .parent(cornerRadiusWrapper)
+            .parent(cubbyCurveRadiusWrapper)
             .attribute('min', '0')
             .attribute('max', '1.0')
             .attribute('step', '0.1')
-            .input(() => this.handleCornerRadiusChange());
+            .input(() => this.handleCubbyCurveRadiusChange());
 
         // Curve sub-options
         this.html.curveGroup = createDiv()
@@ -1236,7 +1238,7 @@ class DesignUI {
             .attribute('min', '0.1')
             .attribute('max', '10.0')
             .attribute('step', '0.1')
-            .input(() => this.handleCurveParameterChange());
+            .input(() => this.handleBendParameterChange());
 
         // Wrapper for Bends
         const bendsWrapper = createDiv()
@@ -1251,7 +1253,7 @@ class DesignUI {
             .attribute('min', '2')
             .attribute('max', '10')
             .attribute('step', '1')
-            .input(() => this.handleCurveParameterChange());
+            .input(() => this.handleBendParameterChange());
 
         // Save button in Results panel
         this.html.saveButton = createButton('Save')
@@ -1278,11 +1280,11 @@ class DesignUI {
                 const algorithm = this.html.wallAlgorithmSelect.value();
                 solution.wallAlgorithm = algorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
             } else {
-                solution.wallAlgorithm = 'curve';
+                solution.wallAlgorithm = 'bend';
             }
             
             if (selectedType === 'cubbies') {
-                solution.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
+                appState.generationConfig.cubbyCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
             }
             
             this.displayResult(); // Redraw with the new fabrication type
@@ -1311,14 +1313,14 @@ class DesignUI {
             } else {
                 this.html.cubbyGroup.addClass('hidden');
             }
-        } else if (fabricationType === 'curved') {
+        } else if (fabricationType === 'bent') {
             this.html.algorithmGroup.addClass('hidden');
             this.html.cubbyGroup.addClass('hidden');
             this.html.curveGroup.removeClass('hidden');
         }
     }
 
-    handleCurveParameterChange() {
+    handleBendParameterChange() {
         // Only regenerate if we have a current solution
         if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
             return;
@@ -1327,7 +1329,7 @@ class DesignUI {
         const solution = appState.currentAnneal.finalSolution;
 
         // Update solution with new values from UI
-        solution.curveRadius = parseFloat(this.html.curveRadiusInput.value());
+        solution.bendRadius = parseFloat(this.html.bendRadiusInput.value());
         solution.maxBends = parseInt(this.html.maxBendsInput.value());
 
         // Redraw the canvas with new walls without triggering a full UI update
@@ -1374,7 +1376,7 @@ class DesignUI {
         this.displayResult();
     }
 
-    handleCornerRadiusChange() {
+    handleCubbyCurveRadiusChange() {
         // Only update if we have a current solution and are in cubbies mode
         if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
             return;
@@ -1385,12 +1387,12 @@ class DesignUI {
             return;
         }
 
-        const solution = appState.currentAnneal.finalSolution;
-        solution.cornerRadius = parseFloat(this.html.cornerRadiusInput.value());
+        const newCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
+        appState.generationConfig.cubbyCurveRadius = newCurveRadius;
 
-        console.log(`[UI] Corner radius changed to: ${solution.cornerRadius}`);
+        console.log(`[UI] Cubby curve radius changed to: ${newCurveRadius}`);
 
-        // Redraw with new corner radius
+        // Redraw with new curve radius
         this.displayResult();
     }
 
@@ -1423,11 +1425,11 @@ class DesignUI {
         // update fabrication UI to match loaded solution
         const solution = appState.currentAnneal.finalSolution;
         
-        // Ensure solution has fabricationType set (for backward compatibility with old saves)
+        // Ensure solution has fabricationType set
         if (!solution.fabricationType) {
             // Infer from wall algorithm for old saves
-            if (solution.wallAlgorithm === 'curve') {
-                solution.fabricationType = 'curved';
+            if (solution.wallAlgorithm === 'bend') {
+                solution.fabricationType = 'bent';
             } else {
                 solution.fabricationType = 'boards'; // default for old cellular saves
             }
@@ -1446,9 +1448,9 @@ class DesignUI {
                     this.html.wallAlgorithmSelect.selected(isRectilinear ? 'rectilinear' : 'cellular');
                 }
                 
-                // Set corner radius for cubbies
-                if (solution.fabricationType === 'cubbies' && this.html.cornerRadiusInput && solution.cornerRadius !== undefined) {
-                    this.html.cornerRadiusInput.value(solution.cornerRadius.toString());
+                // Set curve radius for cubbies
+                if (solution.fabricationType === 'cubbies' && this.html.cubbyCurveRadiusInput) {
+                    this.html.cubbyCurveRadiusInput.value(appState.generationConfig.cubbyCurveRadius.toString());
                 }
             }
         }

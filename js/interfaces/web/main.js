@@ -26,8 +26,8 @@ const ScreenState = {
 //== flags
 const fastReloadDev = true; // loads a test file and solution on start
 const fastReloadScreen = ScreenState.DESIGN;
-const testFileName = "curve_test_both.json";
-const testSolutionName = "solution-3";
+const testFileName = "cubby_test.json";
+const testSolutionName = "solution-7";
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -151,7 +151,7 @@ function keyPressed() {
         }
         else if (key === 'g' && appState.display.devMode) {
             const fabricationType = appState.generationConfig.fabricationType;
-            if (fabricationType === 'curved') {
+            if (fabricationType === 'bent') {
                 appState.display.curveStep++;
             } else {
                 appState.display.numGrow++;

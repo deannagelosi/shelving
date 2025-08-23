@@ -392,7 +392,7 @@ class SolutionRenderer {
 
     renderCompleteSolution(solution, canvas, layoutProps, perimeterConfig, wallRenderers, wallRenderData) {
         // renders complete solution with walls and perimeter handling
-        // wallRenderers: { curveWallRenderer, cellularRenderer }
+        // wallRenderers: { bendWallRenderer, cellularRenderer }
         // wallRenderData: { currCellular, goldenPathData, useGoldenPathDebugData}
 
         clear();
@@ -419,16 +419,16 @@ class SolutionRenderer {
 
         const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
 
-        if (wallAlgorithm === 'curve') {
-            this.renderCurveWalls(solution, canvas, config, wallRenderers, wallRenderData);
-            return null; // Curve walls don't generate cellular data
+        if (wallAlgorithm === 'bend') {
+            this.renderBentWalls(solution, canvas, config, wallRenderers, wallRenderData);
+            return null; // Bent walls don't generate cellular data
         } else {
             return this.renderCellularWalls(solution, canvas, config, wallRenderers, wallRenderData);
         }
     }
 
-    renderCurveWalls(solution, canvas, config, wallRenderers, wallRenderData) {
-        // handles curve wall rendering
+    renderBentWalls(solution, canvas, config, wallRenderers, wallRenderData) {
+        // handles bent wall rendering
 
         let wallPath;
         // check for display state (with worker context fallback)
@@ -440,32 +440,32 @@ class SolutionRenderer {
             console.log('[SolutionRenderer] Using golden path test data for visual validation');
         } else {
             // Use actual algorithm output
-            const curveGenerator = new CurveWall(solution);
+            const bendGenerator = new BendWall(solution);
             const stepLimit = isDevMode ? (typeof appState !== 'undefined' && appState.display ? appState.display.curveStep : 0) : -1;
             if (isDevMode) {
-                curveGenerator.setDebugMode(true);
+                bendGenerator.setDebugMode(true);
             }
-            wallPath = curveGenerator.generate(solution.maxBends, solution.curveRadius, stepLimit);
-            console.log('[SolutionRenderer] Using actual CurveWall algorithm output');
+            wallPath = bendGenerator.generate(solution.maxBends, solution.bendRadius, stepLimit);
+            console.log('[SolutionRenderer] Using actual BendWall algorithm output');
         }
 
         // Render debug state or final path
         if (isDevMode) {
             // Create a generator instance just to get the group data for debugging
-            const curveGenerator = new CurveWall(solution);
-            curveGenerator._groupShapesByY(solution.shapes); // Run grouping
-            wallRenderers.curveWallRenderer.renderDebugState(
+            const bendGenerator = new BendWall(solution);
+            bendGenerator._groupShapesByY(solution.shapes); // Run grouping
+            wallRenderers.bendWallRenderer.renderDebugState(
                 null, // No specific debug state object anymore
-                curveGenerator.groups,
+                bendGenerator.groups,
                 canvas,
                 config
             );
-            wallRenderers.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+            wallRenderers.bendWallRenderer.renderWallPath(wallPath, canvas, config);
         } else {
             if (wallPath && wallPath.length > 0) {
-                wallRenderers.curveWallRenderer.renderWallPath(wallPath, canvas, config);
+                wallRenderers.bendWallRenderer.renderWallPath(wallPath, canvas, config);
             } else {
-                console.warn('[SolutionRenderer] No curve wall path to render');
+                console.warn('[SolutionRenderer] No bent wall path to render');
             }
         }
     }
@@ -501,9 +501,64 @@ class SolutionRenderer {
             }
         }
 
-        // Render cellular walls
-        const cellLines = currCellular.getCellRenderLines();
-        wallRenderers.cellularRenderer.renderCellLines(cellLines, canvas, config);
+        // Check if this is a cubbies fabrication type
+        const fabricationType = solution.fabricationType || 'boards';
+        
+        if (fabricationType === 'cubbies') {
+            // Render cubbies instead of regular cellular walls
+            const cubbyAreas = currCellular.calculateAllCubbyAreas();
+            
+            if (cubbyAreas && cubbyAreas.length > 0) {
+                // Get wall thickness and curve radius from appState or defaults
+                const wallThickness = (typeof appState !== 'undefined' && appState.generationConfig.wallThickness) ? 
+                    appState.generationConfig.wallThickness : 0.25;
+                const cubbyCurveRadius = (typeof appState !== 'undefined' ? appState.generationConfig.cubbyCurveRadius : 0.5);
+                
+                // Get layout dimensions for perimeter detection
+                const layoutWidth = currCellular.layoutWidth;
+                const layoutHeight = currCellular.layoutHeight;
+                
+                // Create Cubby instances with all line data
+                const cubbies = cubbyAreas.map(cubbyData => {
+                    if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
+                        const cubby = new Cubby(
+                            cubbyData.shape_id,
+                            cubbyData.visitedCells,
+                            wallThickness,
+                            cubbyCurveRadius
+                        );
+                        
+                        // Generate all three line types (no perimeter detection needed)
+                        cubby.generateCenterLines();
+                        cubby.generateInteriorLines();
+                        cubby.generateExteriorLines();
+                        
+                        return cubby;
+                    }
+                    return null;
+                }).filter(Boolean);
+                
+                // Render all three line types with distinct colors (all 1px)
+                const renderOptions = {
+                    exteriorColor: '#FF8C00',  // Bright Orange
+                    exteriorWeight: 1,
+                    centerColor: '#333333',    // Dark Gray
+                    centerWeight: 1,
+                    interiorColor: '#00CC66',  // Bright Green
+                    interiorWeight: 1
+                };
+                
+                wallRenderers.cubbyRenderer.renderAllLineTypes(cubbies, canvas, config, renderOptions);
+                wallRenderers.cubbyRenderer.renderCubbyLabels(cubbies, canvas, config, { 
+                    textSize: 14,
+                    labelColor: 'white'
+                });
+            }
+        } else {
+            // Render normal cellular walls for boards/bent fabrication types
+            const cellLines = currCellular.getCellRenderLines();
+            wallRenderers.cellularRenderer.renderCellLines(cellLines, canvas, config);
+        }
 
         // Display cells and terrain in dev mode
         if (isDevMode) {

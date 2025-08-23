@@ -1,4 +1,4 @@
-class CurveWall {
+class BendWall {
     constructor(solution) {
         this.solution = solution;
         this.shapes = solution.shapes;
@@ -747,5 +747,5 @@ class CurveWall {
 // Only export the class when in a Node.js environment (e.g., during Jest tests)
 // Ignored when the app is running in the browser
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CurveWall;
+    module.exports = BendWall;
 } 

@@ -1,8 +1,8 @@
-// tests/CurveWall.test.js
+// tests/BendWall.test.js
 
 const Solution = require('../js/core/Solution');
 const Shape = require('../js/core/Shape');
-const CurveWall = require('../js/core/CurveWall');
+const BendWall = require('../js/core/BendWall');
 const fs = require('fs');
 const path = require('path');
 
@@ -19,7 +19,7 @@ function loadGoldenPath(fileName) {
 }
 
 
-describe('CurveWall Algorithm', () => {
+describe('BendWall Algorithm', () => {
     let testSolution;
     let goldenPath;
 
@@ -39,10 +39,10 @@ describe('CurveWall Algorithm', () => {
     });
 
     it('should generate line and arc segments that match the golden path', () => {
-        const curveWall = new CurveWall(testSolution);
-        const generatedPath = curveWall.generate(
+        const bendWall = new BendWall(testSolution);
+        const generatedPath = bendWall.generate(
             testSolution.maxBends,
-            testSolution.curveRadius
+            testSolution.bendRadius
         );
 
         const generatedLines = generatedPath.filter(s => s.type === 'line');

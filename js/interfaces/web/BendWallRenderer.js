@@ -1,4 +1,4 @@
-class CurveWallRenderer {
+class BendWallRenderer {
     constructor() {
         // Rendering colors for different states
         this.colors = {
@@ -68,7 +68,7 @@ class CurveWallRenderer {
                 x = (canvasStartX + canvasEndX) / 2;
                 y = (canvasStartY + canvasEndY) / 2;
             } else if (segment.type === 'arc') {
-                // Handle both startDeg/endDeg (from CurveWall) and startAngle/endAngle (from golden path)
+                // Handle both startDeg/endDeg (from BendWall) and startAngle/endAngle (from golden path)
                 const startAngleDeg = segment.startDeg !== undefined ? segment.startDeg : segment.startAngle;
                 const endAngleDeg = segment.endDeg !== undefined ? segment.endDeg : segment.endAngle;
                 const midAngle = radians((startAngleDeg + endAngleDeg) / 2);
@@ -89,7 +89,7 @@ class CurveWallRenderer {
 
     /**
      * Render debug visualization for curve wall generation
-     * @param {Object} debugState - Current debug state from CurveWall
+     * @param {Object} debugState - Current debug state from BendWall
      * @param {Array} groups - Shape groups
      * @param {Object} canvas - Canvas dimensions
      * @param {Object} config - Rendering configuration
@@ -179,7 +179,7 @@ class CurveWallRenderer {
         const radius = segment.radius * config.squareSize;
 
         // Convert angles from degrees to radians
-        // CurveWall generates startDeg/endDeg, but golden path uses startAngle/endAngle
+        // BendWall generates startDeg/endDeg, but golden path uses startAngle/endAngle
         const startAngleDeg = segment.startDeg !== undefined ? segment.startDeg : segment.startAngle;
         const endAngleDeg = segment.endDeg !== undefined ? segment.endDeg : segment.endAngle;
         const startAngle = radians(startAngleDeg);
@@ -328,5 +328,5 @@ class CurveWallRenderer {
 // Only export the class when in a Node.js environment (e.g., during Jest tests)
 // Ignored when the app is running in the browser
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CurveWallRenderer;
+    module.exports = BendWallRenderer;
 } 

@@ -55,7 +55,8 @@ class Solution {
 
         // Wall generation configuration
         this.wallAlgorithm = _wallConfig.algorithm || 'cellular-organic';
-        this.curveRadius = _wallConfig.curveRadius || 1.0;
+        this.cubbyCurveRadius = _wallConfig.cubbyCurveRadius || 0.5;
+        this.bendRadius = _wallConfig.bendRadius || 1.0;
         this.maxBends = _wallConfig.maxBends || 4;
 
         this.score;
@@ -603,7 +604,8 @@ class Solution {
         };
         const wallConfig = {
             algorithm: this.wallAlgorithm,
-            curveRadius: this.curveRadius,
+            cubbyCurveRadius: this.cubbyCurveRadius,
+            bendRadius: this.bendRadius,
             maxBends: this.maxBends
         };
         let newSolution = new Solution(shapesCopy, this.startID, layoutConfig, wallConfig);
@@ -748,8 +750,8 @@ class Solution {
             // Wall generation parameters
             wallAlgorithm: this.wallAlgorithm,
             fabricationType: this.fabricationType,
-            cornerRadius: this.cornerRadius,
-            curveRadius: this.curveRadius,
+            cubbyCurveRadius: this.cubbyCurveRadius,
+            bendRadius: this.bendRadius,
             maxBends: this.maxBends
         };
     }
@@ -771,7 +773,8 @@ class Solution {
         // Prepare wall generation parameters
         const wallConfig = {
             algorithm: solutionData.wallAlgorithm || 'cellular-organic',
-            curveRadius: solutionData.curveRadius || 1.0,
+            cubbyCurveRadius: solutionData.cubbyCurveRadius || 0.5,
+            bendRadius: solutionData.bendRadius || solutionData.curveRadius || 1.0,
             maxBends: solutionData.maxBends || 4
         };
 
@@ -784,7 +787,6 @@ class Solution {
 
         // set fabrication type and related properties
         solution.fabricationType = solutionData.fabricationType;
-        solution.cornerRadius = solutionData.cornerRadius;
 
         // Check if layout data exists (from worker) or needs to be recalculated (from import)
         if (solutionData.layout && solutionData.score !== undefined && solutionData.valid !== undefined) {

@@ -258,6 +258,7 @@ class BoardExporter {
                 // Text labels (board IDs)
                 fill('blue');
                 noStroke();
+                textAlign(LEFT, BASELINE);
                 textSize(5 / scaleValue);
                 text(etch.text, etch.x, etch.y);
             } else if (etch.type === 'line') {
