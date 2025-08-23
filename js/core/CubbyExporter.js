@@ -56,10 +56,8 @@ class CubbyExporter {
                     this.cubbyCurveRadius
                 );
                 
-                // Generate all three line types (no perimeter detection needed)
-                cubby.generateCenterLines();
-                cubby.generateInteriorLines();
-                cubby.generateExteriorLines();
+                // Generate all three line types
+                cubby.generateAllLines();
                 
                 this.cubbies.push(cubby);
             }

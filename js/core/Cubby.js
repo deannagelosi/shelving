@@ -39,13 +39,37 @@ class Cubby {
         return this.centerLines;
     }
     
+    // Generate all three line types in consistent order
+    generateAllLines() {
+        this.generateCenterLines();
+        this.generateInteriorLines();
+        this.generateExteriorLines();
+        return {
+            center: this.centerLines,
+            interior: this.interiorLines,
+            exterior: this.exteriorLines
+        };
+    }
+    
     // Generate interior lines (inset + curves)
     generateInteriorLines() {
+        const offsetDistance = this.wallThickness / 2;
+        return this._generateOffsetLines(offsetDistance, 'inset', 'interiorLines');
+    }
+    
+    // Generate exterior lines (outset + curves)
+    generateExteriorLines() {
+        const offsetDistance = this.wallThickness / 2;
+        return this._generateOffsetLines(offsetDistance, 'outset', 'exteriorLines');
+    }
+    
+    // Shared helper for generating offset lines (interior or exterior)
+    _generateOffsetLines(distance, direction, targetProperty) {
         // Check if we need to regenerate based on parameter changes
-        if (this.interiorLines && 
+        if (this[targetProperty] && 
             this._lastWallThickness === this.wallThickness &&
             this._lastCurveRadius === this.cubbyCurveRadius) {
-            return this.interiorLines;
+            return this[targetProperty];
         }
         
         // Ensure center lines are generated
@@ -53,27 +77,21 @@ class Cubby {
             this.generateCenterLines();
         }
         
-        // Inset lines by half wall thickness
-        const insetDistance = this.wallThickness / 2;
-        const insetLines = this.insetLines(this.centerLines, insetDistance);
+        // Apply offset based on direction
+        const offsetLines = this.offsetLines(this.centerLines, distance, direction);
         
         // Apply corner curves if radius > 0
         if (this.cubbyCurveRadius > 0) {
-            this.interiorLines = this.applyCurves(insetLines, this.cubbyCurveRadius);
+            this[targetProperty] = this.applyCurves(offsetLines, this.cubbyCurveRadius);
         } else {
-            this.interiorLines = insetLines;
+            this[targetProperty] = offsetLines;
         }
         
         // Update cache keys
         this._lastWallThickness = this.wallThickness;
         this._lastCurveRadius = this.cubbyCurveRadius;
-        return this.interiorLines;
-    }
-    
-    // Generate exterior lines (extend + curves)
-    generateExteriorLines() {
-        // TODO: Implement exterior lines generation
-        return [];
+        
+        return this[targetProperty];
     }
     
     // Extract perimeter segments from cells
@@ -226,21 +244,20 @@ class Cubby {
         return merged;
     }
     
-    // Inset lines by a given distance (for interior lines)
-    insetLines(lines, distance) {
+    // Offset lines by a given distance (inset for interior, outset for exterior)
+    offsetLines(lines, distance, direction = 'inset') {
         if (distance === 0) return [...lines];
-        
         
         // Convert lines to vertices for proper corner handling
         const vertices = this.extractVertices(lines);
         
-        // Calculate inset vertices (handles convex/concave differently)
-        const insetVertices = this.calculateInsetVertices(vertices, distance);
+        // Calculate offset vertices based on direction
+        const offsetVertices = direction === 'inset'
+            ? this.calculateInsetVertices(vertices, distance)
+            : this.calculateOutsetVertices(vertices, distance);
         
         // Convert back to lines
-        const insetLines = this.verticesToLines(insetVertices);
-        
-        return insetLines;
+        return this.verticesToLines(offsetVertices);
     }
     
     // Extract ordered vertices from ordered lines
@@ -376,65 +393,48 @@ class Cubby {
         return lines;
     }
     
-    // Extend lines by a given distance (for exterior perimeter lines)
-    extendLines(lines, distance) {
-        if (distance === 0) return [...lines];
+    
+    // Calculate outset vertices using intersection-based approach (expands polygon)
+    calculateOutsetVertices(vertices, distance) {
+        const outsetVertices = [];
         
-        const extendedLines = [];
-        
-        // For CCW polygons, exterior is always to the right of each edge
-        // Since we standardize to CCW in orderLinesQuietly(), we can rely on this
-        for (const line of lines) {
-            const dx = line.x2 - line.x1;
-            const dy = line.y2 - line.y1;
+        for (const vertex of vertices) {
+            // Get edge directions (should be axis-aligned unit vectors)
+            const dirIn = this.getEdgeDirection(vertex.edgeIn);
+            const dirOut = this.getEdgeDirection(vertex.edgeOut);
             
-            if (dx === 0) {
-                // Vertical line
-                // For CCW: if going down (dy > 0), exterior is to the left (-x)
-                //          if going up (dy < 0), exterior is to the right (+x)
-                const extendDir = (line.y2 > line.y1) ? -1 : 1;
-                
-                extendedLines.push({
-                    type: 'line',
-                    x1: line.x1 + (distance * extendDir),
-                    y1: line.y1,
-                    x2: line.x2 + (distance * extendDir),
-                    y2: line.y2
-                });
-            } else if (dy === 0) {
-                // Horizontal line
-                // For CCW: if going right (dx > 0), exterior is below (+y)
-                //          if going left (dx < 0), exterior is above (-y)
-                const extendDir = (line.x2 > line.x1) ? 1 : -1;
-                
-                extendedLines.push({
-                    type: 'line',
-                    x1: line.x1,
-                    y1: line.y1 + (distance * extendDir),
-                    x2: line.x2,
-                    y2: line.y2 + (distance * extendDir)
-                });
-            } else {
-                // Fail fast - non-aligned lines not supported
-                throw new Error(`Non-aligned line found: (${line.x1},${line.y1}) to (${line.x2},${line.y2})`);
-            }
+            // Use intersection-based approach for ALL corners (eliminates diagonals)
+            const outsetVertex = this.calculateLineIntersectionOutward(vertex, dirIn, dirOut, distance);
+            outsetVertices.push(outsetVertex);
         }
         
-        return this.createConnectedPolygon(this.centerLines, extendedLines);
+        return outsetVertices;
     }
     
-    // Clean 3-step algorithm: Extract corners, create offset lines, connect at corners
-    createConnectedPolygon(centerLines, offsetLines) {
+    // Calculate intersection of two outward-offset lines (for axis-aligned fabrication)
+    calculateLineIntersectionOutward(vertex, dirIn, dirOut, distance) {
+        const normIn = this.getOutwardNormal(dirIn);
+        const normOut = this.getOutwardNormal(dirOut);
         
-        // Centerlines are already ordered into CW polygon from generateCenterLines()
+        // Create offset lines by moving each adjacent line outward
+        const offsetLine1 = {
+            // Line going INTO this vertex, offset outward
+            x1: vertex.x + distance * normIn.x - dirIn.x,
+            y1: vertex.y + distance * normIn.y - dirIn.y,
+            x2: vertex.x + distance * normIn.x,
+            y2: vertex.y + distance * normIn.y
+        };
         
-        // Step 1: Extract corner information from centerlines
-        const corners = this.extractCorners(centerLines);
+        const offsetLine2 = {
+            // Line going OUT of this vertex, offset outward  
+            x1: vertex.x + distance * normOut.x,
+            y1: vertex.y + distance * normOut.y,
+            x2: vertex.x + distance * normOut.x + dirOut.x,
+            y2: vertex.y + distance * normOut.y + dirOut.y
+        };
         
-        // Step 2: Offset lines are already created (passed in as parameter)
-        
-        // Step 3: Connect offset lines using corner template
-        return this.connectAtCorners(offsetLines, corners);
+        // Find intersection of these two offset lines
+        return this.findLineIntersection(offsetLine1, offsetLine2);
     }
     
     // Order lines without throwing errors (for internal use)
@@ -519,83 +519,6 @@ class Cubby {
         return signedArea > 0;
     }
     
-    // Step 1: Extract corner connections from centerlines
-    extractCorners(centerLines) {
-        const corners = [];
-        
-        for (let i = 0; i < centerLines.length; i++) {
-            const current = centerLines[i];
-            const next = centerLines[(i + 1) % centerLines.length];
-            
-            // Find connection point between current and next line
-            const connection = this.findConnectionPoint(current, next);
-            if (connection) {
-                corners.push({
-                    id: `corner_${i}`,
-                    line1_id: i,
-                    line1_endpoint: this.whichEndpoint(current, connection),
-                    line2_id: (i + 1) % centerLines.length,
-                    line2_endpoint: this.whichEndpoint(next, connection),
-                    connection_point: connection
-                });
-            }
-        }
-        
-        return corners;
-    }
-    
-    // Step 3: Connect offset lines using corner template
-    connectAtCorners(offsetLines, corners) {
-        const result = [...offsetLines]; // Start with copy of offset lines
-        
-        for (const corner of corners) {
-            const line1 = result[corner.line1_id];
-            const line2 = result[corner.line2_id];
-            
-            // Calculate intersection between the two offset lines
-            const intersection = this.findLineIntersection(line1, line2);
-            if (intersection) {
-                // Set both line endpoints to the intersection point
-                this.setEndpoint(line1, corner.line1_endpoint, intersection);
-                this.setEndpoint(line2, corner.line2_endpoint, intersection);
-            }
-        }
-        
-        return result;
-    }
-    
-    // Helper: Determine which endpoint of a line matches a point
-    whichEndpoint(line, point) {
-        const startDist = Math.abs(line.x1 - point.x) + Math.abs(line.y1 - point.y);
-        const endDist = Math.abs(line.x2 - point.x) + Math.abs(line.y2 - point.y);
-        return startDist < endDist ? 'start' : 'end';
-    }
-    
-    // Helper: Set specific endpoint of a line to a point
-    setEndpoint(line, endpoint, point) {
-        if (endpoint === 'start') {
-            line.x1 = point.x;
-            line.y1 = point.y;
-        } else {
-            line.x2 = point.x;
-            line.y2 = point.y;
-        }
-    }
-    
-    // Find intersection point between two lines (assuming they're perpendicular)
-    findLineIntersection(line1, line2) {
-        // Simple case: one horizontal, one vertical
-        if (line1.x1 === line1.x2 && line2.y1 === line2.y2) {
-            // line1 is vertical, line2 is horizontal
-            return { x: line1.x1, y: line2.y1 };
-        } else if (line1.y1 === line1.y2 && line2.x1 === line2.x2) {
-            // line1 is horizontal, line2 is vertical
-            return { x: line2.x1, y: line1.y1 };
-        }
-        
-        return null;
-    }
-    
     
     // Apply corner curves to lines
     applyCurves(lines, radius) {
@@ -670,20 +593,30 @@ class Cubby {
         return ordered;
     }
     
-    // Find where two lines connect
+    // Find where two lines connect (for ordered lines, should be end-to-start)
     findConnectionPoint(line1, line2) {
-        if (line1.x2 === line2.x1 && line1.y2 === line2.y1) {
+        const tolerance = 0.001;
+        
+        // Standard case: end of line1 connects to start of line2
+        if (Math.abs(line1.x2 - line2.x1) < tolerance && 
+            Math.abs(line1.y2 - line2.y1) < tolerance) {
             return { x: line1.x2, y: line1.y2 };
         }
-        if (line1.x1 === line2.x2 && line1.y1 === line2.y2) {
+        
+        // Check other possible connections (for robustness)
+        if (Math.abs(line1.x1 - line2.x2) < tolerance && 
+            Math.abs(line1.y1 - line2.y2) < tolerance) {
             return { x: line1.x1, y: line1.y1 };
         }
-        if (line1.x1 === line2.x1 && line1.y1 === line2.y1) {
+        if (Math.abs(line1.x1 - line2.x1) < tolerance && 
+            Math.abs(line1.y1 - line2.y1) < tolerance) {
             return { x: line1.x1, y: line1.y1 };
         }
-        if (line1.x2 === line2.x2 && line1.y2 === line2.y2) {
+        if (Math.abs(line1.x2 - line2.x2) < tolerance && 
+            Math.abs(line1.y2 - line2.y2) < tolerance) {
             return { x: line1.x2, y: line1.y2 };
         }
+        
         return null;
     }
     

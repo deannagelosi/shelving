@@ -528,10 +528,8 @@ class SolutionRenderer {
                             cubbyCurveRadius
                         );
                         
-                        // Generate all three line types (no perimeter detection needed)
-                        cubby.generateCenterLines();
-                        cubby.generateInteriorLines();
-                        cubby.generateExteriorLines();
+                        // Generate all three line types
+                        cubby.generateAllLines();
                         
                         return cubby;
                     }
