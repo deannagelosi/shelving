@@ -4,25 +4,67 @@ class CubbyRenderer {
         // All render methods use only parameters, no global state
     }
 
-    // Render all three line types for each cubby in different colors
+    // Render all four line types for each cubby in different colors
     renderAllLineTypes(cubbies, canvas, config, options = {}) {
         noFill();
         
         for (const cubby of cubbies) {
-            // 1. Render exterior lines (thickest, bottom layer)
+            // 1. Render edge lines (actual cubby boundary, solid bottom layer)
+            stroke(options.edgeColor || 'magenta');
+            strokeWeight(2); // Use 2px for edgelines as requested
+            drawingContext.setLineDash([]); // Solid line
+            this.renderLineSet(cubby.edgeLines, canvas, config);
+            
+            // 2. Render interior lines (2px, solid with curves)
+            stroke(options.interiorColor || 'red');
+            strokeWeight(2); // Use 2px for interior lines
+            drawingContext.setLineDash([]); // Solid line
+            this.renderLineSet(cubby.interiorLines, canvas, config);
+            
+            // 3. Render exterior lines (dashed, on top)
             stroke(options.exteriorColor || 'blue');
-            strokeWeight(options.exteriorWeight || 4);
+            strokeWeight(1); // Use 1px to match centerlines
+            drawingContext.setLineDash([5, 5]); // Dashed line
             this.renderLineSet(cubby.exteriorLines, canvas, config);
             
-            // 2. Render center lines (middle layer)
-            stroke(options.centerColor || 'black');
-            strokeWeight(options.centerWeight || 2);
-            this.renderLineSet(cubby.centerLines, canvas, config);
+            // 4. Render center lines with perimeter/interior distinction (dashed, topmost)
+            strokeWeight(1); // Use 1px to match exterior lines
+            drawingContext.setLineDash([3, 3]); // Dashed line
+            this.renderCenterLinesWithPerimeterFlags(cubby.centerLines, canvas, config, options);
             
-            // 3. Render interior lines (thinnest, top layer)
-            stroke(options.interiorColor || 'red');
-            strokeWeight(options.interiorWeight || 1);
-            this.renderLineSet(cubby.interiorLines, canvas, config);
+            // Reset to solid lines
+            drawingContext.setLineDash([]);
+        }
+    }
+
+    // Render center lines with perimeter/interior color distinction
+    renderCenterLinesWithPerimeterFlags(lines, canvas, config, options) {
+        if (!lines || lines.length === 0) return;
+        
+        for (const lineSegment of lines) {
+            // Set color based on perimeter flag
+            if (lineSegment.isPerimeterWall) {
+                stroke('red'); // Perimeter walls in red
+            } else {
+                stroke(options.centerColor || '#333333'); // Interior walls in dark grey
+            }
+            
+            if (lineSegment.type === 'bezier') {
+                // Render bezier curve
+                const coords1 = this.gridToCanvas(lineSegment.x1, lineSegment.y1, canvas, config);
+                const coordsCP1 = this.gridToCanvas(lineSegment.cp1x, lineSegment.cp1y, canvas, config);
+                const coordsCP2 = this.gridToCanvas(lineSegment.cp2x, lineSegment.cp2y, canvas, config);
+                const coords2 = this.gridToCanvas(lineSegment.x2, lineSegment.y2, canvas, config);
+                
+                bezier(coords1.x, coords1.y, coordsCP1.x, coordsCP1.y,
+                       coordsCP2.x, coordsCP2.y, coords2.x, coords2.y);
+            } else {
+                // Render regular line
+                const coords1 = this.gridToCanvas(lineSegment.x1, lineSegment.y1, canvas, config);
+                const coords2 = this.gridToCanvas(lineSegment.x2, lineSegment.y2, canvas, config);
+                
+                line(coords1.x, coords1.y, coords2.x, coords2.y);
+            }
         }
     }
 

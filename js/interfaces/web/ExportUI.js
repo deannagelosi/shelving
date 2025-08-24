@@ -46,6 +46,11 @@ class ExportUI {
         appEvents.on('materialTypeChanged', ({ materialType }) => {
             this.updateMaterialTypeUI(materialType);
         });
+
+        // listen for cubby mode changes to update UI
+        appEvents.on('cubbyModeChanged', ({ cubbyMode }) => {
+            this.updateCubbyModeUI(cubbyMode);
+        });
     }
 
     computeState() {
@@ -98,6 +103,25 @@ class ExportUI {
         this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
         this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
         this.html.materialTypeSelect.option('Clay/Plastic (3D Printer)', 'clay-plastic-3d');
+
+        // Cubby Mode selection (only shown for cubbies fabrication type)
+        this.html.cubbyModeRow = createDiv()
+            .addClass('settings-row')
+            .parent(this.html.settingsContainer);
+        createSpan('Cubby Mode')
+            .addClass('settings-label')
+            .parent(this.html.cubbyModeRow);
+        const cubbyModeColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(this.html.cubbyModeRow);
+        this.html.cubbyModeSelect = createSelect()
+            .parent(cubbyModeColumn)
+            .addClass('settings-select')
+            .changed(() => this.handleCubbyModeChange());
+        this.html.cubbyModeSelect.option('One (Merge)', 'one');
+        this.html.cubbyModeSelect.option('Many (Individual)', 'many');
+        // Set to appState value or default
+        this.html.cubbyModeSelect.selected(appState.generationConfig.cubbyMode || 'one');
 
         // Number of Sheets (hidden - automatically managed by export system)
         this.html.numSheetsInput = createInput('1')
@@ -255,6 +279,13 @@ class ExportUI {
         // show basic UI elements (material type dropdown and buttons)
         this.html.materialTypeGroup.removeClass('hidden');
         this.html.buttonList.removeClass('hidden');
+        
+        // show/hide cubby mode dropdown based on fabrication type
+        if (appState.generationConfig.fabricationType === 'cubbies') {
+            this.html.cubbyModeRow.removeClass('hidden');
+        } else {
+            this.html.cubbyModeRow.addClass('hidden');
+        }
 
         // initialize material type selection from appState and build UI
         const currentMaterialType = appState.generationConfig.materialType;
@@ -346,6 +377,18 @@ class ExportUI {
         appState.setMaterialType(selectedMaterial);
     }
 
+    handleCubbyModeChange() {
+        const selectedMode = this.html.cubbyModeSelect.value();
+        
+        // Update appState using centralized method
+        appState.setCubbyMode(selectedMode);
+        
+        // If we have current export data and it's cubbies, regenerate
+        if (this.currExport && appState.generationConfig.fabricationType === 'cubbies') {
+            this.prepareExportData();
+        }
+    }
+
     updateMaterialTypeUI(materialType) {
         // Update dropdown to match state (in case changed from elsewhere)
         if (this.html.materialTypeSelect) {
@@ -360,6 +403,18 @@ class ExportUI {
 
         // Trigger export data preparation with new material settings
         this.prepareExportData();
+    }
+
+    updateCubbyModeUI(cubbyMode) {
+        // Update dropdown to match state (in case changed from elsewhere)
+        if (this.html.cubbyModeSelect) {
+            this.html.cubbyModeSelect.selected(cubbyMode);
+            
+            // Force update if p5.js didn't update properly
+            if (this.html.cubbyModeSelect.value() !== cubbyMode) {
+                this.html.cubbyModeSelect.elt.value = cubbyMode;
+            }
+        }
     }
 
     //== button handlers

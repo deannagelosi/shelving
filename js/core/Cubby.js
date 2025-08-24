@@ -11,14 +11,11 @@ class Cubby {
         this.centerLines = null;    // Merged cellular lines (no curves, no inset)
         this.interiorLines = null;  // Inset by wallThickness/2 + curved
         this.exteriorLines = null;  // Extended by wallThickness/2 + curved
+        this.edgeLines = null;      // Mixed center/exterior lines for actual cubby edge
         
         // Metadata
         this.area = cells ? cells.length : 0;
         this.bounds = null;          // Cached bounding box
-        
-        // Cache keys for regeneration detection
-        this._lastWallThickness = wallThickness;
-        this._lastCurveRadius = cubbyCurveRadius;
     }
     
     // Generate center lines from cells (merge segments into full lines)
@@ -36,18 +33,32 @@ class Cubby {
         // Order lines into CCW polygon sequence
         this.centerLines = this.orderLinesQuietly(mergedLines);
         
+        // Initialize perimeter flag (set later by detectPerimeterWalls)
+        for (const line of this.centerLines) {
+            line.isPerimeterWall = false;
+        }
+        
         return this.centerLines;
     }
     
-    // Generate all three line types in consistent order
-    generateAllLines() {
+    // Generate all line polygons for this cubby
+    generateAllLines(caseBounds = null) {
         this.generateCenterLines();
+        
+        // Detect perimeter walls if case bounds provided
+        if (caseBounds) {
+            this.detectPerimeterWalls(caseBounds);
+        }
+        
         this.generateInteriorLines();
         this.generateExteriorLines();
+        this.generateEdgeLines();
+        
         return {
             center: this.centerLines,
             interior: this.interiorLines,
-            exterior: this.exteriorLines
+            exterior: this.exteriorLines,
+            edge: this.edgeLines
         };
     }
     
@@ -63,15 +74,250 @@ class Cubby {
         return this._generateOffsetLines(offsetDistance, 'outset', 'exteriorLines');
     }
     
-    // Shared helper for generating offset lines (interior or exterior)
-    _generateOffsetLines(distance, direction, targetProperty) {
-        // Check if we need to regenerate based on parameter changes
-        if (this[targetProperty] && 
-            this._lastWallThickness === this.wallThickness &&
-            this._lastCurveRadius === this.cubbyCurveRadius) {
-            return this[targetProperty];
+    /**
+     * Generate edge lines - the actual outer boundary of the cubby
+     * 
+     * Two modes based on cubbyMode setting:
+     * - "one" (Merge): Mix exterior lines (for perimeter walls) and center lines (for interior walls)
+     *                  Only apply curves to perimeter-to-perimeter corners
+     * - "many" (Individual): Use all center lines, apply curves to all corners
+     */
+    generateEdgeLines() {
+        
+        // Ensure prerequisite polygons exist
+        if (!this.centerLines) {
+            this.generateCenterLines();
+        }
+        if (!this.exteriorLines) {
+            this.generateExteriorLines();
         }
         
+        // Validate that centerLines and exteriorLines have matching counts
+        if (this.centerLines.length !== this.exteriorLines.length) {
+            throw new Error(`Center lines (${this.centerLines.length}) and exterior lines (${this.exteriorLines.length}) count mismatch - cannot generate edge lines`);
+        }
+        
+        // Create edgeline based on cubby mode
+        const edgeLines = [];
+        const cubbyMode = (typeof appState !== 'undefined') ? appState.generationConfig.cubbyMode : 'one';
+        
+        if (cubbyMode === 'many') {
+            // Mode "Many": Always use centerline positions for all walls
+            for (let i = 0; i < this.centerLines.length; i++) {
+                edgeLines.push({ ...this.centerLines[i] });
+            }
+        } else {
+            // Mode "One": Mix center and exterior lines based on perimeter flags
+            for (let i = 0; i < this.centerLines.length; i++) {
+                const centerLine = this.centerLines[i];
+                const exteriorLine = this.exteriorLines[i];
+                
+                if (centerLine.isPerimeterWall) {
+                    // Use corresponding exterior line for perimeter walls (full extension)
+                    // But preserve the perimeter flag from centerline
+                    const edgeLine = { ...exteriorLine };
+                    edgeLine.isPerimeterWall = centerLine.isPerimeterWall;
+                    edgeLines.push(edgeLine);
+                } else {
+                    // Use center line for interior walls (shared with adjacent cubbies, no extension)
+                    edgeLines.push({ ...centerLine });
+                }
+            }
+        }
+        
+        // Align corners only for mode "One" (mode "Many" doesn't need alignment since it's all centerlines)
+        if (cubbyMode === 'one') {
+            this.alignEdgeLineCorners(edgeLines);
+        }
+        
+        // Apply curves based on mode
+        if (this.cubbyCurveRadius > 0) {
+            if (cubbyMode === 'one') {
+                // Mode "One" (Merge): Only curves on outer perimeter corners
+                this.edgeLines = this.applyPerimeterOnlyCurves(edgeLines, this.cubbyCurveRadius);
+            } else {
+                // Mode "Many" (Individual): Curves on all corners
+                this.edgeLines = this.applyCurves(edgeLines, this.cubbyCurveRadius);
+            }
+        } else {
+            this.edgeLines = edgeLines;
+        }
+        
+        return this.edgeLines;
+    }
+    
+    /**
+     * Align corners where center and exterior lines meet (Mode "One" only)
+     * When mixing center/exterior lines, corners need alignment to prevent gaps
+     */
+    alignEdgeLineCorners(edgeLines) {
+        for (let i = 0; i < edgeLines.length; i++) {
+            const current = edgeLines[i];
+            const nextIndex = (i + 1) % edgeLines.length;
+            const next = edgeLines[nextIndex];
+            
+            // Check if current and next lines use different base types (center vs exterior)
+            const currentIsCenter = !this.centerLines[i].isPerimeterWall;
+            const nextIsCenter = !this.centerLines[nextIndex].isPerimeterWall;
+            
+            if (currentIsCenter !== nextIsCenter) {
+                // Mixed types - need alignment
+                if (currentIsCenter) {
+                    // Current line uses centerline, next uses exterior - align them
+                    this.alignCenterWithExterior(current, next);
+                } else {
+                    // Current line uses exterior, next uses centerline - align them  
+                    this.alignExteriorWithCenter(current, next);
+                }
+            }
+        }
+    }
+    
+    // Align a centerline-based edge line with an exterior line-based edge line
+    alignCenterWithExterior(centerEdgeLine, exteriorEdgeLine) {
+        const tolerance = 0.001;
+        
+        // Determine centerline orientation
+        const isHorizontal = Math.abs(centerEdgeLine.y1 - centerEdgeLine.y2) < tolerance;
+        const isVertical = Math.abs(centerEdgeLine.x1 - centerEdgeLine.x2) < tolerance;
+        
+        if (isHorizontal) {
+            // Horizontal centerline: use exterior's x for centerline endpoint, centerline's y for exterior endpoint
+            const exteriorX = exteriorEdgeLine.x1; // Start point x of exterior line
+            const centerY = centerEdgeLine.y2; // End point y of centerline
+            
+            // Adjust centerline endpoint
+            centerEdgeLine.x2 = exteriorX; // Use exterior's x
+            centerEdgeLine.y2 = centerY; // Keep same y (already correct)
+            
+            // Adjust exterior line startpoint  
+            exteriorEdgeLine.x1 = exteriorX; // Keep same x (already correct)
+            exteriorEdgeLine.y1 = centerY; // Use centerline's y
+            
+        } else if (isVertical) {
+            // Vertical centerline: use exterior's y for centerline endpoint, centerline's x for exterior endpoint
+            const exteriorY = exteriorEdgeLine.y1; // Start point y of exterior line
+            const centerX = centerEdgeLine.x2; // End point x of centerline
+            
+            // Adjust centerline endpoint
+            centerEdgeLine.x2 = centerX; // Keep same x (already correct)
+            centerEdgeLine.y2 = exteriorY; // Use exterior's y
+            
+            // Adjust exterior line startpoint
+            exteriorEdgeLine.x1 = centerX; // Use centerline's x
+            exteriorEdgeLine.y1 = exteriorY; // Keep same y (already correct)
+        }
+    }
+    
+    // Align an exterior line-based edge line with a centerline-based edge line  
+    alignExteriorWithCenter(exteriorEdgeLine, centerEdgeLine) {
+        const tolerance = 0.001;
+        
+        // Determine centerline orientation (the one that extends to meet the exterior)
+        const isHorizontal = Math.abs(centerEdgeLine.y1 - centerEdgeLine.y2) < tolerance;
+        const isVertical = Math.abs(centerEdgeLine.x1 - centerEdgeLine.x2) < tolerance;
+        
+        if (isHorizontal) {
+            // Horizontal centerline: use exterior's x for centerline endpoint, centerline's y for exterior endpoint
+            const exteriorX = exteriorEdgeLine.x2; // End point x of exterior line
+            const centerY = centerEdgeLine.y1; // Start point y of centerline
+            
+            // Adjust exterior endpoint
+            exteriorEdgeLine.x2 = exteriorX; // Keep same x (already correct)
+            exteriorEdgeLine.y2 = centerY; // Use centerline's y
+            
+            // Adjust centerline startpoint
+            centerEdgeLine.x1 = exteriorX; // Use exterior's x
+            centerEdgeLine.y1 = centerY; // Keep same y (already correct)
+            
+        } else if (isVertical) {
+            // Vertical centerline: use exterior's y for centerline endpoint, centerline's x for exterior endpoint
+            const exteriorY = exteriorEdgeLine.y2; // End point y of exterior line
+            const centerX = centerEdgeLine.x1; // Start point x of centerline
+            
+            // Adjust exterior endpoint
+            exteriorEdgeLine.x2 = centerX; // Use centerline's x
+            exteriorEdgeLine.y2 = exteriorY; // Keep same y (already correct)
+            
+            // Adjust centerline startpoint
+            centerEdgeLine.x1 = centerX; // Keep same x (already correct)
+            centerEdgeLine.y1 = exteriorY; // Use exterior's y
+        }
+    }
+    
+    // Helper to check if two points are equal
+    pointsEqual(p1, p2, tolerance = 0.001) {
+        return Math.abs(p1.x - p2.x) < tolerance && Math.abs(p1.y - p2.y) < tolerance;
+    }
+    
+    // Apply curves only to specific corners
+    applySelectiveCurves(lines, radius, cornerIndices) {
+        if (radius === 0 || lines.length === 0 || cornerIndices.length === 0) {
+            return [...lines];
+        }
+        
+        const orderedLines = this.orderLines(lines);
+        const result = [];
+        
+        for (let i = 0; i < orderedLines.length; i++) {
+            const current = orderedLines[i];
+            const next = orderedLines[(i + 1) % orderedLines.length];
+            const cornerIndex = (i + 1) % orderedLines.length;
+            
+            if (cornerIndices.includes(cornerIndex)) {
+                // This corner should have a curve
+                const connectionPoint = this.findConnectionPoint(current, next);
+                const isRightAngle = this.isRightAngleCorner(current, next);
+                
+                if (!connectionPoint || !isRightAngle) {
+                    throw new Error(`Cannot apply curve at corner ${cornerIndex} - not a right angle`);
+                }
+                
+                // Create rounded corner: [trimmedLine1, curveSegment, trimmedLine2]
+                const [trimmedCurrent, curveSegment, trimmedNext] = this.createRoundedCorner(
+                    current, next, connectionPoint, radius
+                );
+                
+                result.push(trimmedCurrent);
+                result.push(curveSegment);
+                
+                // Update next line to use trimmed version
+                orderedLines[(i + 1) % orderedLines.length] = trimmedNext;
+            } else {
+                // Sharp corner - keep original line
+                result.push({ ...current });
+            }
+        }
+        
+        return result;
+    }
+    
+    // Apply curves only to perimeter-to-perimeter corners (Mode "One")
+    applyPerimeterOnlyCurves(lines, radius) {
+        if (radius === 0 || lines.length === 0) {
+            return [...lines];
+        }
+        
+        // Find corners where both adjacent lines are perimeter walls
+        const perimeterCorners = [];
+        for (let i = 0; i < lines.length; i++) {
+            const currentLine = lines[i];
+            const nextLine = lines[(i + 1) % lines.length];
+            
+            if (currentLine.isPerimeterWall && nextLine.isPerimeterWall) {
+                // Both lines are on the perimeter - curve this corner
+                perimeterCorners.push((i + 1) % lines.length);
+            }
+        }
+        
+        // Apply curves only to perimeter corners
+        return perimeterCorners.length > 0 
+            ? this.applySelectiveCurves(lines, radius, perimeterCorners)
+            : [...lines];
+    }
+    
+    // Shared helper for generating offset lines (interior or exterior)
+    _generateOffsetLines(distance, direction, targetProperty) {
         // Ensure center lines are generated
         if (!this.centerLines) {
             this.generateCenterLines();
@@ -80,16 +326,12 @@ class Cubby {
         // Apply offset based on direction
         const offsetLines = this.offsetLines(this.centerLines, distance, direction);
         
-        // Apply corner curves if radius > 0
-        if (this.cubbyCurveRadius > 0) {
+        // Apply corner curves to interior lines only
+        if (targetProperty === 'interiorLines' && this.cubbyCurveRadius > 0) {
             this[targetProperty] = this.applyCurves(offsetLines, this.cubbyCurveRadius);
         } else {
             this[targetProperty] = offsetLines;
         }
-        
-        // Update cache keys
-        this._lastWallThickness = this.wallThickness;
-        this._lastCurveRadius = this.cubbyCurveRadius;
         
         return this[targetProperty];
     }
@@ -725,23 +967,70 @@ class Cubby {
         return this.bounds;
     }
     
-    
-    // Update wall thickness and clear relevant caches
-    setWallThickness(thickness) {
-        if (this.wallThickness !== thickness) {
-            this.wallThickness = thickness;
-            this.interiorLines = null;
-            this.exteriorLines = null;
+    // Detect which centerlines are perimeter walls (on case edge)
+    detectPerimeterWalls(caseBounds) {
+        if (!this.centerLines || !caseBounds) return;
+        
+        for (const line of this.centerLines) {
+            line.isPerimeterWall = this.isLineOnCasePerimeter(line, caseBounds);
         }
     }
     
-    // Update curve radius and clear relevant caches
-    setCurveRadius(radius) {
-        if (this.cubbyCurveRadius !== radius) {
-            this.cubbyCurveRadius = radius;
-            this.interiorLines = null;
-            this.exteriorLines = null;
+    // Check if a line is on the perimeter of the case
+    isLineOnCasePerimeter(line, caseBounds) {
+        const tolerance = 0.001;
+        
+        // Vertical line on left or right edge?
+        if (Math.abs(line.x1 - line.x2) < tolerance) {
+            const x = line.x1;
+            return Math.abs(x - caseBounds.minX) < tolerance || 
+                   Math.abs(x - caseBounds.maxX) < tolerance;
         }
+        
+        // Horizontal line on top or bottom edge?
+        if (Math.abs(line.y1 - line.y2) < tolerance) {
+            const y = line.y1;
+            return Math.abs(y - caseBounds.minY) < tolerance || 
+                   Math.abs(y - caseBounds.maxY) < tolerance;
+        }
+        
+        return false;
+    }
+    
+    // Calculate case bounds from all cubbies (static method)
+    static calculateCaseBounds(allCubbies) {
+        if (!allCubbies || allCubbies.length === 0) return null;
+        
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        for (const cubby of allCubbies) {
+            for (const cell of cubby.cells) {
+                minX = Math.min(minX, cell.x);
+                minY = Math.min(minY, cell.y);
+                maxX = Math.max(maxX, cell.x + 1);
+                maxY = Math.max(maxY, cell.y + 1);
+            }
+        }
+        
+        return { minX, minY, maxX, maxY };
+    }
+    
+    
+    // Update wall thickness and clear cached lines
+    setWallThickness(thickness) {
+        this.wallThickness = thickness;
+        this.interiorLines = null;
+        this.exteriorLines = null;
+        this.edgeLines = null;
+    }
+    
+    // Update curve radius and clear cached lines
+    setCurveRadius(radius) {
+        this.cubbyCurveRadius = radius;
+        this.interiorLines = null;
+        this.exteriorLines = null;
+        this.edgeLines = null;
     }
 }
 

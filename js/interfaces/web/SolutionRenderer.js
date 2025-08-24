@@ -518,7 +518,7 @@ class SolutionRenderer {
                 const layoutWidth = currCellular.layoutWidth;
                 const layoutHeight = currCellular.layoutHeight;
                 
-                // Create Cubby instances with all line data
+                // Create Cubby instances
                 const cubbies = cubbyAreas.map(cubbyData => {
                     if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
                         const cubby = new Cubby(
@@ -528,22 +528,27 @@ class SolutionRenderer {
                             cubbyCurveRadius
                         );
                         
-                        // Generate all three line types
-                        cubby.generateAllLines();
-                        
                         return cubby;
                     }
                     return null;
                 }).filter(Boolean);
                 
-                // Render all three line types with distinct colors (all 1px)
+                // Generate all polygon data with perimeter detection
+                const caseBounds = Cubby.calculateCaseBounds(cubbies);
+                for (const cubby of cubbies) {
+                    cubby.generateAllLines(caseBounds);
+                }
+                
+                // Render all four line types with distinct colors
                 const renderOptions = {
                     exteriorColor: '#FF8C00',  // Bright Orange
                     exteriorWeight: 1,
                     centerColor: '#333333',    // Dark Gray
                     centerWeight: 1,
                     interiorColor: '#00CC66',  // Bright Green
-                    interiorWeight: 1
+                    interiorWeight: 2,         // 2px for interior lines
+                    edgeColor: 'magenta',      // Magenta for edgelines
+                    edgeWeight: 2
                 };
                 
                 wallRenderers.cubbyRenderer.renderAllLineTypes(cubbies, canvas, config, renderOptions);

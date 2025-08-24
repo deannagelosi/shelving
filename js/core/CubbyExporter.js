@@ -48,7 +48,7 @@ class CubbyExporter {
             const cubbyData = cubbyAreas[i];
             
             if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
-                // Create a Cubby instance with all line data
+                // Create a Cubby instance 
                 const cubby = new Cubby(
                     cubbyData.shape_id,
                     cubbyData.visitedCells,
@@ -56,11 +56,14 @@ class CubbyExporter {
                     this.cubbyCurveRadius
                 );
                 
-                // Generate all three line types
-                cubby.generateAllLines();
-                
                 this.cubbies.push(cubby);
             }
+        }
+        
+        // Generate all polygon data with perimeter detection
+        const caseBounds = Cubby.calculateCaseBounds(this.cubbies);
+        for (const cubby of this.cubbies) {
+            cubby.generateAllLines(caseBounds);
         }
 
         // Apply shrink factor if needed
@@ -265,24 +268,19 @@ class CubbyExporter {
             strokeWeight(2);
             noFill();
             
-            // Render all three line types for the cubby (all 1px with distinct colors)
-            // Exterior lines
-            stroke('#FF8C00');  // Bright Orange
-            strokeWeight(1);
-            if (cubby.exteriorLines && cubby.exteriorLines.length > 0) {
-                this.renderCubbyPerimeter(cubby.exteriorLines, bounds, offsetX, offsetY, scale);
+            // Render all four line types with solid edgeline and dashed exterior/center
+            // 1. Edge lines (actual cubby boundary, solid bottom layer)
+            stroke('magenta');  // Magenta
+            strokeWeight(2);
+            drawingContext.setLineDash([]); // Solid line
+            if (cubby.edgeLines && cubby.edgeLines.length > 0) {
+                this.renderCubbyPerimeter(cubby.edgeLines, bounds, offsetX, offsetY, scale);
             }
             
-            // Center lines
-            stroke('#333333');  // Dark Gray
-            strokeWeight(1);
-            if (cubby.centerLines && cubby.centerLines.length > 0) {
-                this.renderCubbyPerimeter(cubby.centerLines, bounds, offsetX, offsetY, scale);
-            }
-            
-            // Interior lines
+            // 2. Interior lines (solid, 2px with curves)
             stroke('#00CC66');  // Bright Green
-            strokeWeight(1);
+            strokeWeight(2); // 2px for interior lines
+            drawingContext.setLineDash([]); // Solid line
             if (cubby.interiorLines && cubby.interiorLines.length > 0) {
                 this.renderCubbyPerimeter(cubby.interiorLines, bounds, offsetX, offsetY, scale);
             } else {
@@ -293,6 +291,24 @@ class CubbyExporter {
                 const rectH = bounds.height * scale;
                 rect(rectX, rectY, rectW, rectH);
             }
+            
+            // 3. Exterior lines (dashed, 1px)
+            stroke('#FF8C00');  // Bright Orange
+            strokeWeight(1); // 1px to match centerlines
+            drawingContext.setLineDash([5, 5]); // Dashed line
+            if (cubby.exteriorLines && cubby.exteriorLines.length > 0) {
+                this.renderCubbyPerimeter(cubby.exteriorLines, bounds, offsetX, offsetY, scale);
+            }
+            
+            // 4. Center lines with perimeter/interior distinction (dashed, 1px)
+            strokeWeight(1); // 1px to match exterior lines
+            drawingContext.setLineDash([3, 3]); // Dashed line
+            if (cubby.centerLines && cubby.centerLines.length > 0) {
+                this.renderCubbyPerimeterWithFlags(cubby.centerLines, bounds, offsetX, offsetY, scale);
+            }
+            
+            // Reset to solid lines
+            drawingContext.setLineDash([]);
             
             // Label cubby
             fill(color);
@@ -445,6 +461,40 @@ class CubbyExporter {
         }
         
         return points;
+    }
+
+    renderCubbyPerimeterWithFlags(perimeter, bounds, offsetX, offsetY, scale) {
+        // Render cubby perimeter with perimeter/interior color distinction
+        for (const segment of perimeter) {
+            // Set color based on perimeter flag
+            if (segment.isPerimeterWall) {
+                stroke('red'); // Perimeter walls in red
+            } else {
+                stroke('#333333'); // Interior walls in dark grey
+            }
+            
+            if (segment.type === 'bezier') {
+                // Render bezier curve for rounded corners - flip Y coordinates
+                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
+                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
+                const cp1x = offsetX + (segment.cp1x - bounds.minX) * scale;
+                const cp1y = offsetY + (bounds.maxY - segment.cp1y) * scale;  // Y-flip
+                const cp2x = offsetX + (segment.cp2x - bounds.minX) * scale;
+                const cp2y = offsetY + (bounds.maxY - segment.cp2y) * scale;  // Y-flip
+                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
+                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
+                
+                bezier(x1, y1, cp1x, cp1y, cp2x, cp2y, x2, y2);
+            } else {
+                // Render regular line segment - flip Y coordinates
+                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
+                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
+                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
+                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
+                
+                line(x1, y1, x2, y2);
+            }
+        }
     }
 
     renderCubbyPerimeter(perimeter, bounds, offsetX, offsetY, scale) {

@@ -27,6 +27,7 @@ const appState = {
         wallAlgorithm: 'cellular-organic',  // 'cellular-organic', 'cellular-rectilinear', 'bend'
         cubbyCurveRadius: 0.5,         // For cubbies: 0-1.0, radius for rounded corners
         wallThickness: 0.25,           // For cubbies: wall thickness in inches
+        cubbyMode: 'one',              // 'one' (merge after fabrication), 'many' (individual cubbies)
         bendRadius: 1.0,               // For bent wood walls
         maxBends: 4
     },
@@ -56,6 +57,21 @@ const appState = {
             }
         } else {
             console.log(`[appState] Fabrication type unchanged: ${newType} (${source})`);
+        }
+    },
+
+    setCubbyMode(newMode, source = 'user') {
+        if (this.generationConfig.cubbyMode !== newMode) {
+            const oldMode = this.generationConfig.cubbyMode;
+            this.generationConfig.cubbyMode = newMode;
+            console.log(`[appState] Cubby mode changed: ${oldMode} → ${newMode} (${source})`);
+            
+            // Emit event for UI updates
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('cubbyModeChanged', { cubbyMode: newMode, source });
+            }
+        } else {
+            console.log(`[appState] Cubby mode unchanged: ${newMode} (${source})`);
         }
     },
 

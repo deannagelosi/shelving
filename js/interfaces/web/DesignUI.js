@@ -40,6 +40,11 @@ class DesignUI {
             this.updateFabricationTypeUI(fabricationType);
         });
 
+        // listen for cubby mode changes to update UI
+        appEvents.on('cubbyModeChanged', ({ cubbyMode }) => {
+            this.updateCubbyModeUI(cubbyMode);
+        });
+
         //== movement debouncing
         this.moveDebounceTimer = null;
         this.moveDebounceDelay = 150; // milliseconds
@@ -1185,6 +1190,22 @@ class DesignUI {
         this.html.fabricationTypeSelect.option('Bent Wall', 'bent');
         // Set to appState value or default to ensure it has a valid value
         this.html.fabricationTypeSelect.selected(appState.generationConfig.fabricationType || 'boards');
+        
+        // Cubby Mode selection (only shown for cubbies fabrication type)
+        this.html.cubbyModeGroup = createDiv()
+            .addClass('settings-group cubby-mode-group')
+            .parent(this.html.controlsContainer);
+        createSpan('Cubby Mode')
+            .addClass('settings-label')
+            .parent(this.html.cubbyModeGroup);
+        this.html.cubbyModeSelect = createSelect()
+            .addClass('settings-select')
+            .parent(this.html.cubbyModeGroup)
+            .changed(() => this.handleCubbyModeChange());
+        this.html.cubbyModeSelect.option('One (Merge)', 'one');
+        this.html.cubbyModeSelect.option('Many (Individual)', 'many');
+        // Set to appState value or default
+        this.html.cubbyModeSelect.selected(appState.generationConfig.cubbyMode || 'one');
 
         // Wall Algorithm sub-options (for Boards and Cubbies)
         this.html.algorithmGroup = createDiv()
@@ -1291,6 +1312,19 @@ class DesignUI {
         }
     }
 
+    handleCubbyModeChange() {
+        const selectedMode = this.html.cubbyModeSelect.value();
+        
+        // Update appState using centralized method
+        appState.setCubbyMode(selectedMode);
+        
+        // If there's a current solution and it's cubbies type, regenerate
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution && 
+            appState.generationConfig.fabricationType === 'cubbies') {
+            this.displayResult();
+        }
+    }
+
     updateFabricationTypeUI(fabricationType) {
         // Update dropdown to match state (in case changed from elsewhere)
         if (this.html.fabricationTypeSelect) {
@@ -1307,16 +1341,31 @@ class DesignUI {
             this.html.algorithmGroup.removeClass('hidden');
             this.html.curveGroup.addClass('hidden');
             
-            // Show corner radius only for cubbies
+            // Show corner radius and mode only for cubbies
             if (fabricationType === 'cubbies') {
                 this.html.cubbyGroup.removeClass('hidden');
+                this.html.cubbyModeGroup.removeClass('hidden');
             } else {
                 this.html.cubbyGroup.addClass('hidden');
+                this.html.cubbyModeGroup.addClass('hidden');
             }
         } else if (fabricationType === 'bent') {
             this.html.algorithmGroup.addClass('hidden');
             this.html.cubbyGroup.addClass('hidden');
+            this.html.cubbyModeGroup.addClass('hidden');
             this.html.curveGroup.removeClass('hidden');
+        }
+    }
+
+    updateCubbyModeUI(cubbyMode) {
+        // Update dropdown to match state (in case changed from elsewhere)
+        if (this.html.cubbyModeSelect) {
+            this.html.cubbyModeSelect.selected(cubbyMode);
+            
+            // Force update if p5.js didn't update properly
+            if (this.html.cubbyModeSelect.value() !== cubbyMode) {
+                this.html.cubbyModeSelect.elt.value = cubbyMode;
+            }
         }
     }
 

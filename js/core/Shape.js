@@ -117,8 +117,11 @@ class Shape {
             this.setTrueBetween(newRow, firstTrue, lastTrue + 1);
             this.data.bufferShape.push(newRow);
         }
+        // == //
+        // comment this out to disable top buffer
         // add a row on the top of the trim shape that's the same as the row below it
         this.data.bufferShape.push([...this.data.bufferShape[this.data.bufferShape.length - 1]]);
+        // == //
         // add additional buffer squares for under hangs
         for (let y = 0; y < this.data.bufferShape.length; y++) {
             for (let x = 0; x < this.data.bufferShape[y].length; x++) {

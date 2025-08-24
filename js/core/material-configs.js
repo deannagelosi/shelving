@@ -9,7 +9,7 @@ const MATERIAL_CONFIGS = {
         settings: [
             {
                 name: 'thickness',
-                defaultValue: 0.23,
+                defaultValue: 0.375,
                 container: 'materialProps',
                 inputType: 'number',
                 label: 'Thickness (in)',
@@ -45,7 +45,7 @@ const MATERIAL_CONFIGS = {
             },
             {
                 name: 'sheetWidth',
-                defaultValue: 30,
+                defaultValue: 44,
                 container: 'sheetDimensions',
                 inputType: 'number',
                 label: 'Width (in)',
@@ -54,7 +54,7 @@ const MATERIAL_CONFIGS = {
             },
             {
                 name: 'sheetHeight',
-                defaultValue: 28,
+                defaultValue: 35,
                 container: 'sheetDimensions',
                 inputType: 'number',
                 label: 'Height (in)',
@@ -237,7 +237,7 @@ const MATERIAL_CONFIGS = {
             },
             {
                 name: 'sheetWidth',
-                defaultValue: 30,
+                defaultValue: 44,
                 container: 'sheetDimensions',
                 inputType: 'number',
                 label: 'Width (in)',
@@ -246,7 +246,7 @@ const MATERIAL_CONFIGS = {
             },
             {
                 name: 'sheetHeight',
-                defaultValue: 28,
+                defaultValue: 35,
                 container: 'sheetDimensions',
                 inputType: 'number',
                 label: 'Height (in)',
