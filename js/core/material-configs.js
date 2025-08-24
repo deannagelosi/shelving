@@ -408,6 +408,18 @@ const MATERIAL_CONFIGS = {
         // ============================================================================
         settings: [
             {
+                name: 'cubbyMode',
+                defaultValue: 'one',
+                container: 'caseProps',
+                inputType: 'select',
+                label: 'Cubby Mode',
+                cssClass: 'dimension-input',
+                options: [
+                    { value: 'one', text: 'One (merge cubbies)' },
+                    { value: 'many', text: 'Many (individual cubbies)' }
+                ]
+            },
+            {
                 name: 'shrinkFactor',
                 defaultValue: 0,
                 container: 'materialProps',

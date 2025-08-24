@@ -1038,6 +1038,25 @@ class Cubby {
         this.exteriorLines = null;
         this.edgeLines = null;
     }
+    
+    // Calculate bounding box for cubby cells in grid units
+    static getCubbyBounds(cubby) {
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        for (const cell of cubby.cells) {
+            minX = Math.min(minX, cell.x);
+            minY = Math.min(minY, cell.y);
+            maxX = Math.max(maxX, cell.x + 1);
+            maxY = Math.max(maxY, cell.y + 1);
+        }
+        
+        return {
+            minX, minY, maxX, maxY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)

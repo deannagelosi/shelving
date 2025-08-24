@@ -21,52 +21,26 @@ class CubbyRenderer {
             drawingContext.setLineDash([]); // Solid line
             this.renderLineSet(cubby.interiorLines, canvas, config);
             
-            // 3. Render exterior lines (dashed, on top)
-            stroke(options.exteriorColor || 'blue');
-            strokeWeight(1); // Use 1px to match centerlines
-            drawingContext.setLineDash([5, 5]); // Dashed line
-            this.renderLineSet(cubby.exteriorLines, canvas, config);
-            
-            // 4. Render center lines with perimeter/interior distinction (dashed, topmost)
-            strokeWeight(1); // Use 1px to match exterior lines
-            drawingContext.setLineDash([3, 3]); // Dashed line
-            this.renderCenterLinesWithPerimeterFlags(cubby.centerLines, canvas, config, options);
+            // 3-4. Diagnostic lines only in Detail mode
+            if (appState.display.detailView) {
+                // Exterior lines (dashed orange)
+                stroke(options.exteriorColor || '#FF8C00');
+                strokeWeight(1);
+                drawingContext.setLineDash([5, 5]);
+                this.renderLineSet(cubby.exteriorLines, canvas, config);
+                
+                // Center lines (simplified dashed grey)
+                stroke('#666666');
+                strokeWeight(1);
+                drawingContext.setLineDash([3, 3]);
+                this.renderLineSet(cubby.centerLines, canvas, config);
+            }
             
             // Reset to solid lines
             drawingContext.setLineDash([]);
         }
     }
 
-    // Render center lines with perimeter/interior color distinction
-    renderCenterLinesWithPerimeterFlags(lines, canvas, config, options) {
-        if (!lines || lines.length === 0) return;
-        
-        for (const lineSegment of lines) {
-            // Set color based on perimeter flag
-            if (lineSegment.isPerimeterWall) {
-                stroke('red'); // Perimeter walls in red
-            } else {
-                stroke(options.centerColor || '#333333'); // Interior walls in dark grey
-            }
-            
-            if (lineSegment.type === 'bezier') {
-                // Render bezier curve
-                const coords1 = this.gridToCanvas(lineSegment.x1, lineSegment.y1, canvas, config);
-                const coordsCP1 = this.gridToCanvas(lineSegment.cp1x, lineSegment.cp1y, canvas, config);
-                const coordsCP2 = this.gridToCanvas(lineSegment.cp2x, lineSegment.cp2y, canvas, config);
-                const coords2 = this.gridToCanvas(lineSegment.x2, lineSegment.y2, canvas, config);
-                
-                bezier(coords1.x, coords1.y, coordsCP1.x, coordsCP1.y,
-                       coordsCP2.x, coordsCP2.y, coords2.x, coords2.y);
-            } else {
-                // Render regular line
-                const coords1 = this.gridToCanvas(lineSegment.x1, lineSegment.y1, canvas, config);
-                const coords2 = this.gridToCanvas(lineSegment.x2, lineSegment.y2, canvas, config);
-                
-                line(coords1.x, coords1.y, coords2.x, coords2.y);
-            }
-        }
-    }
 
     // Generic line rendering for any line set
     renderLineSet(lines, canvas, config) {
@@ -120,32 +94,28 @@ class CubbyRenderer {
             const color = colors[i % colors.length];
             
             if (cubby.cells && cubby.cells.length > 0) {
-                // Find center of cubby
-                const centerCell = this.findCubbyCenter(cubby.cells);
-                const centerCoords = this.gridToCanvas(centerCell.x, centerCell.y, canvas, config);
+                // Find top-left most cell (most consistent for irregular shapes)
+                const topLeftCell = cubby.cells.reduce((topLeft, cell) => {
+                    if (cell.y < topLeft.y || (cell.y === topLeft.y && cell.x < topLeft.x)) {
+                        return cell;
+                    }
+                    return topLeft;
+                });
+                
+                // Place label at center of that cell using grid units
+                const labelCoords = this.gridToCanvas(
+                    topLeftCell.x + 0.5, 
+                    topLeftCell.y + 0.5, 
+                    canvas, config
+                );
                 
                 // Draw label with cubby color
                 fill(color);
-                text(`${cubby.id}`, centerCoords.x, centerCoords.y);
+                text(`${cubby.id}`, labelCoords.x, labelCoords.y);
             }
         }
     }
 
-    findCubbyCenter(cells) {
-        // Find approximate center cell of a cubby
-        if (cells.length === 0) return { x: 0, y: 0 };
-        
-        let sumX = 0, sumY = 0;
-        for (const cell of cells) {
-            sumX += cell.x;
-            sumY += cell.y;
-        }
-        
-        return {
-            x: sumX / cells.length,
-            y: sumY / cells.length
-        };
-    }
 
     renderCubbyOutlines(cubbies, canvas, config, options = {}) {
         // Render simple rectangular outlines for cubbies (fallback rendering)
@@ -161,7 +131,7 @@ class CubbyRenderer {
             
             if (cubby.cells && cubby.cells.length > 0) {
                 stroke(color);
-                const bounds = this.getCubbyBounds(cubby.cells);
+                const bounds = Cubby.getCubbyBounds(cubby);
                 
                 const topLeft = this.gridToCanvas(bounds.minX, bounds.maxY, canvas, config);
                 const bottomRight = this.gridToCanvas(bounds.maxX, bounds.minY, canvas, config);
@@ -176,20 +146,6 @@ class CubbyRenderer {
 
     // Note: extractPerimeter and convertEdgesToLineSegments have been moved to Cubby class
 
-    getCubbyBounds(cells) {
-        // Calculate bounding box for cubby cells
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-        
-        for (const cell of cells) {
-            minX = Math.min(minX, cell.x);
-            minY = Math.min(minY, cell.y);
-            maxX = Math.max(maxX, cell.x + 1);
-            maxY = Math.max(maxY, cell.y + 1);
-        }
-        
-        return { minX, minY, maxX, maxY };
-    }
 
     // Note: All curve generation methods have been moved to Cubby class
 }

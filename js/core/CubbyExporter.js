@@ -111,7 +111,7 @@ class CubbyExporter {
         const warnings = [];
         
         for (const cubby of this.cubbies) {
-            const bounds = this.getCubbyBounds(cubby);
+            const bounds = Cubby.getCubbyBounds(cubby);
             
             // Convert to physical dimensions (inches)
             const physicalWidth = bounds.width;
@@ -150,79 +150,6 @@ class CubbyExporter {
         return warnings;
     }
 
-    splitOversizedCubbies() {
-        // Split cubbies that exceed print bed dimensions
-        const newCubbies = [];
-        const oversizedCubbies = [];
-        
-        for (const cubby of this.cubbies) {
-            const bounds = this.getCubbyBounds(cubby);
-            
-            if (bounds.width > this.printBedWidth || bounds.height > this.printBedHeight) {
-                oversizedCubbies.push(cubby);
-                // Split this cubby into smaller pieces
-                const splitCubbies = this.splitCubby(cubby);
-                newCubbies.push(...splitCubbies);
-            } else {
-                newCubbies.push(cubby);
-            }
-        }
-        
-        if (oversizedCubbies.length > 0) {
-            console.log(`[CubbyExporter] Split ${oversizedCubbies.length} oversized cubbies into ${newCubbies.length - (this.cubbies.length - oversizedCubbies.length)} pieces`);
-            this.cubbies = newCubbies;
-        }
-        
-        return oversizedCubbies;
-    }
-
-    splitCubby(cubby) {
-        // Split a cubby into smaller pieces that fit within print bed
-        const bounds = this.getCubbyBounds(cubby);
-        const splitCubbies = [];
-        
-        // Calculate how many pieces we need in each dimension
-        const xSplits = Math.ceil(bounds.width / this.printBedWidth);
-        const ySplits = Math.ceil(bounds.height / this.printBedHeight);
-        
-        const pieceWidth = bounds.width / xSplits;
-        const pieceHeight = bounds.height / ySplits;
-        
-        for (let x = 0; x < xSplits; x++) {
-            for (let y = 0; y < ySplits; y++) {
-                const pieceMinX = bounds.minX + (x * pieceWidth);
-                const pieceMaxX = bounds.minX + ((x + 1) * pieceWidth);
-                const pieceMinY = bounds.minY + (y * pieceHeight);
-                const pieceMaxY = bounds.minY + ((y + 1) * pieceHeight);
-                
-                // Filter cells that fall within this piece
-                const pieceCells = cubby.cells.filter(cell => {
-                    const cellX = cell.x * this.squareSize;
-                    const cellY = cell.y * this.squareSize;
-                    return cellX >= pieceMinX && cellX < pieceMaxX && 
-                           cellY >= pieceMinY && cellY < pieceMaxY;
-                });
-                
-                if (pieceCells.length > 0) {
-                    const pieceCubby = {
-                        id: `${cubby.id}-${x}-${y}`,
-                        shapeId: cubby.shapeId,
-                        cells: pieceCells,
-                        area: pieceCells.length,
-                        perimeter: this.extractPerimeterFromCells(pieceCells),
-                        corners: [],
-                        isPiece: true,
-                        originalId: cubby.id
-                    };
-                    
-                    pieceCubby.corners = this.detectCorners(pieceCubby.perimeter);
-                    splitCubbies.push(pieceCubby);
-                }
-            }
-        }
-        
-        return splitCubbies;
-    }
 
     previewLayout() {
         clear();
@@ -241,46 +168,62 @@ class CubbyExporter {
             return;
         }
         
-        // Simple grid layout for individual cubbies
+        // Calculate unified grid layout and scaling
         const maxCols = Math.ceil(Math.sqrt(this.cubbies.length));
+        const maxRows = Math.ceil(this.cubbies.length / maxCols);
         const padding = 50;
-        const cubbySpacing = 100; // Space between cubbies
         
-        // Draw each cubby as perimeter walls instead of cells
+        // Find the maximum dimensions across all cubbies
+        let maxCubbyWidth = 0;
+        let maxCubbyHeight = 0;
+        const cubbyBounds = [];
+        
+        for (const cubby of this.cubbies) {
+            const bounds = Cubby.getCubbyBounds(cubby);
+            cubbyBounds.push(bounds);
+            maxCubbyWidth = Math.max(maxCubbyWidth, bounds.width);
+            maxCubbyHeight = Math.max(maxCubbyHeight, bounds.height);
+        }
+        
+        // Calculate unified scale to fit all cubbies in canvas with padding
+        const availableWidth = width - (padding * 2);
+        const availableHeight = height - (padding * 2);
+        const totalGridWidth = maxCols * maxCubbyWidth;
+        const totalGridHeight = maxRows * maxCubbyHeight;
+        const scale = Math.min(availableWidth / totalGridWidth, availableHeight / totalGridHeight);
+        
+        // Calculate spacing between cubbies
+        const cubbySpacing = Math.max(maxCubbyWidth, maxCubbyHeight) * scale + 20;
+        
         const colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray'];
         
         for (let i = 0; i < this.cubbies.length; i++) {
             const cubby = this.cubbies[i];
             const color = colors[i % colors.length];
+            const bounds = cubbyBounds[i];
             
-            // Calculate position in grid layout
+            // Calculate position in unified grid layout
             const col = i % maxCols;
             const row = Math.floor(i / maxCols);
             const offsetX = padding + (col * cubbySpacing);
             const offsetY = padding + (row * cubbySpacing);
-            
-            // Get cubby bounds for scaling
-            const bounds = this.getCubbyBounds(cubby);
-            const scale = Math.min(80 / bounds.width, 80 / bounds.height); // Fit in 80px square
             
             // Draw perimeter walls instead of cells
             stroke(color);
             strokeWeight(2);
             noFill();
             
-            // Render all four line types with solid edgeline and dashed exterior/center
-            // 1. Edge lines (actual cubby boundary, solid bottom layer)
-            stroke('magenta');  // Magenta
+            // Export preview: only edge lines and interior lines (clean view)
+            stroke('magenta');
             strokeWeight(2);
-            drawingContext.setLineDash([]); // Solid line
+            drawingContext.setLineDash([]);
             if (cubby.edgeLines && cubby.edgeLines.length > 0) {
                 this.renderCubbyPerimeter(cubby.edgeLines, bounds, offsetX, offsetY, scale);
             }
             
-            // 2. Interior lines (solid, 2px with curves)
-            stroke('#00CC66');  // Bright Green
-            strokeWeight(2); // 2px for interior lines
-            drawingContext.setLineDash([]); // Solid line
+            stroke('#00CC66');
+            strokeWeight(2);
+            drawingContext.setLineDash([]);
             if (cubby.interiorLines && cubby.interiorLines.length > 0) {
                 this.renderCubbyPerimeter(cubby.interiorLines, bounds, offsetX, offsetY, scale);
             } else {
@@ -292,31 +235,32 @@ class CubbyExporter {
                 rect(rectX, rectY, rectW, rectH);
             }
             
-            // 3. Exterior lines (dashed, 1px)
-            stroke('#FF8C00');  // Bright Orange
-            strokeWeight(1); // 1px to match centerlines
-            drawingContext.setLineDash([5, 5]); // Dashed line
-            if (cubby.exteriorLines && cubby.exteriorLines.length > 0) {
-                this.renderCubbyPerimeter(cubby.exteriorLines, bounds, offsetX, offsetY, scale);
-            }
-            
-            // 4. Center lines with perimeter/interior distinction (dashed, 1px)
-            strokeWeight(1); // 1px to match exterior lines
-            drawingContext.setLineDash([3, 3]); // Dashed line
-            if (cubby.centerLines && cubby.centerLines.length > 0) {
-                this.renderCubbyPerimeterWithFlags(cubby.centerLines, bounds, offsetX, offsetY, scale);
-            }
-            
             // Reset to solid lines
             drawingContext.setLineDash([]);
             
-            // Label cubby
+            // Visual indicator for cubbies that exceed print bed dimensions
+            if (bounds.width > this.printBedWidth || bounds.height > this.printBedHeight) {
+                fill('rgba(255, 0, 0, 0.3)'); // Transparent red
+                noStroke();
+                rect(offsetX, offsetY, bounds.width * scale, bounds.height * scale);
+            }
+            
+            // Label cubby - find top-left most cell for consistent placement
+            const topLeftCell = cubby.cells.reduce((topLeft, cell) => {
+                if (cell.y < topLeft.y || (cell.y === topLeft.y && cell.x < topLeft.x)) {
+                    return cell;
+                }
+                return topLeft;
+            });
+            
+            // Place label at center of that cell
+            const labelX = offsetX + ((topLeftCell.x + 0.5) - bounds.minX) * scale;
+            const labelY = offsetY + (bounds.maxY - (topLeftCell.y + 0.5)) * scale;
+            
             fill(color);
             noStroke();
             textAlign(CENTER, CENTER);
             textSize(12);
-            const labelX = offsetX + (bounds.width * scale) / 2;
-            const labelY = offsetY + (bounds.height * scale) / 2;
             text(`${cubby.id}`, labelX, labelY);
         }
         
@@ -463,39 +407,6 @@ class CubbyExporter {
         return points;
     }
 
-    renderCubbyPerimeterWithFlags(perimeter, bounds, offsetX, offsetY, scale) {
-        // Render cubby perimeter with perimeter/interior color distinction
-        for (const segment of perimeter) {
-            // Set color based on perimeter flag
-            if (segment.isPerimeterWall) {
-                stroke('red'); // Perimeter walls in red
-            } else {
-                stroke('#333333'); // Interior walls in dark grey
-            }
-            
-            if (segment.type === 'bezier') {
-                // Render bezier curve for rounded corners - flip Y coordinates
-                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
-                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
-                const cp1x = offsetX + (segment.cp1x - bounds.minX) * scale;
-                const cp1y = offsetY + (bounds.maxY - segment.cp1y) * scale;  // Y-flip
-                const cp2x = offsetX + (segment.cp2x - bounds.minX) * scale;
-                const cp2y = offsetY + (bounds.maxY - segment.cp2y) * scale;  // Y-flip
-                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
-                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
-                
-                bezier(x1, y1, cp1x, cp1y, cp2x, cp2y, x2, y2);
-            } else {
-                // Render regular line segment - flip Y coordinates
-                const x1 = offsetX + (segment.x1 - bounds.minX) * scale;
-                const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
-                const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
-                const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
-                
-                line(x1, y1, x2, y2);
-            }
-        }
-    }
 
     renderCubbyPerimeter(perimeter, bounds, offsetX, offsetY, scale) {
         // Render cubby perimeter with Y-flip to match CubbyRenderer coordinate system
@@ -524,24 +435,6 @@ class CubbyExporter {
         }
     }
 
-    getCubbyBounds(cubby) {
-        // Calculate bounding box for a cubby in grid units
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-        
-        for (const cell of cubby.cells) {
-            minX = Math.min(minX, cell.x);
-            minY = Math.min(minY, cell.y);
-            maxX = Math.max(maxX, cell.x + 1);
-            maxY = Math.max(maxY, cell.y + 1);
-        }
-        
-        return {
-            minX, minY, maxX, maxY,
-            width: maxX - minX,
-            height: maxY - minY
-        };
-    }
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)
