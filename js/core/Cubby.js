@@ -130,15 +130,10 @@ class Cubby {
             this.alignEdgeLineCorners(edgeLines);
         }
         
-        // Apply curves based on mode
+        // Apply curves
         if (this.cubbyCurveRadius > 0) {
-            if (cubbyMode === 'one') {
-                // Mode "One" (Merge): Only curves on outer perimeter corners
-                this.edgeLines = this.applyPerimeterOnlyCurves(edgeLines, this.cubbyCurveRadius);
-            } else {
-                // Mode "Many" (Individual): Curves on all corners
-                this.edgeLines = this.applyCurves(edgeLines, this.cubbyCurveRadius);
-            }
+            const cornersToApply = this.selectCornersForCurves(edgeLines, cubbyMode, 'edge');
+            this.edgeLines = this.applySelectiveCurves(edgeLines, this.cubbyCurveRadius, cornersToApply);
         } else {
             this.edgeLines = edgeLines;
         }
@@ -250,7 +245,6 @@ class Cubby {
         return Math.abs(p1.x - p2.x) < tolerance && Math.abs(p1.y - p2.y) < tolerance;
     }
     
-    // Apply curves only to specific corners
     applySelectiveCurves(lines, radius, cornerIndices) {
         if (radius === 0 || lines.length === 0 || cornerIndices.length === 0) {
             return [...lines];
@@ -259,61 +253,106 @@ class Cubby {
         const orderedLines = this.orderLines(lines);
         const result = [];
         
-        for (let i = 0; i < orderedLines.length; i++) {
-            const current = orderedLines[i];
-            const next = orderedLines[(i + 1) % orderedLines.length];
-            const cornerIndex = (i + 1) % orderedLines.length;
+        // Process each line exactly once, considering both endpoints
+        for (let lineIndex = 0; lineIndex < orderedLines.length; lineIndex++) {
+            const line = orderedLines[lineIndex];
+            const startCorner = lineIndex;
+            const endCorner = (lineIndex + 1) % orderedLines.length;
             
-            if (cornerIndices.includes(cornerIndex)) {
-                // This corner should have a curve
-                const connectionPoint = this.findConnectionPoint(current, next);
-                const isRightAngle = this.isRightAngleCorner(current, next);
-                
-                if (!connectionPoint || !isRightAngle) {
-                    throw new Error(`Cannot apply curve at corner ${cornerIndex} - not a right angle`);
-                }
-                
-                // Create rounded corner: [trimmedLine1, curveSegment, trimmedLine2]
-                const [trimmedCurrent, curveSegment, trimmedNext] = this.createRoundedCorner(
-                    current, next, connectionPoint, radius
-                );
-                
-                result.push(trimmedCurrent);
-                result.push(curveSegment);
-                
-                // Update next line to use trimmed version
-                orderedLines[(i + 1) % orderedLines.length] = trimmedNext;
-            } else {
-                // Sharp corner - keep original line
-                result.push({ ...current });
-            }
+            const startCurved = cornerIndices.includes(startCorner);
+            const endCurved = cornerIndices.includes(endCorner);
+            
+            const segments = this.generateLineWithEndpoints(line, lineIndex, startCurved, endCurved, radius, orderedLines);
+            result.push(...segments);
         }
         
         return result;
     }
     
-    // Apply curves only to perimeter-to-perimeter corners (Mode "One")
-    applyPerimeterOnlyCurves(lines, radius) {
-        if (radius === 0 || lines.length === 0) {
-            return [...lines];
-        }
+    // Generate line segment + curves based on endpoint states
+    // Curves are only generated at line starts to avoid duplication
+    generateLineWithEndpoints(line, lineIndex, startCurved, endCurved, radius, orderedLines) {
+        const segments = [];
         
-        // Find corners where both adjacent lines are perimeter walls
-        const perimeterCorners = [];
-        for (let i = 0; i < lines.length; i++) {
-            const currentLine = lines[i];
-            const nextLine = lines[(i + 1) % lines.length];
+        if (startCurved) {
+            // Generate curve at start of this line
+            const prevLine = orderedLines[(lineIndex - 1 + orderedLines.length) % orderedLines.length];
+            const connectionPoint = this.findConnectionPoint(prevLine, line);
+            const [, curve, trimmedCurrent] = this.createRoundedCorner(prevLine, line, connectionPoint, radius);
             
-            if (currentLine.isPerimeterWall && nextLine.isPerimeterWall) {
-                // Both lines are on the perimeter - curve this corner
-                perimeterCorners.push((i + 1) % lines.length);
+            segments.push(curve);
+            
+            // If end is also curved, we need to trim this line on both ends
+            if (endCurved) {
+                const nextLine = orderedLines[(lineIndex + 1) % orderedLines.length];
+                const endConnection = this.findConnectionPoint(line, nextLine);
+                const [trimmedCurrentEnd] = this.createRoundedCorner(line, nextLine, endConnection, radius);
+                
+                // Create line trimmed at both ends: start from start curve, end where end curve starts
+                const doubleTrimmedLine = {
+                    type: 'line',
+                    x1: trimmedCurrent.x1, y1: trimmedCurrent.y1,
+                    x2: trimmedCurrentEnd.x2, y2: trimmedCurrentEnd.y2
+                };
+                segments.push(doubleTrimmedLine);
+            } else {
+                // Only start curve - use line trimmed at start only
+                segments.push(trimmedCurrent);
+            }
+        } else {
+            // No start curve
+            if (endCurved) {
+                // Line will be trimmed by next line's start curve, but we need to trim the end now
+                const nextLine = orderedLines[(lineIndex + 1) % orderedLines.length];
+                const endConnection = this.findConnectionPoint(line, nextLine);
+                const [trimmedCurrentEnd] = this.createRoundedCorner(line, nextLine, endConnection, radius);
+                
+                // Add line trimmed at end only (start curve will be added by next line)
+                segments.push(trimmedCurrentEnd);
+            } else {
+                // No curves at either end - keep original line
+                segments.push({ ...line });
             }
         }
         
-        // Apply curves only to perimeter corners
-        return perimeterCorners.length > 0 
-            ? this.applySelectiveCurves(lines, radius, perimeterCorners)
-            : [...lines];
+        return segments;
+    }
+    
+    // Unified corner selection for curve application
+    selectCornersForCurves(lines, mode, lineType) {
+        if (mode === 'one' && lineType === 'edge') {
+            // Mode "One" edge lines: Only perimeter-to-perimeter corners
+            return this.getPerimeterCornerIndices(lines);
+        } else {
+            // All other cases: Apply curves to all corners
+            return this.getAllCornerIndices(lines);
+        }
+    }
+    
+    // Get indices of all corners in a polygon
+    getAllCornerIndices(lines) {
+        const indices = [];
+        for (let i = 0; i < lines.length; i++) {
+            indices.push(i);
+        }
+        return indices;
+    }
+    
+    // Get indices of corners where both adjacent lines are perimeter walls
+    getPerimeterCornerIndices(lines) {
+        const perimeterCorners = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const currentLine = lines[i];
+            const nextLine = lines[(i + 1) % lines.length];
+            const cornerIndex = (i + 1) % lines.length;
+            
+            if (currentLine.isPerimeterWall && nextLine.isPerimeterWall) {
+                perimeterCorners.push(cornerIndex);
+            }
+        }
+        
+        return perimeterCorners;
     }
     
     // Shared helper for generating offset lines (interior or exterior)
@@ -326,9 +365,10 @@ class Cubby {
         // Apply offset based on direction
         const offsetLines = this.offsetLines(this.centerLines, distance, direction);
         
-        // Apply corner curves to interior lines only
+        // Apply corner curves to interior lines only using unified approach
         if (targetProperty === 'interiorLines' && this.cubbyCurveRadius > 0) {
-            this[targetProperty] = this.applyCurves(offsetLines, this.cubbyCurveRadius);
+            const cornersToApply = this.selectCornersForCurves(offsetLines, 'any', 'interior');
+            this[targetProperty] = this.applySelectiveCurves(offsetLines, this.cubbyCurveRadius, cornersToApply);
         } else {
             this[targetProperty] = offsetLines;
         }
@@ -420,23 +460,21 @@ class Cubby {
             }
         }
         
-        
         const mergedLines = [];
         
         // Merge horizontal segments
-        for (const [y, segs] of horizontalGroups) {
+        for (const [, segs] of horizontalGroups) {
             const sorted = segs.sort((a, b) => Math.min(a.x1, a.x2) - Math.min(b.x1, b.x2));
             const merged = this.mergeAlignedSegments(sorted, 'horizontal');
             mergedLines.push(...merged);
         }
         
         // Merge vertical segments
-        for (const [x, segs] of verticalGroups) {
+        for (const [, segs] of verticalGroups) {
             const sorted = segs.sort((a, b) => Math.min(a.y1, a.y2) - Math.min(b.y1, b.y2));
             const merged = this.mergeAlignedSegments(sorted, 'vertical');
             mergedLines.push(...merged);
         }
-        
         
         return mergedLines;
     }
@@ -509,9 +547,6 @@ class Cubby {
         for (let i = 0; i < lines.length; i++) {
             const curr = lines[i];
             const prev = lines[(i - 1 + lines.length) % lines.length];
-            
-            // Verify that lines actually connect
-            const tolerance = 0.001;
             
             // Each vertex is the start point of current line
             // Store the vertex with its incident edges
@@ -759,35 +794,6 @@ class Cubby {
         
         // Positive area means clockwise in screen coordinates (Y increases downward)
         return signedArea > 0;
-    }
-    
-    
-    // Apply corner curves to lines
-    applyCurves(lines, radius) {
-        if (radius === 0 || lines.length === 0) return [...lines];
-        
-        // First, organize lines into a continuous path
-        const orderedLines = this.orderLines(lines);
-        const curvedLines = [];
-        
-        for (let i = 0; i < orderedLines.length; i++) {
-            const current = orderedLines[i];
-            const next = orderedLines[(i + 1) % orderedLines.length];
-            
-            // Find the connection point between current and next line
-            const connectionPoint = this.findConnectionPoint(current, next);
-            const isRightAngle = this.isRightAngleCorner(current, next);
-            
-            if (connectionPoint && isRightAngle) {
-                // Apply corner rounding
-                const roundedCorner = this.createRoundedCorner(current, next, connectionPoint, radius);
-                curvedLines.push(...roundedCorner);
-            } else {
-                // Fail fast - all corners must connect at right angles for curves
-                throw new Error(`Cannot apply curve - no connection point or not a right angle corner`);
-            }
-        }
-        return curvedLines;
     }
     
     // Order lines to form a continuous path
