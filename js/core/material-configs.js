@@ -487,7 +487,8 @@ const MATERIAL_CONFIGS = {
 
         // DXF layer definitions for cubbies
         dxfLayers: [
-            { name: 'Cubby Outlines', color: 'BLACK', content: 'cubbies' },
+            { name: 'Edge Lines', color: 'MAGENTA', content: 'edges' },
+            { name: 'Interior Lines', color: 'GREEN', content: 'interior' },
             { name: 'Labels', color: 'BLUE', content: 'labels' }
         ],
 

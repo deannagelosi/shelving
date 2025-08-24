@@ -188,6 +188,15 @@ class ExportUI {
         }
     }
 
+    getCurrentSettingValue(settingName, defaultValue) {
+        // Get current value from appState, handling falsy values like 0 properly
+        if (settingName === 'cubbyCurveRadius' && typeof appState.generationConfig.cubbyCurveRadius === 'number') {
+            return appState.generationConfig.cubbyCurveRadius;
+        }
+        // Add other settings that need appState sync here as needed
+        return defaultValue;
+    }
+
     buildSettings(materialType, settingsDefinitions) {
         for (const setting of settingsDefinitions) {
             const container = this.html.materialContainers[setting.container];
@@ -220,9 +229,13 @@ class ExportUI {
                         inputElement.option(option.text, option.value);
                     }
                 }
-                inputElement.value(setting.defaultValue);
+                // Use current appState value if available, otherwise use default
+                const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
+                inputElement.value(currentValue);
             } else {
-                inputElement = createInput(setting.defaultValue.toString())
+                // Use current appState value if available, otherwise use default
+                const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
+                inputElement = createInput(currentValue.toString())
                     .parent(column)
                     .addClass(setting.cssClass)
                     .attribute('type', setting.inputType)
@@ -580,7 +593,9 @@ class ExportUI {
             cubbyCurveRadius: cubbyCurveRadius,
             cubbyMode: cubbyMode,
             wallThickness: elementMap['wallThickness'] ? parseFloat(elementMap['wallThickness'].value()) : 0.25,
-            shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0
+            shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0,
+            printBedWidth: elementMap['printBedWidth'] ? parseFloat(elementMap['printBedWidth'].value()) : 12,
+            printBedHeight: elementMap['printBedHeight'] ? parseFloat(elementMap['printBedHeight'].value()) : 12
         };
         // get cellular layout data (case lines)
         const cellData = cellularInstance;
