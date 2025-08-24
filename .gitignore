@@ -1,6 +1,7 @@
 # IDE
 .vscode/
 .cursor/
+.claude/
 CLAUDE.md
 
 # System
