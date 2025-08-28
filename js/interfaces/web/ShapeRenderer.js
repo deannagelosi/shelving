@@ -99,8 +99,8 @@ class ShapeRenderer {
     }
 
     renderSingleHighResShape(shape, gridX, gridY, xOffset, yOffset, squareSize, colors, config) {
-        // Render high-resolution shape data for preview
-        if (!shape.data.highResShape) return;
+        // Render high-resolution shape data for preview using buffer array filtering
+        if (!shape.data.highResBufferShape) return;
 
         const scaleFactor = RenderConfig.getScaleFactor(config.minWallLength);
         const highResSquareSize = squareSize / scaleFactor;
@@ -109,13 +109,16 @@ class ShapeRenderer {
         stroke(colors.highResShapeColor);
         strokeWeight(0.5);
 
-        // Position shape directly at grid coordinates - no alignment offset
-        for (let y = 0; y < shape.data.highResShape.length; y++) {
-            for (let x = 0; x < shape.data.highResShape[y].length; x++) {
-                if (shape.data.highResShape[y][x]) {
+        // Render original shape squares from buffer array
+        for (let y = 0; y < shape.data.highResBufferShape.length; y++) {
+            for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
+                const square = shape.data.highResBufferShape[y][x];
+                
+                // Only render original shape squares (not buffer expansion)
+                if (square.occupied && square.isOriginalShape) {
+                    // Use direct buffer coordinates (no alignment needed)
                     const rectX = xOffset + (gridX * squareSize) + (x * highResSquareSize);
-                    // Use shape's own coordinate system with Y-axis flipping
-                    const rectY = yOffset + (gridY * squareSize) + ((shape.data.highResShape.length - 1 - y) * highResSquareSize);
+                    const rectY = yOffset + (gridY * squareSize) + ((shape.data.highResBufferShape.length - 1 - y) * highResSquareSize);
                     rect(rectX, rectY, highResSquareSize, highResSquareSize);
                 }
             }
@@ -212,9 +215,9 @@ class ShapeRenderer {
         const scaleFactor = RenderConfig.getScaleFactor(config.minWallLength);
         const highResSquareSize = squareSize / scaleFactor;
 
-        // Get original shape dimensions
-        const originalHeight = shape.data.highResShape.length;
-        const originalWidth = shape.data.highResShape[0].length;
+        // Get buffer dimensions for proper bounding box calculation
+        const originalHeight = shape.data.highResBufferShape ? shape.data.highResBufferShape.length : shape.data.highResShape.length;
+        const originalWidth = shape.data.highResBufferShape ? shape.data.highResBufferShape[0].length : shape.data.highResShape[0].length;
 
         // Get buffer shape dimensions 
         const bufferArrayHeight = shape.data.highResBufferShape.length;
@@ -298,12 +301,16 @@ class ShapeRenderer {
         let scaleFactor = RenderConfig.getScaleFactor(minWallLength);
         let smallSquare = config.squareSize / scaleFactor;
 
-        // Draw blue overlay for each true square in the selected shape
-        for (let y = 0; y < selectedShape.data.highResShape.length; y++) {
-            for (let x = 0; x < selectedShape.data.highResShape[y].length; x++) {
-                // Only draw overlay on high res shape squares
-                if (selectedShape.data.highResShape[y][x]) {
-                    // Find its position on the canvas (same calculation as renderHighResShapes)
+        // Draw blue overlay for each original shape square in the buffer array
+        if (!selectedShape.data.highResBufferShape) return;
+        
+        for (let y = 0; y < selectedShape.data.highResBufferShape.length; y++) {
+            for (let x = 0; x < selectedShape.data.highResBufferShape[y].length; x++) {
+                const square = selectedShape.data.highResBufferShape[y][x];
+                
+                // Only draw overlay on original shape squares (not buffer expansion)
+                if (square.occupied && square.isOriginalShape) {
+                    // Use direct buffer coordinates (same calculation as SolutionRenderer)
                     let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
                     let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
                     let yStart = (startY * config.squareSize);

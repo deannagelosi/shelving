@@ -66,25 +66,22 @@ class Shape {
             }
         }
 
-        // Apply initial expansion AND scale factor padding to high-res shape
-        // This ensures highResShape and highResBufferShape will have matching dimensions
+        // Store the trimmed shape as highResShape (pure shape content)
+        this.data.highResShape = shapeTemp;
 
-        // First apply the initial expansion (+1 on all sides, respecting centerShape setting)
-        // This expansion is needed for flood fill edge detection
-        let expandedShape = this.expandShapeBounds(shapeTemp, config.centerShape, scaleFactor);
-
-        // Store the expanded shape as highResShape
-        // It now has the initial expansion and is aligned to the scale factor grid
-        this.data.highResShape = expandedShape;
+        // Create expanded shape for buffer generation 
+        // This expansion is needed for flood fill edge detection and proper buffer dimensions
+        const expansionResult = this.expandShapeBounds(shapeTemp, config.centerShape, scaleFactor);
+        const expandedShape = expansionResult.expandedShape;
 
         //== create the high res buffer shape
         // - apply proper perimeter expansion at high resolution for detailed visualization
         this.data.highResBufferShape = this.generateHighResBuffer(bufferInches, config.centerShape, config);
 
         //== create the low res shape 
-        // - scale the already-padded high-res shape down by the scaleFactor
-        // - since highResShape is already padded and centered, we can directly convert it
-        const paddedShape = this.data.highResShape;
+        // - scale the expanded shape (not highResShape) down by the scaleFactor
+        // - expandedShape is padded and centered for proper low-res conversion
+        const paddedShape = expandedShape;
         // reduce the resolution by scaleFactor
         this.data.lowResShape = [];
         const lowResHeight = Math.floor(paddedShape.length / scaleFactor);
@@ -304,12 +301,20 @@ class Shape {
             bottomExpansion = 0;
         }
 
-        return this.expandShape(shape, {
+        const expansion = {
             left: leftExpansion,
             right: rightExpansion,
             top: topExpansion,
             bottom: bottomExpansion
-        });
+        };
+        
+        const expandedShape = this.expandShape(shape, expansion);
+        
+        // Return both the expanded shape and the expansion data
+        return {
+            expandedShape: expandedShape,
+            expansion: expansion
+        };
     }
 
     expandShape(shape, padding) {
@@ -331,7 +336,8 @@ class Shape {
             // Create empty square object with same structure
             fillValue = {
                 occupied: false,
-                isPerimeter: false
+                isPerimeter: false,
+                isOriginalShape: false
             };
         } else {
             // Default to false for unknown types
@@ -422,21 +428,27 @@ class Shape {
         let currentShape = this.data.highResShape.map(row => [...row]);
 
         // Step 1: Fill void spaces between occupied squares in each row
+        const originalShape = currentShape.map(row => [...row]); // Keep reference to original before void filling
         currentShape = this.fillVoidSpaces(currentShape);
 
         // Step 2: Convert to square objects for buffer processing
-        // (No need for expandShapeBounds - already done in saveUserInput)
-        let shapeBuffer = this.convertBooleanArrayToSquareObjects(currentShape);
+        // Pass original shape to distinguish true shape squares from void-filled squares
+        let shapeBuffer = this.convertBooleanArrayToSquareObjects(currentShape, originalShape);
 
-        // Calculate steps needed (each step = 0.25" at high resolution)
+        // Step 3: Always ensure proper bounds for flood fill and scale factor alignment
+        // This is needed even when buffer = 0
+        if (this.needsBoundsExpansion(shapeBuffer, centerShape)) {
+            shapeBuffer = this.expandBothArrays(shapeBuffer, centerShape, scaleFactor);
+        }
+
+        // Calculate steps needed for buffer expansion (each step = 0.25" at high resolution)
         const steps = Math.round(bufferInches * scaleFactor);
 
-        // Step 3: Iteratively expand outward for N steps (skip if 0 buffer)
+        // Step 4: Iteratively expand outward for N steps (only if buffer > 0)
         if (bufferInches > 0 && steps > 0) {
             for (let step = 0; step < steps; step++) {
-                // Check if we need to expand array bounds before expansion
+                // Check if we need to expand array bounds again during buffer expansion
                 if (this.needsBoundsExpansion(shapeBuffer, centerShape)) {
-                    // Use synchronized expansion to keep highResShape and buffer in sync
                     shapeBuffer = this.expandBothArrays(shapeBuffer, centerShape, scaleFactor);
                 }
 
@@ -496,7 +508,8 @@ class Shape {
             const [x, y] = target.split(',').map(Number);
             result[y][x] = {
                 occupied: true,
-                isPerimeter: false
+                isPerimeter: false,
+                isOriginalShape: false
             };
         }
 
@@ -524,9 +537,10 @@ class Shape {
         return false;
     }
 
-    convertBooleanArrayToSquareObjects(booleanArray) {
+    convertBooleanArrayToSquareObjects(booleanArray, originalShapeArray = null) {
         // Convert boolean[][] to object[][] with shape metadata
-        // Each square: { occupied: boolean, isPerimeter: boolean }
+        // Each square: { occupied: boolean, isPerimeter: boolean, isOriginalShape: boolean }
+        // originalShapeArray: reference to distinguish true shape squares from void-filled squares
 
         const result = [];
 
@@ -534,9 +548,12 @@ class Shape {
             const row = [];
             for (let x = 0; x < booleanArray[y].length; x++) {
                 const wasOccupied = booleanArray[y][x];
+                // Check if this square was in the original shape (before void filling)
+                const isOriginal = originalShapeArray ? originalShapeArray[y][x] : wasOccupied;
                 row.push({
                     occupied: wasOccupied,
-                    isPerimeter: false  // Will be set by perimeter detection
+                    isPerimeter: false,  // Will be set by perimeter detection
+                    isOriginalShape: isOriginal  // True only for original shape squares
                 });
             }
             result.push(row);
@@ -583,8 +600,9 @@ class Shape {
     }
 
     expandBothArrays(bufferShape, centerShape = false, scaleFactor = 1) {
-        // Synchronized expansion - expands both highResBufferShape AND highResShape
-        // to maintain matching dimensions throughout buffer generation
+        // Expand buffer array bounds to keep occupied squares away from edges
+        // and maintain dimensions divisible by scaleFactor
+        // Note: keep highResShape as pure shape data, no expansion/padding
 
         // First calculate the expansion needed
         const currentHeight = bufferShape.length;
@@ -622,11 +640,8 @@ class Shape {
             bottom: bottomExpansion
         };
 
-        // Expand the buffer shape (with square objects)
+        // Expand only the buffer shape (highResShape remains pure shape data)
         const expandedBuffer = this.expandShape(bufferShape, expansion);
-
-        // Also expand the high-res shape array to maintain synchronized dimensions
-        this.data.highResShape = this.expandShape(this.data.highResShape, expansion);
 
         return expandedBuffer;
     }

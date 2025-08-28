@@ -169,22 +169,31 @@ class SolutionRenderer {
     }
 
     renderHighResShapes(shapes, config, colors) {
-        // show high resolution shapes
+        // show high resolution shapes using buffer array filtering
         noStroke();
         fill(colors.highResShapeColor);
 
         for (let i = 0; i < shapes.length; i++) {
-            let startX = shapes[i].posX;
-            let startY = shapes[i].posY;
+            const shape = shapes[i];
+            
+            // Skip shapes without buffer data
+            if (!shape.data.highResBufferShape || shape.data.highResBufferShape.length === 0) {
+                continue;
+            }
+
+            let startX = shape.posX;
+            let startY = shape.posY;
             let minWallLength = (typeof appState !== 'undefined' && appState.generationConfig) ? appState.generationConfig.minWallLength || 1.0 : 1.0;
             let smallSquare = config.squareSize / RenderConfig.getScaleFactor(minWallLength);
 
-            // draw rectangle for each true square in the shape grid
-            for (let y = 0; y < shapes[i].data.highResShape.length; y++) {
-                for (let x = 0; x < shapes[i].data.highResShape[y].length; x++) {
-                    // only draw high res shape squares
-                    if (shapes[i].data.highResShape[y][x]) {
-                        // find its position on the canvas
+            // Draw rectangle for each original shape square in the buffer array
+            for (let y = 0; y < shape.data.highResBufferShape.length; y++) {
+                for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
+                    const square = shape.data.highResBufferShape[y][x];
+                    
+                    // Only render original shape squares (not buffer expansion)
+                    if (square.occupied && square.isOriginalShape) {
+                        // Use direct buffer coordinates (no alignment needed)
                         let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
                         let yOffset = ((config.canvasHeight - config.yPadding) - smallSquare - config.buffer);
                         let yStart = (startY * config.squareSize);
@@ -226,8 +235,8 @@ class SolutionRenderer {
                 for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
                     const square = shape.data.highResBufferShape[y][x];
 
-                    // Only render occupied squares in the buffer
-                    if (!square.occupied) {
+                    // Only render buffer squares (not original shape squares)
+                    if (!square.occupied || square.isOriginalShape) {
                         continue;
                     }
 
