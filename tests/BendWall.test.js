@@ -3,6 +3,10 @@
 const Solution = require('../js/core/Solution');
 const Shape = require('../js/core/Shape');
 const BendWall = require('../js/core/BendWall');
+const RenderConfig = require('../js/interfaces/web/RenderConfig');
+
+// Make RenderConfig available globally for Shape.js
+global.RenderConfig = RenderConfig;
 const fs = require('fs');
 const path = require('path');
 
@@ -24,8 +28,8 @@ describe('BendWall Algorithm', () => {
     let goldenPath;
 
     beforeAll(() => {
-        const testData = loadTestData('curve_test_both.json');
-        goldenPath = loadGoldenPath('curved_walls_check.json');
+        const testData = loadTestData('bend_test_both.json');
+        goldenPath = loadGoldenPath('bent_walls_check.json');
 
         const solutionData = testData.savedAnneals.find(s => s.title === 'solution-3');
         if (!solutionData) {

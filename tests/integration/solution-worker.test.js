@@ -75,7 +75,7 @@ const Solution = require('../../js/core/Solution');
 const Cellular = require('../../js/core/Cellular');
 const Anneal = require('../../js/core/Anneal');
 const Board = require('../../js/core/Board');
-const Export = require('../../js/core/Export');
+const BoardExporter = require('../../js/core/BoardExporter');
 
 // Make core classes available globally (as importScripts would do in browser)
 global.EventEmitter = EventEmitter;
@@ -84,7 +84,7 @@ global.Solution = Solution;
 global.Cellular = Cellular;
 global.Anneal = Anneal;
 global.Board = Board;
-global.Export = Export;
+global.BoardExporter = BoardExporter;
 
 // Import the worker after setting up the environment
 const SolutionWorker = require('../../js/workers/solution-worker');

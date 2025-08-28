@@ -3,8 +3,8 @@
 const MATERIAL_CONFIGS = require('../../js/core/material-configs');
 global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
 
-// Import Export class after setting up globals
-const Export = require('../../js/core/Export');
+// Import BoardExporter class after setting up globals
+const BoardExporter = require('../../js/core/BoardExporter');
 
 // Mock DXFWriter to capture DXF output
 const mockDXFWriter = {
@@ -106,7 +106,7 @@ describe('DXF Snapshot Tests', () => {
             };
 
             // 2. Execute
-            const exportInstance = new Export(mockCellular, spacing, config, 'plywood-laser');
+            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -145,7 +145,7 @@ describe('DXF Snapshot Tests', () => {
             };
 
             // 2. Execute
-            const exportInstance = new Export(mockCellular, spacing, config, 'plywood-laser');
+            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -182,7 +182,7 @@ describe('DXF Snapshot Tests', () => {
             };
 
             // 2. Execute
-            const exportInstance = new Export(mockCellular, spacing, config, 'plywood-laser');
+            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -219,7 +219,7 @@ describe('DXF Snapshot Tests', () => {
             };
 
             // 2. Execute
-            const exportInstance = new Export(mockCellular, spacing, config, 'acrylic-laser');
+            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'acrylic-laser'}, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -260,7 +260,7 @@ describe('DXF Snapshot Tests', () => {
             const outputs = [];
             for (let i = 0; i < 3; i++) {
                 mockDXFWriter.reset();
-                const exportInstance = new Export(mockCellular, spacing, config, 'plywood-laser');
+                const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
                 exportInstance.makeBoards();
                 exportInstance.assignBoardEndTypes();
                 exportInstance.detectJoints();

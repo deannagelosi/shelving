@@ -1,14 +1,14 @@
 // tests/Export.test.js
 
 const Board = require('../js/core/Board');
-const Export = require('../js/core/Export');
+const BoardExporter = require('../js/core/BoardExporter');
 const MATERIAL_CONFIGS = require('../js/core/material-configs');
 
-// Make minimal globals available (Export.js expects these)
+// Make minimal globals available (BoardExporter.js expects these)
 global.Board = Board;
 global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
 
-describe('Export', () => {
+describe('BoardExporter', () => {
     let mockCellular;
     let testConfig;
     let testSpacing;
@@ -44,20 +44,21 @@ describe('Export', () => {
 
     describe('Constructor', () => {
         test('should initialize with correct material configuration', () => {
-            // 1. Setup & Execute
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            // 1. Setup & Execute - Use BoardExporter with config containing material type
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
 
             // 2. Assert - Should use default plywood material
             expect(exportInstance.materialType).toBe('plywood-laser');
             expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['plywood-laser']);
-            expect(exportInstance.cellData).toBe(mockCellular);
+            expect(exportInstance.cellular).toBe(mockCellular);
             expect(exportInstance.caseDepth).toBe(testConfig.caseDepth);
             expect(exportInstance.sheetThickness).toBe(testConfig.sheetThickness);
         });
 
         test('should accept specified material type', () => {
-            // 1. Setup & Execute
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig, 'acrylic-laser');
+            // 1. Setup & Execute - Pass material type in config object
+            const configWithMaterial = { ...testConfig, materialType: 'acrylic-laser' };
+            const exportInstance = new BoardExporter(mockCellular, configWithMaterial, testSpacing);
 
             // 2. Assert
             expect(exportInstance.materialType).toBe('acrylic-laser');
@@ -68,10 +69,11 @@ describe('Export', () => {
             // 1. Setup - Mock console.error to suppress error output
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-            // 2. Execute
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig, 'unknown-material');
+            // 2. Execute - Pass unknown material type in config
+            const configWithUnknown = { ...testConfig, materialType: 'unknown-material' };
+            const exportInstance = new BoardExporter(mockCellular, configWithUnknown, testSpacing);
 
-            // 3. Assert - Should fallback to plywood but keep specified type name
+            // 3. Assert - Should fallback to plywood config but keep specified type name
             expect(exportInstance.materialType).toBe('unknown-material');
             expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['plywood-laser']);
             expect(consoleSpy).toHaveBeenCalled();
@@ -84,7 +86,7 @@ describe('Export', () => {
     describe('makeBoards', () => {
         test('should convert cellular lines to Board objects', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
 
             // 2. Execute
             exportInstance.makeBoards();
@@ -102,7 +104,7 @@ describe('Export', () => {
 
         test('should sort boards by length in descending order', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
 
             // 2. Execute  
             exportInstance.makeBoards();
@@ -119,7 +121,7 @@ describe('Export', () => {
     describe('assignBoardEndTypes', () => {
         test('should process all boards for end type assignment', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
             const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             exportInstance.boards = [testBoard];
             
@@ -141,7 +143,7 @@ describe('Export', () => {
     describe('prepJoints', () => {
         test('should generate cuts and etches for board joints', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
             const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             const boardStartX = 5;
             const boardStartY = 10;
@@ -187,7 +189,7 @@ describe('Export', () => {
     describe('setupSheets', () => {
         test('should calculate correct sheet layout based on configuration', () => {
             // 1. Setup
-            const exportInstance = new Export(mockCellular, testSpacing, testConfig);
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
 
             // 2. Execute
             exportInstance.setupSheets();
