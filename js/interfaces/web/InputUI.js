@@ -238,7 +238,13 @@ class InputUI {
         // save the shape
         let newShape = new Shape();
         let gridCopy = this.inputGrid.map(colArray => [...colArray]);
-        newShape.saveUserInput(titleValue, gridCopy); // save a copy of the input grid
+        // Create explicit configuration for shape processing
+        const config = {
+            customBufferSize: appState.generationConfig.customBufferSize,
+            centerShape: appState.generationConfig.centerShape,
+            minWallLength: appState.generationConfig.minWallLength
+        };
+        newShape.saveUserInput(titleValue, gridCopy, config); // save a copy of the input grid
         appState.shapes.push(newShape);
 
         // reset active shape and UI
@@ -355,10 +361,13 @@ class InputUI {
             image(this.imgData.img, topX, topY);
         }
 
+        const colors = RenderConfig.getColors();
+        const strokeWeights = RenderConfig.getStrokeWeights();
         const yOffset = canvasHeight - this.sidePadding - this.squareSize;
         const xOffset = this.sidePadding;
 
         // draw grid
+        strokeWeight(strokeWeights.gridLine);
         for (let y = 0; y < this.inputRows; y++) {
             for (let x = 0; x < this.inputCols; x++) {
                 // draw input square
@@ -368,12 +377,12 @@ class InputUI {
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
                     // semi-transparent color squares for selected
-                    stroke("rgba(204,204,204, 0.25)");
-                    fill("rgba(111, 0, 255, 0.5)"); // purple
+                    stroke(colors.inputSelectedStroke);
+                    fill(colors.inputSelectedColor);
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
-                    stroke("rgb(204,204,204)");
+                    stroke(colors.lineColor);
                     noFill();
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 }
@@ -381,7 +390,8 @@ class InputUI {
         }
 
         // draw inch marker lines
-        stroke(0);
+        stroke(colors.numColor);
+        strokeWeight(strokeWeights.boundingBox);
         for (let y = 0; y < this.inputRows + 1; y++) {
             // draw a line for every 4th y value
             if (y % 4 === 0) {

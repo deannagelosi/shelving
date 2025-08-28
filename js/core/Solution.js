@@ -41,7 +41,7 @@ const WEIGHTS = {
 };
 
 class Solution {
-    constructor(_shapes = [], _startID = 0, _layoutConfig = {}, _wallConfig = {}) {
+    constructor(_shapes = [], _startID = 0, _layoutConfig = {}, _wallConfig = {}, _bufferConfig = {}) {
         this.shapes = _shapes; // shapes with position data
         this.startID = _startID; // the multi-start index this solution annealed from
         this.layout = [[]]; // 2D array of shapes that occupy the layout
@@ -58,6 +58,11 @@ class Solution {
         this.cubbyCurveRadius = _wallConfig.cubbyCurveRadius || 0.5;
         this.bendRadius = _wallConfig.bendRadius || 1.0;
         this.maxBends = _wallConfig.maxBends || 4;
+
+        // Shape buffer configuration (used during generation)
+        this.customBufferSize = _bufferConfig.customBufferSize !== undefined ? _bufferConfig.customBufferSize : 0.25;
+        this.centerShape = _bufferConfig.centerShape !== undefined ? _bufferConfig.centerShape : false;
+        this.minWallLength = _bufferConfig.minWallLength !== undefined ? _bufferConfig.minWallLength : 1.0;
 
         this.score;
         this.valid = false;
@@ -608,7 +613,12 @@ class Solution {
             bendRadius: this.bendRadius,
             maxBends: this.maxBends
         };
-        let newSolution = new Solution(shapesCopy, this.startID, layoutConfig, wallConfig);
+        const bufferConfig = {
+            customBufferSize: this.customBufferSize,
+            centerShape: this.centerShape,
+            minWallLength: this.minWallLength
+        };
+        let newSolution = new Solution(shapesCopy, this.startID, layoutConfig, wallConfig, bufferConfig);
 
         // pick a random shape to act on
         let shapeIndex = Math.floor(Math.random() * this.shapes.length);
@@ -752,7 +762,11 @@ class Solution {
             fabricationType: this.fabricationType,
             cubbyCurveRadius: this.cubbyCurveRadius,
             bendRadius: this.bendRadius,
-            maxBends: this.maxBends
+            maxBends: this.maxBends,
+            // Shape buffer parameters (used during generation)
+            customBufferSize: this.customBufferSize,
+            centerShape: this.centerShape,
+            minWallLength: this.minWallLength
         };
     }
 
@@ -760,7 +774,16 @@ class Solution {
         // convert Solution text object (JSON) to Solution instance (import/worker communication)
         // note: recalculates layout and score if missing
         const LocalShape = getShape();
-        const shapes = solutionData.shapes.map(shapeData => LocalShape.fromDataObject(shapeData));
+
+        // Prepare buffer configuration first - handle legacy solutions
+        const bufferConfig = {
+            customBufferSize: solutionData.customBufferSize !== undefined ? solutionData.customBufferSize : 1.0, // Legacy default: 1" buffer
+            centerShape: solutionData.centerShape !== undefined ? solutionData.centerShape : false, // Legacy default: drop to bottom
+            minWallLength: solutionData.minWallLength !== undefined ? solutionData.minWallLength : 1.0 // Legacy default: 1" grid square size
+        };
+
+        // Create shapes with the correct buffer configuration
+        const shapes = solutionData.shapes.map(shapeData => LocalShape.fromDataObject(shapeData, bufferConfig));
 
         // Prepare layout configuration
         const layoutConfig = {
@@ -778,7 +801,7 @@ class Solution {
             maxBends: solutionData.maxBends || 4
         };
 
-        const solution = new Solution(shapes, solutionData.startID, layoutConfig, wallConfig);
+        const solution = new Solution(shapes, solutionData.startID, layoutConfig, wallConfig, bufferConfig);
 
         // set missing properties if they exist
         if (solutionData.clusterLimit !== undefined) {
@@ -803,7 +826,7 @@ class Solution {
         return solution;
     }
 
-    static createGridBaseline(shapeInstances, aspectRatioPref = 0) {
+    static createGridBaseline(shapeInstances, aspectRatioPref = 0, bufferConfig = {}) {
         // create a deterministic grid-packing baseline solution
         // calculate rows and columns for a near-square layout
         const numShapes = shapeInstances.length;
@@ -846,7 +869,7 @@ class Solution {
 
         // create solution instance and calculate layout/score
         const layoutConfig = { aspectRatioPref: aspectRatioPref };
-        const gridSolution = new Solution(shapesCopy, 0, layoutConfig);
+        const gridSolution = new Solution(shapesCopy, 0, layoutConfig, {}, bufferConfig);
         gridSolution.makeLayout();
         gridSolution.calcScore();
 

@@ -383,6 +383,26 @@ class ExportUI {
         this.prepareExportData();
     }
 
+    updateCubbyModeUI(cubbyMode) {
+        // Only update if we're on the export screen and material UI is built
+        if (appState.currentScreen !== ScreenState.EXPORT) {
+            return;
+        }
+
+        // Update cubby mode UI elements if they exist
+        const currentMaterialType = this.html.materialTypeSelect.value();
+        const elementMap = this.materialElementMaps[currentMaterialType];
+        
+        if (elementMap && elementMap['cubbyMode']) {
+            elementMap['cubbyMode'].selected(cubbyMode);
+        }
+
+        // Only trigger export data preparation if we have export data ready
+        if (elementMap) {
+            this.prepareExportData();
+        }
+    }
+
 
     //== button handlers
     handleBack() {

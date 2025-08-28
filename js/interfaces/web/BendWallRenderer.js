@@ -1,15 +1,6 @@
 class BendWallRenderer {
     constructor() {
-        // Rendering colors for different states
-        this.colors = {
-            wallPath: 'rgb(50, 50, 50)',
-            debugGroup: 'rgba(255, 0, 0, 0.3)',
-            completedGroup: 'rgba(0, 255, 0, 0.3)',
-            activeGroup: 'rgba(0, 0, 255, 0.3)',
-            forbiddenEnd: 'rgb(255, 0, 0)',
-            availableEnd: 'rgb(0, 255, 0)',
-            connectionLine: 'rgb(255, 165, 0)'
-        };
+        // Renderer for curved wall visualization
     }
 
     /**
@@ -28,13 +19,16 @@ class BendWallRenderer {
         noFill();
 
         wallPath.forEach(segment => {
+            // Get colors from centralized config
+            const colors = RenderConfig.getColors();
+            
             // Color-code segments by their function: shelf vs. connection.
             if (segment.isShelf) {
-                stroke('orange'); // A main shelf
+                stroke(colors.bendWall.shelfSegment); // A main shelf
             } else if (segment.type === 'line') {
-                stroke('red');    // A connecting line (stub or vertical)
+                stroke(colors.bendWall.lineSegment);    // A connecting line (stub or vertical)
             } else if (segment.type === 'arc') {
-                stroke('blue');   // A connecting arc
+                stroke(colors.bendWall.arcSegment);   // A connecting arc
             }
 
             if (segment.type === 'line') {
@@ -51,9 +45,11 @@ class BendWallRenderer {
     }
 
     _renderSegmentIDs(wallPath, config) {
+        const colors = RenderConfig.getColors();
+        
         push();
-        fill('black');
-        stroke('white');
+        fill(colors.bendWall.segmentIdText);
+        stroke(colors.bendWall.segmentIdStroke);
         strokeWeight(2);
         textSize(12);
         textAlign(CENTER, CENTER);
@@ -112,8 +108,10 @@ class BendWallRenderer {
         push();
         noStroke();
 
+        const colors = RenderConfig.getColors();
+        
         groups.forEach(group => {
-            const color = group.completed ? this.colors.completedGroup : this.colors.debugGroup;
+            const color = group.completed ? colors.bendWall.completedGroup : colors.bendWall.debugGroup;
             fill(color);
 
             // Highlight the group area
@@ -145,12 +143,14 @@ class BendWallRenderer {
         const rightX = this._layoutToCanvasX(group.rightX, config);
         const y = this._layoutToCanvasY(group.y, config) + config.squareSize / 2;
 
+        const colors = RenderConfig.getColors();
+        
         // Left endpoint
-        fill(group.connectedSides.left ? this.colors.forbiddenEnd : this.colors.availableEnd);
+        fill(group.connectedSides.left ? colors.bendWall.forbiddenEnd : colors.bendWall.availableEnd);
         circle(leftX, y, endpointSize);
 
         // Right endpoint
-        fill(group.connectedSides.right ? this.colors.forbiddenEnd : this.colors.availableEnd);
+        fill(group.connectedSides.right ? colors.bendWall.forbiddenEnd : colors.bendWall.availableEnd);
         circle(rightX + config.squareSize, y, endpointSize);
     }
 
@@ -217,8 +217,10 @@ class BendWallRenderer {
      */
     _renderConnectionDebug(debugState, config) {
         // Highlight active groups in connection
+        const colors = RenderConfig.getColors();
+        
         push();
-        stroke(this.colors.connectionLine);
+        stroke(colors.bendWall.connectionLine);
         strokeWeight(3);
         noFill();
 
@@ -244,8 +246,10 @@ class BendWallRenderer {
      */
     _renderChainCapDebug(debugState, config) {
         // Highlight the capped group
+        const colors = RenderConfig.getColors();
+        
         push();
-        stroke(this.colors.forbiddenEnd);
+        stroke(colors.bendWall.forbiddenEnd);
         strokeWeight(4);
         noFill();
 
@@ -268,8 +272,10 @@ class BendWallRenderer {
      */
     _renderOrphanDebug(debugState, config) {
         // Highlight the orphan group
+        const colors = RenderConfig.getColors();
+        
         push();
-        stroke(this.colors.activeGroup);
+        stroke(colors.bendWall.activeGroup);
         strokeWeight(4);
         noFill();
 

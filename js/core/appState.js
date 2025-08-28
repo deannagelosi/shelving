@@ -19,9 +19,14 @@ const appState = {
 
         // Fabrication type (user-selectable in Design UI)
         fabricationType: 'boards',     // 'boards', 'cubbies', 'bent'
-        
+
         // Material type for export (user-selectable in Export UI)
         materialType: 'plywood-laser', // 'plywood-laser', 'acrylic-laser', 'clay-plastic-3d'
+
+        // Shape processing (user-selectable in UI)
+        customBufferSize: 0.25,        // inches, 0-1 in 0.25 increments, default 0.25
+        centerShape: false,            // boolean, default false (false = drop to bottom, true = center vertically)
+        minWallLength: 1.0,            // inches per low-res grid square, options: 1.0, 0.5, 0.25
 
         // Wall generation (user-selectable in UI)
         wallAlgorithm: 'cellular-organic',  // 'cellular-organic', 'cellular-rectilinear', 'bend'
@@ -37,7 +42,9 @@ const appState = {
         detailView: false,  // show detailed buffer zones and grid info
         devMode: false,     // show debug information and step-by-step controls
         numGrow: 0,         // current cellular growth step in dev mode
-        curveStep: 0        // current curve growth step in dev mode
+        curveStep: 0,       // current curve growth step in dev mode
+        previewShapeId: null, // ID of shape being previewed (null = no preview)
+        previewMode: false   // whether in shape preview mode
     },
 
     // Configuration management methods
@@ -45,14 +52,13 @@ const appState = {
         if (this.generationConfig.fabricationType !== newType) {
             const oldType = this.generationConfig.fabricationType;
             this.generationConfig.fabricationType = newType;
-            console.log(`[appState] Fabrication type changed: ${oldType} → ${newType} (${source})`);
-            
+
             // Emit event for UI updates
             if (typeof appEvents !== 'undefined') {
-                appEvents.emit('fabricationTypeChanged', { 
-                    fabricationType: newType, 
+                appEvents.emit('fabricationTypeChanged', {
+                    fabricationType: newType,
                     previousType: oldType,
-                    source 
+                    source
                 });
             }
         } else {
@@ -64,8 +70,7 @@ const appState = {
         if (this.generationConfig.cubbyMode !== newMode) {
             const oldMode = this.generationConfig.cubbyMode;
             this.generationConfig.cubbyMode = newMode;
-            console.log(`[appState] Cubby mode changed: ${oldMode} → ${newMode} (${source})`);
-            
+
             // Emit event for UI updates
             if (typeof appEvents !== 'undefined') {
                 appEvents.emit('cubbyModeChanged', { cubbyMode: newMode, source });
@@ -79,27 +84,25 @@ const appState = {
         if (this.generationConfig.materialType !== newType) {
             const oldType = this.generationConfig.materialType;
             this.generationConfig.materialType = newType;
-            console.log(`[appState] Material type changed: ${oldType} → ${newType}`);
-            
+
             // Sync wall thickness from material config if it has a default
             this.syncWallThicknessFromMaterial(newType);
-            
+
             // Emit event for UI updates  
             if (typeof appEvents !== 'undefined') {
-                appEvents.emit('materialTypeChanged', { 
-                    materialType: newType, 
-                    previousType: oldType 
+                appEvents.emit('materialTypeChanged', {
+                    materialType: newType,
+                    previousType: oldType
                 });
             }
         }
     },
-    
+
     setWallThickness(thickness, source = 'user') {
         if (this.generationConfig.wallThickness !== thickness) {
             const oldThickness = this.generationConfig.wallThickness;
             this.generationConfig.wallThickness = thickness;
-            console.log(`[appState] Wall thickness changed: ${oldThickness} → ${thickness} (${source})`);
-            
+
             // Emit event for UI updates
             if (typeof appEvents !== 'undefined') {
                 appEvents.emit('wallThicknessChanged', {
@@ -110,11 +113,11 @@ const appState = {
             }
         }
     },
-    
+
     getWallThickness() {
         return this.generationConfig.wallThickness || 0.25;
     },
-    
+
     syncWallThicknessFromMaterial(materialType) {
         // Check if this material has a wall thickness setting
         if (typeof MATERIAL_CONFIGS !== 'undefined' && MATERIAL_CONFIGS[materialType]) {
@@ -126,15 +129,87 @@ const appState = {
         }
     },
 
-    loadSolutionConfig(solution) {
-        console.log(`[appState] Loading configuration from solution`);
+    setCustomBufferSize(size, source = 'user') {
+        if (this.generationConfig.customBufferSize !== size) {
+            const oldSize = this.generationConfig.customBufferSize;
+            this.generationConfig.customBufferSize = size;
+
+            // Emit event for UI updates
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('customBufferSizeChanged', {
+                    customBufferSize: size,
+                    previousSize: oldSize,
+                    source
+                });
+            }
+        }
+    },
+
+    setCenterShape(enabled, source = 'user') {
+        if (this.generationConfig.centerShape !== enabled) {
+            const oldEnabled = this.generationConfig.centerShape;
+            this.generationConfig.centerShape = enabled;
+
+            // Emit event for UI updates
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('centerShapeChanged', {
+                    centerShape: enabled,
+                    previousEnabled: oldEnabled,
+                    source
+                });
+            }
+        }
+    },
+
+    setMinWallLength(length, source = 'user') {
+        // Validate input - reject undefined/null values
+        if (length === undefined || length === null) {
+            console.warn('[appState] setMinWallLength called with invalid value:', length, 'from source:', source);
+            return;
+        }
         
+        if (this.generationConfig.minWallLength !== length) {
+            const oldLength = this.generationConfig.minWallLength;
+            this.generationConfig.minWallLength = length;
+
+            // Emit event for UI updates
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('minWallLengthChanged', {
+                    minWallLength: length,
+                    previousLength: oldLength,
+                    source
+                });
+            }
+        }
+    },
+
+    loadSolutionConfig(solution) {
         // Handle fabrication type override from solution
         if (solution.fabricationType) {
             this.setFabricationType(solution.fabricationType, 'solution');
         }
-        
+
         // Note: materialType is not stored in solutions, it's an export preference
         // so we don't override it when loading solutions
+    },
+
+    setShapePreview(shapeId) {
+        if (this.display.previewShapeId !== shapeId) {
+            const oldPreviewId = this.display.previewShapeId;
+            this.display.previewShapeId = shapeId;
+            this.display.previewMode = (shapeId !== null);
+
+            // Emit event for UI updates
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('shapePreviewChanged', {
+                    previewShapeId: shapeId,
+                    previewMode: this.display.previewMode
+                });
+            }
+        }
+    },
+
+    clearShapePreview() {
+        this.setShapePreview(null);
     }
 };

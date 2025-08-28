@@ -10,7 +10,7 @@ class CubbyExporter {
         this.materialType = config.materialType;
         this.materialConfig = MATERIAL_CONFIGS[config.materialType];
         if (!this.materialConfig) {
-            console.error(`Unknown material type: ${config.materialType}. Using clay-plastic-3d as fallback.`);
+            console.error(`Unknown material type: ${config.materialType}. Using clay-plastic-3d.`);
             this.materialConfig = MATERIAL_CONFIGS['clay-plastic-3d'];
         }
 
@@ -47,19 +47,16 @@ class CubbyExporter {
     }
 
     detectCubbies() {
-        // Use Cellular's proven flood fill algorithm to detect cubbies
-        console.log('[CubbyExporter] Detecting cubbies using Cellular.calculateAllCubbyAreas()');
-        console.log(`[CubbyExporter] Using curve radius: ${this.cubbyCurveRadius}`);
-        
+        // Use Cellular's flood fill algorithm to detect cubbies
         this.cubbies = [];
-        
+
         // Use the Cellular class's calculateAllCubbyAreas method 
         // This contains the proven flood fill algorithm used by the worker for statistics
         const cubbyAreas = this.cellular.calculateAllCubbyAreas();
-        
+
         for (let i = 0; i < cubbyAreas.length; i++) {
             const cubbyData = cubbyAreas[i];
-            
+
             if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
                 // Create a Cubby instance 
                 const cubby = new Cubby(
@@ -68,11 +65,11 @@ class CubbyExporter {
                     this.wallThickness,
                     this.cubbyCurveRadius
                 );
-                
+
                 this.cubbies.push(cubby);
             }
         }
-        
+
         // Generate all polygon data with perimeter detection
         const caseBounds = Cubby.calculateCaseBounds(this.cubbies);
         for (const cubby of this.cubbies) {
@@ -85,7 +82,6 @@ class CubbyExporter {
         // Print bed validation 
         this.printBedWarnings = this.validatePrintBedDimensions();
 
-        console.log(`[CubbyExporter] Detected ${this.cubbies.length} cubbies`);
         return this.cubbies;
     }
 
@@ -101,9 +97,9 @@ class CubbyExporter {
     applyShrinkFactor() {
         // Apply shrink factor to compensate for material shrinkage
         if (this.shrinkFactor === 0) return;
-        
+
         const scaleFactor = 1 + (this.shrinkFactor / 100);
-        
+
         for (let cubby of this.cubbies) {
             // Scale perimeter points
             for (let segment of cubby.perimeter) {
@@ -123,7 +119,7 @@ class CubbyExporter {
         this.cubbyLabels = [];
 
         if (this.cubbies.length === 0) {
-            this.layoutWidth = 1; // Fallback 
+            this.layoutWidth = 1;
             this.layoutHeight = 1;
             return;
         }
@@ -133,12 +129,12 @@ class CubbyExporter {
         const maxRows = Math.ceil(this.cubbies.length / maxCols);
         const gridPadding = 0.5; // inches of padding around grid
         const cubbySpacing = 0.25; // inches between cubbies
-        
+
         // Find maximum dimensions across all cubbies (in grid units like BoardExporter)
         let maxCubbyWidth = 0;
         let maxCubbyHeight = 0;
         const cubbyBounds = [];
-        
+
         for (const cubby of this.cubbies) {
             const bounds = Cubby.getCubbyBounds(cubby);
             cubbyBounds.push(bounds);
@@ -146,22 +142,22 @@ class CubbyExporter {
             maxCubbyWidth = Math.max(maxCubbyWidth, bounds.width);
             maxCubbyHeight = Math.max(maxCubbyHeight, bounds.height);
         }
-        
+
         // Calculate total layout dimensions in grid units (like BoardExporter)
         this.layoutWidth = (maxCols * (maxCubbyWidth + cubbySpacing)) - cubbySpacing + (2 * gridPadding);
         this.layoutHeight = (maxRows * (maxCubbyHeight + cubbySpacing)) - cubbySpacing + (2 * gridPadding);
-        
+
         // STEP 2: Now store coordinates in grid units (like BoardExporter)
         for (let i = 0; i < this.cubbies.length; i++) {
             const cubby = this.cubbies[i];
             const bounds = cubbyBounds[i];
-            
+
             // Calculate position in grid layout (in grid units like BoardExporter)
             const col = i % maxCols;
             const row = Math.floor(i / maxCols);
             const cubbyStartX = gridPadding + (col * (maxCubbyWidth + cubbySpacing));
             const cubbyStartY = gridPadding + (row * (maxCubbyHeight + cubbySpacing));
-            
+
             // Transform and store edge lines (magenta in preview)
             if (cubby.edgeLines && cubby.edgeLines.length > 0) {
                 const transformedEdgeLines = this.transformPerimeterToPhysical(cubby.edgeLines, bounds, cubbyStartX, cubbyStartY);
@@ -170,7 +166,7 @@ class CubbyExporter {
                     lines: transformedEdgeLines
                 });
             }
-            
+
             // Transform and store interior lines (green in preview)  
             if (cubby.interiorLines && cubby.interiorLines.length > 0) {
                 const transformedInteriorLines = this.transformPerimeterToPhysical(cubby.interiorLines, bounds, cubbyStartX, cubbyStartY);
@@ -179,7 +175,7 @@ class CubbyExporter {
                     lines: transformedInteriorLines
                 });
             }
-            
+
             // Transform and store labels (blue in preview) - use grid coordinates like CubbyRenderer
             if (cubby.cells.length > 0) {
                 const centerCell = cubby.cells[0];
@@ -199,7 +195,7 @@ class CubbyExporter {
         // Transform cubby perimeter to physical coordinates - no coordinate system conversion here
         // CubbyRenderer already handles coordinate system conversion in gridToCanvas()
         const transformedLines = [];
-        
+
         for (const segment of perimeter) {
             if (segment.type === 'bezier') {
                 // Transform bezier curve coordinates to layout space
@@ -209,7 +205,7 @@ class CubbyExporter {
                     y1: offsetY + (segment.y1 - bounds.minY),
                     cp1x: offsetX + (segment.cp1x - bounds.minX),
                     cp1y: offsetY + (segment.cp1y - bounds.minY),
-                    cp2x: offsetX + (segment.cp2x - bounds.minX),  
+                    cp2x: offsetX + (segment.cp2x - bounds.minX),
                     cp2y: offsetY + (segment.cp2y - bounds.minY),
                     x2: offsetX + (segment.x2 - bounds.minX),
                     y2: offsetY + (segment.y2 - bounds.minY),
@@ -225,21 +221,21 @@ class CubbyExporter {
                 });
             }
         }
-        
+
         return transformedLines;
     }
 
     validatePrintBedDimensions() {
         // Check if cubbies fit within print bed dimensions
         const warnings = [];
-        
+
         for (const cubby of this.cubbies) {
             const bounds = Cubby.getCubbyBounds(cubby);
-            
+
             // Convert to physical dimensions (inches)
             const physicalWidth = bounds.width;
             const physicalHeight = bounds.height;
-            
+
             if (physicalWidth > this.printBedWidth) {
                 warnings.push({
                     type: 'width',
@@ -249,7 +245,7 @@ class CubbyExporter {
                     message: `Cubby ${cubby.id} width (${physicalWidth.toFixed(2)}") exceeds print bed width (${this.printBedWidth}")`
                 });
             }
-            
+
             if (physicalHeight > this.printBedHeight) {
                 warnings.push({
                     type: 'height',
@@ -260,16 +256,16 @@ class CubbyExporter {
                 });
             }
         }
-        
+
         if (warnings.length > 0) {
             console.warn('[CubbyExporter] Print bed dimension warnings:', warnings);
-            
+
             // Emit warning event if appEvents is available
             if (typeof appEvents !== 'undefined') {
                 appEvents.emit('printBedWarnings', { warnings });
             }
         }
-        
+
         return warnings;
     }
 
@@ -282,9 +278,7 @@ class CubbyExporter {
 
         clear();
         background(255);
-        
-        console.log(`[CubbyExporter] Drawing ${this.cubbies.length} cubbies`);
-        
+
         if (this.cubbies.length === 0) {
             fill('red');
             textAlign(CENTER, CENTER);
@@ -309,14 +303,14 @@ class CubbyExporter {
         for (const outlineData of this.cubbyOutlines) {
             this.renderPreparedPerimeter(outlineData.lines);
         }
-        
+
         // Draw interior lines (green) from prepared data  
         stroke('#00CC66');
         strokeWeight(2 / scaleValue);
         for (const interiorData of this.cubbyInteriors) {
             this.renderPreparedPerimeter(interiorData.lines);
         }
-        
+
         // Draw labels (blue) from prepared data
         fill('blue');
         noStroke();
@@ -325,15 +319,15 @@ class CubbyExporter {
         for (const labelData of this.cubbyLabels) {
             text(labelData.text, labelData.x, this.layoutHeight - labelData.y);
         }
-        
+
         // Draw print bed validation visual indicators (red overlay for oversized cubbies)
         if (this.printBedWarnings && this.printBedWarnings.length > 0) {
             fill(255, 0, 0, 80); // Transparent red overlay
             noStroke();
-            
+
             // Get list of cubby IDs that have warnings
             const oversizedCubbyIds = new Set(this.printBedWarnings.map(warning => warning.cubbyId));
-            
+
             // Draw red overlay on oversized cubbies
             for (const outlineData of this.cubbyOutlines) {
                 if (oversizedCubbyIds.has(outlineData.cubbyId)) {
@@ -353,7 +347,7 @@ class CubbyExporter {
                 }
             }
         }
-        
+
         pop(); // Restore original rendering state
     }
 
@@ -449,7 +443,7 @@ class CubbyExporter {
     exportPreparedPerimeterToDXF(dxf, lines) {
         // Export prepared perimeter lines to DXF (coordinates already in DXF-compatible format)
         const points = [];
-        
+
         for (const line of lines) {
             if (line.type === 'bezier') {
                 // For bezier curves, approximate with line segments for DXF
@@ -467,24 +461,24 @@ class CubbyExporter {
                 points.push([line.x2, line.y2]);
             }
         }
-        
+
         // Remove duplicate consecutive points
         const uniquePoints = [];
         for (let i = 0; i < points.length; i++) {
-            if (i === 0 || 
-                Math.abs(points[i][0] - points[i-1][0]) > 0.001 || 
-                Math.abs(points[i][1] - points[i-1][1]) > 0.001) {
+            if (i === 0 ||
+                Math.abs(points[i][0] - points[i - 1][0]) > 0.001 ||
+                Math.abs(points[i][1] - points[i - 1][1]) > 0.001) {
                 uniquePoints.push(points[i]);
             }
         }
-        
+
         // Draw as connected line segments
         for (let i = 0; i < uniquePoints.length - 1; i++) {
             const [x1, y1] = uniquePoints[i];
             const [x2, y2] = uniquePoints[i + 1];
             dxf.drawLine(x1, y1, x2, y2);
         }
-        
+
         // Close the shape if needed
         if (uniquePoints.length > 2) {
             const first = uniquePoints[0];
@@ -499,10 +493,10 @@ class CubbyExporter {
     exportCubbyToPolyline(dxf, perimeter) {
         // Export cubby perimeter as a polyline with bezier curves
         if (perimeter.length === 0) return;
-        
+
         // Start polyline
         const points = [];
-        
+
         for (const segment of perimeter) {
             if (segment.type === 'bezier') {
                 // For bezier curves, we need to approximate with line segments
@@ -521,24 +515,24 @@ class CubbyExporter {
                 points.push([segment.x2, segment.y2]);
             }
         }
-        
+
         // Remove duplicate consecutive points
         const uniquePoints = [];
         for (let i = 0; i < points.length; i++) {
-            if (i === 0 || 
-                Math.abs(points[i][0] - points[i-1][0]) > 0.001 || 
-                Math.abs(points[i][1] - points[i-1][1]) > 0.001) {
+            if (i === 0 ||
+                Math.abs(points[i][0] - points[i - 1][0]) > 0.001 ||
+                Math.abs(points[i][1] - points[i - 1][1]) > 0.001) {
                 uniquePoints.push(points[i]);
             }
         }
-        
+
         // Draw as connected line segments
         for (let i = 0; i < uniquePoints.length - 1; i++) {
             const [x1, y1] = uniquePoints[i];
             const [x2, y2] = uniquePoints[i + 1];
             dxf.drawLine(x1, y1, x2, y2);
         }
-        
+
         // Close the shape if needed
         if (uniquePoints.length > 2) {
             const first = uniquePoints[0];
@@ -552,25 +546,25 @@ class CubbyExporter {
     approximateBezierCurve(x1, y1, cx1, cy1, cx2, cy2, x2, y2, segments) {
         // Approximate a bezier curve with line segments
         const points = [];
-        
+
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             const nt = 1 - t;
-            
+
             // Cubic bezier formula
-            const x = nt * nt * nt * x1 + 
-                     3 * nt * nt * t * cx1 + 
-                     3 * nt * t * t * cx2 + 
-                     t * t * t * x2;
-                     
-            const y = nt * nt * nt * y1 + 
-                     3 * nt * nt * t * cy1 + 
-                     3 * nt * t * t * cy2 + 
-                     t * t * t * y2;
-            
+            const x = nt * nt * nt * x1 +
+                3 * nt * nt * t * cx1 +
+                3 * nt * t * t * cx2 +
+                t * t * t * x2;
+
+            const y = nt * nt * nt * y1 +
+                3 * nt * nt * t * cy1 +
+                3 * nt * t * t * cy2 +
+                t * t * t * y2;
+
             points.push([x, y]);
         }
-        
+
         return points;
     }
 
@@ -588,7 +582,7 @@ class CubbyExporter {
                 const cp2y = offsetY + (bounds.maxY - segment.cp2y) * scale;  // Y-flip
                 const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
                 const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
-                
+
                 bezier(x1, y1, cp1x, cp1y, cp2x, cp2y, x2, y2);
             } else {
                 // Render regular line segment - flip Y coordinates
@@ -596,7 +590,7 @@ class CubbyExporter {
                 const y1 = offsetY + (bounds.maxY - segment.y1) * scale;  // Y-flip
                 const x2 = offsetX + (segment.x2 - bounds.minX) * scale;
                 const y2 = offsetY + (bounds.maxY - segment.y2) * scale;  // Y-flip
-                
+
                 line(x1, y1, x2, y2);
             }
         }

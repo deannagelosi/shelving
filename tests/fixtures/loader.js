@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const Shape = require('../../js/core/Shape');
+const RenderConfig = require('../../js/interfaces/web/RenderConfig');
+
+// Make RenderConfig available globally for Shape class
+global.RenderConfig = RenderConfig;
 
 function loadShapesFromFixture() {
     // Construct the full path to the fixture file

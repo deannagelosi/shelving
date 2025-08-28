@@ -37,10 +37,11 @@ class CellularRenderer {
             // set line color based on strain
             let lineColor;
             let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+            const colors = RenderConfig.getColors(isDevMode);
             if (isDevMode) {
                 lineColor = this.strainColor(strain);
             } else {
-                lineColor = "rgb(175, 141, 117)";
+                lineColor = colors.cellular.lineColor;
             }
 
             if (overrideColor) {
@@ -58,7 +59,8 @@ class CellularRenderer {
 
     renderTerrain(layout, canvas, config) {
         // display terrain values on the canvas
-        fill(75); // dark grey
+        const colors = RenderConfig.getColors();
+        fill(colors.cellular.terrainText);
         strokeWeight(0);
         textAlign(CENTER, CENTER);
         let txtXOffset = config.squareSize / 2;
@@ -90,17 +92,9 @@ class CellularRenderer {
             return; // No area data to visualize
         }
 
-        // Color palette for different shapes (semi-transparent)
-        const colors = [
-            [255, 100, 100, 80],  // Red
-            [100, 255, 100, 80],  // Green
-            [100, 100, 255, 80],  // Blue
-            [255, 255, 100, 80],  // Yellow
-            [255, 100, 255, 80],  // Magenta
-            [100, 255, 255, 80],  // Cyan
-            [255, 150, 100, 80],  // Orange
-            [150, 100, 255, 80],  // Purple
-        ];
+        // Get color palette from centralized config
+        const configColors = RenderConfig.getColors();
+        const colors = configColors.cellular.floodFillPalette;
 
         noStroke();
 

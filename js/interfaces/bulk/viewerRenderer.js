@@ -131,7 +131,7 @@ class ViewerRenderer {
                 // Use pre-calculated board render data
                 optimizedBoardData = JSON.parse(this.state.selectedSolution.board_render_data_optimized);
             } else {
-                // Fallback: calculate board render data
+                // Calculate board render data
                 const exportConfig = {
                     caseDepth: 3,
                     sheetThickness: 0.23,

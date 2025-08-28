@@ -1,5 +1,5 @@
 class Anneal {
-    constructor(_shapes, _layoutConfig = {}) {
+    constructor(_shapes, _layoutConfig = {}, _bufferConfig = {}) {
         //== anneal strategy variables
         // annealing strategy:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -16,6 +16,7 @@ class Anneal {
 
         //== configuration
         this.layoutConfig = _layoutConfig;
+        this.bufferConfig = _bufferConfig;
 
         //== state variables
         this.shapes = _shapes;
@@ -55,7 +56,7 @@ class Anneal {
             };
 
             // create new solution with random layout.
-            let initialSolution = new Solution(this.shapes, startID, this.layoutConfig);
+            let initialSolution = new Solution(this.shapes, startID, this.layoutConfig, {}, this.bufferConfig);
             initialSolution.randomLayout();
 
             // start concurrent anneals (pass which iteration number for multi-start)

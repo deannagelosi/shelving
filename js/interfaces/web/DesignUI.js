@@ -12,6 +12,7 @@ class DesignUI {
 
         //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
+        this.shapeRenderer = new ShapeRenderer();
         this.cellularRenderer = new CellularRenderer();
         this.bendWallRenderer = new BendWallRenderer();
         this.cubbyRenderer = new CubbyRenderer();
@@ -35,14 +36,46 @@ class DesignUI {
             }
         });
 
-        // listen for fabrication type changes to update UI
-        appEvents.on('fabricationTypeChanged', ({ fabricationType }) => {
-            this.updateFabricationTypeUI(fabricationType);
+        // Note: fabricationType and cubbyMode changes now handled by settingsChanged event
+
+        // listen for shape preview changes
+        appEvents.on('shapePreviewChanged', () => {
+            this.updateShapePreview();
         });
 
-        // listen for cubby mode changes to update UI
-        appEvents.on('cubbyModeChanged', ({ cubbyMode }) => {
-            this.updateCubbyModeUI(cubbyMode);
+        // Central settings change handler - simple switch for all reactions
+        appEvents.on('settingsChanged', ({ setting, value }) => {
+            switch (setting) {
+                // Shape processing settings that require regeneration
+                case 'customBufferSize':
+                case 'centerShape':
+                case 'minWallLength':
+                    this.regenerateShapesWithNewSettings();
+                    break;
+
+                // UI visibility settings
+                case 'fabricationType':
+                    this.updateFabricationTypeUI(value);
+                    break;
+                case 'cubbyMode':
+                    this.updateCubbyModeUI(value);
+                    break;
+
+                // Settings that don't need additional reactions (yet)
+                case 'aspectRatioPref':
+                case 'useCustomPerimeter':
+                case 'perimeterWidth':
+                case 'perimeterHeight':
+                case 'wallAlgorithm':
+                case 'bendRadius':
+                case 'maxBends':
+                case 'cubbyCurveRadius':
+                    break;
+
+                default:
+                    console.log(`[DesignUI] Unhandled setting change: ${setting} = ${value}`);
+                    break;
+            }
         });
 
         //== movement debouncing
@@ -297,17 +330,15 @@ class DesignUI {
         // Sync UI with appState (single source of truth)
         if (this.html.fabricationTypeSelect) {
             const fabricationType = appState.generationConfig.fabricationType;
-            console.log(`[DesignUI.show] Setting dropdown to appState value: ${fabricationType}`);
-            
+
             // Force update using both p5 method and direct DOM access
             this.html.fabricationTypeSelect.selected(fabricationType);
-            
+
             // Double-check and force if needed using underlying element
             if (this.html.fabricationTypeSelect.value() !== fabricationType) {
-                console.log(`[DesignUI.show] Dropdown didn't update, forcing via DOM`);
                 this.html.fabricationTypeSelect.elt.value = fabricationType;
             }
-            
+
             // Update UI visibility to match current fabrication type
             this.updateFabricationTypeUI(fabricationType);
         }
@@ -346,6 +377,11 @@ class DesignUI {
         // update dynamic lists
         this.updateShapesList();
         this.updateSavedSolutionsList();
+
+        // refresh shape preview if active (detail toggle auto-refresh)
+        if (appState.display.previewMode && this.displayShapePreview) {
+            this.displayShapePreview();
+        }
     }
 
     //== button handlers
@@ -408,11 +444,11 @@ class DesignUI {
                 for (let x = 0; x < shape.data.bufferShape[y].length; x++) {
                     if (shape.data.bufferShape[y][x]) {
                         // Calculate canvas position for this buffer pixel (low-res grid square)
-                        let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding + (config.squareSize / 2);
+                        let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
                         let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
                         let yStart = (startY * config.squareSize);
                         let yRect = (y * smallSquare);
-                        let rectY = yOffset - yStart - yRect - (config.squareSize / 2);
+                        let rectY = yOffset - yStart - yRect;
 
                         minX = Math.min(minX, rectX);
                         maxX = Math.max(maxX, rectX + smallSquare);
@@ -482,13 +518,18 @@ class DesignUI {
             bendRadius: currentSolution.bendRadius,
             maxBends: currentSolution.maxBends
         };
+        const bufferConfig = {
+            customBufferSize: currentSolution.customBufferSize,
+            centerShape: currentSolution.centerShape,
+            minWallLength: currentSolution.minWallLength
+        };
 
-        const newSolution = new Solution(shapesCopy, currentSolution.startID, layoutConfig, wallConfig);
+        const newSolution = new Solution(shapesCopy, currentSolution.startID, layoutConfig, wallConfig, bufferConfig);
 
         // Find the selected shape in the new solution
         const newSelectedShape = newSolution.shapes.find(shape => shape.id === appState.selectedShapeId);
 
-        // Update position based on direction (1 unit = 1 inch on low-resolution grid)
+        // Update position based on direction (1 unit = 1 grid square)
         switch (direction) {
             case 'left':
                 newSelectedShape.posX -= 1;
@@ -569,9 +610,14 @@ class DesignUI {
         }
         // update the screen
         this.displayResult();
+        // emit state change event to refresh shape preview if active
+        appEvents.emit('stateChanged');
     }
 
     async handleStartAnneal() {
+        // Start with clean slate (clears preview, solution, and resets UI)
+        this.drawBlankGrid();
+        
         // clear the original annealed solution when starting a new generation
         appState.originalAnnealedSolution = null;
         appState.selectedShapeId = null;
@@ -607,17 +653,21 @@ class DesignUI {
         this.shapeElements.forEach(element => {
             element.addClass('disabled');
         });
-        // unselect solutions from list
-        this.viewSavedAnneal(null);
 
         //== start the annealing process
         this.html.saveButton.attribute('disabled', '');
 
         // check if each shape has all it's grid data
+        const config = {
+            customBufferSize: appState.generationConfig.customBufferSize,
+            centerShape: appState.generationConfig.centerShape,
+            minWallLength: appState.generationConfig.minWallLength
+        };
+
         for (let shape of appState.shapes) {
             if (!shape.data.lowResShape || !shape.data.bufferShape) {
                 // if missing, generate it
-                shape.saveUserInput(shape.data.title, shape.data.highResShape);
+                shape.saveUserInput(shape.data.title, shape.data.highResShape, config);
             }
         }
 
@@ -639,30 +689,8 @@ class DesignUI {
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
 
-            // get fabrication and wall generation parameters from UI to appState
-            const fabricationType = this.html.fabricationTypeSelect ? this.html.fabricationTypeSelect.value() : 'boards';
-            const wallAlgorithm = this.html.wallAlgorithmSelect ? this.html.wallAlgorithmSelect.value() : 'cellular';
-
-            appState.setFabricationType(fabricationType);
-            
-            if (fabricationType === 'boards' || fabricationType === 'cubbies') {
-                appState.generationConfig.wallAlgorithm = wallAlgorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
-            } else {
-                appState.generationConfig.wallAlgorithm = 'bend';
-            }
-
-            // Update curve radius for cubbies
-            if (fabricationType === 'cubbies' && this.html.cubbyCurveRadiusInput) {
-                appState.generationConfig.cubbyCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
-            }
-
-            // Update bend parameters if they exist
-            if (this.html.bendRadiusInput) {
-                appState.generationConfig.bendRadius = parseFloat(this.html.bendRadiusInput.value());
-            }
-            if (this.html.maxBendsInput) {
-                appState.generationConfig.maxBends = parseInt(this.html.maxBendsInput.value());
-            }
+            // appState.generationConfig is kept current by reactive form handlers
+            // no need to read from DOM - all form changes immediately sync to appState
 
             // send generation request to worker
             this.solutionWorker.postMessage({
@@ -681,7 +709,11 @@ class DesignUI {
                     wallAlgorithm: appState.generationConfig.wallAlgorithm,
                     cubbyCurveRadius: appState.generationConfig.cubbyCurveRadius,
                     wallBendRadius: appState.generationConfig.bendRadius,
-                    maxBends: appState.generationConfig.maxBends
+                    maxBends: appState.generationConfig.maxBends,
+                    // Buffer Configuration
+                    customBufferSize: appState.generationConfig.customBufferSize,
+                    centerShape: appState.generationConfig.centerShape,
+                    minWallLength: appState.generationConfig.minWallLength
                 }
             });
 
@@ -719,8 +751,18 @@ class DesignUI {
         let savedData = {
             title: `solution-${appState.totalSavedAnneals}`,
             finalSolution: deepCopySolution,
-            enabledShapes: appState.shapes.map(shape => shape.enabled)
-            // Note: Generation config is stored in the Solution object itself
+            enabledShapes: appState.shapes.map(shape => shape.enabled),
+            // Preserve fabrication context for this solution
+            fabricationContext: {
+                bufferSettings: {
+                    customBufferSize: appState.generationConfig.customBufferSize,
+                    centerShape: appState.generationConfig.centerShape,
+                    minWallLength: appState.generationConfig.minWallLength
+                },
+                // Include other settings that affect physical output
+                fabricationType: appState.generationConfig.fabricationType,
+                materialType: appState.generationConfig.materialType
+            }
         };
         appState.savedAnneals.push(savedData);
 
@@ -736,6 +778,8 @@ class DesignUI {
         // clear current selection
         appState.currentViewedAnnealIndex = null;
         appState.currentAnneal = null;
+        // clear shape preview state
+        appState.clearShapePreview();
 
         // Re-enable perimeter controls
         if (this.html.usePerimeterCheckbox) {
@@ -765,40 +809,49 @@ class DesignUI {
 
 
         // use renderer to display blank grid
-        let canvas = { height: canvasHeight, width: canvasWidth };
-        let layoutProps = this.solutionRenderer.calculateLayoutProperties(null, canvasWidth, canvasHeight); // null will return default values
-        this.solutionRenderer.renderBlankGrid(canvas, layoutProps, 20);
+        const config = this.getRenderConfig(); // null is default for solution parameter
+        this.solutionRenderer.renderBlankGrid(config, 20);
 
         // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
-    updateDisplayCallback(_solution) {
-        // receives a solution from the web worker and updates the display
-        let layoutProps = this.solutionRenderer.calculateLayoutProperties(_solution, canvasWidth, canvasHeight);
-        let canvas = { height: canvasHeight, width: canvasWidth };
-        let perimeterConfig = {
+    getRenderConfig(solution = null) {
+        // centralized configuration for all rendering methods - flat structure
+        const layoutProps = this.solutionRenderer.calculateLayoutProperties(solution, canvasWidth, canvasHeight);
+        return {
+            // Canvas dimensions
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+
+            // Layout properties (flattened from layoutProps)
+            squareSize: layoutProps.squareSize,
+            buffer: layoutProps.buffer,
+            xPadding: layoutProps.xPadding,
+            yPadding: layoutProps.yPadding,
+            layoutHeight: layoutProps.layoutHeight,
+            layoutWidth: layoutProps.layoutWidth,
+
+            // Perimeter configuration (flattened from perimeterConfig)
             useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
             perimeterWidth: appState.generationConfig.perimeterWidth,
             perimeterHeight: appState.generationConfig.perimeterHeight
         };
+    }
 
-        // use renderer to display the solution with perimeter handling
-        this.solutionRenderer.renderSolutionProgress(_solution, canvas, layoutProps, perimeterConfig, true);
+    updateDisplayCallback(_solution) {
+        // receives a solution from the web worker and updates the display
+        const config = this.getRenderConfig(_solution);
+
+        // use unified renderer to display the solution with scores for annealing progress
+        this.solutionRenderer.renderSolution(_solution, config, true);
     }
 
     displayResult() {
         // show shapes and grid but not annealing scores
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             let solution = appState.currentAnneal.finalSolution;
-            let layoutProps = this.solutionRenderer.calculateLayoutProperties(solution, canvasWidth, canvasHeight);
-            let canvas = { height: canvasHeight, width: canvasWidth };
-
-            let perimeterConfig = {
-                useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
-                perimeterWidth: appState.generationConfig.perimeterWidth,
-                perimeterHeight: appState.generationConfig.perimeterHeight
-            };
+            const config = this.getRenderConfig(solution);
 
             let wallRenderers = {
                 bendWallRenderer: this.bendWallRenderer,
@@ -812,9 +865,12 @@ class DesignUI {
                 useGoldenPathDebugData: this.useGoldenPathDebugData
             };
 
-            // Use renderer to display complete solution with walls
-            const updatedCellular = this.solutionRenderer.renderCompleteSolution(
-                solution, canvas, layoutProps, perimeterConfig, wallRenderers, wallRenderData
+            // Use unified renderer to display solution layout (without scores)
+            this.solutionRenderer.renderSolution(solution, config, false);
+
+            // Render walls
+            const updatedCellular = this.solutionRenderer.renderWalls(
+                solution, config, wallRenderers, wallRenderData
             );
 
             // updates app state when cellular data is generated
@@ -858,9 +914,10 @@ class DesignUI {
             .addClass('sidebar-controls')
             .parent(htmlRefs.left.list);
 
-        // Create the aspect ratio controls and perimeter controls in the fixed container
+        // Create pre-anneal settings controls
         this.createAspectRatioControls();
         this.createPerimeterControls();
+        this.createShapeProcessingControls();
 
         // Create scrollable container for shapes
         this.html.leftScrollContainer = createDiv()
@@ -901,6 +958,20 @@ class DesignUI {
             createSpan(shape.data.title)
                 .addClass('shape-title')
                 .parent(shapeItem);
+
+            // Add eyeball preview icon
+            let previewIcon = createImg('img/view.svg', 'Preview shape')
+                .addClass('shape-preview-icon')
+                .size(16, 16)
+                .parent(shapeItem)
+                .style('margin-left', 'auto')
+                .style('padding', '0 5px')
+                .style('cursor', 'pointer')
+                .style('user-select', 'none')
+                .mousePressed((event) => {
+                    event.stopPropagation(); // Prevent shape selection toggle
+                    this.previewShape(shape.id);
+                });
 
             this.shapeElements.push(shapeItem);
         });
@@ -964,7 +1035,7 @@ class DesignUI {
 
         this.html.usePerimeterCheckbox = createCheckbox(' Use Custom Perimeter', appState.generationConfig.useCustomPerimeter)
             .parent(checkboxContainer)
-            .changed(() => { this.togglePerimeterInputs() });
+            .changed(() => this.handleUseCustomPerimeterChange());
 
         // Ensure checkbox state is always synchronized with appState
         this.html.usePerimeterCheckbox.checked(appState.generationConfig.useCustomPerimeter);
@@ -990,7 +1061,7 @@ class DesignUI {
             .addClass('dimension-input')
             .parent(widthColumn)
             .attribute('min', '1')
-            .changed(() => this.updatePerimeterWidth());
+            .changed(() => this.handlePerimeterWidthChange());
 
         // Height input column
         const heightColumn = createDiv()
@@ -1003,8 +1074,189 @@ class DesignUI {
             .addClass('dimension-input')
             .parent(heightColumn)
             .attribute('min', '1')
-            .changed(() => this.updatePerimeterHeight());
+            .changed(() => this.handlePerimeterHeightChange());
     }
+
+    createShapeProcessingControls() {
+        // Shape Processing Options section
+        const processingGroup = createDiv()
+            .addClass('settings-group')
+            .parent(this.html.leftControlsContainer);
+
+        createSpan('Shape Processing Options')
+            .addClass('settings-label')
+            .parent(processingGroup);
+
+        // Custom Buffer Size input
+        const bufferSizeRow = createDiv()
+            .addClass('input-row')
+            .parent(processingGroup);
+        createSpan('Custom Buffer (in)')
+            .addClass('input-label')
+            .parent(bufferSizeRow);
+        this.html.customBufferSizeInput = createInput(appState.generationConfig.customBufferSize.toString(), 'number')
+            .addClass('number-input')
+            .parent(bufferSizeRow)
+            .attribute('min', '0')
+            .attribute('max', '1')
+            .attribute('step', '0.25')
+            .changed(() => this.handleCustomBufferSizeChange());
+
+        // Buffer on Bottom checkbox
+        const bufferBottomContainer = createDiv()
+            .addClass('checkbox-group')
+            .parent(processingGroup);
+        this.html.centerShapeCheckbox = createCheckbox(' Center shape vertically', appState.generationConfig.centerShape)
+            .parent(bufferBottomContainer)
+            .changed(() => this.handleCenterShapeChange());
+
+        // Minimum Wall Length dropdown
+        const wallLengthRow = createDiv()
+            .addClass('input-row')
+            .parent(processingGroup);
+        createSpan('Minimum Wall Length (in)')
+            .addClass('input-label')
+            .parent(wallLengthRow);
+        this.html.minWallLengthSelect = createSelect()
+            .addClass('select-input')
+            .parent(wallLengthRow)
+            .changed(() => this.handleMinWallLengthChange());
+
+        // Add grid square size options
+        this.html.minWallLengthSelect.option('1.0', '1.0');
+        this.html.minWallLengthSelect.option('0.5', '0.5');
+        this.html.minWallLengthSelect.option('0.25', '0.25');
+
+        // Set initial value
+        this.html.minWallLengthSelect.selected(appState.generationConfig.minWallLength.toString());
+    }
+
+    updateCustomBufferSize() {
+        const value = parseFloat(this.html.customBufferSizeInput.value());
+        if (!isNaN(value) && value >= 0 && value <= 1) {
+            appState.setCustomBufferSize(value);
+        }
+    }
+
+    updateCenterShape() {
+        const enabled = this.html.centerShapeCheckbox.checked();
+        appState.setCenterShape(enabled);
+    }
+
+    updateMinWallLength() {
+        const gridSquareSize = parseFloat(this.html.minWallLengthSelect.selected());
+        if (!isNaN(gridSquareSize)) {
+            appState.setMinWallLength(gridSquareSize);
+        }
+    }
+
+    // ============= Form Change Handlers (Write-Through to AppState) =============
+    // These handlers are the ONLY place that reads from DOM elements
+    // All other code must read from appState.generationConfig
+
+    handleAspectRatioChange(value) {
+        // Update UI buttons
+        this.html.tallButton.removeClass('selected');
+        this.html.squareButton.removeClass('selected');
+        this.html.wideButton.removeClass('selected');
+
+        if (value === -1) this.html.tallButton.addClass('selected');
+        else if (value === 0) this.html.squareButton.addClass('selected');
+        else if (value === 1) this.html.wideButton.addClass('selected');
+
+        // Write directly to appState
+        appState.generationConfig.aspectRatioPref = value;
+        appEvents.emit('settingsChanged', { setting: 'aspectRatioPref', value });
+    }
+
+    handleUseCustomPerimeterChange() {
+        const enabled = this.html.usePerimeterCheckbox.checked();
+        appState.generationConfig.useCustomPerimeter = enabled;
+        appEvents.emit('settingsChanged', { setting: 'useCustomPerimeter', value: enabled });
+        this.togglePerimeterInputs(); // UI visibility update
+    }
+
+    handlePerimeterWidthChange() {
+        const value = parseInt(this.html.perimeterWidthInput.value());
+        if (!isNaN(value) && value >= 1) {
+            appState.generationConfig.perimeterWidth = value;
+            appEvents.emit('settingsChanged', { setting: 'perimeterWidth', value });
+        }
+    }
+
+    handlePerimeterHeightChange() {
+        const value = parseInt(this.html.perimeterHeightInput.value());
+        if (!isNaN(value) && value >= 1) {
+            appState.generationConfig.perimeterHeight = value;
+            appEvents.emit('settingsChanged', { setting: 'perimeterHeight', value });
+        }
+    }
+
+    handleCustomBufferSizeChange() {
+        const value = parseFloat(this.html.customBufferSizeInput.value());
+        if (!isNaN(value) && value >= 0) {
+            appState.setCustomBufferSize(value);
+            appEvents.emit('settingsChanged', { setting: 'customBufferSize', value });
+        }
+    }
+
+    handleCenterShapeChange() {
+        const enabled = this.html.centerShapeCheckbox.checked();
+        appState.setCenterShape(enabled);
+        appEvents.emit('settingsChanged', { setting: 'centerShape', value: enabled });
+    }
+
+    handleMinWallLengthChange() {
+        const value = parseFloat(this.html.minWallLengthSelect.value());
+        if (!isNaN(value)) {
+            appState.setMinWallLength(value);
+            appEvents.emit('settingsChanged', { setting: 'minWallLength', value });
+        }
+    }
+
+    handleFabricationTypeChange() {
+        const type = this.html.fabricationTypeSelect.value();
+        appState.generationConfig.fabricationType = type;
+        appEvents.emit('settingsChanged', { setting: 'fabricationType', value: type });
+    }
+
+    handleCubbyModeChange() {
+        const mode = this.html.cubbyModeSelect.value();
+        appState.generationConfig.cubbyMode = mode;
+        appEvents.emit('settingsChanged', { setting: 'cubbyMode', value: mode });
+    }
+
+    handleWallAlgorithmChange() {
+        const value = this.html.wallAlgorithmSelect.value();
+        const fullAlgorithm = value === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
+        appState.generationConfig.wallAlgorithm = fullAlgorithm;
+        appEvents.emit('settingsChanged', { setting: 'wallAlgorithm', value: fullAlgorithm });
+    }
+
+    handleBendRadiusChange() {
+        const value = parseFloat(this.html.curveRadiusInput.value());
+        if (!isNaN(value) && value >= 0.1 && value <= 10.0) {
+            appState.generationConfig.bendRadius = value;
+            appEvents.emit('settingsChanged', { setting: 'bendRadius', value });
+        }
+    }
+
+    handleMaxBendsChange() {
+        const value = parseInt(this.html.maxBendsInput.value());
+        if (!isNaN(value) && value >= 1) {
+            appState.generationConfig.maxBends = value;
+            appEvents.emit('settingsChanged', { setting: 'maxBends', value });
+        }
+    }
+
+    handleCubbyCurveRadiusChange() {
+        const value = parseFloat(this.html.cubbyCurveRadiusInput.value());
+        if (!isNaN(value) && value >= 0 && value <= 1.0) {
+            appState.generationConfig.cubbyCurveRadius = value;
+            appEvents.emit('settingsChanged', { setting: 'cubbyCurveRadius', value });
+        }
+    }
+
 
     togglePerimeterInputs() {
         // Don't allow changes if the checkbox is disabled
@@ -1014,7 +1266,10 @@ class DesignUI {
             return;
         }
 
-        appState.generationConfig.useCustomPerimeter = this.html.usePerimeterCheckbox.checked();
+        // Use reactive approach to update appState
+        this.updateUseCustomPerimeter();
+
+        // Handle UI visibility based on new appState value
         if (appState.generationConfig.useCustomPerimeter) {
             this.html.perimeterInputsContainer.removeClass('hidden');
         } else {
@@ -1041,6 +1296,64 @@ class DesignUI {
 
         appState.shapes[index].enabled = !appState.shapes[index].enabled;
         this.shapeElements[index].toggleClass('highlighted');
+    }
+
+    previewShape(shapeId) {
+        // Set the shape preview in appState
+        appState.setShapePreview(shapeId);
+
+        // Clear any current solution display and show preview
+        appState.currentAnneal = null;
+        appState.currentViewedAnnealIndex = null;
+
+        // Trigger display update
+        this.displayShapePreview();
+    }
+
+    displayShapePreview() {
+        if (!appState.display.previewMode || appState.display.previewShapeId === null || appState.display.previewShapeId === undefined) {
+            return;
+        }
+
+        // Find the shape to preview
+        const shapeToPreview = appState.shapes.find(shape => shape.id === appState.display.previewShapeId);
+        if (!shapeToPreview) {
+            console.error(`Shape with ID ${appState.display.previewShapeId} not found`);
+            return;
+        }
+
+
+        // Check if shape needs regeneration with current settings
+        const currentConfig = {
+            customBufferSize: appState.generationConfig.customBufferSize,
+            centerShape: appState.generationConfig.centerShape,
+            minWallLength: appState.generationConfig.minWallLength
+        };
+        
+        // Check if shape's cached config differs from current config
+        // Shapes don't currently store their generation config, so we need to check if buffer data exists
+        // and regenerate if the config has changed since last generation
+        if (!shapeToPreview.lastGeneratedConfig || 
+            shapeToPreview.lastGeneratedConfig.customBufferSize !== currentConfig.customBufferSize ||
+            shapeToPreview.lastGeneratedConfig.centerShape !== currentConfig.centerShape ||
+            shapeToPreview.lastGeneratedConfig.minWallLength !== currentConfig.minWallLength) {
+            
+            
+            // Regenerate shape buffers with current settings
+            shapeToPreview.saveUserInput(
+                shapeToPreview.data.title,
+                shapeToPreview.data.highResShape,
+                currentConfig
+            );
+            
+            // Store the config used for generation
+            shapeToPreview.lastGeneratedConfig = { ...currentConfig };
+        }
+
+        // Use the shape preview renderer
+        const canvas = { width: canvasWidth, height: canvasHeight };
+        const detailMode = appState.display.detailView;
+        this.shapeRenderer.renderShapePreview(shapeToPreview, canvas, detailMode, appState);
     }
 
     initializeResultsPanel() {
@@ -1190,7 +1503,7 @@ class DesignUI {
         this.html.fabricationTypeSelect.option('Bent Wall', 'bent');
         // Set to appState value or default to ensure it has a valid value
         this.html.fabricationTypeSelect.selected(appState.generationConfig.fabricationType || 'boards');
-        
+
         // Cubby Mode selection (only shown for cubbies fabrication type)
         this.html.cubbyModeGroup = createDiv()
             .addClass('settings-group cubby-mode-group')
@@ -1250,7 +1563,7 @@ class DesignUI {
         const radiusWrapper = createDiv()
             .addClass('settings-group')
             .parent(this.html.curveGroup);
-        createSpan('Curve Radius (inches)')
+        createSpan('Curve Radius (in)')
             .addClass('settings-label')
             .parent(radiusWrapper);
         this.html.curveRadiusInput = createInput('1.0', 'number')
@@ -1259,7 +1572,7 @@ class DesignUI {
             .attribute('min', '0.1')
             .attribute('max', '10.0')
             .attribute('step', '0.1')
-            .input(() => this.handleBendParameterChange());
+            .input(() => this.handleBendRadiusChange());
 
         // Wrapper for Bends
         const bendsWrapper = createDiv()
@@ -1274,7 +1587,7 @@ class DesignUI {
             .attribute('min', '2')
             .attribute('max', '10')
             .attribute('step', '1')
-            .input(() => this.handleBendParameterChange());
+            .input(() => this.handleMaxBendsChange());
 
         // Save button in Results panel
         this.html.saveButton = createButton('Save')
@@ -1296,30 +1609,29 @@ class DesignUI {
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
             const solution = appState.currentAnneal.finalSolution;
             solution.fabricationType = selectedType;
-            
+
             if (selectedType === 'boards' || selectedType === 'cubbies') {
-                const algorithm = this.html.wallAlgorithmSelect.value();
-                solution.wallAlgorithm = algorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
+                // Read from appState, not DOM
+                solution.wallAlgorithm = appState.generationConfig.wallAlgorithm;
             } else {
                 solution.wallAlgorithm = 'bend';
             }
-            
-            if (selectedType === 'cubbies') {
-                appState.generationConfig.cubbyCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
-            }
-            
+
+            // cubbyCurveRadius is already in appState from other handlers
+            // No need to read from DOM here
+
             this.displayResult(); // Redraw with the new fabrication type
         }
     }
 
     handleCubbyModeChange() {
         const selectedMode = this.html.cubbyModeSelect.value();
-        
+
         // Update appState using centralized method
         appState.setCubbyMode(selectedMode);
-        
+
         // If there's a current solution and it's cubbies type, regenerate
-        if (appState.currentAnneal && appState.currentAnneal.finalSolution && 
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution &&
             appState.generationConfig.fabricationType === 'cubbies') {
             this.displayResult();
         }
@@ -1329,7 +1641,7 @@ class DesignUI {
         // Update dropdown to match state (in case changed from elsewhere)
         if (this.html.fabricationTypeSelect) {
             this.html.fabricationTypeSelect.selected(fabricationType);
-            
+
             // Force update if p5.js didn't update properly
             if (this.html.fabricationTypeSelect.value() !== fabricationType) {
                 this.html.fabricationTypeSelect.elt.value = fabricationType;
@@ -1340,7 +1652,7 @@ class DesignUI {
         if (fabricationType === 'boards' || fabricationType === 'cubbies') {
             this.html.algorithmGroup.removeClass('hidden');
             this.html.curveGroup.addClass('hidden');
-            
+
             // Show corner radius and mode only for cubbies
             if (fabricationType === 'cubbies') {
                 this.html.cubbyGroup.removeClass('hidden');
@@ -1361,7 +1673,7 @@ class DesignUI {
         // Update dropdown to match state (in case changed from elsewhere)
         if (this.html.cubbyModeSelect) {
             this.html.cubbyModeSelect.selected(cubbyMode);
-            
+
             // Force update if p5.js didn't update properly
             if (this.html.cubbyModeSelect.value() !== cubbyMode) {
                 this.html.cubbyModeSelect.elt.value = cubbyMode;
@@ -1369,20 +1681,129 @@ class DesignUI {
         }
     }
 
-    handleBendParameterChange() {
-        // Only regenerate if we have a current solution
-        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
-            return;
+
+    // ============= UI Update from AppState =============
+    updateUIFromAppState() {
+        // Update all form elements to match appState
+        // Called after external changes (loading solutions, etc.)
+        // This is the ONLY place besides handlers that should touch UI elements
+
+        const config = appState.generationConfig;
+
+        // Aspect ratio buttons - use handler to update both UI and ensure consistency
+        this.handleAspectRatioChange(config.aspectRatioPref);
+
+        // Perimeter settings
+        if (this.html.usePerimeterCheckbox) {
+            this.html.usePerimeterCheckbox.checked(config.useCustomPerimeter);
+            // Force update if p5.js didn't update properly
+            if (this.html.usePerimeterCheckbox.checked() !== config.useCustomPerimeter) {
+                this.html.usePerimeterCheckbox.elt.checked = config.useCustomPerimeter;
+            }
         }
 
-        const solution = appState.currentAnneal.finalSolution;
+        if (this.html.perimeterWidthInput) {
+            this.html.perimeterWidthInput.value(config.perimeterWidth);
+            // Force update if p5.js didn't update properly
+            if (this.html.perimeterWidthInput.value() !== config.perimeterWidth.toString()) {
+                this.html.perimeterWidthInput.elt.value = config.perimeterWidth;
+            }
+        }
 
-        // Update solution with new values from UI
-        solution.bendRadius = parseFloat(this.html.bendRadiusInput.value());
-        solution.maxBends = parseInt(this.html.maxBendsInput.value());
+        if (this.html.perimeterHeightInput) {
+            this.html.perimeterHeightInput.value(config.perimeterHeight);
+            // Force update if p5.js didn't update properly
+            if (this.html.perimeterHeightInput.value() !== config.perimeterHeight.toString()) {
+                this.html.perimeterHeightInput.elt.value = config.perimeterHeight;
+            }
+        }
 
-        // Redraw the canvas with new walls without triggering a full UI update
-        this.displayResult();
+        // Buffer settings
+        if (this.html.customBufferSizeInput) {
+            this.html.customBufferSizeInput.value(config.customBufferSize);
+            // Force update if p5.js didn't update properly
+            if (this.html.customBufferSizeInput.value() !== config.customBufferSize.toString()) {
+                this.html.customBufferSizeInput.elt.value = config.customBufferSize;
+            }
+        }
+
+        if (this.html.centerShapeCheckbox) {
+            this.html.centerShapeCheckbox.checked(config.centerShape);
+            // Force update if p5.js didn't update properly
+            if (this.html.centerShapeCheckbox.checked() !== config.centerShape) {
+                this.html.centerShapeCheckbox.elt.checked = config.centerShape;
+            }
+        }
+
+        if (this.html.minWallLengthSelect && config.minWallLength !== undefined) {
+            this.html.minWallLengthSelect.selected(config.minWallLength.toString());
+            // Force update if p5.js didn't update properly
+            if (this.html.minWallLengthSelect.value() !== config.minWallLength.toString()) {
+                this.html.minWallLengthSelect.elt.value = config.minWallLength;
+            }
+        }
+
+        // Wall settings
+        if (this.html.fabricationTypeSelect) {
+            this.html.fabricationTypeSelect.selected(config.fabricationType);
+            // Force update if p5.js didn't update properly
+            if (this.html.fabricationTypeSelect.value() !== config.fabricationType) {
+                this.html.fabricationTypeSelect.elt.value = config.fabricationType;
+            }
+        }
+
+        if (this.html.cubbyModeSelect) {
+            this.html.cubbyModeSelect.selected(config.cubbyMode);
+            // Force update if p5.js didn't update properly
+            if (this.html.cubbyModeSelect.value() !== config.cubbyMode) {
+                this.html.cubbyModeSelect.elt.value = config.cubbyMode;
+            }
+        }
+
+        if (this.html.wallAlgorithmSelect) {
+            const dropdownValue = config.wallAlgorithm === 'cellular-organic' ? 'cellular' : 'cellular-rectilinear';
+            this.html.wallAlgorithmSelect.selected(dropdownValue);
+            // Force update if p5.js didn't update properly
+            if (this.html.wallAlgorithmSelect.value() !== dropdownValue) {
+                this.html.wallAlgorithmSelect.elt.value = dropdownValue;
+            }
+        }
+
+        if (this.html.curveRadiusInput) {
+            this.html.curveRadiusInput.value(config.bendRadius);
+            // Force update if p5.js didn't update properly
+            if (this.html.curveRadiusInput.value() !== config.bendRadius) {
+                this.html.curveRadiusInput.elt.value = config.bendRadius;
+            }
+        }
+
+        if (this.html.maxBendsInput) {
+            this.html.maxBendsInput.value(config.maxBends);
+            // Force update if p5.js didn't update properly
+            if (this.html.maxBendsInput.value() !== config.maxBends) {
+                this.html.maxBendsInput.elt.value = config.maxBends;
+            }
+        }
+
+        if (this.html.cubbyCurveRadiusInput) {
+            this.html.cubbyCurveRadiusInput.value(config.cubbyCurveRadius);
+            // Force update if p5.js didn't update properly
+            if (this.html.cubbyCurveRadiusInput.value() !== config.cubbyCurveRadius) {
+                this.html.cubbyCurveRadiusInput.elt.value = config.cubbyCurveRadius;
+            }
+        }
+    }
+
+    handleBendParameterChange() {
+        // Update appState with current form values (reactive approach)
+        this.updateBendRadius();
+        this.updateMaxBends();
+
+        // Only regenerate display if we have a current solution
+        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
+            // Redraw the canvas with new walls without triggering a full UI update
+            this.displayResult();
+        }
     }
 
     handleWallAlgorithmChange() {
@@ -1439,8 +1860,6 @@ class DesignUI {
         const newCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
         appState.generationConfig.cubbyCurveRadius = newCurveRadius;
 
-        console.log(`[UI] Cubby curve radius changed to: ${newCurveRadius}`);
-
         // Redraw with new curve radius
         this.displayResult();
     }
@@ -1452,28 +1871,49 @@ class DesignUI {
 
     viewSavedAnneal(index) {
         if (index === null) {
-            // clear the viewed anneal
-            appState.currentViewedAnnealIndex = null;
-            appState.currentAnneal = null;
-            // notify ui update manager
-            appEvents.emit('stateChanged');
+            // Display an empty solution grid
+            this.drawBlankGrid();
             return;
         }
 
+        // Start with clean slate before viewing solution
+        this.drawBlankGrid();
+        
         // display selected saved anneal
         appState.currentViewedAnnealIndex = index;
         // Create a deep copy of the saved anneal to prevent modifications
         const savedAnneal = appState.savedAnneals[index];
 
+        // Handle legacy solutions (use historical defaults for shape processing)
+        let fabricationContext = savedAnneal.fabricationContext;
+        if (!fabricationContext) {
+            console.log('[DesignUI] Loading legacy solution - using historical defaults');
+            fabricationContext = {
+                bufferSettings: {
+                    customBufferSize: 1,  // Historical default of 1" buffer added
+                    centerShape: false,
+                    minWallLength: 1.0
+                },
+                fabricationType: savedAnneal.finalSolution.fabricationType || 'boards',
+                materialType: 'plywood-laser'
+            };
+        }
+
+        // Apply solution's buffer settings using setter methods
+        appState.setCustomBufferSize(fabricationContext.bufferSettings.customBufferSize, 'solution');
+        appState.setCenterShape(fabricationContext.bufferSettings.centerShape, 'solution');
+        appState.setMinWallLength(fabricationContext.bufferSettings.minWallLength, 'solution');
+
         appState.currentAnneal = {
             title: savedAnneal.title,
             finalSolution: Solution.fromDataObject(savedAnneal.finalSolution.toDataObject()),
-            enabledShapes: [...savedAnneal.enabledShapes] // shallow copy is fine for boolean array
+            enabledShapes: [...savedAnneal.enabledShapes], // shallow copy is fine for boolean array
+            fabricationContext: fabricationContext // Store context with loaded solution
         };
 
         // update fabrication UI to match loaded solution
         const solution = appState.currentAnneal.finalSolution;
-        
+
         // Ensure solution has fabricationType set
         if (!solution.fabricationType) {
             // Infer from wall algorithm for old saves
@@ -1483,35 +1923,22 @@ class DesignUI {
                 solution.fabricationType = 'boards'; // default for old cellular saves
             }
         }
-        
-        if (this.html.fabricationTypeSelect) {
-            // Use centralized method to update appState and trigger events
-            // This will set appState.generationConfig.fabricationType and emit the event
-            appState.loadSolutionConfig(solution);
-            
-            // Set solution-specific UI values (the general UI visibility is handled by the event)
-            if (solution.fabricationType === 'boards' || solution.fabricationType === 'cubbies') {
-                // Set wall algorithm from solution
-                if (this.html.wallAlgorithmSelect && solution.wallAlgorithm) {
-                    const isRectilinear = solution.wallAlgorithm.includes('rectilinear');
-                    this.html.wallAlgorithmSelect.selected(isRectilinear ? 'rectilinear' : 'cellular');
-                }
-                
-                // Set curve radius for cubbies
-                if (solution.fabricationType === 'cubbies' && this.html.cubbyCurveRadiusInput) {
-                    this.html.cubbyCurveRadiusInput.value(appState.generationConfig.cubbyCurveRadius.toString());
-                }
-            }
+
+        // Use centralized method to update appState and trigger events
+        // This will set appState.generationConfig.fabricationType and emit the event
+        appState.loadSolutionConfig(solution);
+
+        // Update appState with all solution settings
+        if (solution.wallAlgorithm) {
+            appState.generationConfig.wallAlgorithm = solution.wallAlgorithm;
         }
-
-        // Restore generation configuration from the Solution object
-        // Update aspect ratio preference and UI
-        this.handleAspectRatioChange(solution.aspectRatioPref);
-
-        // Update perimeter settings in appState (but UI will show locked values)
+        appState.generationConfig.aspectRatioPref = solution.aspectRatioPref;
         appState.generationConfig.useCustomPerimeter = solution.useCustomPerimeter;
         appState.generationConfig.perimeterWidth = solution.perimeterWidth;
         appState.generationConfig.perimeterHeight = solution.perimeterHeight;
+
+        // Update all UI elements from appState (single source of truth)
+        this.updateUIFromAppState();
 
         // Update perimeter UI to show the saved values (but keep them disabled)
         if (this.html.usePerimeterCheckbox) {
@@ -1566,6 +1993,7 @@ class DesignUI {
         // update display
         this.displayResult();
         this.updateSavedAnnealHighlight();
+
         // notify ui update manager
         appEvents.emit('stateChanged');
     }
@@ -1577,6 +2005,36 @@ class DesignUI {
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');
             }
+        }
+    }
+
+    regenerateShapesWithNewSettings() {
+        // Regenerate each shape using its original high-resolution data
+        const config = {
+            customBufferSize: appState.generationConfig.customBufferSize,
+            centerShape: appState.generationConfig.centerShape,
+            minWallLength: appState.generationConfig.minWallLength
+        };
+
+        appState.shapes.forEach(shape => {
+            if (shape.data && shape.data.highResShape && shape.data.title) {
+                // Use the existing high-resolution data as input (it represents the processed user input)
+                // Pass explicit configuration to avoid UI dependencies
+                shape.saveUserInput(shape.data.title, shape.data.highResShape, config);
+            }
+        });
+
+        // Emit state change to trigger UI updates
+        appEvents.emit('stateChanged');
+
+        // Update preview if active
+        this.updateShapePreview();
+    }
+
+    updateShapePreview() {
+        // Update shape preview when preview state changes or shapes are regenerated
+        if (appState.display.previewMode && this.displayShapePreview) {
+            this.displayShapePreview();
         }
     }
 }

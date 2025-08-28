@@ -88,7 +88,10 @@ class SolutionWorker {
             maxBends = 4,
             useCustomPerimeter = false,
             perimeterWidth = 0,
-            perimeterHeight = 0
+            perimeterHeight = 0,
+            customBufferSize = 0.25,
+            centerShape = false,
+            minWallLength = 1.0
         } = payload;
 
         // Create configuration objects
@@ -107,12 +110,18 @@ class SolutionWorker {
             maxBends: maxBends
         };
 
+        const bufferConfig = {
+            customBufferSize: customBufferSize,
+            centerShape: centerShape,
+            minWallLength: minWallLength
+        };
+
         this.currentJob = { jobId, startId };
 
         try {
             // Convert plain shape data objects to Shape class instances
             // (postMessage serialization strips class methods)
-            let shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData));
+            let shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData, bufferConfig));
 
             // Apply random sampling in bulk mode if parameters are provided
             let actualShapes = shapeInstances;
@@ -145,7 +154,7 @@ class SolutionWorker {
             this.sendProgress('PHASE_START', { phase: 'anneal', message: 'Starting annealing process...' });
 
             // create Anneal instance
-            const anneal = new this.Anneal(actualShapes, layoutConfig);
+            const anneal = new this.Anneal(actualShapes, layoutConfig, bufferConfig);
 
             // create progress callback for worker messaging
             const progressCallback = (solution) => {
@@ -163,7 +172,8 @@ class SolutionWorker {
                                 posY: shape.posY,
                                 data: {
                                     title: shape.data.title,
-                                    highResShape: shape.data.highResShape
+                                    highResShape: shape.data.highResShape,
+                                    highResBufferShape: shape.data.highResBufferShape
                                 }
                             })),
                             // Include perimeter properties for proper progress rendering
@@ -196,7 +206,7 @@ class SolutionWorker {
             let gridBaseline = null;
             if (this.mode === 'bulk') {
                 this.sendProgress('PHASE_START', { phase: 'baseline-grid', message: 'Generating grid-packing baseline...' });
-                gridBaseline = this.Solution.createGridBaseline(actualShapes, aspectRatioPref);
+                gridBaseline = this.Solution.createGridBaseline(actualShapes, aspectRatioPref, bufferConfig);
                 this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-grid', score: gridBaseline.score });
             }
 
@@ -508,7 +518,8 @@ function initializeBrowserWorker() {
         '../core/BendWall.js',
         '../core/Anneal.js',
         '../core/BoardExporter.js',
-        '../core/Board.js'
+        '../core/Board.js',
+        '../interfaces/web/RenderConfig.js'
     );
 
     // In the browser, classes are available in the global scope

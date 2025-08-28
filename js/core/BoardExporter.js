@@ -4,7 +4,7 @@ class BoardExporter {
         // Core data
         this.cellular = cellular;
         this.cellLines = cellular.getCellRenderLines();
-        
+
         // Material configuration
         this.materialType = config.materialType || 'plywood-laser';
         this.materialConfig = MATERIAL_CONFIGS[this.materialType];
@@ -213,7 +213,7 @@ class BoardExporter {
 
         const hRelativePosition = vBoard.coords.start.x - hBoard.coords.start.x;
         const vRelativePosition = hBoard.coords.start.y - vBoard.coords.start.y;
-        
+
         hBoard.poi.xJoints.push(hRelativePosition);
         vBoard.poi.xJoints.push(vRelativePosition);
     }
@@ -310,8 +310,11 @@ class BoardExporter {
         ctx.strokeWeight(7);
         for (let i = 0; i < this.boards.length; i++) {
             const board = this.boards[i];
-            if (isDevMode && renderer === null) ctx.stroke("rgba(175, 141, 117, 0.5)");
-            if (!isDevMode) ctx.stroke("rgb(175, 141, 117)");
+            // Use RenderConfig colors
+            if (typeof RenderConfig !== 'undefined') {
+                const colors = RenderConfig.getColors(isDevMode);
+                ctx.stroke(colors.boardColor);
+            }
 
             const x1 = startX(board.coords.start.x);
             const y1 = startY(board.coords.start.y);
@@ -472,7 +475,7 @@ class BoardExporter {
 
     getLongestBoard() {
         if (this.boards.length === 0) return null;
-        return this.boards.reduce((longest, current) => 
+        return this.boards.reduce((longest, current) =>
             current.getLength() > longest.getLength() ? current : longest
         );
     }

@@ -26,8 +26,9 @@ const ScreenState = {
 //== flags
 const fastReloadDev = true; // loads a test file and solution on start
 const fastReloadScreen = ScreenState.DESIGN;
-const testFileName = "cubby_test.json";
-const testSolutionName = "solution-7";
+const testFileName = "cubby_test_min.json";
+const autoLoadSolution = false;
+const testSolutionName = "solution-1";
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -108,18 +109,20 @@ function loadTestData() {
             // switch the screen
             changeScreen(fastReloadScreen);
 
-            // Use setTimeout to ensure the UI has finished its render cycle
-            setTimeout(() => {
-                let uiClass = (fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
-                if (uiClass) {
-                    const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
-                    if (targetSolutionIndex !== -1) {
-                        uiClass.viewSavedAnneal(targetSolutionIndex);
-                    } else {
-                        console.error(`Fast Reload Error: Could not find '${testSolutionName}' in the loaded data.`);
+            if (autoLoadSolution) {
+                // Use setTimeout to ensure the UI has finished its render cycle
+                setTimeout(() => {
+                    let uiClass = (fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
+                    if (uiClass) {
+                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
+                        if (targetSolutionIndex !== -1) {
+                            uiClass.viewSavedAnneal(targetSolutionIndex);
+                        } else {
+                            console.error(`Fast Reload Error: Could not find '${testSolutionName}' in the loaded data.`);
+                        }
                     }
-                }
-            }, 0);
+                }, 0);
+            }
         })
         .catch(error => console.error('Error loading test data:', error));
 }
