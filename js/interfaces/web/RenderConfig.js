@@ -121,6 +121,73 @@ class RenderConfig {
             debug: 10
         };
     }
+
+    static calculatePreviewGridSize(shape, minWallLength = 1.0, canvasWidth, canvasHeight) {
+        // Calculate optimal grid size for shape preview that maintains consistent visual scale
+        // Returns grid dimensions and positioning info
+        
+        if (!shape || !shape.data) {
+            // Default grid for empty shape
+            return {
+                gridSize: 12,
+                squareSize: Math.min(canvasWidth, canvasHeight) / 14, // Leave padding
+                xOffset: 0,
+                yOffset: 0
+            };
+        }
+
+        // Get shape dimensions in high-res units (1/4 inch)
+        let shapeWidth = 0;
+        let shapeHeight = 0;
+        
+        if (shape.data.highResBufferShape) {
+            shapeHeight = shape.data.highResBufferShape.length;
+            shapeWidth = shape.data.highResBufferShape[0] ? shape.data.highResBufferShape[0].length : 0;
+        } else if (shape.data.highResShape) {
+            shapeHeight = shape.data.highResShape.length;
+            shapeWidth = shape.data.highResShape[0] ? shape.data.highResShape[0].length : 0;
+        }
+
+        // Convert high-res units to grid units based on min wall length
+        const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
+        const shapeGridWidth = Math.ceil(shapeWidth / scaleFactor);
+        const shapeGridHeight = Math.ceil(shapeHeight / scaleFactor);
+
+        // Add padding around shape (in grid units)
+        const gridPadding = 3;
+        const gridSize = Math.max(
+            shapeGridWidth + (gridPadding * 2),
+            shapeGridHeight + (gridPadding * 2),
+            8 // Minimum grid size
+        );
+
+        // Calculate square size to fit grid in canvas
+        const padding = 30;
+        const availableWidth = canvasWidth - (padding * 2);
+        const availableHeight = canvasHeight - (padding * 2);
+        const squareSize = Math.min(availableWidth, availableHeight) / gridSize;
+
+        // Center the grid in canvas
+        const gridWidth = gridSize * squareSize;
+        const gridHeight = gridSize * squareSize;
+        const xOffset = (canvasWidth - gridWidth) / 2;
+        const yOffset = (canvasHeight - gridHeight) / 2;
+
+        // Calculate shape position to center it in the grid
+        const shapeX = Math.floor((gridSize - shapeGridWidth) / 2);
+        const shapeY = Math.floor((gridSize - shapeGridHeight) / 2);
+
+        return {
+            gridSize,
+            squareSize,
+            xOffset,
+            yOffset,
+            shapeX,
+            shapeY,
+            shapeGridWidth,
+            shapeGridHeight
+        };
+    }
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)

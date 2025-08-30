@@ -9,30 +9,6 @@ class ShapeRenderer {
 
         const colors = RenderConfig.getColors();
 
-        // Grid configuration
-        const gridSize = 12;
-        const padding = 30;
-        const availableWidth = canvas.width - (padding * 2);
-        const availableHeight = canvas.height - (padding * 2);
-        const squareSize = Math.min(availableWidth, availableHeight) / gridSize;
-
-        // Center the grid in canvas
-        const gridWidth = gridSize * squareSize;
-        const gridHeight = gridSize * squareSize;
-        const xOffset = (canvas.width - gridWidth) / 2;
-        const yOffset = (canvas.height - gridHeight) / 2;
-
-        // Clear canvas and set background
-        clear();
-        background(255);
-
-        // Draw basic grid
-        this.renderPreviewGrid(gridSize, xOffset, yOffset, squareSize, colors);
-
-        // Position shape at center of grid (with some offset for better visibility)
-        const shapeX = 3;
-        const shapeY = 3;
-
         // Get shape processing configuration
         let config = null;
         if (appState && appState.generationConfig) {
@@ -44,6 +20,28 @@ class ShapeRenderer {
         } else {
             config = shape.getDefaultProcessingConfig();
         }
+
+        // Calculate dynamic grid configuration based on shape size and min wall length
+        const gridConfig = RenderConfig.calculatePreviewGridSize(
+            shape, 
+            config.minWallLength, 
+            canvas.width, 
+            canvas.height
+        );
+
+        const gridSize = gridConfig.gridSize;
+        const squareSize = gridConfig.squareSize;
+        const xOffset = gridConfig.xOffset;
+        const yOffset = gridConfig.yOffset;
+        const shapeX = gridConfig.shapeX;
+        const shapeY = gridConfig.shapeY;
+
+        // Clear canvas and set background
+        clear();
+        background(255);
+
+        // Draw basic grid
+        this.renderPreviewGrid(gridSize, xOffset, yOffset, squareSize, colors);
 
         // Render layered buffer visualization in detail mode
         if (detailMode) {
