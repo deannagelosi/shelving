@@ -615,7 +615,9 @@ class ExportUI {
             wallThickness: elementMap['wallThickness'] ? parseFloat(elementMap['wallThickness'].value()) : 0.25,
             shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0,
             printBedWidth: elementMap['printBedWidth'] ? parseFloat(elementMap['printBedWidth'].value()) : 12,
-            printBedHeight: elementMap['printBedHeight'] ? parseFloat(elementMap['printBedHeight'].value()) : 12
+            printBedHeight: elementMap['printBedHeight'] ? parseFloat(elementMap['printBedHeight'].value()) : 12,
+            // Min wall length from generation config for unit conversion
+            minWallLength: appState.generationConfig.minWallLength || 1.0
         };
         // get cellular layout data (case lines)
         const cellData = cellularInstance;

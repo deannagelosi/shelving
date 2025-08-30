@@ -22,6 +22,21 @@ class BoardExporter {
         this.kerf = config.kerf;
         this.numPinSlots = config.numPinSlots || 2;
 
+        // Min wall length for unit conversion (1 grid unit = minWallLength inches)
+        this.minWallLength = config.minWallLength || 1.0;
+
+        // Initialize constants before unit conversion
+        this.gap = 0.5; // inch gap between boards
+        this.fontSize = 0.10; // inch font size for etching
+        this.fontOffset = 0.10;
+
+        // Convert dimensions from inches to grid units for internal calculations
+        this.sheetWidthInGridUnits = appState.inchesToGridUnits(this.sheetWidth, this.minWallLength);
+        this.sheetHeightInGridUnits = appState.inchesToGridUnits(this.sheetHeight, this.minWallLength);
+        this.caseDepthInGridUnits = appState.inchesToGridUnits(this.caseDepth, this.minWallLength);
+        this.sheetThicknessInGridUnits = appState.inchesToGridUnits(this.sheetThickness, this.minWallLength);
+        this.gapInGridUnits = appState.inchesToGridUnits(this.gap, this.minWallLength);
+
         // Layout configuration - support both new and legacy parameter patterns
         if (spacing) {
             // Legacy pattern: (cellular, config, spacing)
@@ -51,10 +66,6 @@ class BoardExporter {
         this.etchList = [];
         this.sheetOutline = [];
 
-        // Constants
-        this.gap = 0.5; // inch gap between boards
-        this.fontSize = 0.10; // inch font size for etching
-        this.fontOffset = 0.10;
     }
 
     generateBoards() {
@@ -134,6 +145,7 @@ class BoardExporter {
         }
 
         this.boardCounter++;
+        // Note: Board stores coordinates in grid units, will convert to inches during export
         return new Board(this.boardCounter, startCoord, endCoord, orientation, this.sheetThickness);
     }
 
@@ -223,17 +235,17 @@ class BoardExporter {
             this.prepLayout();
         }
 
-        // Calculate scaling factor to fit preview in canvas
-        const totalSheetHeight = this.sheetHeight * this.sheets.length;
-        const scaleX = canvasWidth / this.sheetWidth;
-        const scaleY = canvasHeight / totalSheetHeight;
+        // Calculate scaling factor to fit preview in canvas using grid units
+        const totalSheetHeightInGridUnits = this.sheetHeightInGridUnits * this.sheets.length;
+        const scaleX = canvasWidth / this.sheetWidthInGridUnits;
+        const scaleY = canvasHeight / totalSheetHeightInGridUnits;
         const scaleValue = min(scaleX, scaleY) * 0.9; // 90% of available space for margins
 
         // Set up the drawing environment
         push();
         translate(canvasWidth / 2, canvasHeight / 2);
         scale(scaleValue);
-        translate(-this.sheetWidth / 2, -totalSheetHeight / 2);
+        translate(-this.sheetWidthInGridUnits / 2, -totalSheetHeightInGridUnits / 2);
 
         clear();
         background(255);
@@ -442,9 +454,15 @@ class BoardExporter {
         if (cutLayer) {
             dxf.setActiveLayer(cutLayer.name);
             for (let cut of this.cutList) {
-                const y1 = this.totalHeight - cut.y;
-                const y2 = this.totalHeight - (cut.y + cut.h);
-                dxf.drawRect(cut.x, y1, cut.x + cut.w - this.kerf, y2); // x, y, width, height
+                // Convert from grid units to inches for DXF
+                const xInInches = appState.gridUnitsToInches(cut.x, this.minWallLength);
+                const yInInches = appState.gridUnitsToInches(cut.y, this.minWallLength);
+                const wInInches = appState.gridUnitsToInches(cut.w, this.minWallLength);
+                const hInInches = appState.gridUnitsToInches(cut.h, this.minWallLength);
+
+                const y1 = this.totalHeight - yInInches;
+                const y2 = this.totalHeight - (yInInches + hInInches);
+                dxf.drawRect(xInInches, y1, xInInches + wInInches - this.kerf, y2);
             }
         }
     }
@@ -456,18 +474,21 @@ class BoardExporter {
             dxf.setActiveLayer(etchLayer.name);
             for (let item of this.etchList) {
                 if (item.type === 'text' || !item.type) {
-                    // Handle text etching (labels)
+                    // Handle text etching (labels) - convert from grid units to inches
                     const text = String(item.text);
-                    const x = Number(item.x);
-                    const y = this.totalHeight - Number(item.y);
-                    dxf.drawText(x, y, this.fontSize, 0, text); // x, y, height, rotation, text
+                    const xInInches = appState.gridUnitsToInches(Number(item.x), this.minWallLength);
+                    const yInInches = appState.gridUnitsToInches(Number(item.y), this.minWallLength);
+                    const y = this.totalHeight - yInInches;
+                    dxf.drawText(xInInches, y, this.fontSize, 0, text);
                 } else if (item.type === 'line') {
-                    // Handle line etching (alignment guides)
-                    const x1 = Number(item.x1);
-                    const y1 = this.totalHeight - Number(item.y1);
-                    const x2 = Number(item.x2);
-                    const y2 = this.totalHeight - Number(item.y2);
-                    dxf.drawLine(x1, y1, x2, y2); // x1, y1, x2, y2
+                    // Handle line etching (alignment guides) - convert from grid units to inches
+                    const x1InInches = appState.gridUnitsToInches(Number(item.x1), this.minWallLength);
+                    const y1InInches = appState.gridUnitsToInches(Number(item.y1), this.minWallLength);
+                    const x2InInches = appState.gridUnitsToInches(Number(item.x2), this.minWallLength);
+                    const y2InInches = appState.gridUnitsToInches(Number(item.y2), this.minWallLength);
+                    const y1 = this.totalHeight - y1InInches;
+                    const y2 = this.totalHeight - y2InInches;
+                    dxf.drawLine(x1InInches, y1, x2InInches, y2);
                 }
             }
         }
@@ -481,10 +502,17 @@ class BoardExporter {
     }
 
     setupSheets() {
-        // find how many rows of boards can fit on a sheet based on depth
-        this.sheets = [];
-        let numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
+        // find how many rows of boards can fit on a sheet based on depth (in grid units)
+        const sheetHeight = this.sheetHeightInGridUnits;
+        const caseDepth = this.caseDepthInGridUnits;
+        const gap = this.gapInGridUnits;
 
+        let numRows = Math.floor(sheetHeight / (caseDepth + (gap * 1.25)));
+
+        // ensure numRows is valid for Array constructor
+        numRows = Math.max(1, Math.min(10000, numRows));
+
+        this.sheets = [];
         this.sheets = Array.from({ length: this.numSheets }, () => Array(numRows).fill(0));
         this.totalHeight = this.sheetHeight * this.numSheets;
     }
@@ -514,19 +542,21 @@ class BoardExporter {
 
         // Get boards, joints, and labels
         for (let board of this.boards) {
-            // calculate the true board length
+            // Board length is already in grid units
             let boardLength = board.getLength();
 
             let [sheet, row] = this.findBoardPosition(boardLength);
             if (sheet === null && row === null) {
-                console.error(`LAYOUT ISSUE: Board ${board.id} (length: ${boardLength}) cannot fit on any sheet`, {
-                    boardLength: boardLength,
+                // Convert to inches for error message
+                const boardLengthInInches = appState.gridUnitsToInches(boardLength, this.minWallLength);
+                console.error(`LAYOUT ISSUE: Board ${board.id} (length: ${boardLengthInInches}" / ${boardLength} grid units) cannot fit on any sheet`, {
+                    boardLengthInInches: boardLengthInInches,
                     sheetWidth: this.sheetWidth,
                     numSheets: this.sheets.length
                 });
                 // calculate optimal number of sheets and request adjustment if needed
-                const spaceNeeded = boardLength + (this.gap * 2);
-                if (spaceNeeded <= this.sheetWidth && typeof appEvents !== 'undefined') {
+                const spaceNeeded = boardLength + (this.gapInGridUnits * 2);
+                if (spaceNeeded <= this.sheetWidthInGridUnits && typeof appEvents !== 'undefined') {
                     // Board could fit, calculate optimal sheet count needed
                     const optimalSheets = this.calculateOptimalSheetCount();
                     if (optimalSheets !== this.numSheets) {
@@ -541,7 +571,7 @@ class BoardExporter {
             }
 
             let boardStartX = this.sheets[sheet][row] - boardLength;
-            let boardStartY = ((sheet * this.sheetHeight) + this.gap) + (row * (this.caseDepth + this.gap));
+            let boardStartY = ((sheet * this.sheetHeightInGridUnits) + this.gapInGridUnits) + (row * (this.caseDepthInGridUnits + this.gapInGridUnits));
 
             // Draw board
             this.cutList.push({ x: boardStartX, y: boardStartY, w: boardLength, h: this.caseDepth });
@@ -555,13 +585,13 @@ class BoardExporter {
     }
 
     prepJoints(board, boardStartX, boardStartY) {
-        // Use material-specific cut generation
+        // Use material-specific cut generation (values in grid units)
         const config = {
-            caseDepth: this.caseDepth,
-            sheetThickness: this.sheetThickness,
-            kerf: this.kerf,
+            caseDepth: this.caseDepthInGridUnits,
+            sheetThickness: this.sheetThicknessInGridUnits,
+            kerf: appState.inchesToGridUnits(this.kerf, this.minWallLength),
             numPinSlots: this.numPinSlots,
-            fontOffset: this.fontOffset
+            fontOffset: appState.inchesToGridUnits(this.fontOffset, this.minWallLength)
         };
 
         // Generate cuts using material configuration
@@ -572,16 +602,16 @@ class BoardExporter {
     }
 
     findBoardPosition(_boardLength) {
-        // fit boards efficiently on sheets in each row
+        // fit boards efficiently on sheets in each row (in grid units)
         for (let sheet = 0; sheet < this.sheets.length; sheet++) {
             for (let row = 0; row < this.sheets[sheet].length; row++) {
                 let rowOccupiedWidth = this.sheets[sheet][row];
-                let rowRemainingWidth = this.sheetWidth - rowOccupiedWidth;
-                let spaceNeeded = _boardLength + (this.gap * 2);
+                let rowRemainingWidth = this.sheetWidthInGridUnits - rowOccupiedWidth;
+                let spaceNeeded = _boardLength + (this.gapInGridUnits * 2);
 
                 if (rowRemainingWidth >= spaceNeeded) {
                     // mark the space as occupied
-                    this.sheets[sheet][row] += _boardLength + this.gap;
+                    this.sheets[sheet][row] += _boardLength + this.gapInGridUnits;
                     return [sheet, row];
                 }
             }
@@ -590,24 +620,25 @@ class BoardExporter {
     }
 
     calculateOptimalSheetCount() {
-        const numRows = Math.floor(this.sheetHeight / (this.caseDepth + (this.gap * 1.25)));
+        const numRows = Math.max(1, Math.floor(this.sheetHeightInGridUnits / (this.caseDepthInGridUnits + (this.gapInGridUnits * 1.25))));
         if (numRows <= 0) return 1;
 
         let sheets = [Array(numRows).fill(0)];
         const sortedBoards = [...this.boards].sort((a, b) => b.getLength() - a.getLength());
 
         for (const board of sortedBoards) {
+            // Board length is already in grid units
             const boardLength = board.getLength();
-            const spaceNeeded = boardLength + (this.gap * 2);
+            const spaceNeeded = boardLength + (this.gapInGridUnits * 2);
 
             let placed = false;
             for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
                 for (let rowIndex = 0; rowIndex < sheets[sheetIndex].length; rowIndex++) {
                     const rowOccupiedWidth = sheets[sheetIndex][rowIndex];
-                    const rowRemainingWidth = this.sheetWidth - rowOccupiedWidth;
+                    const rowRemainingWidth = this.sheetWidthInGridUnits - rowOccupiedWidth;
 
                     if (rowRemainingWidth >= spaceNeeded) {
-                        sheets[sheetIndex][rowIndex] += boardLength + this.gap;
+                        sheets[sheetIndex][rowIndex] += boardLength + this.gapInGridUnits;
                         placed = true;
                         break;
                     }
@@ -617,7 +648,7 @@ class BoardExporter {
 
             if (!placed) {
                 sheets.push(Array(numRows).fill(0));
-                sheets[sheets.length - 1][0] = boardLength + this.gap;
+                sheets[sheets.length - 1][0] = boardLength + this.gapInGridUnits;
             }
         }
 
@@ -630,7 +661,7 @@ class BoardExporter {
     }
 
     getTotalBoardLength() {
-        // Calculate total length of all boards for statistical analysis
+        // Calculate total length of all boards in grid units (for statistical analysis)
         return this.boards.reduce((total, board) => total + board.getLength(), 0);
     }
 

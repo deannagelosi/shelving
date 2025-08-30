@@ -4,9 +4,17 @@ const Board = require('../js/core/Board');
 const BoardExporter = require('../js/core/BoardExporter');
 const MATERIAL_CONFIGS = require('../js/core/material-configs');
 
+// Create minimal mocks for appState dependencies
+global.ScreenState = { INPUT: 'input' };
+global.appEvents = { emit: jest.fn() };
+global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
+
+// Now we can safely require appState
+const appState = require('../js/core/appState');
+
 // Make minimal globals available (BoardExporter.js expects these)
 global.Board = Board;
-global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
+global.appState = appState;
 
 describe('BoardExporter', () => {
     let mockCellular;
