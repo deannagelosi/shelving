@@ -435,7 +435,7 @@ const MATERIAL_CONFIGS = {
                 inputType: 'number',
                 label: 'Wall Thickness (in)',
                 cssClass: 'dimension-input',
-                validation: { min: 0.1, max: 1.0, step: 0.05 }
+                validation: { min: 0.05, max: 1.0, step: 0.01 }
             },
             {
                 name: 'cubbyCurveRadius',
