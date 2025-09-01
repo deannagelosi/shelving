@@ -3,6 +3,14 @@
 const MATERIAL_CONFIGS = require('../../js/core/material-configs');
 global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
 
+// Create minimal mocks for appState dependencies
+global.ScreenState = { INPUT: 'input' };
+global.appEvents = { emit: jest.fn() };
+
+// Set up appState (similar to other tests)
+const appState = require('../../js/core/appState');
+global.appState = appState;
+
 // Import BoardExporter class after setting up globals
 const BoardExporter = require('../../js/core/BoardExporter');
 

@@ -1340,9 +1340,12 @@ class DesignUI {
             
             
             // Regenerate shape buffers with current settings
+            // Use inputGrid (original user drawing) for live session reprocessing
+            // Note: File imports correctly use highResShape since inputGrid doesn't exist in JSON
+            const inputData = shapeToPreview.data.inputGrid || shapeToPreview.data.highResShape;
             shapeToPreview.saveUserInput(
                 shapeToPreview.data.title,
-                shapeToPreview.data.highResShape,
+                inputData,
                 currentConfig
             );
             
