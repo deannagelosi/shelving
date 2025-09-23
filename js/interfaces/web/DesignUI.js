@@ -1122,10 +1122,10 @@ class DesignUI {
             .parent(wallLengthRow)
             .changed(() => this.handleMinWallLengthChange());
 
-        // Add grid square size options
+        // Add grid square size options (1.0 first since it's the default)
+        this.html.minWallLengthSelect.option('1.0', '1.0');
         this.html.minWallLengthSelect.option('2.0', '2.0');
         this.html.minWallLengthSelect.option('1.5', '1.5');
-        this.html.minWallLengthSelect.option('1.0', '1.0');
         this.html.minWallLengthSelect.option('0.5', '0.5');
         this.html.minWallLengthSelect.option('0.25', '0.25');
 
@@ -1268,10 +1268,7 @@ class DesignUI {
             return;
         }
 
-        // Use reactive approach to update appState
-        this.updateUseCustomPerimeter();
-
-        // Handle UI visibility based on new appState value
+        // Handle UI visibility based on current appState value
         if (appState.generationConfig.useCustomPerimeter) {
             this.html.perimeterInputsContainer.removeClass('hidden');
         } else {
@@ -1279,19 +1276,6 @@ class DesignUI {
         }
     }
 
-    updatePerimeterWidth() {
-        const value = parseInt(this.html.perimeterWidthInput.value());
-        if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterWidth = value;
-        }
-    }
-
-    updatePerimeterHeight() {
-        const value = parseInt(this.html.perimeterHeightInput.value());
-        if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterHeight = value;
-        }
-    }
 
     toggleShapeSelection(index) {
         if (this.shapeElements[index].hasClass('disabled')) return;
@@ -1799,17 +1783,6 @@ class DesignUI {
         }
     }
 
-    handleBendParameterChange() {
-        // Update appState with current form values (reactive approach)
-        this.updateBendRadius();
-        this.updateMaxBends();
-
-        // Only regenerate display if we have a current solution
-        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
-            // Redraw the canvas with new walls without triggering a full UI update
-            this.displayResult();
-        }
-    }
 
     handleWallAlgorithmChange() {
         // Only regenerate if we have a current solution
