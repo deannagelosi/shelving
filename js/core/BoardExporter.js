@@ -462,7 +462,7 @@ class BoardExporter {
 
                 const y1 = this.totalHeight - yInInches;
                 const y2 = this.totalHeight - (yInInches + hInInches);
-                dxf.drawRect(xInInches, y1, xInInches + wInInches - this.kerf, y2);
+                dxf.drawRect(xInInches, y1, xInInches + wInInches, y2);
             }
         }
     }

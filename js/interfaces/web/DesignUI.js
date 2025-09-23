@@ -1123,6 +1123,8 @@ class DesignUI {
             .changed(() => this.handleMinWallLengthChange());
 
         // Add grid square size options
+        this.html.minWallLengthSelect.option('2.0', '2.0');
+        this.html.minWallLengthSelect.option('1.5', '1.5');
         this.html.minWallLengthSelect.option('1.0', '1.0');
         this.html.minWallLengthSelect.option('0.5', '0.5');
         this.html.minWallLengthSelect.option('0.25', '0.25');

@@ -1,92 +1,98 @@
 // Material-specific configurations for export system
 // This file defines the behavior differences between materials
 
+const COMMON_SETTINGS = {
+    thickness: {
+        name: 'thickness',
+        container: 'materialProps',
+        inputType: 'number',
+        label: 'Thickness (in)',
+        cssClass: 'dimension-input'
+    },
+    kerf: {
+        name: 'kerf',
+        container: 'materialProps', 
+        inputType: 'number',
+        label: 'Kerf Width (in)',
+        cssClass: 'dimension-input'
+    },
+    caseDepth: {
+        name: 'caseDepth',
+        defaultValue: 3,
+        container: 'caseProps',
+        inputType: 'number',
+        label: 'Depth (in)',
+        cssClass: 'dimension-input',
+        validation: { min: 1, max: 10, step: 0.5 }
+    },
+    sheetWidth: {
+        name: 'sheetWidth',
+        defaultValue: 44,
+        container: 'sheetDimensions',
+        inputType: 'number',
+        label: 'Width (in)',
+        cssClass: 'dimension-input',
+        validation: { min: 1, step: 1 }
+    },
+    sheetHeight: {
+        name: 'sheetHeight',
+        defaultValue: 35,
+        container: 'sheetDimensions',
+        inputType: 'number',
+        label: 'Height (in)',
+        cssClass: 'dimension-input',
+        validation: { min: 1, step: 1 }
+    }
+};
+
+const COMMON_CONTAINERS = {
+    materialProps: {
+        label: 'Material Properties',
+        cssClass: 'settings-group'
+    },
+    caseProps: {
+        label: 'Case Properties',
+        cssClass: 'settings-group'
+    },
+    sheetDimensions: {
+        label: 'Sheet Dimensions',
+        cssClass: 'settings-group'
+    }
+};
+
 const MATERIAL_CONFIGS = {
     'plywood-laser': {
         // ============================================================================
         // PLYWOOD CONFIGURATION - Defines controls and ui layout
         // ============================================================================
         settings: [
-            {
-                name: 'thickness',
-                defaultValue: 0.375,
-                container: 'materialProps',
-                inputType: 'number',
-                label: 'Thickness (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 0.13, max: 0.5, step: 0.01 }
-            },
-            {
-                name: 'kerf',
-                defaultValue: 0,
-                container: 'materialProps',
-                inputType: 'number',
-                label: 'Kerf Width (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 0, max: 0.04, step: 0.01 }
-            },
-            {
-                name: 'caseDepth',
-                defaultValue: 3,
-                container: 'caseProps',
-                inputType: 'number',
-                label: 'Depth (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, max: 10, step: 0.5 }
-            },
+            { ...COMMON_SETTINGS.thickness, defaultValue: 0.375, validation: { min: 0.13, max: 0.5, step: 0.01 } },
+            { ...COMMON_SETTINGS.kerf, defaultValue: 0, validation: { min: 0, max: 0.04, step: 0.01 } },
+            COMMON_SETTINGS.caseDepth,
             {
                 name: 'pinSlots',
                 defaultValue: 2,
                 container: 'caseProps',
                 inputType: 'select',
-                label: '# Pin/Slots',
+                label: 'Pin Type',
                 cssClass: 'dimension-input',
-                options: [{ value: 2, text: '2' }, { value: 1, text: '1' }]
+                options: [{ value: 3, text: '2 Pin' }, { value: 2, text: '1 Pin' }, { value: 1, text: 'Lazy' }]
             },
-            {
-                name: 'sheetWidth',
-                defaultValue: 44,
-                container: 'sheetDimensions',
-                inputType: 'number',
-                label: 'Width (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, step: 1 }
-            },
-            {
-                name: 'sheetHeight',
-                defaultValue: 35,
-                container: 'sheetDimensions',
-                inputType: 'number',
-                label: 'Height (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, step: 1 }
-            }
+            COMMON_SETTINGS.sheetWidth,
+            COMMON_SETTINGS.sheetHeight
         ],
 
         // Container definitions
-        containers: {
-            materialProps: {
-                label: 'Material Properties',
-                cssClass: 'settings-group'
-            },
-            caseProps: {
-                label: 'Case Properties',
-                cssClass: 'settings-group'
-            },
-            sheetDimensions: {
-                label: 'Sheet Dimensions',
-                cssClass: 'settings-group'
-            }
-        },
+        containers: COMMON_CONTAINERS,
 
         // Joint type definitions
         jointTypes: {
             corner: {
-                horizontal: 'pin',
+                horizontal: 'pin-corner',
                 vertical: 'slot'
             },
             tJoint: {
-                ending: 'pin',
+                ending: 'pin-tjoint',
                 intersected: 'slot'
             },
             xJoint: {
@@ -112,73 +118,124 @@ const MATERIAL_CONFIGS = {
         // CUTTING STRATEGY - Generates rectangles to cut for joints and connections
         // ============================================================================
         generateJointCuts: function (board, config, boardStartX, boardStartY, cutList) {
-            // Joint configuration
-            const numPinSlots = config.numPinSlots || 2;
-            const jointConfig = {
-                numSlotCuts: numPinSlots,
-                numPinCuts: numPinSlots + 1,
-                totalCuts: (numPinSlots * 2) + 1
-            };
-
-            const numJoints = jointConfig.totalCuts;
-            const cutoutRatio = (1 / numJoints);
-            const jointHeight = cutoutRatio * config.caseDepth;
-
-            // Start joint
-            if (board.poi.start === "slot") {
-                for (let i = 0; i < jointConfig.numSlotCuts; i++) {
-                    let ratio = i === 0 ? 1 : 3;
-                    let x = boardStartX;
-                    let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
-                    cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
+            const numPinSlots = config.numPinSlots || 2; // 1=Lazy, 2=1 Pin, 3=2 Pin
+            
+            // Apply kerf adjustments for plywood
+            const effectiveDepth = config.caseDepth + (config.kerf || 0);
+            const slotWidth = config.sheetThickness - (config.kerf || 0);
+            
+            if (numPinSlots === 1) {
+                // LAZY FINGER MODE - Special positioning based on board orientation and joint type
+                const lazySlotHeight = effectiveDepth * 0.5 - (config.kerf || 0);
+                
+                // Start joint
+                if (board.poi.start === "slot") {
+                    // Vertical board: slot at top
+                    cutList.push({ x: boardStartX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
+                } else if (board.poi.start === "pin-corner") {
+                    // Horizontal board: slot at bottom
+                    cutList.push({ x: boardStartX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
+                } else if (board.poi.start === "pin-tjoint") {
+                    // T-joint end: centered pin (two slots above/below)
+                    const cutRatio = 1/3;
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
+                    cutList.push({ x: boardStartX, y: boardStartY, w: slotWidth, h: jointHeight });
+                    cutList.push({ x: boardStartX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
                 }
-            } else if (board.poi.start === "pin") {
-                for (let i = 0; i < jointConfig.numPinCuts; i++) {
-                    let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                    let x = boardStartX;
-                    let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
-                    cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
+                
+                // End joint
+                const endX = boardStartX + board.getLength() - slotWidth;
+                if (board.poi.end === "slot") {
+                    // Vertical board: slot at top
+                    cutList.push({ x: endX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
+                } else if (board.poi.end === "pin-corner") {
+                    // Horizontal board: slot at bottom
+                    cutList.push({ x: endX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
+                } else if (board.poi.end === "pin-tjoint") {
+                    // T-joint end: centered pin (two slots above/below)
+                    const cutRatio = 1/3;
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
+                    cutList.push({ x: endX, y: boardStartY, w: slotWidth, h: jointHeight });
+                    cutList.push({ x: endX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
+                }
+            } else {
+                // STANDARD MODE (1 Pin or 2 Pin) - Use original ratio-based approach
+                const jointConfig = {
+                    numSlotCuts: numPinSlots - 1,
+                    numPinCuts: numPinSlots,
+                    totalCuts: (numPinSlots * 2) - 1
+                };
+                
+                const cutoutRatio = (1 / jointConfig.totalCuts);
+                const jointHeight = cutoutRatio * effectiveDepth - (config.kerf || 0);
+
+                // Start joint
+                if (board.poi.start === "slot") {
+                    for (let i = 0; i < jointConfig.numSlotCuts; i++) {
+                        let ratio = i === 0 ? 1 : 3;
+                        cutList.push({ 
+                            x: boardStartX, 
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
+                            w: slotWidth, 
+                            h: jointHeight 
+                        });
+                    }
+                } else if (board.poi.start === "pin-corner" || board.poi.start === "pin-tjoint") {
+                    for (let i = 0; i < jointConfig.numPinCuts; i++) {
+                        let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
+                        cutList.push({ 
+                            x: boardStartX, 
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
+                            w: slotWidth, 
+                            h: jointHeight 
+                        });
+                    }
+                }
+
+                // End joint
+                const endX = boardStartX + board.getLength() - slotWidth;
+                if (board.poi.end === "slot") {
+                    for (let i = 0; i < jointConfig.numSlotCuts; i++) {
+                        let ratio = i === 0 ? 1 : 3;
+                        cutList.push({ 
+                            x: endX, 
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
+                            w: slotWidth, 
+                            h: jointHeight 
+                        });
+                    }
+                } else if (board.poi.end === "pin-corner" || board.poi.end === "pin-tjoint") {
+                    for (let i = 0; i < jointConfig.numPinCuts; i++) {
+                        let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
+                        cutList.push({ 
+                            x: endX, 
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
+                            w: slotWidth, 
+                            h: jointHeight 
+                        });
+                    }
                 }
             }
 
-            // End joint
-            if (board.poi.end === "slot") {
-                for (let i = 0; i < jointConfig.numSlotCuts; i++) {
-                    let ratio = i === 0 ? 1 : 3;
-                    let x = boardStartX + board.getLength() - config.sheetThickness;
-                    let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
-                    cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
-                }
-            } else if (board.poi.end === "pin") {
-                for (let i = 0; i < jointConfig.numPinCuts; i++) {
-                    let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                    let x = boardStartX + board.getLength() - config.sheetThickness;
-                    let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
-                    cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
-                }
-            }
-
-            // T-joints
+            // T-joints (same for all pin modes)
             for (let tJoint of board.poi.tJoints) {
-                for (let i = 0; i < jointConfig.numSlotCuts; i++) {
-                    let ratio = i === 0 ? 1 : 3;
-                    // Finding x position of tJoint:
-                    // 1) Geometric Offset:
-                    // - tJoint value is the geometric distance, so no board thickness considered
-                    // - geometric location is a centerline in the middle of the board thickness
-                    // - all start coords are half a thickness wrong when including real board length
-                    let geometricOffset = (config.sheetThickness / 2);
-
-                    // 2) P5.rect() Offset:
-                    // - p5.rect() is drawn from the top left corner, not centerline
-                    // - so we need to offset the x-coord left by half a thickness
-                    let p5Offset = -(config.sheetThickness / 2);
-
-                    let totalOffset = geometricOffset + p5Offset;
-
-                    let x = boardStartX + tJoint; // + totalOffset (cancels out so we ignore it)
-                    let y = boardStartY + config.caseDepth * (ratio * cutoutRatio);
-                    cutList.push({ x, y, w: config.sheetThickness, h: jointHeight });
+                if (numPinSlots === 1) {
+                    // Lazy mode T-joints use 1-pin approach (single slot)
+                    let x = boardStartX + tJoint - (slotWidth / 2);
+                    let y = boardStartY + effectiveDepth * (1/3);
+                    cutList.push({ x, y, w: slotWidth, h: effectiveDepth * (1/3) - (config.kerf || 0) });
+                } else {
+                    // Standard mode T-joints
+                    const numSlotCuts = numPinSlots - 1;
+                    const cutRatio = 1 / (numPinSlots * 2 - 1);
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
+                    
+                    for (let i = 0; i < numSlotCuts; i++) {
+                        let ratio = i === 0 ? 1 : 3;
+                        let x = boardStartX + tJoint - (slotWidth / 2);
+                        let y = boardStartY + effectiveDepth * (ratio * cutRatio);
+                        cutList.push({ x, y, w: slotWidth, h: jointHeight });
+                    }
                 }
             }
 
@@ -192,7 +249,6 @@ const MATERIAL_CONFIGS = {
         // ETCHING STRATEGY - Generates text labels and alignment guides to etch
         // ============================================================================
         generateBoardEtches: function (board, config, boardStartX, boardStartY, etchList) {
-            // Add board ID label
             etchList.push({
                 type: 'text',
                 text: board.id,
@@ -203,73 +259,19 @@ const MATERIAL_CONFIGS = {
     },
 
     'acrylic-laser': {
-
         // ============================================================================
         // ACRYLIC CONFIGURATION - Defines controls and ui layout
         // ============================================================================
         settings: [
-            {
-                name: 'thickness',
-                defaultValue: 0.375,
-                container: 'materialProps',
-                inputType: 'number',
-                label: 'Thickness (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 0.13, max: 0.5, step: 0.01 }
-            },
-            {
-                name: 'kerf',
-                defaultValue: 0.01,
-                container: 'materialProps',
-                inputType: 'number',
-                label: 'Kerf Width (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 0, max: 0.04, step: 0.01 }
-            },
-            {
-                name: 'caseDepth',
-                defaultValue: 3,
-                container: 'caseProps',
-                inputType: 'number',
-                label: 'Depth (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, max: 10, step: 0.5 }
-            },
-            {
-                name: 'sheetWidth',
-                defaultValue: 44,
-                container: 'sheetDimensions',
-                inputType: 'number',
-                label: 'Width (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, step: 1 }
-            },
-            {
-                name: 'sheetHeight',
-                defaultValue: 35,
-                container: 'sheetDimensions',
-                inputType: 'number',
-                label: 'Height (in)',
-                cssClass: 'dimension-input',
-                validation: { min: 1, step: 1 }
-            }
+            { ...COMMON_SETTINGS.thickness, defaultValue: 0.375, validation: { min: 0.13, max: 0.5, step: 0.01 } },
+            { ...COMMON_SETTINGS.kerf, defaultValue: 0.01, validation: { min: 0, max: 0.04, step: 0.01 } },
+            COMMON_SETTINGS.caseDepth,
+            COMMON_SETTINGS.sheetWidth,
+            COMMON_SETTINGS.sheetHeight
         ],
 
         // Container definitions
-        containers: {
-            materialProps: {
-                label: 'Material Properties',
-                cssClass: 'settings-group'
-            },
-            caseProps: {
-                label: 'Case Properties',
-                cssClass: 'settings-group'
-            },
-            sheetDimensions: {
-                label: 'Sheet Dimensions',
-                cssClass: 'settings-group'
-            }
-        },
+        containers: COMMON_CONTAINERS,
 
         // Joint type definitions
         jointTypes: {

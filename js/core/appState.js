@@ -26,7 +26,7 @@ const appState = {
         // Shape processing (user-selectable in UI)
         customBufferSize: 0.25,        // inches, 0-1 in 0.25 increments, default 0.25
         centerShape: false,            // boolean, default false (false = drop to bottom, true = center vertically)
-        minWallLength: 1.0,            // inches per low-res grid square, options: 1.0, 0.5, 0.25
+        minWallLength: 1.0,            // inches per low-res grid square, options: 2.0, 1.5, 1.0, 0.5, 0.25
 
         // Wall generation (user-selectable in UI)
         wallAlgorithm: 'cellular-organic',  // 'cellular-organic', 'cellular-rectilinear', 'bend'

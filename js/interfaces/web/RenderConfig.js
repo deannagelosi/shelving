@@ -70,12 +70,19 @@ class RenderConfig {
 
     static getScaleFactor(minWallLength = 1.0) {
         // Calculate scale factor based on min wall length
-        // 1.0 inch = 4x scale (default), 0.5 inch = 2x scale, 0.25 inch = 1x scale
+        // Scale factor represents number of quarter-inch squares per grid square
+        // 0.25" = 1:1 ratio (1 quarter-inch per grid square, scale factor 1)
+        // 0.5"  = 2:1 ratio (2 quarter-inch squares per grid square, scale factor 2)
+        // 1.0"  = 4:1 ratio (4 quarter-inch squares per grid square, scale factor 4)
+        // 1.5"  = 6:1 ratio (6 quarter-inch squares per grid square, scale factor 6)
+        // 2.0"  = 8:1 ratio (8 quarter-inch squares per grid square, scale factor 8)
         switch (minWallLength) {
             case 0.25: return 1;  // 1:1 ratio
-            case 0.5: return 2;  // 2:1 ratio
-            case 1.0: return 4;  // 4:1 ratio (default)
-            default: return 4;  // else use default
+            case 0.5:  return 2;  // 2:1 ratio
+            case 1.0:  return 4;  // 4:1 ratio
+            case 1.5:  return 6;  // 6:1 ratio
+            case 2.0:  return 8;  // 8:1 ratio
+            default:   return 4;  // default to 1.0" (4:1 ratio)
         }
     }
 
