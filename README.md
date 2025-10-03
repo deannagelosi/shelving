@@ -6,11 +6,24 @@ Creates efficient and visually interesting layouts for irregularly shaped object
 
 Uniquely Shaped Spaces is a 3D shelving generator that uses Simulated Annealing and Cellular Automata algorithms to optimize the placement of irregularly shaped objects.
 
-## Key Features
+### Architecture
+
+Uniquely Shaped Spaces is a dual-environment application for generative design:
+- **Browser-based Web App** for interactive design, allowing users to define shapes, generate optimal layouts, and export designs
+- **CLI Tool** for bulk processing, enabling statistical analysis by running the generation process hundreds or thousands of times
+
+Both environments share the exact same core algorithmic logic, ensuring that results from the bulk analysis tool are a valid representation of the interactive tool's capabilities.
+
+**Core Technologies:** p5.js (web rendering), Node.js (CLI runtime), SQLite (bulk results storage), jstat.js (statistical analysis), dxf-writer.js (export)
+
+### Documentation
+
+- [**ARCHITECTURE.md**](ARCHITECTURE.md) - System design and component architecture
+
+## Algorithms
 
 - **Simulated Annealing**: Optimizes the placement of irregular objects on a grid
 - **Cellular Automata**: Generates dynamic shelving between objects
-- **p5.js**: Utilizes p5.js canvas for rendering and interaction
 
 ## Object Representation
 
@@ -41,3 +54,13 @@ Cellular Automata is used to grow shelving between objects
    - Cells are attracted to dead cells of a different strain (prevents parallel paths)
    - Preference given to easy paths (low values)
    - Cells tend to maintain their current growth direction
+
+## Unit Tests
+
+```sh
+# run all unit tests
+npm test
+
+# update dxf snapshot for unit tests
+npm test -- -u
+```
