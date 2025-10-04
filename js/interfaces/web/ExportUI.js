@@ -36,12 +36,6 @@ class ExportUI {
             this.prepareExportData();
         });
 
-        // listen for requests to reset to layout view (dev mode toggle)
-        appEvents.on('resetToLayoutView', () => {
-            this.showingLayout = true;
-            this.handleShow();
-        });
-
         // listen for material type changes to update UI
         appEvents.on('materialTypeChanged', ({ materialType }) => {
             this.updateMaterialTypeUI(materialType);

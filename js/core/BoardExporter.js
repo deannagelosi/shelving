@@ -290,6 +290,42 @@ class BoardExporter {
             }
         }
 
+        // dev/debug mode: Show board direction indicators and measurements
+        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        if (isDevMode) {
+            noFill();
+
+            // Filter cutList to only board rectangles (not joint/halflap cuts)
+            const boardCuts = this.cutList.filter(cut => cut.type === 'board');
+
+            // Draw board direction indicators
+            strokeWeight(2 / scaleValue);
+            for (let boardCut of boardCuts) {
+                // All boards are laid horizontally on the sheet (vertical boards are rotated)
+                // Board START is always at left edge (x), END is always at right edge (x + w)
+
+                // Green line on left edge (board start)
+                stroke('lime');
+                line(boardCut.x, boardCut.y, boardCut.x, boardCut.y + boardCut.h);
+
+                // Red line on right edge (board end)
+                stroke('red');
+                line(boardCut.x + boardCut.w, boardCut.y, boardCut.x + boardCut.w, boardCut.y + boardCut.h);
+            }
+
+            // Draw 1-inch increment markers (grey vertical lines)
+            stroke('grey');
+            strokeWeight(0.5 / scaleValue);
+
+            for (let boardCut of boardCuts) {
+                // Draw vertical lines at 1-inch increments from start to end
+                for (let i = 1; i < boardCut.w; i += 1) {
+                    const xPos = boardCut.x + i;
+                    line(xPos, boardCut.y, xPos, boardCut.y + boardCut.h);
+                }
+            }
+        }
+
         pop();
     }
 

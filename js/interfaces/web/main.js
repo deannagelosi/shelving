@@ -174,9 +174,17 @@ function keyPressed() {
     // Export screen key commands
     else if (appState.currentScreen == ScreenState.EXPORT) {
         if (key === 'd') {
-            // toggle dev mode on and off
+            // toggle dev mode on and off (shows extra detail in current view)
             appState.display.devMode = !appState.display.devMode;
-            appEvents.emit('resetToLayoutView');
+
+            // redraw current view with updated devMode
+            clear();
+            background(255);
+            if (exportUI.showingLayout) {
+                exportUI.currExport.previewLayout();
+            } else {
+                exportUI.currExport.previewCase();
+            }
         }
     }
 }
