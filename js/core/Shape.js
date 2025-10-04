@@ -171,17 +171,17 @@ class Shape {
                 }
             }
         }
-        
+
         return perimeterCells;
     }
-    
+
     getShapeInfo(array) {
         // Analyzes shape and returns comprehensive information
         const bounds = this.calculateBounds(array);
         const touchesEdges = this.detectEdgeTouching(array, bounds);
         const occupiedCells = this.findOccupiedCells(array);
         const perimeterCells = this.markPerimeterCells(array);
-        
+
         return {
             bounds,
             touchesEdges,
@@ -194,30 +194,22 @@ class Shape {
         // Calculate dimensions and padding needed for scale factor alignment
         const targetWidth = Math.ceil(width / scaleFactor) * scaleFactor;
         const targetHeight = Math.ceil(height / scaleFactor) * scaleFactor;
-        
+
         const horizontalPadding = targetWidth - width;
         const verticalPadding = targetHeight - height;
-        
-        const leftPadding = Math.floor(horizontalPadding / 2);
-        const rightPadding = horizontalPadding - leftPadding;
-        
-        let topPadding, bottomPadding;
-        if (centerShape) {
-            bottomPadding = Math.floor(verticalPadding / 2);
-            topPadding = verticalPadding - bottomPadding;
-        } else {
-            topPadding = verticalPadding;
-            bottomPadding = 0;
-        }
-        
+
+        // Use MathUtils for consistent padding distribution
+        const hPad = MathUtils.distributePadding(horizontalPadding, true); // Always center horizontally
+        const vPad = MathUtils.distributePadding(verticalPadding, centerShape);
+
         return {
             width: targetWidth,
             height: targetHeight,
             padding: {
-                left: leftPadding,
-                right: rightPadding,
-                top: topPadding,
-                bottom: bottomPadding
+                left: hPad.start,
+                right: hPad.end,
+                top: vPad.start,
+                bottom: vPad.end
             }
         };
     }
@@ -248,19 +240,20 @@ class Shape {
         processed = this.alignToScaleFactor(processed, scaleFactor, config.customBufferSize > 0 ? false : config.centerShape);
 
         // Store a copy before buffer for lowResShape generation
-        const preBufferProcessed = processed.map(row => row.map(cell => ({...cell})));
-        
+        const preBufferProcessed = processed.map(row => row.map(cell => ({ ...cell })));
+
         // Step 6: Apply custom buffer if specified (pure growth phase)
         if (config.customBufferSize > 0) {
-            const bufferSteps = Math.round(config.customBufferSize * scaleFactor);
-            
-            // Pure buffer growth - no scale factor considerations
+            // convert buffer from inches to highres units (1 highres = 0.25", independent of minWallLength)
+            const bufferSteps = MathUtils.inchesToHighres(config.customBufferSize);
+
+            // apply buffer expansion (operates in highres space, no scale factor involved)
             processed = this.applyBuffer(processed, bufferSteps, config.centerShape);
-            
+
             // Final trim to remove any growth artifacts
             processed = this.trimToBoundingBox(processed);
-            
-            // Final scale factor alignment and centering
+
+            // realign to scale factor after buffer (buffer changes dimensions, need to realign with centering)
             processed = this.alignToScaleFactor(processed, scaleFactor, config.centerShape);
         }
 
@@ -270,7 +263,7 @@ class Shape {
         // Step 7: Generate low-res versions
         // Use the pre-buffer processed shape (aligned but without buffer) for low-res scaling
         const alignedBoolean = this.convertArrayType(preBufferProcessed, 'boolean');
-        this.data.lowResShape = this.generateLowRes(alignedBoolean, scaleFactor);
+        this.data.lowResShape = this.downsampleToLowRes(alignedBoolean, scaleFactor);
         this.data.bufferShape = this.generateLowResBufferFromHighRes(config.minWallLength);
     }
 
@@ -280,7 +273,7 @@ class Shape {
 
     detectEdges(shape, centerShape) {
         // Detect edges using minimal expansion and flood fill
-        
+
         // Add minimal expansion for flood fill (1 cell on each side)
         const minimalPadding = {
             left: 1,
@@ -288,12 +281,12 @@ class Shape {
             top: 1,
             bottom: centerShape ? 1 : 0
         };
-        
+
         const expanded = this.expandShape(shape, minimalPadding);
-        
+
         // Run flood fill from edges to identify perimeter
         Shape.identifyPerimeterSquares(expanded);
-        
+
         // Trim back to occupied cells (expansion only added empty cells)
         return this.trimToBoundingBox(expanded);
     }
@@ -302,49 +295,42 @@ class Shape {
         // Ensure shape dimensions are divisible by scale factor
         const height = shape.length;
         const width = shape[0] ? shape[0].length : 0;
-        
+
         // Check if already divisible - if so, no padding needed
         if (width % scaleFactor === 0 && height % scaleFactor === 0) {
             return shape; // Perfect fit, no changes needed
         }
-        
+
         // Calculate exact padding needed for scale factor divisibility
         const widthRemainder = width % scaleFactor;
         const heightRemainder = height % scaleFactor;
-        
+
         // Add minimum padding to reach next scale factor boundary
         const widthPaddingNeeded = widthRemainder === 0 ? 0 : scaleFactor - widthRemainder;
         const heightPaddingNeeded = heightRemainder === 0 ? 0 : scaleFactor - heightRemainder;
-        
-        // Distribute padding
-        const leftPadding = Math.floor(widthPaddingNeeded / 2);
-        const rightPadding = widthPaddingNeeded - leftPadding;
-        
-        let topPadding, bottomPadding;
-        if (centerShape) {
-            bottomPadding = Math.floor(heightPaddingNeeded / 2);
-            topPadding = heightPaddingNeeded - bottomPadding;
-        } else {
-            topPadding = heightPaddingNeeded;
-            bottomPadding = 0;
-        }
-        
+
+        // Use MathUtils for consistent padding distribution
+        const hPad = MathUtils.distributePadding(widthPaddingNeeded, true); // Always center horizontally
+        const vPad = MathUtils.distributePadding(heightPaddingNeeded, centerShape);
+
         return this.expandShape(shape, {
-            left: leftPadding,
-            right: rightPadding,
-            top: topPadding,
-            bottom: bottomPadding
+            left: hPad.start,
+            right: hPad.end,
+            top: vPad.start,
+            bottom: vPad.end
         });
     }
 
     applyBuffer(shape, bufferSteps, centerShape) {
-        // Apply pure buffer expansion in N steps (no scale factor considerations)
+        // Apply pure buffer expansion in N steps
+        // bufferSteps: number of highres squares to expand (1 step = 0.25")
+        // Operates entirely in highres coordinate space
         let current = shape;
-        
+
         for (let step = 0; step < bufferSteps; step++) {
             // Check if shape touches any edges and needs minimal room for expansion
             const info = this.getShapeInfo(current);
-            
+
             // Add minimal padding only where needed for expansion
             // When centerShape is true, we allow expansion in all directions
             // When centerShape is false, we don't expand bottom
@@ -354,57 +340,19 @@ class Shape {
                 top: info.touchesEdges.top ? 1 : 0,
                 bottom: (info.touchesEdges.bottom && centerShape) ? 1 : 0
             };
-            
+
             // Add minimal padding if needed
             if (padding.left || padding.right || padding.top || padding.bottom) {
                 current = this.expandShape(current, padding);
             }
-            
+
             // Perform the expansion step
             current = this.expandBufferByOneStep(current, centerShape);
         }
-        
+
         return current;
     }
 
-    generateLowRes(highResShape, scaleFactor) {
-        // Generate low-resolution version by downsampling
-        const highResHeight = highResShape.length;
-        const highResWidth = highResShape[0] ? highResShape[0].length : 0;
-        
-        const lowResHeight = Math.ceil(highResHeight / scaleFactor);
-        const lowResWidth = Math.ceil(highResWidth / scaleFactor);
-        
-        const result = [];
-        
-        for (let y = 0; y < lowResHeight; y++) {
-            const row = [];
-            for (let x = 0; x < lowResWidth; x++) {
-                let hasOccupied = false;
-                
-                // Check all high-res cells within this low-res cell
-                const startY = y * scaleFactor;
-                const endY = Math.min(startY + scaleFactor, highResHeight);
-                const startX = x * scaleFactor;
-                const endX = Math.min(startX + scaleFactor, highResWidth);
-                
-                for (let hy = startY; hy < endY; hy++) {
-                    for (let hx = startX; hx < endX; hx++) {
-                        if (highResShape[hy] && highResShape[hy][hx]) {
-                            hasOccupied = true;
-                            break;
-                        }
-                    }
-                    if (hasOccupied) break;
-                }
-                
-                row.push(hasOccupied);
-            }
-            result.push(row);
-        }
-        
-        return result;
-    }
 
 
     downsampleToLowRes(highResShape, scaleFactor) {
@@ -456,7 +404,7 @@ class Shape {
             const row = result[y];
             const firstTrue = row.indexOf(true);
             const lastTrue = row.lastIndexOf(true);
-            
+
             if (firstTrue !== -1 && lastTrue !== -1 && firstTrue < lastTrue) {
                 this.setTrueBetween(row, firstTrue, lastTrue);
             }
@@ -473,10 +421,10 @@ class Shape {
         }
 
         const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
-        
+
         // Step 1: Pure downsampling
         const lowResBuffer = this.downsampleToLowRes(this.data.highResBufferShape, scaleFactor);
-        
+
         // Step 2: Apply void filling to prevent under-hangs
         return this.applyVoidFilling(lowResBuffer);
     }
@@ -765,20 +713,20 @@ class Shape {
         // Use flood fill from edge squares to identify perimeter squares
         // Static utility method for use by renderers
         if (!squareObjects || squareObjects.length === 0) return;
-        
+
         const height = squareObjects.length;
         const width = squareObjects[0].length;
         const visited = new Set();
 
         // Get all edge squares as starting points
         const startingPoints = [];
-        
+
         // Top and bottom edges
         for (let x = 0; x < width; x++) {
             startingPoints.push([x, 0]); // bottom
             startingPoints.push([x, height - 1]); // top
         }
-        
+
         // Left and right edges
         for (let y = 0; y < height; y++) {
             startingPoints.push([0, y]); // left
@@ -800,7 +748,7 @@ class Shape {
             if (!square.occupied) {
                 // Empty square - continue flood fill
                 visited.add(key);
-                
+
                 // Add 4-connected neighbors
                 queue.push([x - 1, y]);
                 queue.push([x + 1, y]);

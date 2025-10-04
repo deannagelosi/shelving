@@ -32,9 +32,9 @@ describe('Material Configurations', () => {
             const jointTypes = plywoodConfig.jointTypes;
 
             // 3. Assert
-            expect(jointTypes.corner.horizontal).toBe('pin');
+            expect(jointTypes.corner.horizontal).toBe('pin-corner');
             expect(jointTypes.corner.vertical).toBe('slot');
-            expect(jointTypes.tJoint.ending).toBe('pin');
+            expect(jointTypes.tJoint.ending).toBe('pin-tjoint');
             expect(jointTypes.tJoint.intersected).toBe('slot');
             expect(jointTypes.xJoint.intersected).toBe('half-lap');
         });
@@ -77,8 +77,8 @@ describe('Material Configurations', () => {
             plywoodConfig.assignBoardEnds.call(plywoodConfig, mockBoard);
 
             // 3. Assert
-            expect(mockBoard.poi.start).toBe('pin');
-            expect(mockBoard.poi.end).toBe('pin');
+            expect(mockBoard.poi.start).toBe('pin-corner');
+            expect(mockBoard.poi.end).toBe('pin-corner');
         });
 
         test('should assign slot ends to vertical boards', () => {
@@ -110,16 +110,16 @@ describe('Material Configurations', () => {
                 orientation: 'x',
                 thickness: 0.23,
                 poi: {
-                    start: 'pin',
-                    end: 'pin',
+                    start: 'pin-corner',
+                    end: 'pin-corner',
                     tJoints: [3, 7], // Two T-joints
                     xJoints: [5] // One X-joint
                 },
                 getLength: function () { return 10; } // Mock fixed length for testing
             };
             mockConfig = {
-                caseDepth: 3,
-                sheetThickness: 0.23,
+                caseDepthIn: 3,
+                sheetThicknessIn: 0.23,
                 numPinSlots: 2
             };
             cutList = [];
@@ -135,8 +135,8 @@ describe('Material Configurations', () => {
             expect(cutList.length).toBeGreaterThan(0);
 
             // Verify we have cuts (exact number depends on pin/slot configuration)
-            // With 2 pin slots: 3 pin cuts per end + 2 slot cuts per T-joint + 1 X-joint cut
-            const expectedCuts = 3 + 3 + (2 * 2) + 1; // start pins + end pins + t-joints + x-joints
+            // With numPinSlots=2 (1 Pin mode): 2 cuts per pin-corner end + 1 cut per T-joint + 1 X-joint cut
+            const expectedCuts = 2 + 2 + (1 * 2) + 1; // start pins + end pins + t-joints + x-joints
             expect(cutList).toHaveLength(expectedCuts);
         });
 
@@ -151,8 +151,8 @@ describe('Material Configurations', () => {
             // 3. Assert
             expect(cutList.length).toBeGreaterThan(0);
 
-            // With 2 pin slots: 2 slot cuts per end + 2 slot cuts per T-joint + 1 X-joint cut
-            const expectedCuts = 2 + 2 + (2 * 2) + 1;
+            // With numPinSlots=2 (1 Pin mode): 1 cut per slot end + 1 cut per T-joint + 1 X-joint cut
+            const expectedCuts = 1 + 1 + (1 * 2) + 1;
             expect(cutList).toHaveLength(expectedCuts);
         });
 
@@ -166,14 +166,14 @@ describe('Material Configurations', () => {
             plywoodConfig.generateJointCuts.call(plywoodConfig, mockBoard, mockConfig, 0, 0, cutList);
 
             // 3. Assert - should only have T-joint cuts
-            // 2 T-joints × 2 slot cuts each = 4 cuts
-            expect(cutList).toHaveLength(4);
+            // With numPinSlots=2 (1 Pin mode): 1 cut per T-joint
+            expect(cutList).toHaveLength(2);
 
             // Verify T-joint cuts are at correct positions
-            const tJoint1Cuts = cutList.filter(cut => cut.x === 3);
-            const tJoint2Cuts = cutList.filter(cut => cut.x === 7);
-            expect(tJoint1Cuts).toHaveLength(2);
-            expect(tJoint2Cuts).toHaveLength(2);
+            const tJoint1Cuts = cutList.filter(cut => Math.abs(cut.x - 3) < 0.5);
+            const tJoint2Cuts = cutList.filter(cut => Math.abs(cut.x - 7) < 0.5);
+            expect(tJoint1Cuts).toHaveLength(1);
+            expect(tJoint2Cuts).toHaveLength(1);
         });
 
         test('should generate cuts for X-joints', () => {
@@ -191,12 +191,12 @@ describe('Material Configurations', () => {
             // Verify X-joint cut properties
             const xJointCut = cutList[0];
             expect(xJointCut.x).toBe(5); // X-joint position
-            expect(xJointCut.w).toBe(mockConfig.sheetThickness);
-            expect(xJointCut.h).toBe(mockConfig.caseDepth / 2); // Half-lap cut
+            expect(xJointCut.w).toBe(mockConfig.sheetThicknessIn);
+            expect(xJointCut.h).toBe(mockConfig.caseDepthIn / 2); // Half-lap cut
         });
 
         test('should handle different pin/slot configurations', () => {
-            // 1. Setup - test with 1 pin/slot instead of 2
+            // 1. Setup - test with lazy finger mode (numPinSlots=1)
             mockConfig.numPinSlots = 1;
             mockBoard.poi.tJoints = []; // Simplify
             mockBoard.poi.xJoints = [];
@@ -204,8 +204,8 @@ describe('Material Configurations', () => {
             // 2. Execute
             plywoodConfig.generateJointCuts.call(plywoodConfig, mockBoard, mockConfig, 0, 0, cutList);
 
-            // 3. Assert - with 1 pin slot: 2 pin cuts per end
-            expect(cutList).toHaveLength(4); // 2 + 2 for start and end pins
+            // 3. Assert - with lazy finger mode (numPinSlots=1): 1 cut per pin-corner end
+            expect(cutList).toHaveLength(2); // 1 + 1 for start and end
         });
 
         test('should position cuts correctly based on board start coordinates', () => {

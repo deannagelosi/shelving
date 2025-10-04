@@ -274,12 +274,12 @@ class ExportUI {
         // show basic UI elements (material type dropdown and buttons)
         this.html.materialTypeGroup.removeClass('hidden');
         this.html.buttonList.removeClass('hidden');
-        
+
 
         // initialize material type selection from appState and build UI
         const currentMaterialType = appState.generationConfig.materialType;
         this.html.materialTypeSelect.selected(currentMaterialType);
-        
+
         // build UI for current material type (setup phase, not triggered by user change)
         this.buildUIForMaterial(currentMaterialType);
         this.displaySettings();
@@ -392,7 +392,7 @@ class ExportUI {
         // Update cubby mode UI elements if they exist
         const currentMaterialType = this.html.materialTypeSelect.value();
         const elementMap = this.materialElementMaps[currentMaterialType];
-        
+
         if (elementMap && elementMap['cubbyMode']) {
             elementMap['cubbyMode'].selected(cubbyMode);
         }
@@ -477,9 +477,9 @@ class ExportUI {
             timestamp: new Date().toISOString(),
             materialType: this.currExport.materialType,
             config: {
-                caseDepth: this.currExport.caseDepth,
-                sheetThickness: this.currExport.sheetThickness,
-                kerf: this.currExport.kerf,
+                caseDepthIn: this.currExport.caseDepthIn,
+                sheetThicknessIn: this.currExport.sheetThicknessIn,
+                kerfIn: this.currExport.kerfIn,
                 numPinSlots: this.currExport.numPinSlots
             },
             boards: boardData,
@@ -571,44 +571,44 @@ class ExportUI {
         }
 
         // Get values from dynamic element map
-        const thickness = elementMap['thickness'] ? parseFloat(elementMap['thickness'].value()) : 0.23;
-        const kerf = elementMap['kerf'] ? parseFloat(elementMap['kerf'].value()) : 0;
-        const caseDepth = elementMap['caseDepth'] ? parseFloat(elementMap['caseDepth'].value()) : 3;
-        const sheetWidth = elementMap['sheetWidth'] ? parseFloat(elementMap['sheetWidth'].value()) : 30;
-        const sheetHeight = elementMap['sheetHeight'] ? parseFloat(elementMap['sheetHeight'].value()) : 28;
+        const thicknessIn = elementMap['thicknessIn'] ? parseFloat(elementMap['thicknessIn'].value()) : 0.23;
+        const kerfIn = elementMap['kerfIn'] ? parseFloat(elementMap['kerfIn'].value()) : 0;
+        const caseDepthIn = elementMap['caseDepthIn'] ? parseFloat(elementMap['caseDepthIn'].value()) : 3;
+        const sheetWidthIn = elementMap['sheetWidthIn'] ? parseFloat(elementMap['sheetWidthIn'].value()) : 30;
+        const sheetHeightIn = elementMap['sheetHeightIn'] ? parseFloat(elementMap['sheetHeightIn'].value()) : 28;
         const numPinSlots = elementMap['pinSlots'] ? parseInt(elementMap['pinSlots'].value()) : 2;
         const numSheets = parseInt(this.html.numSheetsInput.value()); // Hidden but automatically managed
 
         // Validate inputs
-        const invalidInputs = [thickness, kerf, caseDepth, sheetWidth, sheetHeight, numSheets].some(val => isNaN(val));
+        const invalidInputs = [thicknessIn, kerfIn, caseDepthIn, sheetWidthIn, sheetHeightIn, numSheets].some(val => isNaN(val));
         const invalidPinSlots = elementMap['pinSlots'] && isNaN(numPinSlots);
 
         if (invalidInputs || invalidPinSlots) {
             alert("Invalid input for one or more fields");
             return;
         }
-        
+
         // get solution for accessing fabrication type and other properties
         const solution = appState.currentAnneal.finalSolution;
-        
+
         // get export config (includes all parameters for different fabrication types)
         const cubbyCurveRadius = elementMap['cubbyCurveRadius'] ? parseFloat(elementMap['cubbyCurveRadius'].value()) : 0.5;
         const cubbyMode = elementMap['cubbyMode'] ? elementMap['cubbyMode'].value() : 'one';
-        
+
         // Update appState for clay-plastic-3d materials (for consistent preview)
         if (materialType === 'clay-plastic-3d') {
             appState.generationConfig.cubbyCurveRadius = cubbyCurveRadius;
             appState.generationConfig.cubbyMode = cubbyMode;
         }
-        
+
         const config = {
-            caseDepth,
-            sheetThickness: thickness,
-            sheetWidth,
-            sheetHeight,
+            caseDepthIn,
+            sheetThicknessIn: thicknessIn,
+            sheetWidthIn,
+            sheetHeightIn,
             numSheets,
             numPinSlots,
-            kerf,
+            kerfIn,
             // 3D printing specific
             cubbyCurveRadius: cubbyCurveRadius,
             cubbyMode: cubbyMode,
@@ -633,7 +633,7 @@ class ExportUI {
         // Export screen is independent - determine exporter type based on selected material, not solution's fabricationType
         // This allows viewing any solution in any export format
         const exporterType = this.getExporterTypeForMaterial(materialType);
-        
+
         // Create appropriate exporter based on material type selection
         const exportConfig = {
             materialType: materialType,
@@ -653,8 +653,8 @@ class ExportUI {
 
             // Check if any board is longer than the sheet width (accounting for gaps)
             const longestBoard = this.currExport.getLongestBoard();
-            if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidth) {
-                this.showBoardTooLongError(longestBoard, sheetWidth);
+            if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidthIn) {
+                this.showBoardTooLongError(longestBoard, sheetWidthIn);
                 updateButton(this.html.showButton, false);
                 updateButton(this.html.downloadDXFButton, false);
                 updateButton(this.html.downloadCaseButton, false);
@@ -759,10 +759,10 @@ class ExportUI {
             case 'plywood-laser':
             case 'acrylic-laser':
                 return 'boards';  // Use BoardExporter for laser cut materials
-            
+
             case 'clay-plastic-3d':
                 return 'cubbies'; // Use CubbyExporter for 3D printed materials
-            
+
             default:
                 return 'boards';
         }

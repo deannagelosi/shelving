@@ -317,7 +317,7 @@ class BendWall {
     }
 
     _bendPossible(lowGroup, highGroup, side, turnRadius) {
-        // Check if a bend is geometrically possible
+        // Check if a bend is physically possible
         // A 180-degree U-turn requires at least 2 * turnRadius horizontal distance
         const lowX = (side === 'left') ? lowGroup.leftX : lowGroup.rightX;
         const highLeftX = highGroup.leftX;
@@ -442,7 +442,7 @@ class BendWall {
         }
 
         // Handle the 360/0 degree wrap-around case for p5.js arc drawing
-        // But avoid affecting Arc 10 which should be 180°→270°
+        // But avoid affecting Arc 10 which should be 180 deg ->270 deg
         if (startDeg > endDeg && Math.abs(startDeg - endDeg) > 180 && !isArc10Pattern) {
             endDeg += 360;
         }
@@ -483,7 +483,7 @@ class BendWall {
             const arcSegment = { id: baseId++, type: 'arc', ...arc, radius: turnRadius };
             segments.push(arcSegment);
 
-            // Vertical line based on expected pattern (5,7)→(5,9)
+            // Vertical line based on expected pattern (5,7)->(5,9)
             const verticalLine = {
                 id: baseId++,
                 type: 'line',

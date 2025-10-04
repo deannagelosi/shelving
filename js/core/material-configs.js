@@ -2,31 +2,35 @@
 // This file defines the behavior differences between materials
 
 const COMMON_SETTINGS = {
-    thickness: {
-        name: 'thickness',
+    thicknessIn: {
+        name: 'thicknessIn',
         container: 'materialProps',
         inputType: 'number',
         label: 'Thickness (in)',
-        cssClass: 'dimension-input'
+        cssClass: 'dimension-input',
+        defaultValue: 0.75,
+        validation: { min: 0.13, max: 0.75, step: 0.01 }
     },
-    kerf: {
-        name: 'kerf',
-        container: 'materialProps', 
+    kerfIn: {
+        name: 'kerfIn',
+        container: 'materialProps',
         inputType: 'number',
         label: 'Kerf Width (in)',
-        cssClass: 'dimension-input'
+        cssClass: 'dimension-input',
+        defaultValue: 0.00,
+        validation: { min: 0, max: 0.04, step: 0.01 }
     },
-    caseDepth: {
-        name: 'caseDepth',
-        defaultValue: 3,
+    caseDepthIn: {
+        name: 'caseDepthIn',
+        defaultValue: 4,
         container: 'caseProps',
         inputType: 'number',
         label: 'Depth (in)',
         cssClass: 'dimension-input',
         validation: { min: 1, max: 10, step: 0.5 }
     },
-    sheetWidth: {
-        name: 'sheetWidth',
+    sheetWidthIn: {
+        name: 'sheetWidthIn',
         defaultValue: 44,
         container: 'sheetDimensions',
         inputType: 'number',
@@ -34,8 +38,8 @@ const COMMON_SETTINGS = {
         cssClass: 'dimension-input',
         validation: { min: 1, step: 1 }
     },
-    sheetHeight: {
-        name: 'sheetHeight',
+    sheetHeightIn: {
+        name: 'sheetHeightIn',
         defaultValue: 35,
         container: 'sheetDimensions',
         inputType: 'number',
@@ -66,9 +70,9 @@ const MATERIAL_CONFIGS = {
         // PLYWOOD CONFIGURATION - Defines controls and ui layout
         // ============================================================================
         settings: [
-            { ...COMMON_SETTINGS.thickness, defaultValue: 0.375, validation: { min: 0.13, max: 0.5, step: 0.01 } },
-            { ...COMMON_SETTINGS.kerf, defaultValue: 0, validation: { min: 0, max: 0.04, step: 0.01 } },
-            COMMON_SETTINGS.caseDepth,
+            COMMON_SETTINGS.thicknessIn,
+            COMMON_SETTINGS.kerfIn,
+            COMMON_SETTINGS.caseDepthIn,
             {
                 name: 'pinSlots',
                 defaultValue: 2,
@@ -78,8 +82,8 @@ const MATERIAL_CONFIGS = {
                 cssClass: 'dimension-input',
                 options: [{ value: 3, text: '2 Pin' }, { value: 2, text: '1 Pin' }, { value: 1, text: 'Lazy' }]
             },
-            COMMON_SETTINGS.sheetWidth,
-            COMMON_SETTINGS.sheetHeight
+            COMMON_SETTINGS.sheetWidthIn,
+            COMMON_SETTINGS.sheetHeightIn
         ],
 
         // Container definitions
@@ -119,44 +123,44 @@ const MATERIAL_CONFIGS = {
         // ============================================================================
         generateJointCuts: function (board, config, boardStartX, boardStartY, cutList) {
             const numPinSlots = config.numPinSlots || 2; // 1=Lazy, 2=1 Pin, 3=2 Pin
-            
-            // Apply kerf adjustments for plywood
-            const effectiveDepth = config.caseDepth + (config.kerf || 0);
-            const slotWidth = config.sheetThickness - (config.kerf || 0);
-            
+
+            // Apply kerfIn adjustments for plywood
+            const effectiveDepth = config.caseDepthIn + (config.kerfIn || 0);
+            const slotWidth = config.sheetThicknessIn - (config.kerfIn || 0);
+
             if (numPinSlots === 1) {
                 // LAZY FINGER MODE - Special positioning based on board orientation and joint type
-                const lazySlotHeight = effectiveDepth * 0.5 - (config.kerf || 0);
-                
+                const lazySlotHeight = effectiveDepth * 0.5 - (config.kerfIn || 0);
+
                 // Start joint
                 if (board.poi.start === "slot") {
                     // Vertical board: slot at top
-                    cutList.push({ x: boardStartX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
+                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
                 } else if (board.poi.start === "pin-corner") {
                     // Horizontal board: slot at bottom
-                    cutList.push({ x: boardStartX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
+                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
                 } else if (board.poi.start === "pin-tjoint") {
                     // T-joint end: centered pin (two slots above/below)
-                    const cutRatio = 1/3;
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
-                    cutList.push({ x: boardStartX, y: boardStartY, w: slotWidth, h: jointHeight });
-                    cutList.push({ x: boardStartX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
+                    const cutRatio = 1 / 3;
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
+                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY, w: slotWidth, h: jointHeight });
+                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
                 }
-                
+
                 // End joint
                 const endX = boardStartX + board.getLength() - slotWidth;
                 if (board.poi.end === "slot") {
                     // Vertical board: slot at top
-                    cutList.push({ x: endX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
+                    cutList.push({ type: 'joint', x: endX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
                 } else if (board.poi.end === "pin-corner") {
                     // Horizontal board: slot at bottom
-                    cutList.push({ x: endX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
+                    cutList.push({ type: 'joint', x: endX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
                 } else if (board.poi.end === "pin-tjoint") {
                     // T-joint end: centered pin (two slots above/below)
-                    const cutRatio = 1/3;
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
-                    cutList.push({ x: endX, y: boardStartY, w: slotWidth, h: jointHeight });
-                    cutList.push({ x: endX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
+                    const cutRatio = 1 / 3;
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
+                    cutList.push({ type: 'joint', x: endX, y: boardStartY, w: slotWidth, h: jointHeight });
+                    cutList.push({ type: 'joint', x: endX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
                 }
             } else {
                 // STANDARD MODE (1 Pin or 2 Pin) - Use original ratio-based approach
@@ -165,29 +169,31 @@ const MATERIAL_CONFIGS = {
                     numPinCuts: numPinSlots,
                     totalCuts: (numPinSlots * 2) - 1
                 };
-                
+
                 const cutoutRatio = (1 / jointConfig.totalCuts);
-                const jointHeight = cutoutRatio * effectiveDepth - (config.kerf || 0);
+                const jointHeight = cutoutRatio * effectiveDepth - (config.kerfIn || 0);
 
                 // Start joint
                 if (board.poi.start === "slot") {
                     for (let i = 0; i < jointConfig.numSlotCuts; i++) {
                         let ratio = i === 0 ? 1 : 3;
-                        cutList.push({ 
-                            x: boardStartX, 
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
-                            w: slotWidth, 
-                            h: jointHeight 
+                        cutList.push({
+                            type: 'joint',
+                            x: boardStartX,
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
+                            w: slotWidth,
+                            h: jointHeight
                         });
                     }
                 } else if (board.poi.start === "pin-corner" || board.poi.start === "pin-tjoint") {
                     for (let i = 0; i < jointConfig.numPinCuts; i++) {
                         let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                        cutList.push({ 
-                            x: boardStartX, 
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
-                            w: slotWidth, 
-                            h: jointHeight 
+                        cutList.push({
+                            type: 'joint',
+                            x: boardStartX,
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
+                            w: slotWidth,
+                            h: jointHeight
                         });
                     }
                 }
@@ -197,21 +203,23 @@ const MATERIAL_CONFIGS = {
                 if (board.poi.end === "slot") {
                     for (let i = 0; i < jointConfig.numSlotCuts; i++) {
                         let ratio = i === 0 ? 1 : 3;
-                        cutList.push({ 
-                            x: endX, 
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
-                            w: slotWidth, 
-                            h: jointHeight 
+                        cutList.push({
+                            type: 'joint',
+                            x: endX,
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
+                            w: slotWidth,
+                            h: jointHeight
                         });
                     }
                 } else if (board.poi.end === "pin-corner" || board.poi.end === "pin-tjoint") {
                     for (let i = 0; i < jointConfig.numPinCuts; i++) {
                         let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                        cutList.push({ 
-                            x: endX, 
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio), 
-                            w: slotWidth, 
-                            h: jointHeight 
+                        cutList.push({
+                            type: 'joint',
+                            x: endX,
+                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
+                            w: slotWidth,
+                            h: jointHeight
                         });
                     }
                 }
@@ -222,19 +230,19 @@ const MATERIAL_CONFIGS = {
                 if (numPinSlots === 1) {
                     // Lazy mode T-joints use 1-pin approach (single slot)
                     let x = boardStartX + tJoint - (slotWidth / 2);
-                    let y = boardStartY + effectiveDepth * (1/3);
-                    cutList.push({ x, y, w: slotWidth, h: effectiveDepth * (1/3) - (config.kerf || 0) });
+                    let y = boardStartY + effectiveDepth * (1 / 3);
+                    cutList.push({ type: 'joint', x, y, w: slotWidth, h: effectiveDepth * (1 / 3) - (config.kerfIn || 0) });
                 } else {
                     // Standard mode T-joints
                     const numSlotCuts = numPinSlots - 1;
                     const cutRatio = 1 / (numPinSlots * 2 - 1);
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerf || 0);
-                    
+                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
+
                     for (let i = 0; i < numSlotCuts; i++) {
                         let ratio = i === 0 ? 1 : 3;
                         let x = boardStartX + tJoint - (slotWidth / 2);
                         let y = boardStartY + effectiveDepth * (ratio * cutRatio);
-                        cutList.push({ x, y, w: slotWidth, h: jointHeight });
+                        cutList.push({ type: 'joint', x, y, w: slotWidth, h: jointHeight });
                     }
                 }
             }
@@ -263,11 +271,11 @@ const MATERIAL_CONFIGS = {
         // ACRYLIC CONFIGURATION - Defines controls and ui layout
         // ============================================================================
         settings: [
-            { ...COMMON_SETTINGS.thickness, defaultValue: 0.375, validation: { min: 0.13, max: 0.5, step: 0.01 } },
-            { ...COMMON_SETTINGS.kerf, defaultValue: 0.01, validation: { min: 0, max: 0.04, step: 0.01 } },
-            COMMON_SETTINGS.caseDepth,
-            COMMON_SETTINGS.sheetWidth,
-            COMMON_SETTINGS.sheetHeight
+            COMMON_SETTINGS.thicknessIn,
+            COMMON_SETTINGS.kerfIn,
+            COMMON_SETTINGS.caseDepthIn,
+            COMMON_SETTINGS.sheetWidthIn,
+            COMMON_SETTINGS.sheetHeightIn
         ],
 
         // Container definitions
@@ -330,37 +338,36 @@ const MATERIAL_CONFIGS = {
                 y: boardStartY - config.fontOffset
             });
 
-            // Handle 'etch-line' ends - single line inset by thickness from board end
+            // Handle 'etch-line' ends - single line inset by thicknessIn from board end
             if (board.poi.start === 'etch-line') {
-                // Vertical etch line one thickness in from start
+                // Vertical etch line one thicknessIn in from start
                 etchList.push({
                     type: 'line',
-                    x1: boardStartX + config.sheetThickness,
+                    x1: boardStartX + config.sheetThicknessIn,
                     y1: boardStartY,
-                    x2: boardStartX + config.sheetThickness,
-                    y2: boardStartY + config.caseDepth
+                    x2: boardStartX + config.sheetThicknessIn,
+                    y2: boardStartY + config.caseDepthIn
                 });
             }
 
             if (board.poi.end === 'etch-line') {
-                // Vertical etch line one thickness in from end
+                // Vertical etch line one thicknessIn in from end
                 etchList.push({
                     type: 'line',
-                    x1: boardStartX + board.getLength() - config.sheetThickness,
+                    x1: boardStartX + board.getLength() - config.sheetThicknessIn,
                     y1: boardStartY,
-                    x2: boardStartX + board.getLength() - config.sheetThickness,
-                    y2: boardStartY + config.caseDepth
+                    x2: boardStartX + board.getLength() - config.sheetThicknessIn,
+                    y2: boardStartY + config.caseDepthIn
                 });
             }
 
             // Handle T-joint alignment etches - two lines showing where board edges will be
             for (let tJoint of board.poi.tJoints) {
                 // Finding x position of tJoint:
-                // 1) Geometric Offset:
-                // - tJoint value is the geometric distance, so no board thickness considered
-                // - geometric location is a centerline in the middle of the board thickness
-                // - all start coords are half a thickness wrong when including real board length
-                let geometricOffset = (config.sheetThickness / 2);
+                // 1) Base Offset:
+                // - tJoint value is the base distance (as if thickness was zero)
+                // - Need to adjust by half thickness to account for board centerline
+                let baseOffset = (config.sheetThicknessIn / 2);
 
                 // 2) Short End Offset:
                 // - for acrylic, boards are welded so no slots or pins
@@ -371,17 +378,17 @@ const MATERIAL_CONFIGS = {
                 let startEndType = board.poi.start;
                 let shortOffset = 0;
                 if (startEndType === 'short') {
-                    // board is shorter by 1 thickness, so lines are closer to the start end
-                    shortOffset = -config.sheetThickness;
+                    // board is shorter by 1 thicknessIn, so lines are closer to the start end
+                    shortOffset = -config.sheetThicknessIn;
                 }
 
-                let totalOffset = shortOffset + geometricOffset;
+                let totalOffset = shortOffset + baseOffset;
 
                 let centerX = boardStartX + tJoint + totalOffset;
                 // - draw the lines for the board edges, not the centerline
-                // - draw lines a half thickness from the centerline in either direction
-                let leftX = centerX - (config.sheetThickness / 2);
-                let rightX = centerX + (config.sheetThickness / 2);
+                // - draw lines a half thicknessIn from the centerline in either direction
+                let leftX = centerX - (config.sheetThicknessIn / 2);
+                let rightX = centerX + (config.sheetThicknessIn / 2);
 
                 // Left edge guide line (left side of intersecting board)
                 etchList.push({
@@ -389,7 +396,7 @@ const MATERIAL_CONFIGS = {
                     x1: leftX,
                     y1: boardStartY,
                     x2: leftX,
-                    y2: boardStartY + config.caseDepth
+                    y2: boardStartY + config.caseDepthIn
                 });
 
                 // Right edge guide line (right side of intersecting board)
@@ -398,7 +405,7 @@ const MATERIAL_CONFIGS = {
                     x1: rightX,
                     y1: boardStartY,
                     x2: rightX,
-                    y2: boardStartY + config.caseDepth
+                    y2: boardStartY + config.caseDepthIn
                 });
             }
         }
@@ -535,18 +542,20 @@ function generateHalfLapCut(board, xJointPosition, config, boardStartX, boardSta
     if (board.orientation === "y") {
         // Vertical board: cut from top
         cutList.push({
+            type: 'halflap',
             x: xJointX,
             y: boardStartY,
-            w: config.sheetThickness,
-            h: config.caseDepth / 2
+            w: config.sheetThicknessIn,
+            h: config.caseDepthIn / 2
         });
     } else {
         // Horizontal board: cut from bottom
         cutList.push({
+            type: 'halflap',
             x: xJointX,
-            y: boardStartY + (config.caseDepth / 2),
-            w: config.sheetThickness,
-            h: config.caseDepth / 2
+            y: boardStartY + (config.caseDepthIn / 2),
+            w: config.sheetThicknessIn,
+            h: config.caseDepthIn / 2
         });
     }
 }

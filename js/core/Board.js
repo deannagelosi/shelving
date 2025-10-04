@@ -1,28 +1,30 @@
+// Represents a single board with coordinates and thickness in inches (fabrication units)
 class Board {
     constructor(_id, _firstCoord, _secondCoord, _orientation, _thickness) {
-        // state variables
+        // Constructor expects all dimensions in inches
+        // _firstCoord, _secondCoord: {x, y} coordinates in inches
+        // _thickness: board thickness in inches
         this.id = _id;
         this.orientation = _orientation; // horizontal ('x') or vertical ('y')
-        this.thickness = _thickness; // Store thickness for length calculations
+        this.thickness = _thickness; // Board thickness in inches
         this.coords = this.setBoardDirection(_firstCoord, _secondCoord, this.orientation);
         this.boardLabel;
 
         this.poi = { // points of interest
             start: "unassigned", // assigned later by material configuration
             end: "unassigned", // assigned later by material configuration
-            tJoints: [], // array of positions for T-joint intersections
-            xJoints: [], // array of positions for X-joint (half-lap) intersections
+            tJoints: [], // array of positions (in inches from start) for T-joint intersections
+            xJoints: [], // array of positions (in inches from start) for X-joint (half-lap) intersections
         };
     }
 
     getLength() {
-        // Start with geometric distance between structural center lines
-        // (wall lines represent the midpoint of board thickness)
-        let baseLength = this.getGeometricLength();
+        // Calculate total board length in inches (fabrication unit)
+        // Start with base distance (board length if thickness was zero)
+        let baseLength = this.getBaseLength();
 
         // Add full thickness to extend from centerline to actual board ends
         // This accounts for the board extending half-thickness beyond centerline at each end
-        // (geometric distance is as if board went halfway through on each end already)
         let length = baseLength + this.thickness;
 
         // Material-specific end adjustments based on connection method:
@@ -41,8 +43,9 @@ class Board {
         return length;
     }
 
-    getGeometricLength() {
-        // Return the pure geometric distance between coordinates
+    getBaseLength() {
+        // Return base distance between board endpoints (in inches)
+        // This is the board length before thickness adjustments - as if material had zero thickness
         if (this.coords.start.y == this.coords.end.y) {
             // Horizontal board
             return this.coords.end.x - this.coords.start.x;

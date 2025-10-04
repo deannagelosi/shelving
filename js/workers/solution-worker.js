@@ -87,8 +87,8 @@ class SolutionWorker {
             wallBendRadius = 1.0,
             maxBends = 4,
             useCustomPerimeter = false,
-            perimeterWidth = 0,
-            perimeterHeight = 0,
+            perimeterWidthInches = 0,
+            perimeterHeightInches = 0,
             customBufferSize = 0.25,
             centerShape = false,
             minWallLength = 1.0
@@ -99,8 +99,8 @@ class SolutionWorker {
         const layoutConfig = {
             aspectRatioPref: aspectRatioPref,
             useCustomPerimeter: useCustomPerimeter,
-            perimeterWidth: perimeterWidth,
-            perimeterHeight: perimeterHeight
+            perimeterWidthInches: perimeterWidthInches,
+            perimeterHeightInches: perimeterHeightInches
         };
 
         const wallConfig = {
@@ -178,9 +178,10 @@ class SolutionWorker {
                             })),
                             // Include perimeter properties for proper progress rendering
                             useCustomPerimeter: solution.useCustomPerimeter,
-                            perimeterWidth: solution.perimeterWidth,
-                            perimeterHeight: solution.perimeterHeight,
-                            goalPerimeter: solution.goalPerimeter
+                            perimeterWidthInches: solution.perimeterWidthInches,
+                            perimeterHeightInches: solution.perimeterHeightInches,
+                            goalPerimeterGrid: solution.goalPerimeterGrid,
+                            minWallLength: solution.minWallLength
                         }
                     });
                 } else {
@@ -382,12 +383,12 @@ class SolutionWorker {
 
         // Define export configuration (hardcoded for bulk mode)
         const exportConfig = {
-            caseDepth: 3,
-            sheetThickness: 0.23,
-            sheetWidth: 30,
-            sheetHeight: 28,
+            caseDepthIn: 3,
+            sheetThicknessIn: 0.23,
+            sheetWidthIn: 30,
+            sheetHeightIn: 28,
             numSheets: 1,
-            kerf: 0,
+            kerfIn: 0,
             numPinSlots: 2
         };
 

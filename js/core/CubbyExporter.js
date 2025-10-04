@@ -24,15 +24,7 @@ class CubbyExporter {
         this.printBedWidth = config.printBedWidth || 12;
         this.printBedHeight = config.printBedHeight || 12;
 
-        // Convert print bed dimensions from inches to grid units for internal calculations
-        this.printBedWidthInGridUnits = appState.inchesToGridUnits(this.printBedWidth, this.minWallLength);
-        this.printBedHeightInGridUnits = appState.inchesToGridUnits(this.printBedHeight, this.minWallLength);
 
-        // Layout configuration
-        this.squareSize = config.spacing.squareSize;
-        this.buffer = config.spacing.buffer;
-        this.xPadding = config.spacing.xPadding;
-        this.yPadding = config.spacing.yPadding;
 
         // Output data
         this.cubbies = [];
@@ -65,12 +57,15 @@ class CubbyExporter {
             const cubbyData = cubbyAreas[i];
 
             if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
-                // Create a Cubby instance (Cubby works in grid units)
+                // Create a Cubby instance (Cubby works in grid units, so convert from inches)
+                const wallThicknessGrid = MathUtils.inchesToGridUnits(this.wallThickness, this.minWallLength);
+                const cubbyCurveRadiusGrid = MathUtils.inchesToGridUnits(this.cubbyCurveRadius, this.minWallLength);
+
                 const cubby = new Cubby(
                     cubbyData.shape_id,
                     cubbyData.visitedCells,
-                    this.wallThickness,
-                    this.cubbyCurveRadius
+                    wallThicknessGrid,
+                    cubbyCurveRadiusGrid
                 );
 
                 this.cubbies.push(cubby);
@@ -91,15 +86,6 @@ class CubbyExporter {
 
         return this.cubbies;
     }
-
-    // Note: simpleDetectCubbies() method removed - we now always use Cellular.calculateAllCubbyAreas()
-    // which provides consistent, proven flood fill results
-
-    // Note: getShapesFromSolution() method removed - we now get shape data via Cellular.calculateAllCubbyAreas()
-
-    // Note: buildWallSet() and floodFill() methods removed - we now use Cellular.calculateAllCubbyAreas() 
-    // which contains the proven implementation of these algorithms
-
 
     applyShrinkFactor() {
         // Apply shrink factor to compensate for material shrinkage
@@ -131,103 +117,125 @@ class CubbyExporter {
             return;
         }
 
-        // STEP 1: Calculate layout dimensions first (like BoardExporter knows sheet dimensions upfront)
+        // STEP 1: Calculate layout dimensions in inches (fabrication units)
         const maxCols = Math.ceil(Math.sqrt(this.cubbies.length));
         const maxRows = Math.ceil(this.cubbies.length / maxCols);
         const gridPadding = 0.5; // inches of padding around grid
         const cubbySpacing = 0.25; // inches between cubbies
 
-        // Find maximum dimensions across all cubbies (in grid units like BoardExporter)
+        // find maximum cubby dimensions in inches
         let maxCubbyWidth = 0;
         let maxCubbyHeight = 0;
         const cubbyBounds = [];
 
         for (const cubby of this.cubbies) {
-            const bounds = Cubby.getCubbyBounds(cubby);
+            const bounds = Cubby.getCubbyBounds(cubby); // returns bounds in grid units
             cubbyBounds.push(bounds);
-            // Keep in grid units for internal calculations
-            maxCubbyWidth = Math.max(maxCubbyWidth, bounds.width);
-            maxCubbyHeight = Math.max(maxCubbyHeight, bounds.height);
+
+            // convert cubby dimensions from grid units to inches
+            const cubbyWidthInches = MathUtils.gridUnitsToInches(bounds.width, this.minWallLength);
+            const cubbyHeightInches = MathUtils.gridUnitsToInches(bounds.height, this.minWallLength);
+
+            maxCubbyWidth = Math.max(maxCubbyWidth, cubbyWidthInches);
+            maxCubbyHeight = Math.max(maxCubbyHeight, cubbyHeightInches);
         }
 
-        // Convert spacing to grid units
-        const gridPaddingInGridUnits = appState.inchesToGridUnits(gridPadding, this.minWallLength);
-        const cubbySpacingInGridUnits = appState.inchesToGridUnits(cubbySpacing, this.minWallLength);
+        // Calculate total layout dimensions in inches for fabrication
+        this.layoutWidth = (maxCols * (maxCubbyWidth + cubbySpacing)) - cubbySpacing + (2 * gridPadding);
+        this.layoutHeight = (maxRows * (maxCubbyHeight + cubbySpacing)) - cubbySpacing + (2 * gridPadding);
 
-        // Calculate total layout dimensions in grid units
-        this.layoutWidth = (maxCols * (maxCubbyWidth + cubbySpacingInGridUnits)) - cubbySpacingInGridUnits + (2 * gridPaddingInGridUnits);
-        this.layoutHeight = (maxRows * (maxCubbyHeight + cubbySpacingInGridUnits)) - cubbySpacingInGridUnits + (2 * gridPaddingInGridUnits);
-
-        // STEP 2: Now store coordinates in grid units (like BoardExporter)
+        // === CONVERSION BOUNDARY: Grid Units -> Inches ===
+        // STEP 2: Transform cubbies to layout positions (calculate in inches for fabrication)
         for (let i = 0; i < this.cubbies.length; i++) {
             const cubby = this.cubbies[i];
             const bounds = cubbyBounds[i];
 
-            // Calculate position in grid layout (in grid units)
+            // calculate layout position in inches (fabrication units)
             const col = i % maxCols;
             const row = Math.floor(i / maxCols);
-            const cubbyStartX = gridPaddingInGridUnits + (col * (maxCubbyWidth + cubbySpacingInGridUnits));
-            const cubbyStartY = gridPaddingInGridUnits + (row * (maxCubbyHeight + cubbySpacingInGridUnits));
+            const cubbyStartX = gridPadding + (col * (maxCubbyWidth + cubbySpacing));
+            const cubbyStartY = gridPadding + (row * (maxCubbyHeight + cubbySpacing));
 
-            // Transform and store edge lines (magenta in preview) - keep in grid units
+            // Convert cubby bounds from grid units to inches
+            const boundsMinX = MathUtils.gridUnitsToInches(bounds.minX, this.minWallLength);
+            const boundsMinY = MathUtils.gridUnitsToInches(bounds.minY, this.minWallLength);
+
+            // Transform and store edge lines (all in inches for DXF)
             if (cubby.edgeLines && cubby.edgeLines.length > 0) {
-                const transformedEdgeLines = this.transformPerimeterToGridLayout(cubby.edgeLines, bounds, cubbyStartX, cubbyStartY);
+                const transformedEdgeLines = this.transformPerimeterToInches(cubby.edgeLines, boundsMinX, boundsMinY, cubbyStartX, cubbyStartY);
                 this.cubbyOutlines.push({
                     cubbyId: cubby.id,
                     lines: transformedEdgeLines
                 });
             }
 
-            // Transform and store interior lines (green in preview) - keep in grid units
+            // Transform and store interior lines (all in inches for DXF)
             if (cubby.interiorLines && cubby.interiorLines.length > 0) {
-                const transformedInteriorLines = this.transformPerimeterToGridLayout(cubby.interiorLines, bounds, cubbyStartX, cubbyStartY);
+                const transformedInteriorLines = this.transformPerimeterToInches(cubby.interiorLines, boundsMinX, boundsMinY, cubbyStartX, cubbyStartY);
                 this.cubbyInteriors.push({
                     cubbyId: cubby.id,
                     lines: transformedInteriorLines
                 });
             }
 
-            // Transform and store labels (blue in preview) - keep in grid units
+            // Transform and store labels (position in inches for DXF)
             if (cubby.cells.length > 0) {
                 const centerCell = cubby.cells[0];
-                const labelX = cubbyStartX + (centerCell.x + 0.5 - bounds.minX);
-                const labelY = cubbyStartY + (centerCell.y + 0.5 - bounds.minY);
+                const centerCellX = MathUtils.gridUnitsToInches(centerCell.x + 0.5, this.minWallLength);
+                const centerCellY = MathUtils.gridUnitsToInches(centerCell.y + 0.5, this.minWallLength);
                 this.cubbyLabels.push({
                     cubbyId: cubby.id,
-                    x: labelX,
-                    y: labelY,
+                    x: cubbyStartX + (centerCellX - boundsMinX),
+                    y: cubbyStartY + (centerCellY - boundsMinY),
                     text: `${cubby.id}`
                 });
             }
         }
     }
 
-    transformPerimeterToGridLayout(perimeter, bounds, offsetX, offsetY) {
-        // Transform cubby perimeter to layout position (keep in grid units)
+    transformPerimeterToInches(perimeter, boundsMinXIn, boundsMinYIn, offsetXIn, offsetYIn) {
+        // Transform cubby perimeter from grid units to inches and apply layout offset
+        // perimeter: array of line/bezier segments in grid units
+        // boundsMinXIn/boundsMinYIn: cubby bounds minimum coordinates in inches
+        // offsetXIn/offsetYIn: layout position offset in inches
         const transformedLines = [];
 
         for (const segment of perimeter) {
             if (segment.type === 'bezier') {
-                // Transform bezier curve coordinates to layout space in grid units
+                // convert all bezier curve coordinates from grid units to inches, then apply offset
+                const x1In = MathUtils.gridUnitsToInches(segment.x1, this.minWallLength);
+                const y1In = MathUtils.gridUnitsToInches(segment.y1, this.minWallLength);
+                const cp1xIn = MathUtils.gridUnitsToInches(segment.cp1x, this.minWallLength);
+                const cp1yIn = MathUtils.gridUnitsToInches(segment.cp1y, this.minWallLength);
+                const cp2xIn = MathUtils.gridUnitsToInches(segment.cp2x, this.minWallLength);
+                const cp2yIn = MathUtils.gridUnitsToInches(segment.cp2y, this.minWallLength);
+                const x2In = MathUtils.gridUnitsToInches(segment.x2, this.minWallLength);
+                const y2In = MathUtils.gridUnitsToInches(segment.y2, this.minWallLength);
+
                 transformedLines.push({
                     type: 'bezier',
-                    x1: offsetX + (segment.x1 - bounds.minX),
-                    y1: offsetY + (segment.y1 - bounds.minY),
-                    cp1x: offsetX + (segment.cp1x - bounds.minX),
-                    cp1y: offsetY + (segment.cp1y - bounds.minY),
-                    cp2x: offsetX + (segment.cp2x - bounds.minX),
-                    cp2y: offsetY + (segment.cp2y - bounds.minY),
-                    x2: offsetX + (segment.x2 - bounds.minX),
-                    y2: offsetY + (segment.y2 - bounds.minY),
+                    x1: offsetXIn + (x1In - boundsMinXIn),
+                    y1: offsetYIn + (y1In - boundsMinYIn),
+                    cp1x: offsetXIn + (cp1xIn - boundsMinXIn),
+                    cp1y: offsetYIn + (cp1yIn - boundsMinYIn),
+                    cp2x: offsetXIn + (cp2xIn - boundsMinXIn),
+                    cp2y: offsetYIn + (cp2yIn - boundsMinYIn),
+                    x2: offsetXIn + (x2In - boundsMinXIn),
+                    y2: offsetYIn + (y2In - boundsMinYIn),
                 });
             } else {
-                // Transform regular line segment coordinates to layout space in grid units
+                // convert regular line segment coordinates from grid units to inches, then apply offset
+                const x1In = MathUtils.gridUnitsToInches(segment.x1, this.minWallLength);
+                const y1In = MathUtils.gridUnitsToInches(segment.y1, this.minWallLength);
+                const x2In = MathUtils.gridUnitsToInches(segment.x2, this.minWallLength);
+                const y2In = MathUtils.gridUnitsToInches(segment.y2, this.minWallLength);
+
                 transformedLines.push({
                     type: 'line',
-                    x1: offsetX + (segment.x1 - bounds.minX),
-                    y1: offsetY + (segment.y1 - bounds.minY),
-                    x2: offsetX + (segment.x2 - bounds.minX),
-                    y2: offsetY + (segment.y2 - bounds.minY),
+                    x1: offsetXIn + (x1In - boundsMinXIn),
+                    y1: offsetYIn + (y1In - boundsMinYIn),
+                    x2: offsetXIn + (x2In - boundsMinXIn),
+                    y2: offsetYIn + (y2In - boundsMinYIn),
                 });
             }
         }
@@ -236,37 +244,33 @@ class CubbyExporter {
     }
 
     validatePrintBedDimensions() {
-        // Check if cubbies fit within print bed dimensions
+        // check if cubbies fit within print bed dimensions (fabrication in inches)
         const warnings = [];
 
         for (const cubby of this.cubbies) {
-            const bounds = Cubby.getCubbyBounds(cubby);
+            const bounds = Cubby.getCubbyBounds(cubby); // returns bounds in grid units
 
-            // Compare in grid units
-            const cubbyWidth = bounds.width;
-            const cubbyHeight = bounds.height;
+            // convert cubby dimensions from grid units to inches for comparison with print bed
+            const cubbyWidthInches = MathUtils.gridUnitsToInches(bounds.width, this.minWallLength);
+            const cubbyHeightInches = MathUtils.gridUnitsToInches(bounds.height, this.minWallLength);
 
-            if (cubbyWidth > this.printBedWidthInGridUnits) {
-                // Convert to inches for warning message
-                const widthInInches = appState.gridUnitsToInches(cubbyWidth, this.minWallLength);
+            if (cubbyWidthInches > this.printBedWidth) {
                 warnings.push({
                     type: 'width',
                     cubbyId: cubby.id,
-                    required: widthInInches,
+                    required: cubbyWidthInches,
                     available: this.printBedWidth,
-                    message: `Cubby ${cubby.id} width (${widthInInches.toFixed(2)}") exceeds print bed width (${this.printBedWidth}")`
+                    message: `Cubby ${cubby.id} width (${cubbyWidthInches.toFixed(2)}") exceeds print bed width (${this.printBedWidth}")`
                 });
             }
 
-            if (cubbyHeight > this.printBedHeightInGridUnits) {
-                // Convert to inches for warning message
-                const heightInInches = appState.gridUnitsToInches(cubbyHeight, this.minWallLength);
+            if (cubbyHeightInches > this.printBedHeight) {
                 warnings.push({
                     type: 'height',
                     cubbyId: cubby.id,
-                    required: heightInInches,
+                    required: cubbyHeightInches,
                     available: this.printBedHeight,
-                    message: `Cubby ${cubby.id} height (${heightInInches.toFixed(2)}") exceeds print bed height (${this.printBedHeight}")`
+                    message: `Cubby ${cubby.id} height (${cubbyHeightInches.toFixed(2)}") exceeds print bed height (${this.printBedHeight}")`
                 });
             }
         }
@@ -445,35 +449,38 @@ class CubbyExporter {
     }
 
     populateLabelLayer(dxf) {
-        // Export labels from prepared data (coordinates already in DXF-compatible format)
+        // Export labels from prepared data (already in inches, no conversion needed)
         const labelLayer = this.materialConfig.dxfLayers.find(layer => layer.content === 'labels');
         if (labelLayer) {
             dxf.setActiveLayer(labelLayer.name);
             for (const labelData of this.cubbyLabels) {
-                dxf.drawText(labelData.x, labelData.y, this.fontSize, 0, labelData.text);
+                // (p5.js uses a a-flipped coordinate system, flip y back for DXF
+                const yDXF = this.layoutHeight - labelData.y;
+                dxf.drawText(labelData.x, yDXF, this.fontSize, 0, labelData.text);
             }
         }
     }
 
     exportPreparedPerimeterToDXF(dxf, lines) {
-        // Export prepared perimeter lines to DXF (coordinates already in DXF-compatible format)
+        // export prepared perimeter lines to DXF (already in inches, apply Y-flip for DXF)
         const points = [];
 
         for (const line of lines) {
             if (line.type === 'bezier') {
                 // For bezier curves, approximate with line segments for DXF
+                // apply y-flip to all coordinates to unto p5.js y-flip
                 const curvePoints = this.approximateBezierCurve(
-                    line.x1, line.y1,
-                    line.cp1x, line.cp1y,
-                    line.cp2x, line.cp2y,
-                    line.x2, line.y2,
+                    line.x1, this.layoutHeight - line.y1,
+                    line.cp1x, this.layoutHeight - line.cp1y,
+                    line.cp2x, this.layoutHeight - line.cp2y,
+                    line.x2, this.layoutHeight - line.y2,
                     10 // number of approximation segments
                 );
                 points.push(...curvePoints);
             } else {
-                // Regular line segment (no coordinate conversion needed)
-                points.push([line.x1, line.y1]);
-                points.push([line.x2, line.y2]);
+                // regular line segment with Y-flip for DXF coordinate system
+                points.push([line.x1, this.layoutHeight - line.y1]);
+                points.push([line.x2, this.layoutHeight - line.y2]);
             }
         }
 

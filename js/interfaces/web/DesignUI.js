@@ -64,8 +64,8 @@ class DesignUI {
                 // Settings that don't need additional reactions (yet)
                 case 'aspectRatioPref':
                 case 'useCustomPerimeter':
-                case 'perimeterWidth':
-                case 'perimeterHeight':
+                case 'perimeterWidthInches':
+                case 'perimeterHeightInches':
                 case 'wallAlgorithm':
                 case 'bendRadius':
                 case 'maxBends':
@@ -230,9 +230,10 @@ class DesignUI {
                             valid: valid,
                             // Include perimeter properties from visualData
                             useCustomPerimeter: visualData.useCustomPerimeter,
-                            perimeterWidth: visualData.perimeterWidth,
-                            perimeterHeight: visualData.perimeterHeight,
-                            goalPerimeter: visualData.goalPerimeter
+                            perimeterWidthInches: visualData.perimeterWidthInches,
+                            perimeterHeightInches: visualData.perimeterHeightInches,
+                            goalPerimeterGrid: visualData.goalPerimeterGrid,
+                            minWallLength: visualData.minWallLength
                         };
                         // call the display update with the minimal solution
                         this.updateDisplayCallback(minimalSolution);
@@ -510,8 +511,8 @@ class DesignUI {
         const layoutConfig = {
             aspectRatioPref: currentSolution.aspectRatioPref,
             useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
-            perimeterWidth: appState.generationConfig.perimeterWidth,
-            perimeterHeight: appState.generationConfig.perimeterHeight
+            perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
+            perimeterHeightInches: appState.generationConfig.perimeterHeightInches
         };
         const wallConfig = {
             algorithm: currentSolution.wallAlgorithm,
@@ -617,7 +618,7 @@ class DesignUI {
     async handleStartAnneal() {
         // Start with clean slate (clears preview, solution, and resets UI)
         this.drawBlankGrid();
-        
+
         // clear the original annealed solution when starting a new generation
         appState.originalAnnealedSolution = null;
         appState.selectedShapeId = null;
@@ -702,8 +703,8 @@ class DesignUI {
                     aspectRatioPref: appState.generationConfig.aspectRatioPref,
                     // Perimeter
                     useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
-                    perimeterWidth: appState.generationConfig.perimeterWidth,
-                    perimeterHeight: appState.generationConfig.perimeterHeight,
+                    perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
+                    perimeterHeightInches: appState.generationConfig.perimeterHeightInches,
                     // Fabrication and Walls
                     fabricationType: appState.generationConfig.fabricationType,
                     wallAlgorithm: appState.generationConfig.wallAlgorithm,
@@ -834,8 +835,8 @@ class DesignUI {
 
             // Perimeter configuration (flattened from perimeterConfig)
             useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
-            perimeterWidth: appState.generationConfig.perimeterWidth,
-            perimeterHeight: appState.generationConfig.perimeterHeight
+            perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
+            perimeterHeightInches: appState.generationConfig.perimeterHeightInches
         };
     }
 
@@ -1054,10 +1055,10 @@ class DesignUI {
         const widthColumn = createDiv()
             .addClass('dimension-column')
             .parent(dimensionsRow);
-        createSpan('Target Width')
+        createSpan('Target Width (in)')
             .addClass('dimension-label')
             .parent(widthColumn);
-        this.html.perimeterWidthInput = createInput(appState.generationConfig.perimeterWidth.toString(), 'number')
+        this.html.perimeterWidthInput = createInput(appState.generationConfig.perimeterWidthInches.toString(), 'number')
             .addClass('dimension-input')
             .parent(widthColumn)
             .attribute('min', '1')
@@ -1067,10 +1068,10 @@ class DesignUI {
         const heightColumn = createDiv()
             .addClass('dimension-column')
             .parent(dimensionsRow);
-        createSpan('Target Height')
+        createSpan('Target Height (in)')
             .addClass('dimension-label')
             .parent(heightColumn);
-        this.html.perimeterHeightInput = createInput(appState.generationConfig.perimeterHeight.toString(), 'number')
+        this.html.perimeterHeightInput = createInput(appState.generationConfig.perimeterHeightInches.toString(), 'number')
             .addClass('dimension-input')
             .parent(heightColumn)
             .attribute('min', '1')
@@ -1181,16 +1182,16 @@ class DesignUI {
     handlePerimeterWidthChange() {
         const value = parseInt(this.html.perimeterWidthInput.value());
         if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterWidth = value;
-            appEvents.emit('settingsChanged', { setting: 'perimeterWidth', value });
+            appState.generationConfig.perimeterWidthInches = value;
+            appEvents.emit('settingsChanged', { setting: 'perimeterWidthInches', value });
         }
     }
 
     handlePerimeterHeightChange() {
         const value = parseInt(this.html.perimeterHeightInput.value());
         if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterHeight = value;
-            appEvents.emit('settingsChanged', { setting: 'perimeterHeight', value });
+            appState.generationConfig.perimeterHeightInches = value;
+            appEvents.emit('settingsChanged', { setting: 'perimeterHeightInches', value });
         }
     }
 
@@ -1315,16 +1316,15 @@ class DesignUI {
             centerShape: appState.generationConfig.centerShape,
             minWallLength: appState.generationConfig.minWallLength
         };
-        
+
         // Check if shape's cached config differs from current config
         // Shapes don't currently store their generation config, so we need to check if buffer data exists
         // and regenerate if the config has changed since last generation
-        if (!shapeToPreview.lastGeneratedConfig || 
+        if (!shapeToPreview.lastGeneratedConfig ||
             shapeToPreview.lastGeneratedConfig.customBufferSize !== currentConfig.customBufferSize ||
             shapeToPreview.lastGeneratedConfig.centerShape !== currentConfig.centerShape ||
             shapeToPreview.lastGeneratedConfig.minWallLength !== currentConfig.minWallLength) {
-            
-            
+
             // Regenerate shape buffers with current settings
             // Use inputGrid (original user drawing) for live session reprocessing
             // Note: File imports correctly use highResShape since inputGrid doesn't exist in JSON
@@ -1334,7 +1334,7 @@ class DesignUI {
                 inputData,
                 currentConfig
             );
-            
+
             // Store the config used for generation
             shapeToPreview.lastGeneratedConfig = { ...currentConfig };
         }
@@ -1692,18 +1692,18 @@ class DesignUI {
         }
 
         if (this.html.perimeterWidthInput) {
-            this.html.perimeterWidthInput.value(config.perimeterWidth);
+            this.html.perimeterWidthInput.value(config.perimeterWidthInches);
             // Force update if p5.js didn't update properly
-            if (this.html.perimeterWidthInput.value() !== config.perimeterWidth.toString()) {
-                this.html.perimeterWidthInput.elt.value = config.perimeterWidth;
+            if (this.html.perimeterWidthInput.value() !== config.perimeterWidthInches.toString()) {
+                this.html.perimeterWidthInput.elt.value = config.perimeterWidthInches;
             }
         }
 
         if (this.html.perimeterHeightInput) {
-            this.html.perimeterHeightInput.value(config.perimeterHeight);
+            this.html.perimeterHeightInput.value(config.perimeterHeightInches);
             // Force update if p5.js didn't update properly
-            if (this.html.perimeterHeightInput.value() !== config.perimeterHeight.toString()) {
-                this.html.perimeterHeightInput.elt.value = config.perimeterHeight;
+            if (this.html.perimeterHeightInput.value() !== config.perimeterHeightInches.toString()) {
+                this.html.perimeterHeightInput.elt.value = config.perimeterHeightInches;
             }
         }
 
@@ -1725,10 +1725,11 @@ class DesignUI {
         }
 
         if (this.html.minWallLengthSelect && config.minWallLength !== undefined) {
-            this.html.minWallLengthSelect.selected(config.minWallLength.toString());
+            const minWallLengthStr = config.minWallLength.toFixed(1);
+            this.html.minWallLengthSelect.selected(minWallLengthStr);
             // Force update if p5.js didn't update properly
-            if (this.html.minWallLengthSelect.value() !== config.minWallLength.toString()) {
-                this.html.minWallLengthSelect.elt.value = config.minWallLength;
+            if (this.html.minWallLengthSelect.value() !== minWallLengthStr) {
+                this.html.minWallLengthSelect.elt.value = minWallLengthStr;
             }
         }
 
@@ -1856,7 +1857,7 @@ class DesignUI {
 
         // Start with clean slate before viewing solution
         this.drawBlankGrid();
-        
+
         // display selected saved anneal
         appState.currentViewedAnnealIndex = index;
         // Create a deep copy of the saved anneal to prevent modifications
@@ -1912,8 +1913,8 @@ class DesignUI {
         }
         appState.generationConfig.aspectRatioPref = solution.aspectRatioPref;
         appState.generationConfig.useCustomPerimeter = solution.useCustomPerimeter;
-        appState.generationConfig.perimeterWidth = solution.perimeterWidth;
-        appState.generationConfig.perimeterHeight = solution.perimeterHeight;
+        appState.generationConfig.perimeterWidthInches = solution.perimeterWidthInches;
+        appState.generationConfig.perimeterHeightInches = solution.perimeterHeightInches;
 
         // Update all UI elements from appState (single source of truth)
         this.updateUIFromAppState();
@@ -1923,10 +1924,10 @@ class DesignUI {
             this.html.usePerimeterCheckbox.checked(solution.useCustomPerimeter);
         }
         if (this.html.perimeterWidthInput) {
-            this.html.perimeterWidthInput.value(solution.perimeterWidth.toString());
+            this.html.perimeterWidthInput.value(solution.perimeterWidthInches.toString());
         }
         if (this.html.perimeterHeightInput) {
-            this.html.perimeterHeightInput.value(solution.perimeterHeight.toString());
+            this.html.perimeterHeightInput.value(solution.perimeterHeightInches.toString());
         }
 
         // Disable generation controls while viewing saved anneal

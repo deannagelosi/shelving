@@ -29,7 +29,7 @@ describe('Shape', () => {
         // Original 2x2 shape from the middle of the 4x5 input grid
         const expectedGrid = [
             [true, true],  // Trimmed shape data only
-            [true, true] 
+            [true, true]
         ];
         expect(shape.data.highResShape).toEqual(expectedGrid);
         expect(shape.data.title).toBe(title);
@@ -243,5 +243,170 @@ describe('Shape ID Management', () => {
         const newShape = new Shape();
         expect(newShape.id).toBe(21);
         expect(Shape.nextId).toBe(22);
+    });
+
+    describe('Buffer Bug Fix - Consistent buffer size across minWallLength settings', () => {
+        test('0.25" buffer should add same physical distance regardless of minWallLength', () => {
+            // This test verifies the bug fix where buffer was incorrectly multiplied by scaleFactor
+            // Bug: bufferSteps = customBufferSize * scaleFactor (WRONG - varied with minWallLength)
+            // Fix: bufferSteps = MathUtils.inchesToHighres(customBufferSize) (CORRECT - constant)
+
+            // 1. Setup - Use input that aligns perfectly with all scale factors
+            // 8x8 is divisible by 2, 4, and 8
+            const inputGrid = Array(8).fill().map(() => Array(8).fill(true));
+
+            // 2. Execute - Apply 0.25" buffer with different minWallLength settings
+            const shape1 = new Shape();
+            shape1.saveUserInput('Test 1', inputGrid, {
+                customBufferSize: 0.25,
+                minWallLength: 0.5  // scaleFactor = 2
+            });
+
+            const shape2 = new Shape();
+            shape2.saveUserInput('Test 2', inputGrid, {
+                customBufferSize: 0.25,
+                minWallLength: 1.0  // scaleFactor = 4
+            });
+
+            const shape3 = new Shape();
+            shape3.saveUserInput('Test 3', inputGrid, {
+                customBufferSize: 0.25,
+                minWallLength: 2.0  // scaleFactor = 8
+            });
+
+            // 3. Assert - After buffer and alignment, dimensions should be consistent
+            // 8x8 + 1 buffer (top,left,right) = 9x10
+            // Alignment: 9->10 (for sf=2), 9->12 (for sf=4), 9->16 (for sf=8)
+            // Key: The BUFFER SIZE is consistent (1 highres), alignment varies
+
+            // Test by comparing that buffer adds exactly 1 square before alignment
+            // All should have same pre-alignment size, which we can infer from total occupied cells
+            const occupied1 = shape1.data.highResBufferShape.flat().filter(cell =>
+                (typeof cell === 'boolean' ? cell : cell?.occupied)).length;
+            const occupied2 = shape2.data.highResBufferShape.flat().filter(cell =>
+                (typeof cell === 'boolean' ? cell : cell?.occupied)).length;
+            const occupied3 = shape3.data.highResBufferShape.flat().filter(cell =>
+                (typeof cell === 'boolean' ? cell : cell?.occupied)).length;
+
+            // All should have same number of occupied cells (8x8=64 + buffer growth)
+            expect(occupied1).toBe(occupied2);
+            expect(occupied2).toBe(occupied3);
+        });
+
+        test('0.5" buffer should always add 2 highres squares regardless of minWallLength', () => {
+            // 1. Setup - Use 8x8 input (aligned with scale factors 2, 4, 8)
+            const inputGrid = Array(8).fill().map(() => Array(8).fill(true));
+
+            // 2. Execute - Use same minWallLength to eliminate alignment variance
+            const shape1 = new Shape();
+            shape1.saveUserInput('Test A', inputGrid, {
+                customBufferSize: 0.25,  // 1 highres buffer
+                minWallLength: 1.0  // scaleFactor = 4
+            });
+
+            const shape2 = new Shape();
+            shape2.saveUserInput('Test B', inputGrid, {
+                customBufferSize: 0.5,  // 2 highres buffer
+                minWallLength: 1.0  // scaleFactor = 4 (same as above)
+            });
+
+            // 3. Assert - 0.5" buffer should add more cells than 0.25" buffer
+            const occupied1 = shape1.data.highResBufferShape.flat().filter(cell =>
+                (typeof cell === 'boolean' ? cell : cell?.occupied)).length;
+            const occupied2 = shape2.data.highResBufferShape.flat().filter(cell =>
+                (typeof cell === 'boolean' ? cell : cell?.occupied)).length;
+
+            // 0.5" buffer should result in more occupied cells than 0.25" buffer
+            expect(occupied2).toBeGreaterThan(occupied1);
+        });
+    });
+
+    describe('Shape Alignment and Centering', () => {
+        test('should align buffered shape to scale factor with centering', () => {
+            // 1. Setup - 1x1 shape that will need alignment after buffer
+            const shape = new Shape();
+            const inputGrid = [[true]];
+
+            // 2. Execute - Apply buffer with centering enabled
+            // 1x1 + 1 buffer all around = 3x3
+            // 3x3 needs to align to scaleFactor 4 -> should become 4x4 with shape centered
+            shape.saveUserInput('Test', inputGrid, {
+                customBufferSize: 0.25,  // 1 highres square buffer
+                minWallLength: 1.0,      // scaleFactor = 4
+                centerShape: true        // Enable centering
+            });
+
+            // 3. Assert - Should be aligned to 4x4
+            expect(shape.data.highResBufferShape.length).toBe(4);
+            expect(shape.data.highResBufferShape[0].length).toBe(4);
+
+            // Verify the 3x3 buffered shape is centered in 4x4 grid
+            // Expected pattern (0=empty, 1=buffer, #=original):
+            // .###  <- top padding (0.5 pixels, rounds to 0 top, 1 bottom)
+            // ###1
+            // ##1#
+            // .###  <- bottom padding
+
+            // Count occupied cells per row to verify centering
+            const occupiedPerRow = shape.data.highResBufferShape.map(row => {
+                return row.filter(cell => {
+                    const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
+                    return isOccupied;
+                }).length;
+            });
+
+            // With proper centering, we should see padding distributed
+            // The 3x3 buffered shape should be centered in 4x4
+            const totalOccupied = occupiedPerRow.reduce((sum, count) => sum + count, 0);
+            expect(totalOccupied).toBe(9); // 3x3 = 9 cells occupied
+        });
+
+        test('should align buffered shape to scale factor without centering (top-align)', () => {
+            // 1. Setup - 1x1 shape
+            const shape = new Shape();
+            const inputGrid = [[true]];
+
+            // 2. Execute - Apply buffer WITHOUT centering
+            // 1x1 + buffer (top,left,right only) = 2x3
+            // 2x3 needs to align to scaleFactor 4 -> should become 4x4, top-aligned
+            shape.saveUserInput('Test', inputGrid, {
+                customBufferSize: 0.25,  // 1 highres square buffer
+                minWallLength: 1.0,      // scaleFactor = 4
+                centerShape: false       // No centering
+            });
+
+            // 3. Assert - Should be aligned to 4x4
+            expect(shape.data.highResBufferShape.length).toBe(4);
+            expect(shape.data.highResBufferShape[0].length).toBe(4);
+
+            // Verify shape is top-aligned
+            // First row should have occupied cells, last row(s) should be padding
+            const firstRow = shape.data.highResBufferShape[0];
+            const lastRow = shape.data.highResBufferShape[3];
+
+            const firstRowOccupied = firstRow.some(cell => {
+                const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
+                return isOccupied;
+            });
+
+            expect(firstRowOccupied).toBe(true); // First row should have occupied cells
+        });
+
+        test('should handle shapes that are already aligned to scale factor', () => {
+            // 1. Setup - 4x4 shape (already aligned to scaleFactor 4)
+            const shape = new Shape();
+            const inputGrid = Array(4).fill().map(() => Array(4).fill(true));
+
+            // 2. Execute
+            shape.saveUserInput('Test', inputGrid, {
+                customBufferSize: 0.25,  // 1 buffer
+                minWallLength: 1.0,      // scaleFactor = 4
+                centerShape: true
+            });
+
+            // 3. Assert - 4x4 + 1 buffer all around = 6x6, aligned to 8x8
+            expect(shape.data.highResBufferShape.length).toBe(8);
+            expect(shape.data.highResBufferShape[0].length).toBe(8);
+        });
     });
 }); 

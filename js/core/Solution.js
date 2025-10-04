@@ -49,9 +49,6 @@ class Solution {
         // Layout configuration
         this.aspectRatioPref = _layoutConfig.aspectRatioPref || 0; // -1 for tall, 0 for square, 1 for wide layouts
         this.useCustomPerimeter = _layoutConfig.useCustomPerimeter || false;
-        this.perimeterWidth = _layoutConfig.perimeterWidth || 0;
-        this.perimeterHeight = _layoutConfig.perimeterHeight || 0;
-        this.goalPerimeter = null; // will be {x, y, width, height}
 
         // Wall generation configuration
         this.wallAlgorithm = _wallConfig.algorithm || 'cellular-organic';
@@ -63,6 +60,14 @@ class Solution {
         this.customBufferSize = _bufferConfig.customBufferSize !== undefined ? _bufferConfig.customBufferSize : 0.25;
         this.centerShape = _bufferConfig.centerShape !== undefined ? _bufferConfig.centerShape : false;
         this.minWallLength = _bufferConfig.minWallLength !== undefined ? _bufferConfig.minWallLength : 1.0;
+
+        // === CONVERSION BOUNDARY: Inches -> Grid ===
+        // Store perimeter in both inches (for UI/export) and grid units (for layout logic)
+        this.perimeterWidthInches = _layoutConfig.perimeterWidthInches || 0;
+        this.perimeterHeightInches = _layoutConfig.perimeterHeightInches || 0;
+        this.perimeterWidthGrid = MathUtils.inchesToGridUnits(this.perimeterWidthInches, this.minWallLength);
+        this.perimeterHeightGrid = MathUtils.inchesToGridUnits(this.perimeterHeightInches, this.minWallLength);
+        this.goalPerimeterGrid = null; // {x, y, width, height} in grid units
 
         this.score;
         this.valid = false;
@@ -100,7 +105,7 @@ class Solution {
 
         // Initialize goal perimeter once at the beginning of annealing (not during neighbor creation)
         if (this.useCustomPerimeter) {
-            this.centerGoalPerimeter();
+            this.centerGoalPerimeterGrid();
         }
 
         this.calcScore();
@@ -184,8 +189,8 @@ class Solution {
         // Determine target dimensions: use larger of natural bounds or user preference
         let targetWidth, targetHeight;
         if (this.useCustomPerimeter) {
-            targetWidth = Math.max(naturalWidth, this.perimeterWidth);
-            targetHeight = Math.max(naturalHeight, this.perimeterHeight);
+            targetWidth = Math.max(naturalWidth, this.perimeterWidthGrid);
+            targetHeight = Math.max(naturalHeight, this.perimeterHeightGrid);
         } else {
             targetWidth = naturalWidth;
             targetHeight = naturalHeight;
@@ -501,7 +506,7 @@ class Solution {
         let spacePenalty;
         if (this.useCustomPerimeter) {
             const currentArea = this.layout.length * this.layout[0].length;
-            const targetArea = this.perimeterWidth * this.perimeterHeight;
+            const targetArea = this.perimeterWidthGrid * this.perimeterHeightGrid;
             // This rewards shrinking toward the target without overshooting
             const areaDifference = Math.abs(currentArea - targetArea);
             spacePenalty = areaDifference * WEIGHTS.areaDifferenceScalar;
@@ -555,7 +560,7 @@ class Solution {
         // 2. Mark out-of-bounds cells for debug visualization (layout mutation)
         // The marking ensures debug visualization exactly matches scoring logic
 
-        if (!this.useCustomPerimeter || !this.goalPerimeter) {
+        if (!this.useCustomPerimeter || !this.goalPerimeterGrid) {
             return 0;
         }
 
@@ -563,7 +568,7 @@ class Solution {
         this.clearOutOfBoundsMarkers();
 
         let outOfBoundsCount = 0;
-        const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = this.goalPerimeter;
+        const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = this.goalPerimeterGrid;
 
         for (let shape of this.shapes) {
             for (let y = 0; y < shape.data.bufferShape.length; y++) {
@@ -604,8 +609,8 @@ class Solution {
         const layoutConfig = {
             aspectRatioPref: this.aspectRatioPref,
             useCustomPerimeter: this.useCustomPerimeter,
-            perimeterWidth: this.perimeterWidth,
-            perimeterHeight: this.perimeterHeight
+            perimeterWidthInches: this.perimeterWidthInches,
+            perimeterHeightInches: this.perimeterHeightInches
         };
         const wallConfig = {
             algorithm: this.wallAlgorithm,
@@ -679,7 +684,7 @@ class Solution {
 
         // Recalculate goal perimeter to center it on the new layout
         if (newSolution.useCustomPerimeter) {
-            newSolution.centerGoalPerimeter();
+            newSolution.centerGoalPerimeterGrid();
         }
 
         // calculate the score of the new solution
@@ -704,9 +709,9 @@ class Solution {
         }
     }
 
-    centerGoalPerimeter() {
+    centerGoalPerimeterGrid() {
         if (!this.useCustomPerimeter || !this.layout || this.layout.length === 0) {
-            this.goalPerimeter = null;
+            this.goalPerimeterGrid = null;
             return;
         }
 
@@ -718,14 +723,14 @@ class Solution {
         const layoutCenterY = layoutHeight / 2;
 
         // Calculate the top-left corner of the goal perimeter to center it
-        const goalX = Math.floor(layoutCenterX - (this.perimeterWidth / 2));
-        const goalY = Math.floor(layoutCenterY - (this.perimeterHeight / 2));
+        const goalX = Math.floor(layoutCenterX - (this.perimeterWidthGrid / 2));
+        const goalY = Math.floor(layoutCenterY - (this.perimeterHeightGrid / 2));
 
-        this.goalPerimeter = {
+        this.goalPerimeterGrid = {
             x: goalX,
             y: goalY,
-            width: this.perimeterWidth,
-            height: this.perimeterHeight
+            width: this.perimeterWidthGrid,
+            height: this.perimeterHeightGrid
         };
     }
 
@@ -755,8 +760,8 @@ class Solution {
             aspectRatioPref: this.aspectRatioPref,
             // Perimeter parameters
             useCustomPerimeter: this.useCustomPerimeter,
-            perimeterWidth: this.perimeterWidth,
-            perimeterHeight: this.perimeterHeight,
+            perimeterWidthInches: this.perimeterWidthInches,
+            perimeterHeightInches: this.perimeterHeightInches,
             // Wall generation parameters
             wallAlgorithm: this.wallAlgorithm,
             fabricationType: this.fabricationType,
@@ -789,8 +794,8 @@ class Solution {
         const layoutConfig = {
             aspectRatioPref: solutionData.aspectRatioPref || 0,
             useCustomPerimeter: solutionData.useCustomPerimeter || false,
-            perimeterWidth: solutionData.perimeterWidth || 0,
-            perimeterHeight: solutionData.perimeterHeight || 0
+            perimeterWidthInches: solutionData.perimeterWidthInches || 0,
+            perimeterHeightInches: solutionData.perimeterHeightInches || 0
         };
 
         // Prepare wall generation parameters

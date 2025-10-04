@@ -14,8 +14,8 @@ const appState = {
         // Layout preferences (user-selectable in UI)
         aspectRatioPref: 0,           // -1=tall, 0=square, 1=wide
         useCustomPerimeter: false,
-        perimeterWidth: 20,
-        perimeterHeight: 20,
+        perimeterWidthInches: 20,
+        perimeterHeightInches: 20,
 
         // Fabrication type (user-selectable in Design UI)
         fabricationType: 'boards',     // 'boards', 'cubbies', 'bent'
@@ -167,15 +167,18 @@ const appState = {
             console.warn('[appState] setMinWallLength called with invalid value:', length, 'from source:', source);
             return;
         }
-        
-        if (this.generationConfig.minWallLength !== length) {
+
+        // Normalize to numeric value for consistency (converts "1" or 1 to 1.0)
+        const normalizedLength = parseFloat(length);
+
+        if (this.generationConfig.minWallLength !== normalizedLength) {
             const oldLength = this.generationConfig.minWallLength;
-            this.generationConfig.minWallLength = length;
+            this.generationConfig.minWallLength = normalizedLength;
 
             // Emit event for UI updates
             if (typeof appEvents !== 'undefined') {
                 appEvents.emit('minWallLengthChanged', {
-                    minWallLength: length,
+                    minWallLength: normalizedLength,
                     previousLength: oldLength,
                     source
                 });

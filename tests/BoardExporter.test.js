@@ -16,6 +16,7 @@ const appState = require('../js/core/appState');
 // Make minimal globals available (BoardExporter.js expects these)
 global.Board = Board;
 global.appState = appState;
+global.MathUtils = MathUtils;
 
 describe('BoardExporter', () => {
     let mockCellular;
@@ -34,12 +35,12 @@ describe('BoardExporter', () => {
 
         // Real config values for predictable testing
         testConfig = {
-            caseDepth: 3,
-            sheetThickness: 0.25,
-            sheetWidth: 30,
-            sheetHeight: 24,
+            caseDepthIn: 3,
+            sheetThicknessIn: 0.25,
+            sheetWidthIn: 30,
+            sheetHeightIn: 24,
             numSheets: 1,
-            kerf: 0.1,
+            kerfIn: 0.1,
             numPinSlots: 2
         };
 
@@ -60,8 +61,8 @@ describe('BoardExporter', () => {
             expect(exportInstance.materialType).toBe('plywood-laser');
             expect(exportInstance.materialConfig).toBe(MATERIAL_CONFIGS['plywood-laser']);
             expect(exportInstance.cellular).toBe(mockCellular);
-            expect(exportInstance.caseDepth).toBe(testConfig.caseDepth);
-            expect(exportInstance.sheetThickness).toBe(testConfig.sheetThickness);
+            expect(exportInstance.caseDepthIn).toBe(testConfig.caseDepthIn);
+            expect(exportInstance.sheetThicknessIn).toBe(testConfig.sheetThicknessIn);
         });
 
         test('should accept specified material type', () => {
@@ -104,18 +105,39 @@ describe('BoardExporter', () => {
             expect(mockCellular.getCellRenderLines).toHaveBeenCalled();
             expect(exportInstance.boards.length).toBe(3); // Based on our 3 mock lines
             expect(exportInstance.boards[0]).toBeInstanceOf(Board);
-            
+
             // Each board should have proper thickness from config
             exportInstance.boards.forEach(board => {
-                expect(board.thickness).toBe(testConfig.sheetThickness);
+                expect(board.thickness).toBe(testConfig.sheetThicknessIn);
             });
+        });
+
+        test('should create boards with inch-based coordinates and lengths', () => {
+            // 1. Setup
+            const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
+
+            // 2. Execute
+            exportInstance.makeBoards();
+
+            // 3. Assert - Board coordinates and lengths should be in inches
+            const firstBoard = exportInstance.boards[0];
+
+            // With default minWallLength=1.0, grid units convert 1:1 to inches
+            // Mock lines span 2 grid units = 2 inches base
+            // Board.getLength() adds thickness: 2 + 0.25 = 2.25 inches
+            const expectedLength = 2 + testConfig.sheetThicknessIn; // 2.25 inches
+            expect(firstBoard.getLength()).toBe(expectedLength);
+
+            // Verify coordinates are in inches (not grid units)
+            expect(firstBoard.coords.start.x).toBeCloseTo(0, 5);
+            expect(firstBoard.coords.start.y).toBeCloseTo(0, 5);
         });
 
         test('should sort boards by length in descending order', () => {
             // 1. Setup
             const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
 
-            // 2. Execute  
+            // 2. Execute
             exportInstance.makeBoards();
 
             // 3. Assert - Boards should be sorted longest to shortest
@@ -133,7 +155,7 @@ describe('BoardExporter', () => {
             const exportInstance = new BoardExporter(mockCellular, testConfig, testSpacing);
             const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             exportInstance.boards = [testBoard];
-            
+
             // Spy on the material config method
             const assignSpy = jest.spyOn(exportInstance.materialConfig, 'assignBoardEnds');
 
@@ -143,7 +165,7 @@ describe('BoardExporter', () => {
             // 3. Assert - Should call material config for each board
             expect(assignSpy).toHaveBeenCalledWith(testBoard);
             expect(assignSpy).toHaveBeenCalledTimes(1);
-            
+
             // Cleanup
             assignSpy.mockRestore();
         });
@@ -156,7 +178,7 @@ describe('BoardExporter', () => {
             const testBoard = new Board(1, { x: 0, y: 0 }, { x: 5, y: 0 }, 'x', 0.25);
             const boardStartX = 5;
             const boardStartY = 10;
-            
+
             // Spy on material config methods
             const cutsSpy = jest.spyOn(exportInstance.materialConfig, 'generateJointCuts');
             const etchesSpy = jest.spyOn(exportInstance.materialConfig, 'generateBoardEtches');
@@ -168,8 +190,9 @@ describe('BoardExporter', () => {
             expect(cutsSpy).toHaveBeenCalledWith(
                 testBoard,
                 expect.objectContaining({
-                    caseDepth: testConfig.caseDepth,
-                    sheetThickness: testConfig.sheetThickness,
+                    caseDepthIn: testConfig.caseDepthIn,
+                    sheetThicknessIn: testConfig.sheetThicknessIn,
+                    kerfIn: testConfig.kerfIn,
                     numPinSlots: testConfig.numPinSlots
                 }),
                 boardStartX,
@@ -180,15 +203,16 @@ describe('BoardExporter', () => {
             expect(etchesSpy).toHaveBeenCalledWith(
                 testBoard,
                 expect.objectContaining({
-                    caseDepth: testConfig.caseDepth,
-                    sheetThickness: testConfig.sheetThickness,
+                    caseDepthIn: testConfig.caseDepthIn,
+                    sheetThicknessIn: testConfig.sheetThicknessIn,
+                    kerfIn: testConfig.kerfIn,
                     numPinSlots: testConfig.numPinSlots
                 }),
                 boardStartX,
                 boardStartY,
                 exportInstance.etchList
             );
-            
+
             // Cleanup
             cutsSpy.mockRestore();
             etchesSpy.mockRestore();
@@ -206,10 +230,11 @@ describe('BoardExporter', () => {
             // 3. Assert - Should create sheets array with calculated rows
             expect(exportInstance.sheets).toHaveLength(testConfig.numSheets);
             expect(Array.isArray(exportInstance.sheets[0])).toBe(true);
-            expect(exportInstance.totalHeight).toBe(testConfig.sheetHeight * testConfig.numSheets);
-            
-            // Row calculation should be based on case depth and spacing
-            const expectedRows = Math.floor(testConfig.sheetHeight / (testConfig.caseDepth + (testSpacing.buffer * 1.25)));
+            expect(exportInstance.totalHeight).toBe(testConfig.sheetHeightIn * testConfig.numSheets);
+
+            // Row calculation uses gapIn (0.5 inches) for spacing
+            const gapIn = 0.5; // Default gap from BoardExporter
+            const expectedRows = Math.floor(testConfig.sheetHeightIn / (testConfig.caseDepthIn + (gapIn * 1.25)));
             expect(exportInstance.sheets[0].length).toBe(expectedRows);
         });
     });

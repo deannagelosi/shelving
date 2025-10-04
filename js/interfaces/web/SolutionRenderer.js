@@ -79,8 +79,8 @@ class SolutionRenderer {
                 fill(colors.bkrdColor);
 
                 // If in custom perimeter mode, check if the square is out of bounds
-                if (solution && solution.useCustomPerimeter && solution.goalPerimeter) {
-                    const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = solution.goalPerimeter;
+                if (solution && solution.useCustomPerimeter && solution.goalPerimeterGrid) {
+                    const { x: goalX, y: goalY, width: goalWidth, height: goalHeight } = solution.goalPerimeterGrid;
                     if (x < goalX || x >= goalX + goalWidth || y < goalY || y >= goalY + goalHeight) {
                         fill(colors.darkenedBkrdColor);
                     }
@@ -175,7 +175,7 @@ class SolutionRenderer {
 
         for (let i = 0; i < shapes.length; i++) {
             const shape = shapes[i];
-            
+
             // Skip shapes without buffer data
             if (!shape.data.highResBufferShape || shape.data.highResBufferShape.length === 0) {
                 continue;
@@ -190,7 +190,7 @@ class SolutionRenderer {
             for (let y = 0; y < shape.data.highResBufferShape.length; y++) {
                 for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
                     const square = shape.data.highResBufferShape[y][x];
-                    
+
                     // Only render original shape squares (not buffer expansion)
                     if (square.occupied && square.isOriginalShape) {
                         // Use direct buffer coordinates (no alignment needed)
@@ -325,9 +325,9 @@ class SolutionRenderer {
     }
 
     renderPerimeterBox(solution, config) {
-        if (!solution.goalPerimeter) return;
+        if (!solution.goalPerimeterGrid) return;
 
-        const { x, y, width, height } = solution.goalPerimeter;
+        const { x, y, width, height } = solution.goalPerimeterGrid;
         const { squareSize, buffer, xPadding, yPadding } = config;
 
         // Calculate the coordinates and dimensions on the canvas

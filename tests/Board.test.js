@@ -40,7 +40,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric length (8) + thickness (0.25) = 8.25
+            // 3. Assert - base length (8) + thickness (0.25) = 8.25
             expect(length).toBe(8.25);
         });
 
@@ -55,7 +55,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric length (6) + thickness (0.25) = 6.25
+            // 3. Assert - base length (6) + thickness (0.25) = 6.25
             expect(length).toBe(6.25);
         });
 
@@ -73,7 +73,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric (5) + thickness (0.25) - start short (0.25) - end short (0.25) = 4.75
+            // 3. Assert - base (5) + thickness (0.25) - start short (0.25) - end short (0.25) = 4.75
             expect(length).toBe(4.75);
         });
 
@@ -91,7 +91,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric (10) + thickness (0.25) - start short (0.25) = 10
+            // 3. Assert - base (10) + thickness (0.25) - start short (0.25) = 10
             expect(length).toBe(10);
         });
 
@@ -108,7 +108,7 @@ describe('Board', () => {
 
             // 3. Assert - safety check returns 0 for invalid coordinates
             expect(length).toBe(0);
-            // Two error messages: one from getGeometricLength(), one from safety check
+            // Two error messages: one from getBaseLength(), one from safety check
             expect(consoleSpy).toHaveBeenCalledWith("Board length error. start: ", board.coords.start, "end: ", board.coords.end);
             expect(consoleSpy).toHaveBeenCalledWith("Board 1 calculated invalid length: 0");
 
@@ -228,31 +228,31 @@ describe('Board', () => {
         });
     });
 
-    describe('getGeometricLength', () => {
-        test('should return pure geometric distance for horizontal boards', () => {
+    describe('getBaseLength', () => {
+        test('should return base distance for horizontal boards', () => {
             // 1. Setup
             const firstCoord = { x: 2, y: 5 };
             const secondCoord = { x: 10, y: 5 };
             const board = new Board(1, firstCoord, secondCoord, 'x', 0.25);
 
             // 2. Execute
-            const geometricLength = board.getGeometricLength();
+            const baseLength = board.getBaseLength();
 
-            // 3. Assert - pure distance without thickness or poi adjustments
-            expect(geometricLength).toBe(8); // 10 - 2 = 8
+            // 3. Assert - base distance without thickness or poi adjustments (as if thickness was zero)
+            expect(baseLength).toBe(8); // 10 - 2 = 8
         });
 
-        test('should return pure geometric distance for vertical boards', () => {
+        test('should return base distance for vertical boards', () => {
             // 1. Setup
             const firstCoord = { x: 3, y: 1 };
             const secondCoord = { x: 3, y: 7 };
             const board = new Board(1, firstCoord, secondCoord, 'y', 0.25);
 
             // 2. Execute
-            const geometricLength = board.getGeometricLength();
+            const baseLength = board.getBaseLength();
 
-            // 3. Assert - pure distance without thickness or poi adjustments
-            expect(geometricLength).toBe(6); // 7 - 1 = 6
+            // 3. Assert - base distance without thickness or poi adjustments (as if thickness was zero)
+            expect(baseLength).toBe(6); // 7 - 1 = 6
         });
     });
 
@@ -266,7 +266,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric (5) + thickness (0.25), no adjustments for pin/slot
+            // 3. Assert - base (5) + thickness (0.25), no adjustments for pin/slot
             expect(length).toBe(5.25);
         });
 
@@ -279,7 +279,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric (8) + thickness (0.375) - short end (0.375) = 8
+            // 3. Assert - base (8) + thickness (0.375) - short end (0.375) = 8
             expect(length).toBe(8);
         });
 
@@ -292,7 +292,7 @@ describe('Board', () => {
             // 2. Execute
             const length = board.getLength();
 
-            // 3. Assert - geometric (5) + thickness (0.375) - start short (0.375) - end short (0.375) = 4.625
+            // 3. Assert - base (5) + thickness (0.375) - start short (0.375) - end short (0.375) = 4.625
             expect(length).toBe(4.625);
         });
     });

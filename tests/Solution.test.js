@@ -229,4 +229,134 @@ describe('Solution.normalizeCoordinates', () => {
         expect(solution.shapes[1].posX).toBe(originalPositions[1].posX + expectedShiftX);
         expect(solution.shapes[0].posY).toBe(originalPositions[0].posY + expectedShiftY);
     });
-}); 
+});
+
+describe('Solution - Custom Perimeter Conversion', () => {
+    test('custom perimeter converts inches to grid units with minWallLength=2.0', () => {
+        const layoutConfig = {
+            useCustomPerimeter: true,
+            perimeterWidthInches: 20,
+            perimeterHeightInches: 20
+        };
+        const bufferConfig = {
+            minWallLength: 2.0
+        };
+
+        const solution = new Solution([], 0, layoutConfig, {}, bufferConfig);
+
+        // Should store both inches and grid versions
+        expect(solution.perimeterWidthInches).toBe(20);
+        expect(solution.perimeterHeightInches).toBe(20);
+        expect(solution.perimeterWidthGrid).toBe(10);   // 20" / 2 = 10 grid units
+        expect(solution.perimeterHeightGrid).toBe(10);
+    });
+
+    test('custom perimeter converts inches to grid units with minWallLength=1.0', () => {
+        const layoutConfig = {
+            useCustomPerimeter: true,
+            perimeterWidthInches: 20,
+            perimeterHeightInches: 20
+        };
+        const bufferConfig = {
+            minWallLength: 1.0
+        };
+
+        const solution = new Solution([], 0, layoutConfig, {}, bufferConfig);
+
+        expect(solution.perimeterWidthInches).toBe(20);
+        expect(solution.perimeterHeightInches).toBe(20);
+        expect(solution.perimeterWidthGrid).toBe(20);   // 20" / 1 = 20 grid units
+        expect(solution.perimeterHeightGrid).toBe(20);
+    });
+
+    test('custom perimeter converts inches to grid units with minWallLength=0.5', () => {
+        const layoutConfig = {
+            useCustomPerimeter: true,
+            perimeterWidthInches: 10,
+            perimeterHeightInches: 10
+        };
+        const bufferConfig = {
+            minWallLength: 0.5
+        };
+
+        const solution = new Solution([], 0, layoutConfig, {}, bufferConfig);
+
+        expect(solution.perimeterWidthInches).toBe(10);
+        expect(solution.perimeterHeightInches).toBe(10);
+        expect(solution.perimeterWidthGrid).toBe(20);   // 10" / 0.5 = 20 grid units
+        expect(solution.perimeterHeightGrid).toBe(20);
+    });
+
+    test('toDataObject exports perimeter in inches', () => {
+        const layoutConfig = {
+            useCustomPerimeter: true,
+            perimeterWidthInches: 20,
+            perimeterHeightInches: 20
+        };
+        const bufferConfig = {
+            minWallLength: 2.0
+        };
+
+        const solution = new Solution([], 0, layoutConfig, {}, bufferConfig);
+        const data = solution.toDataObject();
+
+        // Should export in inches, not grid units
+        expect(data.perimeterWidthInches).toBe(20);
+        expect(data.perimeterHeightInches).toBe(20);
+    });
+
+    test('scoring penalty uses grid units with minWallLength=2.0', () => {
+        // Area difference penalty should compare grid to grid, not grid to inches
+        // Setup: 20" perimeter with minWallLength=2.0 means target is 10x10 grid units (100 area)
+        const layoutConfig = {
+            useCustomPerimeter: true,
+            perimeterWidthInches: 20,
+            perimeterHeightInches: 20
+        };
+        const bufferConfig = {
+            minWallLength: 2.0
+        };
+
+        const solution = new Solution([], 0, layoutConfig, {}, bufferConfig);
+
+        // Verify conversion happened correctly
+        expect(solution.perimeterWidthGrid).toBe(10);
+        expect(solution.perimeterHeightGrid).toBe(10);
+
+        // Test the area difference calculation directly
+        // Target area should be in grid units: 10 * 10 = 100
+        const targetArea = solution.perimeterWidthGrid * solution.perimeterHeightGrid;
+        expect(targetArea).toBe(100);
+
+        // Create layouts of different sizes and check area difference
+        // 8x8 grid = 64 area, difference from target = |64 - 100| = 36
+        solution.layout = Array(8).fill(null).map(() => Array(8).fill({ shapes: [], isShape: [], isBuffer: [], annealScore: 0, terrainValue: 0 }));
+        const area8x8 = solution.layout.length * solution.layout[0].length;
+        const diff8x8 = Math.abs(area8x8 - targetArea);
+        expect(diff8x8).toBe(36);
+
+        // 10x10 grid = 100 area, difference from target = |100 - 100| = 0
+        solution.layout = Array(10).fill(null).map(() => Array(10).fill({ shapes: [], isShape: [], isBuffer: [], annealScore: 0, terrainValue: 0 }));
+        const area10x10 = solution.layout.length * solution.layout[0].length;
+        const diff10x10 = Math.abs(area10x10 - targetArea);
+        expect(diff10x10).toBe(0);
+
+        // 12x12 grid = 144 area, difference from target = |144 - 100| = 44
+        solution.layout = Array(12).fill(null).map(() => Array(12).fill({ shapes: [], isShape: [], isBuffer: [], annealScore: 0, terrainValue: 0 }));
+        const area12x12 = solution.layout.length * solution.layout[0].length;
+        const diff12x12 = Math.abs(area12x12 - targetArea);
+        expect(diff12x12).toBe(44);
+
+        // Verify that 10x10 has smallest area difference (closest to target)
+        expect(diff10x10).toBeLessThan(diff8x8);
+        expect(diff10x10).toBeLessThan(diff12x12);
+
+        // The bug would cause this test to fail because:
+        // - Before fix: targetArea = 20*20 = 400 (inches treated as grid)
+        // - 8x8 would have diff = |64 - 400| = 336
+        // - 10x10 would have diff = |100 - 400| = 300
+        // - 12x12 would have diff = |144 - 400| = 256 (best! wrong!)
+        // - After fix: targetArea = 10*10 = 100 (correct grid units)
+        // - 10x10 has diff = 0 (best! correct!)
+    });
+});

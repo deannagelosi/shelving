@@ -10,6 +10,7 @@ const path = require('path');
 global.Shape = Shape;
 global.Solution = Solution;
 global.RenderConfig = RenderConfig;
+global.MathUtils = MathUtils;
 
 describe('Data Loading & Export Tests', () => {
     let sampleShapesData;

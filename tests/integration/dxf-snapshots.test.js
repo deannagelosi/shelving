@@ -1,7 +1,9 @@
 // tests/dxf-snapshots.test.js
 
 const MATERIAL_CONFIGS = require('../../js/core/material-configs');
+const MathUtils = require('../../js/core/MathUtils');
 global.MATERIAL_CONFIGS = MATERIAL_CONFIGS;
+global.MathUtils = MathUtils;
 
 // Create minimal mocks for appState dependencies
 global.ScreenState = { INPUT: 'input' };
@@ -103,18 +105,18 @@ describe('DXF Snapshot Tests', () => {
                 yPadding: 1
             };
             const config = {
-                caseDepth: 3,
-                sheetThickness: 0.23,
-                sheetWidth: 30,
-                sheetHeight: 28,
+                caseDepthIn: 3,
+                sheetThicknessIn: 0.23,
+                sheetWidthIn: 30,
+                sheetHeightIn: 28,
                 numSheets: 1,
-                kerf: 0.01,
+                kerfIn: 0.01,
                 numPinSlots: 2,
                 fontOffset: 0.1
             };
 
             // 2. Execute
-            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
+            const exportInstance = new BoardExporter(mockCellular, { ...config, materialType: 'plywood-laser' }, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -142,18 +144,18 @@ describe('DXF Snapshot Tests', () => {
                 yPadding: 1
             };
             const config = {
-                caseDepth: 3,
-                sheetThickness: 0.23,
-                sheetWidth: 30,
-                sheetHeight: 28,
+                caseDepthIn: 3,
+                sheetThicknessIn: 0.23,
+                sheetWidthIn: 30,
+                sheetHeightIn: 28,
                 numSheets: 1,
-                kerf: 0.01,
+                kerfIn: 0.01,
                 numPinSlots: 1,
                 fontOffset: 0.1
             };
 
             // 2. Execute
-            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
+            const exportInstance = new BoardExporter(mockCellular, { ...config, materialType: 'plywood-laser' }, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -179,18 +181,18 @@ describe('DXF Snapshot Tests', () => {
                 yPadding: 1
             };
             const config = {
-                caseDepth: 4, // Different case depth
-                sheetThickness: 0.23,
-                sheetWidth: 30,
-                sheetHeight: 28,
+                caseDepthIn: 4, // Different case depth
+                sheetThicknessIn: 0.23,
+                sheetWidthIn: 30,
+                sheetHeightIn: 28,
                 numSheets: 1,
-                kerf: 0.01,
+                kerfIn: 0.01,
                 numPinSlots: 2,
                 fontOffset: 0.1
             };
 
             // 2. Execute
-            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
+            const exportInstance = new BoardExporter(mockCellular, { ...config, materialType: 'plywood-laser' }, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -217,17 +219,17 @@ describe('DXF Snapshot Tests', () => {
                 yPadding: 1
             };
             const config = {
-                caseDepth: 3,
-                sheetThickness: 0.125, // Thinner acrylic
-                sheetWidth: 30,
-                sheetHeight: 28,
+                caseDepthIn: 3,
+                sheetThicknessIn: 0.125, // Thinner acrylic
+                sheetWidthIn: 30,
+                sheetHeightIn: 28,
                 numSheets: 1,
-                kerf: 0.005, // Smaller kerf for acrylic
+                kerfIn: 0.005, // Smaller kerf for acrylic
                 fontOffset: 0.1
             };
 
             // 2. Execute
-            const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'acrylic-laser'}, spacing);
+            const exportInstance = new BoardExporter(mockCellular, { ...config, materialType: 'acrylic-laser' }, spacing);
             exportInstance.makeBoards();
             exportInstance.assignBoardEndTypes();
             exportInstance.detectJoints();
@@ -254,12 +256,12 @@ describe('DXF Snapshot Tests', () => {
                 yPadding: 1
             };
             const config = {
-                caseDepth: 3,
-                sheetThickness: 0.23,
-                sheetWidth: 30,
-                sheetHeight: 28,
+                caseDepthIn: 3,
+                sheetThicknessIn: 0.23,
+                sheetWidthIn: 30,
+                sheetHeightIn: 28,
                 numSheets: 1,
-                kerf: 0.01,
+                kerfIn: 0.01,
                 numPinSlots: 2,
                 fontOffset: 0.1
             };
@@ -268,7 +270,7 @@ describe('DXF Snapshot Tests', () => {
             const outputs = [];
             for (let i = 0; i < 3; i++) {
                 mockDXFWriter.reset();
-                const exportInstance = new BoardExporter(mockCellular, {...config, materialType: 'plywood-laser'}, spacing);
+                const exportInstance = new BoardExporter(mockCellular, { ...config, materialType: 'plywood-laser' }, spacing);
                 exportInstance.makeBoards();
                 exportInstance.assignBoardEndTypes();
                 exportInstance.detectJoints();
