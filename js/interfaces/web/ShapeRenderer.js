@@ -23,9 +23,9 @@ class ShapeRenderer {
 
         // Calculate dynamic grid configuration based on shape size and min wall length
         const gridConfig = RenderConfig.calculatePreviewGridSize(
-            shape, 
-            config.minWallLength, 
-            canvas.width, 
+            shape,
+            config.minWallLength,
+            canvas.width,
             canvas.height
         );
 
@@ -111,7 +111,7 @@ class ShapeRenderer {
         for (let y = 0; y < shape.data.highResBufferShape.length; y++) {
             for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
                 const square = shape.data.highResBufferShape[y][x];
-                
+
                 // Only render original shape squares (not buffer expansion)
                 if (square.occupied && square.isOriginalShape) {
                     // Use direct buffer coordinates (no alignment needed)
@@ -275,6 +275,51 @@ class ShapeRenderer {
     }
 
 
+    // converts grid coordinates (x, y) for a shape pixel to canvas screen coordinates
+    // returns {x, y, width, height} for the pixel's screen rectangle
+    calculatePixelScreenPosition(shape, pixelX, pixelY, canvas, config) {
+        const minWallLength = (typeof appState !== 'undefined' && appState.generationConfig)
+            ? appState.generationConfig.minWallLength || 1.0
+            : 1.0;
+        const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
+        const smallSquare = config.squareSize / scaleFactor;
+
+        const rectX = (shape.posX * config.squareSize) + (pixelX * smallSquare) + config.buffer + config.xPadding;
+        const yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
+        const yStart = (shape.posY * config.squareSize);
+        const yRect = (pixelY * smallSquare);
+        const rectY = yOffset - yStart - yRect;
+
+        return { x: rectX, y: rectY, width: smallSquare, height: smallSquare };
+    }
+
+    // checks if a screen coordinate (mouseX, mouseY) hits a shape's high-res buffer area
+    // returns true if the click is on any occupied pixel (includes voids and buffer area)
+    isPointOnShape(shape, mouseX, mouseY, canvas, config) {
+        if (!shape.data.highResBufferShape) return false;
+
+        for (let y = 0; y < shape.data.highResBufferShape.length; y++) {
+            for (let x = 0; x < shape.data.highResBufferShape[y].length; x++) {
+                const square = shape.data.highResBufferShape[y][x];
+
+                // check any occupied pixel in the high-res buffer (original shape + buffer + filled voids)
+                if (square.occupied) {
+                    const pixelRect = this.calculatePixelScreenPosition(shape, x, y, canvas, config);
+
+                    // check if mouse is within this pixel's rectangle
+                    if (mouseX >= pixelRect.x &&
+                        mouseX <= pixelRect.x + pixelRect.width &&
+                        mouseY >= pixelRect.y &&
+                        mouseY <= pixelRect.y + pixelRect.height) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     renderShapeSelection(shapes, canvas, config, selectedShapeId) {
         // Render blue tint overlay for selected shape
         if (selectedShapeId === null) {
@@ -292,29 +337,17 @@ class ShapeRenderer {
         noStroke();
         fill(colors.selectionColor);
 
-        let startX = selectedShape.posX;
-        let startY = selectedShape.posY;
-        // Get the correct scale factor based on app state or default
-        let minWallLength = (typeof appState !== 'undefined' && appState.generationConfig) ? appState.generationConfig.minWallLength || 1.0 : 1.0;
-        let scaleFactor = RenderConfig.getScaleFactor(minWallLength);
-        let smallSquare = config.squareSize / scaleFactor;
-
         // Draw blue overlay for each original shape square in the buffer array
         if (!selectedShape.data.highResBufferShape) return;
-        
+
         for (let y = 0; y < selectedShape.data.highResBufferShape.length; y++) {
             for (let x = 0; x < selectedShape.data.highResBufferShape[y].length; x++) {
                 const square = selectedShape.data.highResBufferShape[y][x];
-                
+
                 // Only draw overlay on original shape squares (not buffer expansion)
                 if (square.occupied && square.isOriginalShape) {
-                    // Use direct buffer coordinates (same calculation as SolutionRenderer)
-                    let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
-                    let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
-                    let yStart = (startY * config.squareSize);
-                    let yRect = (y * smallSquare);
-                    let rectY = yOffset - yStart - yRect;
-                    rect(rectX, rectY, smallSquare, smallSquare);
+                    const pixelRect = this.calculatePixelScreenPosition(selectedShape, x, y, canvas, config);
+                    rect(pixelRect.x, pixelRect.y, pixelRect.width, pixelRect.height);
                 }
             }
         }

@@ -430,36 +430,12 @@ class DesignUI {
         // Get the same config values used for rendering
         const config = this.solutionRenderer.calculateLayoutProperties(solution, canvasWidth, canvasHeight);
 
-        // Check each shape to see if the click is within its bounds
+        // Check each shape using shape and buffer click detection
         for (let i = 0; i < solution.shapes.length; i++) {
             const shape = solution.shapes[i];
-            const startX = shape.posX;
-            const startY = shape.posY;
-            const smallSquare = config.squareSize; // use full low-res square size for bufferShape
 
-            // Calculate the bounding box of the shape footprint (bufferShape)
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-
-            for (let y = 0; y < shape.data.bufferShape.length; y++) {
-                for (let x = 0; x < shape.data.bufferShape[y].length; x++) {
-                    if (shape.data.bufferShape[y][x]) {
-                        // Calculate canvas position for this buffer pixel (low-res grid square)
-                        let rectX = (startX * config.squareSize) + (x * smallSquare) + config.buffer + config.xPadding;
-                        let yOffset = ((canvas.height - config.yPadding) - smallSquare - config.buffer);
-                        let yStart = (startY * config.squareSize);
-                        let yRect = (y * smallSquare);
-                        let rectY = yOffset - yStart - yRect;
-
-                        minX = Math.min(minX, rectX);
-                        maxX = Math.max(maxX, rectX + smallSquare);
-                        minY = Math.min(minY, rectY);
-                        maxY = Math.max(maxY, rectY + smallSquare);
-                    }
-                }
-            }
-
-            // Check if click is within this shape's bounding box
-            if (mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY) {
+            // use ShapeRenderer's pixel hit detection
+            if (this.solutionRenderer.shapeRenderer.isPointOnShape(shape, mouseX, mouseY, canvas, config)) {
                 // Shape clicked - update selection
                 appState.selectedShapeId = shape.id;
                 this.displayResult();
