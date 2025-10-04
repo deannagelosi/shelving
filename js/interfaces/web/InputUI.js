@@ -6,8 +6,12 @@ class InputUI {
         // dom elements
         this.html = {};
         this.shapeTitleElements = [];
-        // flags
-        this.eraseMode = "first";
+
+        //== brush settings
+        this.brushSize = 1; // size in grid squares (1 = 1x1, 2 = 2x2, etc)
+        this.drawMode = true; // true = draw/fill, false = erase
+        this.mouseGridX = -1; // current mouse position in grid coordinates
+        this.mouseGridY = -1;
 
         //== setup
         // image mask brightness range
@@ -30,11 +34,6 @@ class InputUI {
         this.squareSize;
         this.inputGridHeight;
         this.inputGridWidth;
-        this.sidePadding;
-
-        //== mouse click delay (debounce)
-        this.lastClickTime = 0;
-        this.clickDelay = 200; // milliseconds
 
         //== initialize UI elements
         this.initHeaderUI();
@@ -93,7 +92,7 @@ class InputUI {
             .parent(this.html.imageControls);
 
         // label
-        this.html.gridLabel = createSpan('Grid size (in): ')
+        this.html.gridLabel = createSpan('Image Height (in): ')
             .parent(gridSizeDiv);
         // grid size input
         this.html.gridSizeInput = createInput(String(this.maxInputInches), 'number')
@@ -458,6 +457,39 @@ class InputUI {
                 }
             }
         }
+
+        // Draw brush preview overlay
+        if (this.mouseGridX >= 0 && this.mouseGridY >= 0) {
+            this.drawBrushPreview(xOffset, yOffset);
+        }
+    }
+
+    drawBrushPreview(xOffset, yOffset) {
+        // Draw brush preview at current mouse position
+        const bounds = this.getBrushBounds(this.mouseGridX, this.mouseGridY);
+
+        // Convert to screen coordinates
+        const brushX = xOffset + (bounds.minX * this.squareSize);
+        const brushY = yOffset - (bounds.maxY * this.squareSize);
+        const brushWidth = this.brushSize * this.squareSize;
+        const brushHeight = this.brushSize * this.squareSize;
+
+        // Get colors from config
+        const brushColors = RenderConfig.getBrushColors();
+        const colors = this.drawMode ? brushColors.draw : brushColors.erase;
+
+        // Draw single rectangle for entire brush area
+        fill(colors.fill);
+        stroke(colors.stroke);
+        strokeWeight(2);
+        rect(brushX, brushY, brushWidth, brushHeight);
+
+        // Draw brush info text
+        fill(0);
+        noStroke();
+        textSize(12);
+        textAlign(LEFT, TOP);
+        text(`Brush: ${this.brushSize}x${this.brushSize} | Mode: ${this.drawMode ? 'Draw (D)' : 'Erase (E)'} | Size: [ ]`, 10, 10);
     }
 
     displayShapeTitles() {
@@ -518,7 +550,18 @@ class InputUI {
         // load a saved shape into the input grid for editing
         const shape = appState.shapes[index];
 
-        // clear current state (preserve grid size but clear content)
+        // calculate grid dimensions from shape aspect ratio (same as image import)
+        const shapeGrid = shape.data.highResShape;
+        const shapeHeight = shapeGrid.length;
+        const shapeWidth = shapeGrid[0].length;
+        const shapeAspectRatio = shapeWidth / shapeHeight;
+        const estimatedCols = Math.ceil(this.inputRows * shapeAspectRatio);
+        this.inputCols = estimatedCols;
+
+        // recalculate grid sizing to fit canvas
+        this.calcGridSizing();
+
+        // clear current state with new grid dimensions
         this.resetInputGrid();
         this.imgData = {};
 
@@ -577,33 +620,91 @@ class InputUI {
     }
 
     //== mouse event handler
-    selectInputSquare(mouseX, mouseY, isDragging = false) {
-        // check if mouse click is within input grid
-        // factor in padding on all sides
-        let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
-        let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
-        if (xValid && yValid) {
-            let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
-            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.squareSize); // row
+    screenToGrid(mouseX, mouseY) {
+        // Convert screen coordinates to grid coordinates
+        // Returns {x, y} or null if out of bounds
+        const xValid = mouseX >= this.xSidePadding && mouseX <= this.inputGridWidth + this.xSidePadding;
+        const yValid = mouseY >= this.ySidePadding && mouseY <= this.inputGridHeight + this.ySidePadding;
 
-            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                let currentTime = millis();
-                if (isDragging || (currentTime - this.lastClickTime > this.clickDelay)) {
-                    if (isDragging) {
-                        // check if need to initialize erase mode
-                        if (this.eraseMode === "first") {
-                            this.eraseMode = !this.inputGrid[gridY][gridX];
-                        }
-                        // set the square based on the current erase mode
-                        this.inputGrid[gridY][gridX] = !this.eraseMode;
-                    } else {
-                        // used when clicking mouse
-                        this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
-                        this.lastClickTime = currentTime;
-                    }
-                    this.drawInputGrid();
+        if (!xValid || !yValid) {
+            return null;
+        }
+
+        const gridX = Math.floor((mouseX - this.xSidePadding) / this.squareSize);
+        const gridY = Math.floor((this.inputGridHeight + this.ySidePadding - mouseY) / this.squareSize);
+
+        // Bounds check
+        if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+            return { x: gridX, y: gridY };
+        }
+
+        return null;
+    }
+
+    updateMouseGridPosition(mouseX, mouseY) {
+        // Update current mouse position in grid coordinates for brush preview
+        const gridPos = this.screenToGrid(mouseX, mouseY);
+        if (gridPos) {
+            this.mouseGridX = gridPos.x;
+            this.mouseGridY = gridPos.y;
+        } else {
+            this.mouseGridX = -1;
+            this.mouseGridY = -1;
+        }
+    }
+
+    getBrushBounds(centerX, centerY) {
+        // Calculate brush area bounds in grid coordinates
+        const offset = Math.floor(this.brushSize / 2);
+        return {
+            minX: centerX - offset,
+            maxX: centerX + (this.brushSize - offset - 1),
+            minY: centerY - (this.brushSize - offset - 1),
+            maxY: centerY + offset
+        };
+    }
+
+    applyBrush(centerX, centerY) {
+        // Apply brush centered on cursor (odd sizes) or offset up-left in screen space (even sizes)
+        const bounds = this.getBrushBounds(centerX, centerY);
+
+        for (let dy = bounds.minY; dy <= bounds.maxY; dy++) {
+            for (let dx = bounds.minX; dx <= bounds.maxX; dx++) {
+                // Check bounds
+                if (dx >= 0 && dx < this.inputCols && dy >= 0 && dy < this.inputRows) {
+                    this.inputGrid[dy][dx] = this.drawMode;
                 }
             }
+        }
+    }
+
+    paintAtPosition(mouseX, mouseY, isDragging = false) {
+        // Apply brush at the given screen position
+        const gridPos = this.screenToGrid(mouseX, mouseY);
+        if (gridPos) {
+            this.applyBrush(gridPos.x, gridPos.y);
+            this.drawInputGrid();
+        }
+    }
+
+    handleKeyPress(key) {
+        // Handle keyboard shortcuts for brush controls
+        if (key === '[') {
+            // Decrease brush size
+            this.brushSize = Math.max(1, this.brushSize - 1);
+            this.drawInputGrid();
+        } else if (key === ']') {
+            // Increase brush size
+            this.brushSize = Math.min(9, this.brushSize + 1);
+            this.drawInputGrid();
+        } else if (key === 'd' || key === 'D') {
+            // Draw mode
+            this.drawMode = true;
+            this.drawInputGrid();
+        } else if (key === 'e' || key === 'E') {
+            // Erase mode
+            this.drawMode = false;
+            this.drawInputGrid();
         }
     }
 

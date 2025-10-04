@@ -138,6 +138,9 @@ function keyPressed() {
         if (key === '~') {
             // toggle export button visibility
             inputUI.html.exportButton.toggleClass('hidden');
+        } else {
+            // Handle brush controls
+            inputUI.handleKeyPress(key);
         }
     }
     // Design screen key commands
@@ -187,7 +190,7 @@ function keyPressed() {
 
 function mousePressed() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.selectInputSquare(mouseX, mouseY);
+        inputUI.paintAtPosition(mouseX, mouseY);
     } else if (appState.currentScreen == ScreenState.DESIGN) {
         designUI.handleCanvasClick(mouseX, mouseY);
     }
@@ -195,13 +198,15 @@ function mousePressed() {
 
 function mouseDragged() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.selectInputSquare(mouseX, mouseY, true);
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.paintAtPosition(mouseX, mouseY, true);
     }
 }
 
-function mouseReleased() {
+function mouseMoved() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.eraseMode = "first";
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.drawInputGrid();
     }
 }
 
