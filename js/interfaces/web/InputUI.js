@@ -549,14 +549,11 @@ class InputUI {
     loadShape(index) {
         // load a saved shape into the input grid for editing
         const shape = appState.shapes[index];
-
-        // calculate grid dimensions from shape aspect ratio (same as image import)
         const shapeGrid = shape.data.highResShape;
-        const shapeHeight = shapeGrid.length;
-        const shapeWidth = shapeGrid[0].length;
-        const shapeAspectRatio = shapeWidth / shapeHeight;
-        const estimatedCols = Math.ceil(this.inputRows * shapeAspectRatio);
-        this.inputCols = estimatedCols;
+
+        // set grid to shape's actual dimensions (for preview display)
+        this.inputRows = shapeGrid.length;
+        this.inputCols = shapeGrid[0].length;
 
         // recalculate grid sizing to fit canvas
         this.calcGridSizing();
