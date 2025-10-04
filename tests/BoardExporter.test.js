@@ -3,6 +3,7 @@
 const Board = require('../js/core/Board');
 const BoardExporter = require('../js/core/BoardExporter');
 const MATERIAL_CONFIGS = require('../js/core/material-configs');
+const MathUtils = require('../js/core/MathUtils');
 
 // Create minimal mocks for appState dependencies
 global.ScreenState = { INPUT: 'input' };

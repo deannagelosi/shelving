@@ -70,7 +70,11 @@ class RenderConfig {
 
     static getScaleFactor(minWallLength = 1.0) {
         // Calculate scale factor based on min wall length
-        // Scale factor represents number of quarter-inch squares per grid square
+        // Scale factor represents number of quarter-inch (highres) squares per grid square
+        //
+        // IMPORTANT: This relates GRID units to HIGHRES units, NOT inches to highres
+        // For inches -> highres conversion, use MathUtils.inchesToHighres() (always factor of 4)
+        //
         // 0.25" = 1:1 ratio (1 quarter-inch per grid square, scale factor 1)
         // 0.5"  = 2:1 ratio (2 quarter-inch squares per grid square, scale factor 2)
         // 1.0"  = 4:1 ratio (4 quarter-inch squares per grid square, scale factor 4)

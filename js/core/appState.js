@@ -211,20 +211,6 @@ const appState = {
 
     clearShapePreview() {
         this.setShapePreview(null);
-    },
-
-    // Unit conversion methods
-    gridUnitsToInches(gridUnits, minWallLength = null) {
-        // Convert grid units to physical inches based on minimum wall length setting
-        // Each grid unit represents minWallLength inches
-        const wallLength = minWallLength || this.generationConfig.minWallLength || 1.0;
-        return gridUnits * wallLength;
-    },
-
-    inchesToGridUnits(inches, minWallLength = null) {
-        // Convert physical inches to grid units based on minimum wall length setting
-        const wallLength = minWallLength || this.generationConfig.minWallLength || 1.0;
-        return inches / wallLength;
     }
 };
 

@@ -4,9 +4,11 @@ const Solution = require('../js/core/Solution');
 const Shape = require('../js/core/Shape');
 const BendWall = require('../js/core/BendWall');
 const RenderConfig = require('../js/interfaces/web/RenderConfig');
+const MathUtils = require('../js/core/MathUtils');
 
-// Make RenderConfig available globally for Shape.js
+// Make required classes available globally for Shape.js
 global.RenderConfig = RenderConfig;
+global.MathUtils = MathUtils;
 const fs = require('fs');
 const path = require('path');
 

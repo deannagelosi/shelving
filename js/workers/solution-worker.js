@@ -512,6 +512,7 @@ function initializeBrowserWorker() {
     // Load dependencies
     importScripts(
         '../core/EventEmitter.js',
+        '../core/MathUtils.js',
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',

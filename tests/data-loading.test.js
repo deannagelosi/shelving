@@ -2,6 +2,7 @@ const { loadShapesFromFixture } = require('./fixtures/loader');
 const Shape = require('../js/core/Shape');
 const Solution = require('../js/core/Solution');
 const RenderConfig = require('../js/interfaces/web/RenderConfig');
+const MathUtils = require('../js/core/MathUtils');
 const fs = require('fs');
 const path = require('path');
 

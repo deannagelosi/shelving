@@ -1,9 +1,11 @@
 const { loadShapesFromFixture } = require('./fixtures/loader');
 const Shape = require('../js/core/Shape');
 const RenderConfig = require('../js/interfaces/web/RenderConfig');
+const MathUtils = require('../js/core/MathUtils');
 
-// Make RenderConfig available globally for Shape.js
+// Make required classes available globally for Shape.js
 global.RenderConfig = RenderConfig;
+global.MathUtils = MathUtils;
 
 // Load all shapes from the fixture file before tests run
 const allFixtureShapes = loadShapesFromFixture();

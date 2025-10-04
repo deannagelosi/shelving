@@ -32,21 +32,21 @@ class Shape {
     trimToBoundingBox(array) {
         // Works with both boolean[][] and object[][] arrays
         // Returns trimmed array with no empty rows/columns on edges
-        
+
         if (!array || array.length === 0) return array;
-        
+
         const height = array.length;
         const width = array[0].length;
-        
+
         let minY = height, maxY = -1;
         let minX = width, maxX = -1;
-        
+
         // Find bounds of all occupied cells
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const cell = array[y][x];
                 const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
-                
+
                 if (isOccupied) {
                     minY = Math.min(minY, y);
                     maxY = Math.max(maxY, y);
@@ -55,10 +55,10 @@ class Shape {
                 }
             }
         }
-        
+
         // If no occupied cells found, return empty array
         if (maxY < 0 || maxX < 0) return [[]];
-        
+
         // Trim to bounding box
         const result = [];
         for (let y = minY; y <= maxY; y++) {
@@ -68,7 +68,7 @@ class Shape {
             }
             result.push(row);
         }
-        
+
         return result;
     }
 
@@ -76,16 +76,16 @@ class Shape {
         // Converts between boolean[][] and object[][] formats
         // targetType: 'boolean' or 'object'
         // originalShape: optional reference for distinguishing original vs filled cells
-        
+
         if (!array || array.length === 0) return array;
-        
+
         const result = [];
-        
+
         for (let y = 0; y < array.length; y++) {
             const row = [];
             for (let x = 0; x < array[y].length; x++) {
                 const cell = array[y][x];
-                
+
                 if (targetType === 'boolean') {
                     // Convert to boolean
                     const value = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
@@ -107,39 +107,20 @@ class Shape {
             }
             result.push(row);
         }
-        
+
         return result;
     }
 
     calculateBounds(array) {
-        // Calculate the bounding box of all occupied cells
-        const height = array.length;
-        const width = array[0] ? array[0].length : 0;
-        
-        const bounds = { minX: width, maxX: -1, minY: height, maxY: -1 };
-        
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const cell = array[y][x];
-                const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
-                
-                if (isOccupied) {
-                    bounds.minX = Math.min(bounds.minX, x);
-                    bounds.maxX = Math.max(bounds.maxX, x);
-                    bounds.minY = Math.min(bounds.minY, y);
-                    bounds.maxY = Math.max(bounds.maxY, y);
-                }
-            }
-        }
-        
-        return bounds;
+        // Delegate to MathUtils for consistent bounds calculation
+        return MathUtils.calculateBounds(array);
     }
-    
+
     detectEdgeTouching(array, bounds) {
         // Determine if occupied cells touch any array edges
         const height = array.length;
         const width = array[0] ? array[0].length : 0;
-        
+
         return {
             left: bounds.minX === 0,
             right: bounds.maxX === width - 1,
@@ -147,38 +128,38 @@ class Shape {
             top: bounds.maxY === height - 1
         };
     }
-    
+
     findOccupiedCells(array) {
         // Find all occupied cell coordinates
         const height = array.length;
         const width = array[0] ? array[0].length : 0;
         const occupiedCells = [];
-        
+
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const cell = array[y][x];
                 const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
-                
+
                 if (isOccupied) {
                     occupiedCells.push({ x, y });
                 }
             }
         }
-        
+
         return occupiedCells;
     }
-    
+
     markPerimeterCells(array) {
         // Find perimeter cells and mark them in object arrays
         const height = array.length;
         const width = array[0] ? array[0].length : 0;
         const perimeterCells = [];
-        
+
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const cell = array[y][x];
                 const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
-                
+
                 if (isOccupied) {
                     const hasEmpty = this.hasEmptyNeighbor(array, x, y, width, height);
                     if (hasEmpty) {
