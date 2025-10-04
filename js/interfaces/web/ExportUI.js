@@ -8,8 +8,9 @@ class ExportUI {
         // flags
         this.showingLayout = true;
 
-        //== renderer instance
+        //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
+        this.boardRenderer = new BoardRenderer();
 
         //== initialize UI elements
         this.initSidebarButtons();
@@ -416,10 +417,27 @@ class ExportUI {
         this.showingLayout = !this.showingLayout;
 
         if (this.showingLayout) {
-            this.currExport.previewLayout();
+            // Ensure layout data is prepared
+            if (this.currExport.sheetOutline.length === 0 || this.currExport.cutList.length === 0 || this.currExport.etchList.length === 0) {
+                this.currExport.prepLayout();
+            }
+            // Render using BoardRenderer
+            const renderConfig = this._buildBoardRenderConfig();
+            this.boardRenderer.renderLayout(
+                this.currExport.cutList,
+                this.currExport.etchList,
+                this.currExport.sheetOutline,
+                renderConfig
+            );
             this.html.showButton.html('Show Case');
         } else {
-            this.currExport.previewCase();
+            // Render using BoardRenderer
+            const renderConfig = this._buildBoardRenderConfig();
+            this.boardRenderer.renderCase(
+                this.currExport.boards,
+                this.currExport.cellular,
+                renderConfig
+            );
             this.html.showButton.html('Show Layout');
         }
     }
@@ -441,9 +459,14 @@ class ExportUI {
     handleDownloadCase() {
         // draw case plan in an offscreen buffer and save it
         const imageBuffer = createGraphics(canvasWidth, canvasHeight);
-        this.currExport.previewCase(imageBuffer);
+        const renderConfig = this._buildBoardRenderConfig(imageBuffer);
+        this.boardRenderer.renderCase(
+            this.currExport.boards,
+            this.currExport.cellular,
+            renderConfig
+        );
 
-        // todo: file name  based on solution name
+        // todo: file name based on solution name
         imageBuffer.save('case_preview.png');
     }
 
@@ -661,17 +684,61 @@ class ExportUI {
             this.currExport.setupSheets();
         }
 
-        // preview the layout or case
+        // preview the layout or case using BoardRenderer
+        const renderConfig = this._buildBoardRenderConfig();
         if (this.showingLayout) {
-            this.currExport.previewLayout();
+            // Ensure layout data is prepared
+            if (this.currExport.sheetOutline.length === 0 || this.currExport.cutList.length === 0 || this.currExport.etchList.length === 0) {
+                this.currExport.prepLayout();
+            }
+            this.boardRenderer.renderLayout(
+                this.currExport.cutList,
+                this.currExport.etchList,
+                this.currExport.sheetOutline,
+                renderConfig
+            );
         } else {
-            this.currExport.previewCase();
+            this.boardRenderer.renderCase(
+                this.currExport.boards,
+                this.currExport.cellular,
+                renderConfig
+            );
         }
 
         // enable show and download buttons
         updateButton(this.html.showButton, true);
         updateButton(this.html.downloadDXFButton, true);
         updateButton(this.html.downloadCaseButton, true);
+    }
+
+    _buildBoardRenderConfig(renderer = null) {
+        // Build configuration object for BoardRenderer
+        // Check for dev mode
+        const isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+
+        return {
+            // Canvas dimensions
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+
+            // Sheet dimensions (for layout preview)
+            sheetWidthIn: this.currExport.sheetWidthIn,
+            sheetHeightIn: this.currExport.sheetHeightIn,
+            numSheets: this.currExport.numSheets,
+
+            // Grid/pixel conversion (for case preview)
+            squareSize: this.currExport.squareSize,
+            buffer: this.currExport.buffer,
+            xPadding: this.currExport.xPadding,
+            yPadding: this.currExport.yPadding,
+            minWallLength: this.currExport.minWallLength,
+
+            // Debug/dev options
+            showDevMarkers: isDevMode,
+
+            // Optional offscreen renderer
+            renderer: renderer
+        };
     }
 
     //== Display functions

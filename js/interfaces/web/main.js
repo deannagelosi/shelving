@@ -180,10 +180,35 @@ function keyPressed() {
             // redraw current view with updated devMode
             clear();
             background(255);
-            if (exportUI.showingLayout) {
-                exportUI.currExport.previewLayout();
-            } else {
-                exportUI.currExport.previewCase();
+
+            // use BoardRenderer for board exports
+            if (exportUI.currExport && typeof exportUI.currExport.boards !== 'undefined') {
+                const renderConfig = exportUI._buildBoardRenderConfig();
+                if (exportUI.showingLayout) {
+                    // prep layout data
+                    if (exportUI.currExport.sheetOutline.length === 0 || exportUI.currExport.cutList.length === 0 || exportUI.currExport.etchList.length === 0) {
+                        exportUI.currExport.prepLayout();
+                    }
+                    exportUI.boardRenderer.renderLayout(
+                        exportUI.currExport.cutList,
+                        exportUI.currExport.etchList,
+                        exportUI.currExport.sheetOutline,
+                        renderConfig
+                    );
+                } else {
+                    exportUI.boardRenderer.renderCase(
+                        exportUI.currExport.boards,
+                        exportUI.currExport.cellular,
+                        renderConfig
+                    );
+                }
+            } else if (exportUI.currExport && typeof exportUI.currExport.previewLayout === 'function') {
+                // use CubbyExporter if not previewing boards (cubby still has preview methods)
+                if (exportUI.showingLayout) {
+                    exportUI.currExport.previewLayout();
+                } else {
+                    exportUI.currExport.previewCase();
+                }
             }
         }
     }

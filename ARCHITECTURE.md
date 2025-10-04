@@ -84,13 +84,13 @@ This diagram provides a mental model of how the major components interact and ho
                             ↕ (uses)
 ┌──────────────────────────────────────────────────────────────────┐
 │                      RENDERING LAYER (web/)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│  │ShapeRenderer │  │SolutionRndrr │  │CellularRndrr │           │
-│  └──────────────┘  └──────────────┘  └──────────────┘           │
-│  ┌──────────────┐  ┌──────────────┐                             │
-│  │BendWallRndrr │  │CubbyRenderer │                             │
-│  └──────────────┘  └──────────────┘                             │
-│         Stateless visualization - no business logic              │
+│     ┌───────────────┐  ┌───────────────┐  ┌───────────────┐      │
+│     │ ShapeRenderer │  │ SolutionRndrr │  │ CellularRndrr │      │
+│     └───────────────┘  └───────────────┘  └───────────────┘      │
+│     ┌───────────────┐  ┌───────────────┐  ┌───────────────┐      │
+│     │ BoardRenderer │  │ CubbyRenderer │  │ BendWallRndrr │      │
+│     └───────────────┘  └───────────────┘  └───────────────┘      │
+│           Stateless visualization - no business logic            │
 └──────────────────────────────────────────────────────────────────┘
                             ↕ (renders data from)
 ┌──────────────────────────────────────────────────────────────────┐
@@ -333,6 +333,9 @@ inchesToHighres(inches)
 - **`SolutionRenderer.js`**: Solution visualization with perimeter/collision highlighting
 - **`ShapeRenderer.js`**: Shape-specific rendering with direct coordinates
 - **`CellularRenderer.js`**: Wall generation visualization
+- **`BoardRenderer.js`**: Board fabrication preview (layout sheets and case assembly)
+- **`BendWallRenderer.js`**: Curved wall visualization
+- **`CubbyRenderer.js`**: Cubby perimeter visualization
 - **`RenderConfig.js`**: Centralized colors, weights, scale factors, layouts
 
 ### `interfaces/bulk/` - Bulk Tools
