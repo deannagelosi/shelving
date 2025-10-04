@@ -23,13 +23,6 @@ const ScreenState = {
     EXPORT: 'export'
 };
 
-//== flags
-const fastReloadDev = true; // loads a test file and solution on start
-const fastReloadScreen = ScreenState.DESIGN;
-const testFileName = "cubby_test_min.json";
-const autoLoadSolution = false;
-const testSolutionName = "solution-1";
-
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-div');
@@ -94,31 +87,31 @@ function setup() {
     changeScreen(ScreenState.INPUT);
 
     // If fast reload is enabled, load the test data
-    if (fastReloadDev) {
+    if (appState.display.fastReloadDev) {
         loadTestData();
     }
 }
 
 function loadTestData() {
-    fetch(`examples/${testFileName}`)
+    fetch(`examples/${appState.display.testFileName}`)
         .then(response => response.json())
         .then(data => {
             // load the data
             inputUI.loadJsonData(data);
 
             // switch the screen
-            changeScreen(fastReloadScreen);
+            changeScreen(appState.display.fastReloadScreen);
 
-            if (autoLoadSolution) {
+            if (appState.display.autoLoadSolution) {
                 // Use setTimeout to ensure the UI has finished its render cycle
                 setTimeout(() => {
-                    let uiClass = (fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
+                    let uiClass = (appState.display.fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
                     if (uiClass) {
-                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === testSolutionName);
+                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === appState.display.testSolutionName);
                         if (targetSolutionIndex !== -1) {
                             uiClass.viewSavedAnneal(targetSolutionIndex);
                         } else {
-                            console.error(`Fast Reload Error: Could not find '${testSolutionName}' in the loaded data.`);
+                            console.error(`Fast Reload Error: Could not find '${appState.display.testSolutionName}' in the loaded data.`);
                         }
                     }
                 }, 0);

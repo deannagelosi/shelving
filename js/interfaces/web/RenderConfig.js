@@ -82,11 +82,11 @@ class RenderConfig {
         // 2.0"  = 8:1 ratio (8 quarter-inch squares per grid square, scale factor 8)
         switch (minWallLength) {
             case 0.25: return 1;  // 1:1 ratio
-            case 0.5:  return 2;  // 2:1 ratio
-            case 1.0:  return 4;  // 4:1 ratio
-            case 1.5:  return 6;  // 6:1 ratio
-            case 2.0:  return 8;  // 8:1 ratio
-            default:   return 4;  // default to 1.0" (4:1 ratio)
+            case 0.5: return 2;  // 2:1 ratio
+            case 1.0: return 4;  // 4:1 ratio
+            case 1.5: return 6;  // 6:1 ratio
+            case 2.0: return 8;  // 8:1 ratio
+            default: return 4;  // default to 1.0" (4:1 ratio)
         }
     }
 
@@ -125,6 +125,19 @@ class RenderConfig {
         };
     }
 
+    static getBrushColors() {
+        return {
+            draw: {
+                fill: 'rgba(0, 150, 255, 0.15)',
+                stroke: 'rgba(0, 150, 255, 1.0)'
+            },
+            erase: {
+                fill: 'rgba(255, 100, 100, 0.15)',
+                stroke: 'rgba(255, 50, 50, 1.0)'
+            }
+        };
+    }
+
     static getTextSizes(squareSize) {
         return {
             gridNumber: squareSize / 2.5,
@@ -136,7 +149,7 @@ class RenderConfig {
     static calculatePreviewGridSize(shape, minWallLength = 1.0, canvasWidth, canvasHeight) {
         // Calculate optimal grid size for shape preview that maintains consistent visual scale
         // Returns grid dimensions and positioning info
-        
+
         if (!shape || !shape.data) {
             // Default grid for empty shape
             return {
@@ -150,7 +163,7 @@ class RenderConfig {
         // Get shape dimensions in high-res units (1/4 inch)
         let shapeWidth = 0;
         let shapeHeight = 0;
-        
+
         if (shape.data.highResBufferShape) {
             shapeHeight = shape.data.highResBufferShape.length;
             shapeWidth = shape.data.highResBufferShape[0] ? shape.data.highResBufferShape[0].length : 0;

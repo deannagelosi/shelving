@@ -8,7 +8,6 @@ class DesignUI {
         // dom elements
         this.html = {};
         this.shapeElements = [];
-        this.shapesDisabled = false;
 
         //== renderer instances
         this.solutionRenderer = new SolutionRenderer();
@@ -301,7 +300,7 @@ class DesignUI {
         }
 
         // re-enable shape selection
-        this.shapesDisabled = false;
+        appState.display.shapesDisabled = false;
         // Ensure shapes list exists before trying to enable it
         if (this.shapeElements.length === 0) {
             this.updateShapesList();
@@ -646,7 +645,7 @@ class DesignUI {
         this.html.wideButton.addClass('disabled');
 
         // disable shape selection changes while annealing
-        this.shapesDisabled = true;
+        appState.display.shapesDisabled = true;
         // Ensure shapes list exists before trying to disable it
         if (this.shapeElements.length === 0) {
             this.updateShapesList();
@@ -799,7 +798,7 @@ class DesignUI {
         this.html.wideButton.removeClass('disabled');
 
         // enable shape selection
-        this.shapesDisabled = false;
+        appState.display.shapesDisabled = false;
         // Ensure shapes list exists before trying to enable it
         if (this.shapeElements.length === 0) {
             this.updateShapesList();
@@ -978,7 +977,7 @@ class DesignUI {
         });
 
         // Preserve disabled state if shapes should be disabled
-        if (this.shapesDisabled) {
+        if (appState.display.shapesDisabled) {
             this.shapeElements.forEach(element => {
                 element.addClass('disabled');
             });
@@ -1945,7 +1944,7 @@ class DesignUI {
         this.html.wideButton.addClass('disabled');
 
         // disable shape selection changes while viewing saved anneal
-        this.shapesDisabled = true;
+        appState.display.shapesDisabled = true;
         if (this.shapeElements.length === 0) {
             this.createShapeList();
         }

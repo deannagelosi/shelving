@@ -1,5 +1,26 @@
 // centralized state object for app data across screens
 const appState = {
+    // Display/rendering configuration
+    display: {
+        detailView: false,  // show detailed buffer zones and grid info
+        devMode: false,     // show debug information and step-by-step controls
+        numGrow: 0,         // current cellular growth step in dev mode
+        curveStep: 0,       // current curve growth step in dev mode
+        previewShapeId: null, // ID of shape being previewed (null = no preview)
+        previewMode: false,  // whether in shape preview mode
+
+        // UI state flags
+        shapesDisabled: false,  // DesignUI: whether shape interaction is disabled during generation
+        exportViewMode: 'layout', // ExportUI: 'layout' or 'cubbies' view mode
+
+        // Development flags
+        fastReloadDev: false,  // loads a test file and solution on start for faster development
+        fastReloadScreen: ScreenState.EXPORT,  // which screen to load in fast reload mode
+        testFileName: "lab-test-window.json",
+        autoLoadSolution: true,
+        testSolutionName: "solution-1",
+    },
+
     currentScreen: ScreenState.INPUT,
     shapes: [], // Shape objects [{data (reference), posX (int), posY (int)}]
     savedAnneals: [],
@@ -35,16 +56,6 @@ const appState = {
         cubbyMode: 'one',              // 'one' (merge after fabrication), 'many' (individual cubbies)
         bendRadius: 1.0,               // For bent wood walls
         maxBends: 4
-    },
-
-    // Display/rendering configuration
-    display: {
-        detailView: false,  // show detailed buffer zones and grid info
-        devMode: false,     // show debug information and step-by-step controls
-        numGrow: 0,         // current cellular growth step in dev mode
-        curveStep: 0,       // current curve growth step in dev mode
-        previewShapeId: null, // ID of shape being previewed (null = no preview)
-        previewMode: false   // whether in shape preview mode
     },
 
     // Configuration management methods
