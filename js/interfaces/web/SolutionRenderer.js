@@ -28,7 +28,7 @@ class SolutionRenderer {
 
         // show grid numbers
         if (detailView || isDevMode) {
-            this.renderGridNumbers(solution.layout, config, colors);
+            this.renderGridNumbers(solution.layout, config, colors, solution);
         }
 
         // display buffer squares
@@ -93,33 +93,55 @@ class SolutionRenderer {
         }
     }
 
-    renderGridNumbers(layout, config, colors) {
+    renderGridNumbers(layout, config, colors, solution) {
         textAlign(CENTER, CENTER);
         const textSizes = RenderConfig.getTextSizes(config.squareSize);
-        let txtXOffset = config.squareSize / 2.5;
-        let txtYOffset = config.squareSize / 2.5;
         textSize(textSizes.gridNumber);
         noStroke();
+        fill(colors.numColor);
 
         let designHeight = layout.length;
         let designWidth = layout[0].length;
 
-        // check for display state (with worker context fallback)
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        // get minWallLength from solution (defaults to 1.0)
+        const minWallLength = solution.minWallLength || 1.0;
+
+        // position text in the buffer zone, offset from the grid edge
+        const textOffset = config.buffer * 0.4; // 40% into the buffer zone
+
+        // track the last displayed inch value to avoid duplicates
+        let lastDisplayedXInch = -1;
 
         for (let x = 0; x < designWidth; x++) {
-            // display column number
-            fill(isDevMode && x % 5 === 0 ? "pink" : colors.numColor);
-            let textX = (x * config.squareSize) + config.buffer + config.xPadding + txtXOffset;
-            let textY = ((config.canvasHeight - config.yPadding) - config.buffer) + txtYOffset;
-            text(x + 1, textX, textY);
+            // calculate inch value at the right edge of this grid cell
+            const inchValue = (x + 1) * minWallLength;
 
-            for (let y = 0; y < designHeight; y++) {
-                // display row number
-                fill(isDevMode && y % 5 === 0 ? "pink" : colors.numColor);
-                let textX = config.xPadding + txtXOffset;
-                let textY = ((config.canvasHeight - config.yPadding) - config.squareSize - config.buffer) - (y * config.squareSize) + txtYOffset;
-                text(y + 1, textX, textY);
+            // only display whole inch values
+            if (Math.floor(inchValue) === inchValue && inchValue !== lastDisplayedXInch) {
+                lastDisplayedXInch = inchValue;
+
+                // position at the right edge of the grid cell (the gridline)
+                let textX = ((x + 1) * config.squareSize) + config.buffer + config.xPadding;
+                let textY = ((config.canvasHeight - config.yPadding) - config.buffer) + textOffset;
+                text(inchValue, textX, textY);
+            }
+        }
+
+        // track the last displayed inch value for Y axis
+        let lastDisplayedYInch = -1;
+
+        for (let y = 0; y < designHeight; y++) {
+            // calculate inch value at the top edge of this grid cell
+            const inchValue = (y + 1) * minWallLength;
+
+            // only display whole inch values
+            if (Math.floor(inchValue) === inchValue && inchValue !== lastDisplayedYInch) {
+                lastDisplayedYInch = inchValue;
+
+                // position at the top edge of the grid cell (the gridline)
+                let textX = config.xPadding + config.buffer - textOffset;
+                let textY = ((config.canvasHeight - config.yPadding) - config.buffer) - ((y + 1) * config.squareSize);
+                text(inchValue, textX, textY);
             }
         }
     }
