@@ -389,7 +389,7 @@ class SolutionWorker {
             sheetHeightIn: 28,
             numSheets: 1,
             kerfIn: 0,
-            numPinSlots: 2
+            pinMode: '1-pin'
         };
 
         // Extract spacing from anneal instance

@@ -139,7 +139,7 @@ class ViewerRenderer {
                     sheetHeight: 28,
                     numSheets: 1,
                     kerf: 0,
-                    numPinSlots: 2
+                    pinMode: '1-pin'
                 };
                 const spacing = {
                     buffer: savedAnneal.buffer,

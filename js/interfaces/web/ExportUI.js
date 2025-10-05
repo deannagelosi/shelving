@@ -594,14 +594,13 @@ class ExportUI {
         const sheetWidthIn = elementMap['sheetWidthIn'] ? parseFloat(elementMap['sheetWidthIn'].value()) : 30;
         const sheetHeightIn = elementMap['sheetHeightIn'] ? parseFloat(elementMap['sheetHeightIn'].value()) : 28;
         const gapIn = elementMap['gapIn'] ? parseFloat(elementMap['gapIn'].value()) : 0.5;
-        const numPinSlots = elementMap['pinSlots'] ? parseInt(elementMap['pinSlots'].value()) : 2;
+        const pinMode = elementMap['pinMode'] ? elementMap['pinMode'].value() : '1-pin';
         const numSheets = parseInt(this.html.numSheetsInput.value());
 
         // Validate inputs
         const invalidInputs = [thicknessIn, kerfIn, caseDepthIn, sheetWidthIn, sheetHeightIn, gapIn, numSheets].some(val => isNaN(val));
-        const invalidPinSlots = elementMap['pinSlots'] && isNaN(numPinSlots);
 
-        if (invalidInputs || invalidPinSlots) {
+        if (invalidInputs) {
             alert("Invalid input for one or more fields");
             return;
         }
@@ -626,7 +625,7 @@ class ExportUI {
             numSheets,
             gapIn,
             caseDepthIn,
-            numPinSlots,
+            pinMode,
             kerfIn,
             // 3D printing specific
             cubbyCurveRadius: cubbyCurveRadius,

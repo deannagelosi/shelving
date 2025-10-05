@@ -18,7 +18,7 @@ const COMMON_SETTINGS = {
         label: 'Kerf Width (in)',
         cssClass: 'dimension-input',
         defaultValue: 0.00,
-        validation: { min: 0, max: 0.04, step: 0.01 }
+        validation: { min: 0, max: 0.05, step: 0.01 }
     },
     caseDepthIn: {
         name: 'caseDepthIn',
@@ -83,13 +83,13 @@ const MATERIAL_CONFIGS = {
             COMMON_SETTINGS.kerfIn,
             COMMON_SETTINGS.caseDepthIn,
             {
-                name: 'pinSlots',
-                defaultValue: 2,
+                name: 'pinMode',
+                defaultValue: '1-pin',
                 container: 'caseProps',
                 inputType: 'select',
                 label: 'Pin Type',
                 cssClass: 'dimension-input',
-                options: [{ value: 3, text: '2 Pin' }, { value: 2, text: '1 Pin' }, { value: 1, text: 'Lazy' }]
+                options: [{ value: '2-pin', text: '2 Pin' }, { value: '1-pin', text: '1 Pin' }, { value: 'lazy', text: 'Lazy' }]
             },
             COMMON_SETTINGS.sheetWidthIn,
             COMMON_SETTINGS.sheetHeightIn,
@@ -132,128 +132,20 @@ const MATERIAL_CONFIGS = {
         // CUTTING STRATEGY - Generates rectangles to cut for joints and connections
         // ============================================================================
         generateJointCuts: function (board, config, boardStartX, boardStartY, cutList) {
-            const numPinSlots = config.numPinSlots || 2; // 1=Lazy, 2=1 Pin, 3=2 Pin
+            const pinMode = config.pinMode;
+            const slotKerfWidth = getSlotKerfWidth(config);
 
-            // Apply kerfIn adjustments for plywood
-            const effectiveDepth = config.caseDepthIn + (config.kerfIn || 0);
-            const slotWidth = config.sheetThicknessIn - (config.kerfIn || 0);
+            // Generate start end joints
+            generateBoardEndJoints(board.poi.start, pinMode, boardStartX, boardStartY, config, cutList);
 
-            if (numPinSlots === 1) {
-                // LAZY FINGER MODE - Special positioning based on board orientation and joint type
-                const lazySlotHeight = effectiveDepth * 0.5 - (config.kerfIn || 0);
+            // Generate end end joints
+            const endX = boardStartX + board.getLength() - slotKerfWidth;
+            generateBoardEndJoints(board.poi.end, pinMode, endX, boardStartY, config, cutList);
 
-                // Start joint
-                if (board.poi.start === "slot") {
-                    // Vertical board: slot at top
-                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
-                } else if (board.poi.start === "pin-corner") {
-                    // Horizontal board: slot at bottom
-                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
-                } else if (board.poi.start === "pin-tjoint") {
-                    // T-joint end: centered pin (two slots above/below)
-                    const cutRatio = 1 / 3;
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
-                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY, w: slotWidth, h: jointHeight });
-                    cutList.push({ type: 'joint', x: boardStartX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
-                }
-
-                // End joint
-                const endX = boardStartX + board.getLength() - slotWidth;
-                if (board.poi.end === "slot") {
-                    // Vertical board: slot at top
-                    cutList.push({ type: 'joint', x: endX, y: boardStartY, w: slotWidth, h: lazySlotHeight });
-                } else if (board.poi.end === "pin-corner") {
-                    // Horizontal board: slot at bottom
-                    cutList.push({ type: 'joint', x: endX, y: boardStartY + effectiveDepth - lazySlotHeight, w: slotWidth, h: lazySlotHeight });
-                } else if (board.poi.end === "pin-tjoint") {
-                    // T-joint end: centered pin (two slots above/below)
-                    const cutRatio = 1 / 3;
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
-                    cutList.push({ type: 'joint', x: endX, y: boardStartY, w: slotWidth, h: jointHeight });
-                    cutList.push({ type: 'joint', x: endX, y: boardStartY + effectiveDepth * (2 * cutRatio), w: slotWidth, h: jointHeight });
-                }
-            } else {
-                // STANDARD MODE (1 Pin or 2 Pin) - Use original ratio-based approach
-                const jointConfig = {
-                    numSlotCuts: numPinSlots - 1,
-                    numPinCuts: numPinSlots,
-                    totalCuts: (numPinSlots * 2) - 1
-                };
-
-                const cutoutRatio = (1 / jointConfig.totalCuts);
-                const jointHeight = cutoutRatio * effectiveDepth - (config.kerfIn || 0);
-
-                // Start joint
-                if (board.poi.start === "slot") {
-                    for (let i = 0; i < jointConfig.numSlotCuts; i++) {
-                        let ratio = i === 0 ? 1 : 3;
-                        cutList.push({
-                            type: 'joint',
-                            x: boardStartX,
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
-                            w: slotWidth,
-                            h: jointHeight
-                        });
-                    }
-                } else if (board.poi.start === "pin-corner" || board.poi.start === "pin-tjoint") {
-                    for (let i = 0; i < jointConfig.numPinCuts; i++) {
-                        let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                        cutList.push({
-                            type: 'joint',
-                            x: boardStartX,
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
-                            w: slotWidth,
-                            h: jointHeight
-                        });
-                    }
-                }
-
-                // End joint
-                const endX = boardStartX + board.getLength() - slotWidth;
-                if (board.poi.end === "slot") {
-                    for (let i = 0; i < jointConfig.numSlotCuts; i++) {
-                        let ratio = i === 0 ? 1 : 3;
-                        cutList.push({
-                            type: 'joint',
-                            x: endX,
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
-                            w: slotWidth,
-                            h: jointHeight
-                        });
-                    }
-                } else if (board.poi.end === "pin-corner" || board.poi.end === "pin-tjoint") {
-                    for (let i = 0; i < jointConfig.numPinCuts; i++) {
-                        let ratio = i === 0 ? 0 : i === 1 ? 2 : 4;
-                        cutList.push({
-                            type: 'joint',
-                            x: endX,
-                            y: boardStartY + effectiveDepth * (ratio * cutoutRatio),
-                            w: slotWidth,
-                            h: jointHeight
-                        });
-                    }
-                }
-            }
-
-            // T-joints (same for all pin modes)
+            // T-joints (middle of boards)
             for (let tJoint of board.poi.tJoints) {
-                const { x, width } = calculateCenteredJointCut(tJoint, config, boardStartX);
-                if (numPinSlots === 1) {
-                    // Lazy mode T-joints use 1-pin approach (single slot)
-                    let y = boardStartY + effectiveDepth * (1 / 3);
-                    cutList.push({ type: 'joint', x, y, w: width, h: effectiveDepth * (1 / 3) - (config.kerfIn || 0) });
-                } else {
-                    // Standard mode T-joints
-                    const numSlotCuts = numPinSlots - 1;
-                    const cutRatio = 1 / (numPinSlots * 2 - 1);
-                    const jointHeight = effectiveDepth * cutRatio - (config.kerfIn || 0);
-
-                    for (let i = 0; i < numSlotCuts; i++) {
-                        let ratio = i === 0 ? 1 : 3;
-                        let y = boardStartY + effectiveDepth * (ratio * cutRatio);
-                        cutList.push({ type: 'joint', x, y, w: width, h: jointHeight });
-                    }
-                }
+                const rectStartX = calculateJointRectStartX(tJoint, config, boardStartX);
+                generateTJointSlots(pinMode, rectStartX, boardStartY, config, cutList);
             }
 
             // Half-lap cuts (X-joints)
@@ -535,11 +427,102 @@ const MATERIAL_CONFIGS = {
 // SHARED FUNCTIONS - Used by multiple material configurations
 // ============================================================================
 
-// Calculate rectangle start position for a joint cut centered on it's poi (point of interest)
-function calculateCenteredJointCut(poiCenter, config, boardStartX) {
-    const slotWidth = config.sheetThicknessIn - (config.kerfIn || 0);
-    const rectStartX = boardStartX + poiCenter - (slotWidth / 2);
-    return { x: rectStartX, width: slotWidth };
+// Calculate kerf-adjusted slot dimensions
+function getSlotKerfWidth(config) {
+    return config.sheetThicknessIn - config.kerfIn;
+}
+
+function getSlotKerfHeight(caseKerfDepth, ratio, kerfIn) {
+    return (caseKerfDepth * ratio) - kerfIn;
+}
+
+function getCaseKerfDepth(config) {
+    return config.caseDepthIn + config.kerfIn;
+}
+
+// Calculate rectangle start X for a joint cut (POI is the centerline, convert to left edge)
+function calculateJointRectStartX(poiCenter, config, boardStartX) {
+    const slotKerfWidth = getSlotKerfWidth(config);
+    return boardStartX + poiCenter - (slotKerfWidth / 2);
+}
+
+// Generate slot cuts for a board end based on pin mode and end type
+function generateBoardEndJoints(endType, pinMode, x, boardStartY, config, cutList) {
+    if (pinMode === 'lazy') {
+        generateLazyEndJoints(endType, x, boardStartY, config, cutList);
+    } else if (pinMode === '1-pin') {
+        generate1PinEndJoints(endType, x, boardStartY, config, cutList);
+    } else if (pinMode === '2-pin') {
+        generate2PinEndJoints(endType, x, boardStartY, config, cutList);
+    }
+}
+
+function generateLazyEndJoints(endType, x, boardStartY, config, cutList) {
+    const slotKerfWidth = getSlotKerfWidth(config);
+    const caseKerfDepth = getCaseKerfDepth(config);
+    const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 0.5, config.kerfIn);
+
+    if (endType === "slot") {
+        // Vertical board: single slot at top
+        cutList.push({ type: 'joint', x, y: boardStartY, w: slotKerfWidth, h: slotKerfHeight });
+    } else if (endType === "pin-corner") {
+        // Horizontal board: single slot at bottom
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth - slotKerfHeight, w: slotKerfWidth, h: slotKerfHeight });
+    } else if (endType === "pin-tjoint") {
+        // T-joint end: two slots (top and bottom thirds)
+        const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 1 / 3, config.kerfIn);
+        cutList.push({ type: 'joint', x, y: boardStartY, w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (2 / 3), w: slotKerfWidth, h: slotKerfHeight });
+    }
+}
+
+function generate1PinEndJoints(endType, x, boardStartY, config, cutList) {
+    const slotKerfWidth = getSlotKerfWidth(config);
+    const caseKerfDepth = getCaseKerfDepth(config);
+    const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 1 / 3, config.kerfIn);
+
+    if (endType === "slot") {
+        // Single centered slot at position 1/3
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (1 / 3), w: slotKerfWidth, h: slotKerfHeight });
+    } else if (endType === "pin-corner" || endType === "pin-tjoint") {
+        // Two slots: at positions 0 and 2/3
+        cutList.push({ type: 'joint', x, y: boardStartY, w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (2 / 3), w: slotKerfWidth, h: slotKerfHeight });
+    }
+}
+
+function generate2PinEndJoints(endType, x, boardStartY, config, cutList) {
+    const slotKerfWidth = getSlotKerfWidth(config);
+    const caseKerfDepth = getCaseKerfDepth(config);
+    const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 1 / 5, config.kerfIn);
+
+    if (endType === "slot") {
+        // Two slots: at positions 1/5 and 3/5
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (1 / 5), w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (3 / 5), w: slotKerfWidth, h: slotKerfHeight });
+    } else if (endType === "pin-corner" || endType === "pin-tjoint") {
+        // Three slots: at positions 0, 2/5, and 4/5
+        cutList.push({ type: 'joint', x, y: boardStartY, w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (2 / 5), w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (4 / 5), w: slotKerfWidth, h: slotKerfHeight });
+    }
+}
+
+// Generate slot cuts for T-joints in the middle of boards
+function generateTJointSlots(pinMode, x, boardStartY, config, cutList) {
+    const slotKerfWidth = getSlotKerfWidth(config);
+    const caseKerfDepth = getCaseKerfDepth(config);
+
+    if (pinMode === 'lazy' || pinMode === '1-pin') {
+        // Single centered slot at 1/3 depth
+        const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 1 / 3, config.kerfIn);
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (1 / 3), w: slotKerfWidth, h: slotKerfHeight });
+    } else if (pinMode === '2-pin') {
+        // Two slots at 1/5 and 3/5 depth
+        const slotKerfHeight = getSlotKerfHeight(caseKerfDepth, 1 / 5, config.kerfIn);
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (1 / 5), w: slotKerfWidth, h: slotKerfHeight });
+        cutList.push({ type: 'joint', x, y: boardStartY + caseKerfDepth * (3 / 5), w: slotKerfWidth, h: slotKerfHeight });
+    }
 }
 
 // Board end assignment based on orientation and joint types
@@ -555,23 +538,25 @@ function assignBoardEnds(board, jointTypes) {
 
 // Half-lap (X-joint) cuts
 function generateHalfLapCut(board, xJointPosition, config, boardStartX, boardStartY, cutList) {
-    const { x, width } = calculateCenteredJointCut(xJointPosition, config, boardStartX);
+    const rectStartX = calculateJointRectStartX(xJointPosition, config, boardStartX);
+    const slotKerfWidth = getSlotKerfWidth(config);
+
     if (board.orientation === "y") {
         // Vertical board: cut from top
         cutList.push({
             type: 'halflap',
-            x: x,
+            x: rectStartX,
             y: boardStartY,
-            w: width,
+            w: slotKerfWidth,
             h: config.caseDepthIn / 2
         });
     } else {
         // Horizontal board: cut from bottom
         cutList.push({
             type: 'halflap',
-            x: x,
+            x: rectStartX,
             y: boardStartY + (config.caseDepthIn / 2),
-            w: width,
+            w: slotKerfWidth,
             h: config.caseDepthIn / 2
         });
     }

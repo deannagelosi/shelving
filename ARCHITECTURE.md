@@ -310,8 +310,8 @@ inchesToHighres(inches)
 - **`Solution.js`**: Layout solution data model supporting custom perimeter and variable grid resolutions
 
 **Export:**
-- **`Board.js`**: Board model with kerf-adjusted lengths
-- **`BoardExporter.js`**: Laser-cut export implementing conversion boundary (grid->inches in `prepLayout()`), material-specific joints with kerf compensation
+- **`Board.js`**: Board model in inch units
+- **`BoardExporter.js`**: Laser-cut export implementing conversion boundary (grid->inches in `prepLayout()`), material-specific joints with kerf applied during cut generation
 - **`CubbyExporter.js`**: 3D-print export mirroring BoardExporter's conversion pattern, bezier curves for DXF
 
 **Utilities:**

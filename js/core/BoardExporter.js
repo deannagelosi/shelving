@@ -18,10 +18,10 @@ class BoardExporter {
         this.sheetWidthIn = config.sheetWidthIn;
         this.sheetHeightIn = config.sheetHeightIn;
         this.numSheets = config.numSheets;
-        this.gapIn = config.gapIn; // gap between boards in sheet layout
+        this.gapIn = config.gapIn; // inch gap between boards in sheet layout
         this.caseDepthIn = config.caseDepthIn;
         this.kerfIn = config.kerfIn;
-        this.numPinSlots = config.numPinSlots;
+        this.pinMode = config.pinMode;
         this.fontSizeIn = Math.round((this.gapIn / 2) * 100) / 100;
 
         // Min wall length for unit conversion (1 grid unit = minWallLength inches)
@@ -413,7 +413,7 @@ class BoardExporter {
             caseDepthIn: this.caseDepthIn,
             sheetThicknessIn: this.sheetThicknessIn,
             kerfIn: this.kerfIn,
-            numPinSlots: this.numPinSlots
+            pinMode: this.pinMode
         };
 
         // Generate cuts using material configuration
