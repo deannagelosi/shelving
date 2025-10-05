@@ -593,11 +593,12 @@ class ExportUI {
         const caseDepthIn = elementMap['caseDepthIn'] ? parseFloat(elementMap['caseDepthIn'].value()) : 3;
         const sheetWidthIn = elementMap['sheetWidthIn'] ? parseFloat(elementMap['sheetWidthIn'].value()) : 30;
         const sheetHeightIn = elementMap['sheetHeightIn'] ? parseFloat(elementMap['sheetHeightIn'].value()) : 28;
+        const gapIn = elementMap['gapIn'] ? parseFloat(elementMap['gapIn'].value()) : 0.5;
         const numPinSlots = elementMap['pinSlots'] ? parseInt(elementMap['pinSlots'].value()) : 2;
-        const numSheets = parseInt(this.html.numSheetsInput.value()); // Hidden but automatically managed
+        const numSheets = parseInt(this.html.numSheetsInput.value());
 
         // Validate inputs
-        const invalidInputs = [thicknessIn, kerfIn, caseDepthIn, sheetWidthIn, sheetHeightIn, numSheets].some(val => isNaN(val));
+        const invalidInputs = [thicknessIn, kerfIn, caseDepthIn, sheetWidthIn, sheetHeightIn, gapIn, numSheets].some(val => isNaN(val));
         const invalidPinSlots = elementMap['pinSlots'] && isNaN(numPinSlots);
 
         if (invalidInputs || invalidPinSlots) {
@@ -619,11 +620,12 @@ class ExportUI {
         }
 
         const config = {
-            caseDepthIn,
             sheetThicknessIn: thicknessIn,
             sheetWidthIn,
             sheetHeightIn,
             numSheets,
+            gapIn,
+            caseDepthIn,
             numPinSlots,
             kerfIn,
             // 3D printing specific
@@ -725,6 +727,7 @@ class ExportUI {
             sheetWidthIn: this.currExport.sheetWidthIn,
             sheetHeightIn: this.currExport.sheetHeightIn,
             numSheets: this.currExport.numSheets,
+            fontSizeIn: this.currExport.fontSizeIn,
 
             // Grid/pixel conversion (for case preview)
             squareSize: this.currExport.squareSize,

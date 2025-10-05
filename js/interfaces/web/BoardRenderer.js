@@ -9,7 +9,7 @@ class BoardRenderer {
         // cutList: array of cut rectangles (boards, joints) in inches
         // etchList: array of etch elements (text, lines) in inches
         // sheetOutline: array of sheet rectangles in inches
-        // config: { canvasWidth, canvasHeight, sheetWidthIn, sheetHeightIn, numSheets, showDevMarkers }
+        // config: { canvasWidth, canvasHeight, sheetWidthIn, sheetHeightIn, numSheets, fontSizeIn, showDevMarkers }
 
         const ctx = config.renderer || window;
 
@@ -50,7 +50,7 @@ class BoardRenderer {
                 ctx.fill('blue');
                 ctx.noStroke();
                 ctx.textAlign(LEFT, BASELINE);
-                ctx.textSize(5 / scaleValue);
+                ctx.textSize((config.fontSizeIn * scaleValue) / 10);
                 ctx.text(etch.text, etch.x, etch.y);
             } else if (etch.type === 'line') {
                 // etch lines (alignment guides)

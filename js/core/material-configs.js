@@ -32,7 +32,7 @@ const COMMON_SETTINGS = {
     sheetWidthIn: {
         name: 'sheetWidthIn',
         defaultValue: 44,
-        container: 'sheetDimensions',
+        container: 'sheetLayout',
         inputType: 'number',
         label: 'Width (in)',
         cssClass: 'dimension-input',
@@ -41,11 +41,20 @@ const COMMON_SETTINGS = {
     sheetHeightIn: {
         name: 'sheetHeightIn',
         defaultValue: 35,
-        container: 'sheetDimensions',
+        container: 'sheetLayout',
         inputType: 'number',
         label: 'Height (in)',
         cssClass: 'dimension-input',
         validation: { min: 1, step: 1 }
+    },
+    gapIn: {
+        name: 'gapIn',
+        defaultValue: 0.5,
+        container: 'sheetLayout',
+        inputType: 'number',
+        label: 'Gap (in)',
+        cssClass: 'dimension-input',
+        validation: { min: 0.1, max: 1, step: 0.1 }
     }
 };
 
@@ -58,8 +67,8 @@ const COMMON_CONTAINERS = {
         label: 'Case Properties',
         cssClass: 'settings-group'
     },
-    sheetDimensions: {
-        label: 'Sheet Dimensions',
+    sheetLayout: {
+        label: 'Sheet Layout',
         cssClass: 'settings-group'
     }
 };
@@ -83,7 +92,8 @@ const MATERIAL_CONFIGS = {
                 options: [{ value: 3, text: '2 Pin' }, { value: 2, text: '1 Pin' }, { value: 1, text: 'Lazy' }]
             },
             COMMON_SETTINGS.sheetWidthIn,
-            COMMON_SETTINGS.sheetHeightIn
+            COMMON_SETTINGS.sheetHeightIn,
+            COMMON_SETTINGS.gapIn
         ],
 
         // Container definitions
@@ -275,7 +285,8 @@ const MATERIAL_CONFIGS = {
             COMMON_SETTINGS.kerfIn,
             COMMON_SETTINGS.caseDepthIn,
             COMMON_SETTINGS.sheetWidthIn,
-            COMMON_SETTINGS.sheetHeightIn
+            COMMON_SETTINGS.sheetHeightIn,
+            COMMON_SETTINGS.gapIn
         ],
 
         // Container definitions

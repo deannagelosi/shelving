@@ -14,21 +14,18 @@ class BoardExporter {
         }
 
         // Export configuration - physical measurements (in inches, suffix: In)
-        this.caseDepthIn = config.caseDepthIn;
         this.sheetThicknessIn = config.sheetThicknessIn;
         this.sheetWidthIn = config.sheetWidthIn;
         this.sheetHeightIn = config.sheetHeightIn;
         this.numSheets = config.numSheets;
+        this.gapIn = config.gapIn; // gap between boards in sheet layout
+        this.caseDepthIn = config.caseDepthIn;
         this.kerfIn = config.kerfIn;
-        this.numPinSlots = config.numPinSlots || 2;
+        this.numPinSlots = config.numPinSlots;
+        this.fontSizeIn = Math.round((this.gapIn / 2) * 100) / 100;
 
         // Min wall length for unit conversion (1 grid unit = minWallLength inches)
-        this.minWallLength = config.minWallLength || 1.0;
-
-        // Initialize constants (in inches)
-        this.gapIn = 0.5; // inch gap between boards
-        this.fontSizeIn = 0.10; // inch font size for etching
-        this.fontOffsetIn = 0.10;
+        this.minWallLength = config.minWallLength;
 
         // Layout configuration - support both new and legacy parameter patterns
         if (spacing) {
@@ -404,7 +401,7 @@ class BoardExporter {
                 type: 'text',
                 text: board.id,
                 x: boardStartX,
-                y: boardStartY - this.fontOffsetIn
+                y: boardStartY - (this.fontSizeIn / 2)
             });
         }
     }
