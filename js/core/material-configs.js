@@ -237,11 +237,11 @@ const MATERIAL_CONFIGS = {
 
             // T-joints (same for all pin modes)
             for (let tJoint of board.poi.tJoints) {
+                const { x, width } = calculateCenteredJointCut(tJoint, config, boardStartX);
                 if (numPinSlots === 1) {
                     // Lazy mode T-joints use 1-pin approach (single slot)
-                    let x = boardStartX + tJoint - (slotWidth / 2);
                     let y = boardStartY + effectiveDepth * (1 / 3);
-                    cutList.push({ type: 'joint', x, y, w: slotWidth, h: effectiveDepth * (1 / 3) - (config.kerfIn || 0) });
+                    cutList.push({ type: 'joint', x, y, w: width, h: effectiveDepth * (1 / 3) - (config.kerfIn || 0) });
                 } else {
                     // Standard mode T-joints
                     const numSlotCuts = numPinSlots - 1;
@@ -250,9 +250,8 @@ const MATERIAL_CONFIGS = {
 
                     for (let i = 0; i < numSlotCuts; i++) {
                         let ratio = i === 0 ? 1 : 3;
-                        let x = boardStartX + tJoint - (slotWidth / 2);
                         let y = boardStartY + effectiveDepth * (ratio * cutRatio);
-                        cutList.push({ type: 'joint', x, y, w: slotWidth, h: jointHeight });
+                        cutList.push({ type: 'joint', x, y, w: width, h: jointHeight });
                     }
                 }
             }
@@ -536,6 +535,13 @@ const MATERIAL_CONFIGS = {
 // SHARED FUNCTIONS - Used by multiple material configurations
 // ============================================================================
 
+// Calculate rectangle start position for a joint cut centered on it's poi (point of interest)
+function calculateCenteredJointCut(poiCenter, config, boardStartX) {
+    const slotWidth = config.sheetThicknessIn - (config.kerfIn || 0);
+    const rectStartX = boardStartX + poiCenter - (slotWidth / 2);
+    return { x: rectStartX, width: slotWidth };
+}
+
 // Board end assignment based on orientation and joint types
 function assignBoardEnds(board, jointTypes) {
     if (board.orientation === 'x') {
@@ -549,23 +555,23 @@ function assignBoardEnds(board, jointTypes) {
 
 // Half-lap (X-joint) cuts
 function generateHalfLapCut(board, xJointPosition, config, boardStartX, boardStartY, cutList) {
-    let xJointX = boardStartX + xJointPosition;
+    const { x, width } = calculateCenteredJointCut(xJointPosition, config, boardStartX);
     if (board.orientation === "y") {
         // Vertical board: cut from top
         cutList.push({
             type: 'halflap',
-            x: xJointX,
+            x: x,
             y: boardStartY,
-            w: config.sheetThicknessIn,
+            w: width,
             h: config.caseDepthIn / 2
         });
     } else {
         // Horizontal board: cut from bottom
         cutList.push({
             type: 'halflap',
-            x: xJointX,
+            x: x,
             y: boardStartY + (config.caseDepthIn / 2),
-            w: config.sheetThicknessIn,
+            w: width,
             h: config.caseDepthIn / 2
         });
     }
