@@ -135,6 +135,12 @@ const MATERIAL_CONFIGS = {
             const pinMode = config.pinMode;
             const slotKerfWidth = getSlotKerfWidth(config);
 
+            // Note: poi = point of interest (such as the location of a slot along a board)
+            // In the 2D layout (with zero material thickness), POIs are measured from the board's starting edge.
+            // When board thickness is added, it extends equally on both sides of the layout centerline.
+            // i.e. the poi starting x-coord is at the centerline of the intersecting board's thickness.
+            const boardStartXCenterline = boardStartX + (config.sheetThicknessIn / 2);
+
             // Generate start end joints
             generateBoardEndJoints(board.poi.start, pinMode, boardStartX, boardStartY, config, cutList);
 
@@ -144,13 +150,13 @@ const MATERIAL_CONFIGS = {
 
             // T-joints (middle of boards)
             for (let tJoint of board.poi.tJoints) {
-                const rectStartX = calculateJointRectStartX(tJoint, config, boardStartX);
+                const rectStartX = calculateJointRectStartX(tJoint, config, boardStartXCenterline);
                 generateTJointSlots(pinMode, rectStartX, boardStartY, config, cutList);
             }
 
             // Half-lap cuts (X-joints)
             for (let xJoint of board.poi.xJoints) {
-                generateHalfLapCut(board, xJoint, config, boardStartX, boardStartY, cutList);
+                generateHalfLapCut(board, xJoint, config, boardStartXCenterline, boardStartY, cutList);
             }
         },
 

@@ -38,7 +38,9 @@ class BoardRenderer {
         }
 
         // draw the cuts (red to match DXF layer)
+        ctx.noFill();
         ctx.stroke('red');
+        ctx.strokeWeight(1 / scaleValue);
         for (let cut of cutList) {
             ctx.rect(cut.x, cut.y, cut.w, cut.h);
         }
@@ -142,7 +144,7 @@ class BoardRenderer {
         const boardCuts = cutList.filter(cut => cut.type === 'board');
 
         // draw board direction indicators
-        ctx.strokeWeight(2 / scaleValue);
+        ctx.strokeWeight(1 / scaleValue);
         for (let boardCut of boardCuts) {
             // all boards are laid horizontally on the sheet (vertical boards are rotated)
             // Board START is always at left edge (x), END is always at right edge (x + w)
@@ -151,20 +153,56 @@ class BoardRenderer {
             ctx.stroke('lime');
             ctx.line(boardCut.x, boardCut.y, boardCut.x, boardCut.y + boardCut.h);
 
-            // red line on right edge (board end)
-            ctx.stroke('red');
+            // purple line on right edge (board end)
+            ctx.stroke('purple');
             ctx.line(boardCut.x + boardCut.w, boardCut.y, boardCut.x + boardCut.w, boardCut.y + boardCut.h);
         }
 
-        // draw 1-inch increment markers (grey vertical lines)
-        ctx.stroke('grey');
+        // draw 1-inch increment markers (grey lines, with pink lines every 5 inches)
         ctx.strokeWeight(0.5 / scaleValue);
 
         for (let boardCut of boardCuts) {
-            // draw vertical lines at 1-inch increments from start to end
-            for (let i = 1; i < boardCut.w; i += 1) {
-                const xPos = boardCut.x + i;
-                ctx.line(xPos, boardCut.y, xPos, boardCut.y + boardCut.h);
+            // In the 2D design layout, board are laid out with zero thickness intersections.
+            // With real boards these 2D intersections are at a centerline inside the connected boards.
+            // The added board thickness extends a half-thickness on either side of this centerline.
+            // (Kerf is not a factor here since it is just a fabrication tooling adjustment.)
+            // i.e. the poi starting x-coord is at the centerline of the intersecting board's thickness.
+            const sheetThicknessIn = boardCut.sheetThicknessIn;
+            const boardBodyStartX = boardCut.x + (sheetThicknessIn / 2);
+            const boardBodyEndX = boardCut.x + boardCut.w - (sheetThicknessIn / 2);
+            const boardBodyWidth = boardBodyEndX - boardBodyStartX;
+
+            // draw vertical lines at 1-inch increments across the board body
+            for (let i = 0; i <= boardBodyWidth; i += 1) {
+                const xPos = boardBodyStartX + i;
+                if (xPos <= boardBodyEndX) {
+                    // Color: great, with pink for the first and every 5th inch
+                    if (i === 0 || i % 5 === 0) {
+                        ctx.stroke('pink');
+                    } else {
+                        ctx.stroke('grey');
+                    }
+                    ctx.line(xPos, boardCut.y, xPos, boardCut.y + boardCut.h);
+                }
+            }
+
+            // draw horizontal lines at 1-inch increments from center outward
+            const centerY = boardCut.y + (boardCut.h / 2);
+
+            // center line
+            ctx.line(boardCut.x, centerY, boardCut.x + boardCut.w, centerY);
+
+            // lines above and below center at 1-inch increments
+            const maxDistanceY = Math.max(boardCut.h / 2);
+            for (let i = 1; i <= maxDistanceY; i += 1) {
+                // line above center
+                if (centerY - i >= boardCut.y) {
+                    ctx.line(boardCut.x, centerY - i, boardCut.x + boardCut.w, centerY - i);
+                }
+                // line below center
+                if (centerY + i <= boardCut.y + boardCut.h) {
+                    ctx.line(boardCut.x, centerY + i, boardCut.x + boardCut.w, centerY + i);
+                }
             }
         }
     }

@@ -390,7 +390,8 @@ class BoardExporter {
                 x: boardStartX,
                 y: boardStartY,
                 w: boardLength,
-                h: this.caseDepthIn
+                h: this.caseDepthIn,
+                sheetThicknessIn: this.sheetThicknessIn
             });
 
             // generate joints (all in inches)

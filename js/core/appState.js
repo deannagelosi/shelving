@@ -14,7 +14,7 @@ const appState = {
         exportViewMode: 'layout', // ExportUI: 'layout' or 'cubbies' view mode
 
         // Development flags
-        fastReloadDev: false,  // loads a test file and solution on start for faster development
+        fastReloadDev: true,  // loads a test file and solution on start for faster development
         fastReloadScreen: ScreenState.EXPORT,  // which screen to load in fast reload mode
         testFileName: "lab-test-window.json",
         autoLoadSolution: true,
