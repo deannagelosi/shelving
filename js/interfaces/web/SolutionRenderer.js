@@ -489,24 +489,29 @@ class SolutionRenderer {
         const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
         let currCellular = wallRenderData.currCellular;
 
-        // check for display state (with worker context fallback)
+        currCellular = new Cellular(solution);
+
+        // Check for debug mode to control growth stepping
         let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        let currentNumGrow = (typeof appState !== 'undefined' && appState.display) ? appState.display.numGrow : 0;
 
         if (isDevMode) {
-            // create temporary cellular instance for step-by-step growth preview
-            currCellular = new Cellular(solution);
-
-            // Use the appropriate cellular algorithm
+            // Debug mode: manual step-by-step growth
             if (wallAlgorithm === 'cellular-rectilinear') {
-                currCellular.growRectilinear();
+                // Rectilinear already has step parameter (0 means just setup, no growth)
+                currCellular.growRectilinear(currentNumGrow);
             } else {
-                currCellular.growCells();
+                // Organic: manual stepping (setup + step-by-step growth)
+                currCellular.createTerrain();
+                currCellular.calcPathValues();
+                currCellular.makeInitialCells();
+
+                for (let i = 0; i < currentNumGrow; i++) {
+                    currCellular.growOnce();
+                }
             }
         } else {
-            // create fresh cellular instance to show complete growth
-            currCellular = new Cellular(solution);
-
-            // Use the appropriate cellular algorithm to grow to completion
+            // grow complete cellular structure
             if (wallAlgorithm === 'cellular-rectilinear') {
                 currCellular.growRectilinear();
             } else {

@@ -227,21 +227,10 @@ class Cellular {
         this.calcPathValues();
         this.makeInitialCells();
 
-        // grow alive cells until no more cells are alive
-        // access the global variables if in web app mode
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
-        let currentNumGrow = (typeof appState !== 'undefined' && appState.display) ? appState.display.numGrow : 0;
-        if (isDevMode) {
-            // grow one at a time on keypress
-            for (let i = 0; i < currentNumGrow; i++) {
-                this.growOnce();
-            }
-        } else {
-            // grow till all cells dead
+        // grow cells to completion
+        this.growOnce();
+        while (this.numAlive > 0) {
             this.growOnce();
-            while (this.numAlive > 0) {
-                this.growOnce();
-            }
         }
     }
 
