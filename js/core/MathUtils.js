@@ -118,6 +118,27 @@ class MathUtils {
     }
 
     /**
+     * Calculate scale factor based on min wall length.
+     * Scale factor = number of highres (quarter-inch) squares per grid square.
+     *
+     * IMPORTANT: This relates GRID units to HIGHRES units, NOT inches to highres.
+     * For inches -> highres, use MathUtils.inchesToHighres() (always factor of 4).
+     *
+     * @param {number} minWallLength - Minimum wall length in inches (default 1.0)
+     * @returns {number} Scale factor (highres squares per grid square)
+     */
+    static getScaleFactor(minWallLength = 1.0) {
+        switch (minWallLength) {
+            case 0.25: return 1;
+            case 0.5: return 2;
+            case 1.0: return 4;
+            case 1.5: return 6;
+            case 2.0: return 8;
+            default: return 4;
+        }
+    }
+
+    /**
      * Calculate padding distribution for centering content
      * @param {number} totalPadding - Total padding to distribute
      * @param {boolean} centerAlign - If true, center the content; if false, align to start

@@ -161,7 +161,7 @@ class Shape {
 
         // Use provided configuration or get default configuration
         config = config || this.getDefaultProcessingConfig();
-        const scaleFactor = RenderConfig.getScaleFactor(config.minWallLength);
+        const scaleFactor = MathUtils.getScaleFactor(config.minWallLength);
 
         // Step 1: Trim input to bounding box
         const trimmed = this.trimToBoundingBox(_inputGrid);
@@ -364,7 +364,7 @@ class Shape {
             return [[]];
         }
 
-        const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
+        const scaleFactor = MathUtils.getScaleFactor(minWallLength);
 
         // Step 1: Pure downsampling
         const lowResBuffer = this.downsampleToLowRes(this.data.highResBufferShape, scaleFactor);
