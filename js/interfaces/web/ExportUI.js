@@ -588,13 +588,13 @@ class ExportUI {
         }
 
         // Get values from dynamic element map
-        const thicknessIn = elementMap['thicknessIn'] ? parseFloat(elementMap['thicknessIn'].value()) : 0.23;
+        const thicknessIn = elementMap['thicknessIn'] ? parseFloat(elementMap['thicknessIn'].value()) : 0.73;
         const kerfIn = elementMap['kerfIn'] ? parseFloat(elementMap['kerfIn'].value()) : 0;
         const caseDepthIn = elementMap['caseDepthIn'] ? parseFloat(elementMap['caseDepthIn'].value()) : 3;
         const sheetWidthIn = elementMap['sheetWidthIn'] ? parseFloat(elementMap['sheetWidthIn'].value()) : 30;
         const sheetHeightIn = elementMap['sheetHeightIn'] ? parseFloat(elementMap['sheetHeightIn'].value()) : 28;
         const gapIn = elementMap['gapIn'] ? parseFloat(elementMap['gapIn'].value()) : 0.5;
-        const pinMode = elementMap['pinMode'] ? elementMap['pinMode'].value() : '1-pin';
+        const pinMode = elementMap['pinMode'] ? elementMap['pinMode'].value() : 'lazy';
         const numSheets = parseInt(this.html.numSheetsInput.value());
 
         // Validate inputs

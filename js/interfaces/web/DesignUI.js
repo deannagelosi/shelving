@@ -1098,15 +1098,16 @@ class DesignUI {
             .parent(wallLengthRow)
             .changed(() => this.handleMinWallLengthChange());
 
-        // Add grid square size options (1.0 first since it's the default)
-        this.html.minWallLengthSelect.option('1.0', '1.0');
-        this.html.minWallLengthSelect.option('2.0', '2.0');
-        this.html.minWallLengthSelect.option('1.5', '1.5');
-        this.html.minWallLengthSelect.option('0.5', '0.5');
+        // Add grid square size options in ascending order
+        // Values use String() output to match programmatic selected() calls
         this.html.minWallLengthSelect.option('0.25', '0.25');
+        this.html.minWallLengthSelect.option('0.5', '0.5');
+        this.html.minWallLengthSelect.option('1.0', '1');
+        this.html.minWallLengthSelect.option('1.5', '1.5');
+        this.html.minWallLengthSelect.option('2.0', '2');
 
         // Set initial value
-        this.html.minWallLengthSelect.selected(appState.generationConfig.minWallLength.toString());
+        this.html.minWallLengthSelect.selected(String(appState.generationConfig.minWallLength));
     }
 
     updateCustomBufferSize() {
@@ -1700,7 +1701,7 @@ class DesignUI {
         }
 
         if (this.html.minWallLengthSelect && config.minWallLength !== undefined) {
-            const minWallLengthStr = config.minWallLength.toFixed(1);
+            const minWallLengthStr = String(config.minWallLength);
             this.html.minWallLengthSelect.selected(minWallLengthStr);
             // Force update if p5.js didn't update properly
             if (this.html.minWallLengthSelect.value() !== minWallLengthStr) {
