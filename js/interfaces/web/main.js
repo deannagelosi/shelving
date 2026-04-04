@@ -16,13 +16,6 @@ let isExporting = false;
 //== static DOM element references
 let htmlRefs = {};
 
-//== screens enum
-const ScreenState = {
-    INPUT: 'input',
-    DESIGN: 'design',
-    EXPORT: 'export'
-};
-
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
     canvasElement.parent('canvas-div');
