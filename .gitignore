@@ -1,6 +1,12 @@
-jsconfig.json
-libraries/
+# System
 .DS_Store
-examples/
+
+# IDEs
 .vscode/
-docs/
+.claude/
+
+# Dependencies
+node_modules/
+
+# Reference
+examples/
