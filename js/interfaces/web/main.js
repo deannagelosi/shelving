@@ -1,0 +1,331 @@
+//== constants
+const canvasWidth = 650;
+const canvasHeight = 650;
+const SQUARE_SIZE = 0.25; // in inches
+
+//== UI class instances
+let inputUI;
+let designUI;
+let exportUI;
+
+//== event management
+let appEvents;
+let updateScheduled = false;
+let isExporting = false;
+
+//== static DOM element references
+let htmlRefs = {};
+
+//== screens enum
+const ScreenState = {
+    INPUT: 'input',
+    DESIGN: 'design',
+    EXPORT: 'export'
+};
+
+function setup() {
+    let canvasElement = createCanvas(canvasWidth, canvasHeight);
+    canvasElement.parent('canvas-div');
+
+    // select all DOM containers
+    htmlRefs = {
+        left: {
+            top: select('#left-side-bar .sidebar-top'),
+            list: select('#left-side-bar .sidebar-list'),
+            buttons: select('#left-side-bar .sidebar-buttons')
+        },
+        right: {
+            top: select('#right-side-bar .sidebar-top'),
+            list: select('#right-side-bar .sidebar-list'),
+            buttons: select('#right-side-bar .sidebar-buttons')
+        },
+        leftSidebar: select('#left-side-bar'),
+        rightSidebar: select('#right-side-bar'),
+        headerControls: select('#header-controls'),
+        bottomDiv: select('#bottom-div'),
+        subheading: select('#subheading')
+    };
+
+    // initialize event system
+    appEvents = new EventEmitter();
+
+    // ui update manager for state change events
+    appEvents.on('stateChanged', () => {
+        if (!updateScheduled) {
+            // debounce multiple state change events into a single ui update call
+            updateScheduled = true;
+            // setTimeout delays ui updates until after state changes complete
+            setTimeout(() => {
+                updateScheduled = false;
+                // call ui update on the active screen
+                switch (appState.currentScreen) {
+                    case ScreenState.INPUT:
+                        inputUI.update();
+                        break;
+                    case ScreenState.DESIGN:
+                        designUI.update();
+                        break;
+                    case ScreenState.EXPORT:
+                        exportUI.update();
+                        break;
+                }
+            }, 0);
+        }
+    });
+
+    // setup global export functionality
+    appEvents.on('exportRequested', () => {
+        handleFileExport();
+    });
+
+    // setup ui elements for both screens
+    inputUI = new InputUI();
+    designUI = new DesignUI();
+    exportUI = new ExportUI();
+
+    // start on input screen
+    changeScreen(ScreenState.INPUT);
+
+    // If fast reload is enabled, load the test data
+    if (appState.display.fastReloadDev) {
+        loadTestData();
+    }
+}
+
+function loadTestData() {
+    fetch(`examples/${appState.display.testFileName}`)
+        .then(response => response.json())
+        .then(data => {
+            // load the data
+            inputUI.loadJsonData(data);
+
+            // switch the screen
+            changeScreen(appState.display.fastReloadScreen);
+
+            if (appState.display.autoLoadSolution) {
+                // Use setTimeout to ensure the UI has finished its render cycle
+                setTimeout(() => {
+                    let uiClass = (appState.display.fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
+                    if (uiClass) {
+                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === appState.display.testSolutionName);
+                        if (targetSolutionIndex !== -1) {
+                            uiClass.viewSavedAnneal(targetSolutionIndex);
+                        } else {
+                            console.error(`Fast Reload Error: Could not find '${appState.display.testSolutionName}' in the loaded data.`);
+                        }
+                    }
+                }, 0);
+            }
+        })
+        .catch(error => console.error('Error loading test data:', error));
+}
+
+function draw() {
+    // setup canvas. UI managed by view manager and UI classes
+    noLoop();
+}
+
+function keyPressed() {
+    // Input screen key commands
+    if (appState.currentScreen == ScreenState.INPUT) {
+        if (key === '~') {
+            // toggle export button visibility
+            inputUI.html.exportButton.toggleClass('hidden');
+        } else {
+            // Handle brush controls
+            inputUI.handleKeyPress(key);
+        }
+    }
+    // Design screen key commands
+    else if (appState.currentScreen == ScreenState.DESIGN) {
+        if (key === 'd') {
+            // toggle dev mode on and off
+            appState.display.devMode = !appState.display.devMode;
+            // reset step counters
+            appState.display.numGrow = 0;
+            appState.display.curveStep = 0;
+            if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
+                designUI.displayResult();
+            }
+        }
+        else if (key === 'g' && appState.display.devMode) {
+            const fabricationType = appState.generationConfig.fabricationType;
+            if (fabricationType === 'bent') {
+                appState.display.curveStep++;
+            } else {
+                appState.display.numGrow++;
+            }
+            designUI.displayResult();
+        }
+        // Arrow key handling for shape movement
+        else if (keyCode === LEFT_ARROW) {
+            designUI.handleArrowKey('left');
+        }
+        else if (keyCode === RIGHT_ARROW) {
+            designUI.handleArrowKey('right');
+        }
+        else if (keyCode === UP_ARROW) {
+            designUI.handleArrowKey('up');
+        }
+        else if (keyCode === DOWN_ARROW) {
+            designUI.handleArrowKey('down');
+        }
+    }
+    // Export screen key commands
+    else if (appState.currentScreen == ScreenState.EXPORT) {
+        if (key === 'd') {
+            // toggle dev mode on and off (shows extra detail in current view)
+            appState.display.devMode = !appState.display.devMode;
+
+            // redraw current view with updated devMode
+            clear();
+            background(255);
+
+            // use BoardRenderer for board exports
+            if (exportUI.currExport && typeof exportUI.currExport.boards !== 'undefined') {
+                const renderConfig = exportUI._buildBoardRenderConfig();
+                if (exportUI.showingLayout) {
+                    // prep layout data
+                    if (exportUI.currExport.sheetOutline.length === 0 || exportUI.currExport.cutList.length === 0 || exportUI.currExport.etchList.length === 0) {
+                        exportUI.currExport.prepLayout();
+                    }
+                    exportUI.boardRenderer.renderLayout(
+                        exportUI.currExport.cutList,
+                        exportUI.currExport.etchList,
+                        exportUI.currExport.sheetOutline,
+                        renderConfig
+                    );
+                } else {
+                    exportUI.boardRenderer.renderCase(
+                        exportUI.currExport.boards,
+                        exportUI.currExport.cellular,
+                        renderConfig
+                    );
+                }
+            } else if (exportUI.currExport && typeof exportUI.currExport.previewLayout === 'function') {
+                // use CubbyExporter if not previewing boards (cubby still has preview methods)
+                if (exportUI.showingLayout) {
+                    exportUI.currExport.previewLayout();
+                } else {
+                    exportUI.currExport.previewCase();
+                }
+            }
+        }
+    }
+}
+
+function mousePressed() {
+    if (appState.currentScreen == ScreenState.INPUT) {
+        inputUI.paintAtPosition(mouseX, mouseY);
+    } else if (appState.currentScreen == ScreenState.DESIGN) {
+        designUI.handleCanvasClick(mouseX, mouseY);
+    }
+}
+
+function mouseDragged() {
+    if (appState.currentScreen == ScreenState.INPUT) {
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.paintAtPosition(mouseX, mouseY, true);
+    }
+}
+
+function mouseMoved() {
+    if (appState.currentScreen == ScreenState.INPUT) {
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.drawInputGrid();
+    }
+}
+
+//== helper functions
+function changeScreen(newScreen) {
+    // setup view for the new screen
+    switch (newScreen) {
+        case ScreenState.INPUT:
+            htmlRefs.subheading.html("Object Input");
+            htmlRefs.right.top.html('Shapes');
+            htmlRefs.leftSidebar.addClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+        case ScreenState.DESIGN:
+            htmlRefs.subheading.html("Generate Layout");
+            htmlRefs.left.top.html('Shapes');
+            htmlRefs.right.top.html('Results');
+            htmlRefs.leftSidebar.removeClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+        case ScreenState.EXPORT:
+            htmlRefs.subheading.html("Export Design");
+            htmlRefs.left.top.html('Solutions');
+            htmlRefs.right.top.html('Settings');
+            htmlRefs.leftSidebar.removeClass('hidden');
+            htmlRefs.rightSidebar.removeClass('hidden');
+            break;
+    }
+
+    // update app screen state
+    appState.currentScreen = newScreen;
+
+    // triggers ui .show()/.hide() methods
+    appEvents.emit('screenChanged', { screen: newScreen });
+    // trigger ui .update() method
+    appEvents.emit('stateChanged');
+}
+
+function updateButton(button, enabled) {
+    // enable/disable button based on boolean flag
+    if (enabled) {
+        button.removeAttribute('disabled');
+    } else {
+        button.attribute('disabled', '');
+    }
+}
+
+//== data export functions
+function handleFileExport() {
+    // export saved shapes and solutions
+    if (isExporting) return; // debounce
+    isExporting = true;
+
+    try {
+        // get an export friendly copy of the shapes
+        let shapesCopy = appState.shapes.map(shape => shape.toDataObject());
+        // get an export friendly copy of the saved anneals
+        let annealsCopy = appState.savedAnneals.map(anneal => {
+            return {
+                ...anneal,
+                finalSolution: anneal.finalSolution.toDataObject()
+            };
+        });
+        // create export object
+        let exportData = {
+            savedAnneals: annealsCopy,
+            allShapes: shapesCopy
+        };
+
+        saveJSONFile(exportData);
+    } catch (error) {
+        console.error('Export failed:', error);
+    } finally {
+        isExporting = false;
+    }
+}
+
+function saveJSONFile(_exportData) {
+    // used by InputUI and DesignUI to save export data
+    const jsonData = JSON.stringify(_exportData, null);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    // create temporary link element
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'shelving_data.json';
+
+    // append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // clean up the URL
+    URL.revokeObjectURL(url);
+}
+
+

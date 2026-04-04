@@ -3,6 +3,7 @@
 
 <head>
     <title>Uniquely Shaped Spaces</title>
+    <link rel="icon" href="data:,">
     <script src="lib/p5-1.6.0.js"></script>
     <script src="lib/dxf-writer-1.18.4-bundle.js"></script>
     <link rel="stylesheet" type="text/css" href="css/app.css">
@@ -38,16 +39,30 @@
         <div id="bottom-div"></div>
     </div>
 
-    <script src="js/sketch.js"></script>
-    <script src="js/InputUI.js"></script>
-    <script src="js/DesignUI.js"></script>
-    <script src="js/ExportUI.js"></script>
-    <script src="js/Shape.js"></script>
-    <script src="js/Solution.js"></script>
-    <script src="js/Anneal.js"></script>
-    <script src="js/Cellular.js"></script>
-    <script src="js/Board.js"></script>
-    <script src="js/Export.js"></script>
+    <script src="js/interfaces/web/main.js"></script>
+    <script src="js/core/MathUtils.js"></script>
+    <script src="js/core/appState.js"></script>
+    <script src="js/core/EventEmitter.js"></script>
+    <script src="js/interfaces/web/RenderConfig.js"></script>
+    <script src="js/interfaces/web/ShapeRenderer.js"></script>
+    <script src="js/interfaces/web/SolutionRenderer.js"></script>
+    <script src="js/interfaces/web/CellularRenderer.js"></script>
+    <script src="js/interfaces/web/CubbyRenderer.js"></script>
+    <script src="js/interfaces/web/BendWallRenderer.js"></script>
+    <script src="js/interfaces/web/BoardRenderer.js"></script>
+    <script src="js/core/BendWall.js"></script>
+    <script src="js/interfaces/web/InputUI.js"></script>
+    <script src="js/interfaces/web/DesignUI.js"></script>
+    <script src="js/interfaces/web/ExportUI.js"></script>
+    <script src="js/core/Shape.js"></script>
+    <script src="js/core/Solution.js"></script>
+    <script src="js/core/Anneal.js"></script>
+    <script src="js/core/Cellular.js"></script>
+    <script src="js/core/material-configs.js"></script>
+    <script src="js/core/Board.js"></script>
+    <script src="js/core/BoardExporter.js"></script>
+    <script src="js/core/Cubby.js"></script>
+    <script src="js/core/CubbyExporter.js"></script>
 </body>
 
 </html>

@@ -1,5 +1,5 @@
 class Anneal {
-    constructor(_shapes, _ui) {
+    constructor(_shapes, _layoutConfig = {}, _bufferConfig = {}) {
         //== anneal strategy variables
         // annealing strategy:
         // 1. multi-start: several initial anneals run concurrently, then pick the best to refine
@@ -10,57 +10,38 @@ class Anneal {
         this.reheatCounter = 100; // max failed to improve iterations before reheating
         this.initialTemp = 10000;
         this.minTemp = 0.1; // temperature to stop annealing at
-        this.initialCoolingRate = 0.95; // initial cooling rate (higher = cools slower. range: 0-1)
+        this.initialCoolingRate = 0.90; // initial cooling rate (higher = cools slower. range: 0-1)
         this.reheatingBoost = 1.6; // temperature increases ratio when stuck (higher = more reheat. range: 1-2)
-        this.displayInterval = 30; // how often to update the display with a new solution
+        this.displayInterval = 50; // how often to update the display with a new solution
 
-        //== ui
-        this.ui = _ui;
-        // this.statusText = this.ui.html.statusText;
+        //== configuration
+        this.layoutConfig = _layoutConfig;
+        this.bufferConfig = _bufferConfig;
 
         //== state variables
         this.shapes = _shapes;
         this.multiStartSolutions = []; // step 1 (initial anneal promises)
-        this.multiStartsHistory = {};
-        this.solutionHistory = []; // stores final solution history (...multi-starts, refinement)
         this.finalSolution = null;
         this.stopAnneal = false;
         this.restartAnneal = false;
     }
 
-    async run() {
-        // == Setup == //
-        // switch button modes:
-        // - 'generate' -> 'regenerate' mode
-        // - 'clear' -> 'stop + clear' mode
-        this.ui.html.annealButton.html('Regenerate');
-        this.ui.html.annealButton.mousePressed(() => this.reAnneal());
-        this.ui.html.clearButton.mousePressed(() => this.endAnneal());
-
+    async run(progressCallback = null) {
         // == Start Annealing Process == //
         // - multi-start phase: run several quick anneals concurrently, then pick the best
         // - refinement phase: long anneal the best solution to improve it further
-        let bestStartSolution = await this.multiStartPhase();
+        let bestStartSolution = await this.multiStartPhase(progressCallback);
         if (this.stopAnneal && !bestStartSolution) return; // re-anneal clicked
 
-        let refinedSolution = await this.refinePhase(bestStartSolution);
+        let refinedSolution = await this.refinePhase(bestStartSolution, progressCallback);
         if (this.stopAnneal && !refinedSolution) return; // re-anneal clicked
 
         // == Annealing Complete == //
         // anneal completed with out being stopped
         this.finalSolution = refinedSolution;
-
-        if (devMode) {
-            console.log("Refine complete. Score:", this.finalSolution.score);
-        }
-
-        // update final solution history with it's initial start history
-        let winningStartHistory = [...this.multiStartsHistory[bestStartSolution.startID]];
-        this.solutionHistory = [...winningStartHistory, ...this.solutionHistory];
-        this.multiStartsHistory = {}; // clear the multi-start history
     }
 
-    async multiStartPhase() {
+    async multiStartPhase(progressCallback = null) {
         //  multi-start phase
         // - run several quick anneals concurrently, return best one to refine
         this.multiStartSolutions = [];
@@ -69,12 +50,13 @@ class Anneal {
             // give each start lower initial temperature and faster cooling
             const multiConfig = {
                 multiStart: true,
-                initialTemp: this.initialTemp * (1 - startID / this.numStarts),
-                initialCoolingRate: this.initialCoolingRate * 0.75
+                initialTemp: this.initialTemp * (1 - (startID / this.numStarts)),
+                initialCoolingRate: this.initialCoolingRate,
+                progressCallback: progressCallback
             };
 
             // create new solution with random layout.
-            let initialSolution = new Solution(this.shapes, startID);
+            let initialSolution = new Solution(this.shapes, startID, this.layoutConfig, {}, this.bufferConfig);
             initialSolution.randomLayout();
 
             // start concurrent anneals (pass which iteration number for multi-start)
@@ -87,39 +69,24 @@ class Anneal {
 
         // find the best solution from all multi-starts
         let bestStartSolution = results.reduce((best, current) => current.score < best.score ? current : best);
-        if (devMode) {
-            console.log("Multi-start results: ", results.map(s => s.score).join(', '));
-            console.log("Best solution:", bestStartSolution.score);
-        }
 
         return bestStartSolution;
     }
 
-    async refinePhase(_bestStartSolution) {
+    async refinePhase(_bestStartSolution, progressCallback = null) {
         // == refinement phase == //
         // -- configure the annealing process for refinement -- //
         const refineConfig = {
             initialTemp: this.initialTemp * 0.1, // lower starting temp for refinement
             initialCoolingRate: 0.99, // slower cooling
-        }
+            progressCallback: progressCallback
+        };
 
         let bestSolution = await this.anneal(_bestStartSolution, refineConfig);
-        if (this.stopAnneal) return null // re-anneal clicked
+        if (this.stopAnneal) return null; // stop anneal clicked
 
-
-        // if solution is not valid (overlapping or floating shapes), continue to refine
-        while (bestSolution.valid == false) {
-            // stop refining if re-anneal button clicked
-
-            const refineConfig = {
-                initialTemp: this.initialTemp / (this.numStarts), // lower starting temp for refinement
-                initialCoolingRate: 0.99, // slower cooling
-            }
-            if (devMode) console.log("additional refining...")
-
-            bestSolution = await this.anneal(bestSolution, refineConfig);
-            if (this.stopAnneal) return null // re-anneal clicked
-        }
+        bestSolution = await this.anneal(bestSolution, refineConfig);
+        if (this.stopAnneal) return null; // stop anneal clicked
 
         return bestSolution;
     }
@@ -132,8 +99,9 @@ class Anneal {
             initialCoolingRate: this.initialCoolingRate,
             maxIterations: this.maxIterations,
             reheatCounter: this.reheatCounter,
+            progressCallback: null,
             ..._config // override defaults with any provided values
-        }
+        };
         let temperature = config.initialTemp;
         let coolingRate = config.initialCoolingRate;
         let maxIterations = config.maxIterations;
@@ -142,7 +110,6 @@ class Anneal {
         // initialize the annealing process with the given solution and parameters
         let currentSolution = _initialSolution;
         let bestSolution = _initialSolution;
-        this.saveSolutionHistory(bestSolution, config.multiStart);
 
         let iterationsSinceImprovement = 0;
         const coolingRateAdjustment = 0.01; // small adjustment to cooling rate on improvement
@@ -182,7 +149,6 @@ class Anneal {
             temperature *= coolingRate;
 
             if (iterationsSinceImprovement > config.reheatCounter) {
-                if (devMode) console.log("Reheating...");
                 // adaptive cooling: if stuck, reheat the system
                 // - increasing the temperature causes more exploration, helping to escape a local minima
                 // increase temperature, but don't exceed initial temp
@@ -194,11 +160,13 @@ class Anneal {
 
             // update display at specified intervals
             if (iteration % this.displayInterval === 0) {
-                // this.saveSolutionHistory(bestSolution, config.multiStart);
-                this.saveSolutionHistory(currentSolution, config.multiStart);
                 // only show the first (longest running) multi-start, then all refinements
                 if ((!config.multiStart) || (config.multiStart && currentSolution.startID === 0)) {
-                    this.ui.updateDisplayCallback(currentSolution);
+                    // send solution to web worker progress callback
+                    if (config.progressCallback) {
+                        // Show current accepted solution
+                        config.progressCallback(currentSolution);
+                    }
                 }
             }
 
@@ -208,10 +176,6 @@ class Anneal {
             // add a small delay to prevent blocking the main thread
             await new Promise(resolve => setTimeout(resolve, 0));
             totalIterations++;
-        }
-
-        if (devMode) {
-            console.log("iterations completed:", Math.round((totalIterations / maxIterations) * 10000) / 100, "%");
         }
 
         // return the best solution found during this annealing process
@@ -240,24 +204,9 @@ class Anneal {
         return Math.floor(normalizedTemp * (maxRange - minRange) + minRange);
     }
 
-    saveSolutionHistory(_bestSolution, _multiStart) {
-        // only save the necessary data for the solution history
-        let solutionData = _bestSolution.exportSolution();
-
-        if (_multiStart) {
-            if (!this.multiStartsHistory[_bestSolution.startID]) {
-                this.multiStartsHistory[_bestSolution.startID] = [];
-            }
-            this.multiStartsHistory[_bestSolution.startID].push(solutionData);
-        }
-        else {
-            this.solutionHistory.push(solutionData);
-        }
-    }
-
     // handler for button that controls restart
     reAnneal() {
-        console.log("restart clicked")
+        // console.log("restart clicked");
         // stop flag noticed by async anneals, which terminate
         this.stopAnneal = true;
         // restart flag noticed by handleStartAnneal(), which calls new anneal
@@ -265,8 +214,14 @@ class Anneal {
     }
 
     endAnneal() {
-        console.log("clear (stop) clicked")
+        // console.log("clear (stop) clicked");
         // stop flag noticed by async anneals, which terminate
         this.stopAnneal = true;
     }
+}
+
+// Only export the class when in a Node.js environment (e.g., during Jest tests)
+// Ignored when the app is running in the browser
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Anneal;
 }
