@@ -27,12 +27,6 @@ class Solution {
         this.aspectRatioPref = _layoutConfig.aspectRatioPref || 0; // -1 for tall, 0 for square, 1 for wide layouts
         this.useCustomPerimeter = _layoutConfig.useCustomPerimeter || false;
 
-        // Wall generation configuration
-        this.wallAlgorithm = _wallConfig.algorithm || 'cellular-organic';
-        this.cubbyCurveRadius = _wallConfig.cubbyCurveRadius || 0.5;
-        this.bendRadius = _wallConfig.bendRadius || 1.0;
-        this.maxBends = _wallConfig.maxBends || 4;
-
         // Shape buffer configuration (used during generation)
         this.customBufferSize = _bufferConfig.customBufferSize !== undefined ? _bufferConfig.customBufferSize : 0.25;
         this.centerShape = _bufferConfig.centerShape !== undefined ? _bufferConfig.centerShape : false;
@@ -581,12 +575,7 @@ class Solution {
             perimeterWidthInches: this.perimeterWidthInches,
             perimeterHeightInches: this.perimeterHeightInches
         };
-        const wallConfig = {
-            algorithm: this.wallAlgorithm,
-            cubbyCurveRadius: this.cubbyCurveRadius,
-            bendRadius: this.bendRadius,
-            maxBends: this.maxBends
-        };
+        const wallConfig = {};
         const bufferConfig = {
             customBufferSize: this.customBufferSize,
             centerShape: this.centerShape,
@@ -731,12 +720,6 @@ class Solution {
             useCustomPerimeter: this.useCustomPerimeter,
             perimeterWidthInches: this.perimeterWidthInches,
             perimeterHeightInches: this.perimeterHeightInches,
-            // Wall generation parameters
-            wallAlgorithm: this.wallAlgorithm,
-            fabricationType: this.fabricationType,
-            cubbyCurveRadius: this.cubbyCurveRadius,
-            bendRadius: this.bendRadius,
-            maxBends: this.maxBends,
             // Shape buffer parameters (used during generation)
             customBufferSize: this.customBufferSize,
             centerShape: this.centerShape,
@@ -767,13 +750,7 @@ class Solution {
             perimeterHeightInches: solutionData.perimeterHeightInches || 0
         };
 
-        // Prepare wall generation parameters
-        const wallConfig = {
-            algorithm: solutionData.wallAlgorithm || 'cellular-organic',
-            cubbyCurveRadius: solutionData.cubbyCurveRadius || 0.5,
-            bendRadius: solutionData.bendRadius || solutionData.curveRadius || 1.0,
-            maxBends: solutionData.maxBends || 4
-        };
+        const wallConfig = {};
 
         const solution = new Solution(shapes, solutionData.startID, layoutConfig, wallConfig, bufferConfig);
 
@@ -781,9 +758,6 @@ class Solution {
         if (solutionData.clusterLimit !== undefined) {
             solution.clusterLimit = solutionData.clusterLimit;
         }
-
-        // set fabrication type and related properties
-        solution.fabricationType = solutionData.fabricationType;
 
         // Check if layout data exists (from worker) or needs to be recalculated (from import)
         if (solutionData.layout && solutionData.score !== undefined && solutionData.valid !== undefined) {

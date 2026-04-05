@@ -19,22 +19,6 @@ class RenderConfig {
             highResBufferColor: "rgba(150, 150, 150, 0.5)", // Darker grey, semi-transparent  
             lowResBufferColor: "rgba(0, 174, 255, 0.15)", // Blue buffer zones
 
-            // Bend wall rendering colors
-            bendWall: {
-                wallPath: "rgb(50, 50, 50)",
-                debugGroup: "rgba(255, 0, 0, 0.3)",
-                completedGroup: "rgba(0, 255, 0, 0.3)",
-                activeGroup: "rgba(0, 0, 255, 0.3)",
-                forbiddenEnd: "rgb(255, 0, 0)",
-                availableEnd: "rgb(0, 255, 0)",
-                connectionLine: "rgb(255, 165, 0)",
-                shelfSegment: "orange",
-                lineSegment: "red",
-                arcSegment: "blue",
-                segmentIdText: "black",
-                segmentIdStroke: "white"
-            },
-
             // Cellular automata rendering colors
             cellular: {
                 lineColor: "rgb(175, 141, 117)", // Wood brown for cellular lines

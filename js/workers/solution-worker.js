@@ -7,7 +7,6 @@ class SolutionWorker {
         // Dependencies are injected for environment compatibility
         this.Anneal = dependencies.Anneal;
         this.Cellular = dependencies.Cellular;
-        this.BendWall = dependencies.BendWall;
         this.Solution = dependencies.Solution;
         this.BoardExporter = dependencies.BoardExporter;
         this.Board = dependencies.Board;
@@ -82,10 +81,6 @@ class SolutionWorker {
             aspectRatioPref = 0,
             randMin = null,
             randMax = null,
-            wallAlgorithm = 'cellular-organic',
-            cubbyCurveRadius = 0.5,
-            wallBendRadius = 1.0,
-            maxBends = 4,
             useCustomPerimeter = false,
             perimeterWidthInches = 0,
             perimeterHeightInches = 0,
@@ -95,19 +90,11 @@ class SolutionWorker {
         } = payload;
 
         // Create configuration objects
-        // Re-enabled perimeter config to test if this breaks UI updates
         const layoutConfig = {
             aspectRatioPref: aspectRatioPref,
             useCustomPerimeter: useCustomPerimeter,
             perimeterWidthInches: perimeterWidthInches,
             perimeterHeightInches: perimeterHeightInches
-        };
-
-        const wallConfig = {
-            algorithm: wallAlgorithm,
-            cubbyCurveRadius: cubbyCurveRadius,
-            bendRadius: wallBendRadius,
-            maxBends: maxBends
         };
 
         const bufferConfig = {
@@ -212,58 +199,12 @@ class SolutionWorker {
             }
 
             // Phase 2: Wall generation
-            let cellular;
-            let bendWallData = null; // Decouple bend data from the solution
-            if (wallAlgorithm.startsWith('cellular')) {
-                this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
+            this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
-                cellular = new this.Cellular(anneal.finalSolution);
+            const cellular = new this.Cellular(anneal.finalSolution);
+            cellular.growCells();
 
-                // Route to the appropriate cellular algorithm
-                if (wallAlgorithm === 'cellular-organic') {
-                    cellular.growCells();
-                } else if (wallAlgorithm === 'cellular-rectilinear') {
-                    cellular.growRectilinear();
-                } else {
-                    throw new Error(`Unknown cellular algorithm: ${wallAlgorithm}`);
-                }
-
-                this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
-            } else if (wallAlgorithm === 'bend') {
-                this.sendProgress('PHASE_START', { phase: 'bend', message: 'Generating bent walls...' });
-                console.log(`[Worker] Bend generation started. radius=${wallBendRadius}, maxBends=${wallConfig.maxBends}`);
-
-                // Create BendWall instance and generate bent walls
-                const bendWall = new this.BendWall(anneal.finalSolution);
-
-                // Generate the curved wall path
-                const wallPath = bendWall.generate(wallConfig.maxBends, wallBendRadius);
-                console.log(`[Worker] Bend generation complete. segments=${wallPath.length}`);
-
-                // Store bent wall data in a local variable, not on the solution
-                bendWallData = {
-                    wallPath: wallPath,
-                    groups: bendWall.groups,
-                    debugSteps: bendWall.debugSteps || []
-                };
-
-                // Generate a cellular baseline for statistics even in curve mode
-                cellular = new this.Cellular(anneal.finalSolution, false);
-                cellular.growCells();
-
-                this.sendProgress('PHASE_COMPLETE', {
-                    phase: 'bend',
-                    wallSegments: wallPath.length,
-                    groups: bendWall.groups.length
-                });
-            } else {
-                throw new Error(`Unknown wall generation mode: ${wallAlgorithm}`);
-            }
-
-            // Store selected wall generation parameters on the solution for UI/export persistence
-            anneal.finalSolution.wallAlgorithm = wallAlgorithm;
-            anneal.finalSolution.bendRadius = wallBendRadius;
-            anneal.finalSolution.maxBends = maxBends;
+            this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
 
             // Phase 3: Data preparation
             this.sendProgress('PHASE_START', { phase: 'export', message: 'Preparing data for storage...' });
@@ -273,7 +214,6 @@ class SolutionWorker {
                 const result = {
                     title: `solution-${this.currentJob.startId + 1}`,
                     finalSolution: anneal.finalSolution.toDataObject(),
-                    bendWallData: bendWallData, // Pass decoupled data here
                     enabledShapes: actualShapes.map(() => true),
                     cellular: {
                         cellSpace: cellular.cellSpace,
@@ -517,7 +457,6 @@ function initializeBrowserWorker() {
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',
-        '../core/BendWall.js',
         '../core/Anneal.js',
         '../core/BoardExporter.js',
         '../core/Board.js',
@@ -525,7 +464,7 @@ function initializeBrowserWorker() {
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular, BendWall, Solution, BoardExporter, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, BoardExporter, Board });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -554,7 +493,6 @@ function initializeNodeWorker() {
     const Shape = require('../core/Shape.js');
     const Anneal = require('../core/Anneal.js');
     const Cellular = require('../core/Cellular.js');
-    const BendWall = require('../core/BendWall.js');
     const BoardExporter = require('../core/BoardExporter.js');
     const Board = require('../core/Board.js');
 
@@ -566,7 +504,7 @@ function initializeNodeWorker() {
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular, BendWall, Solution, BoardExporter, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, BoardExporter, Board });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;

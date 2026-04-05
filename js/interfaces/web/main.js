@@ -142,12 +142,7 @@ function keyPressed() {
             }
         }
         else if (key === 'g' && appState.display.devMode) {
-            const fabricationType = appState.generationConfig.fabricationType;
-            if (fabricationType === 'bent') {
-                appState.display.curveStep++;
-            } else {
-                appState.display.numGrow++;
-            }
+            appState.display.numGrow++;
             designUI.displayResult();
         }
         // Arrow key handling for shape movement
@@ -175,7 +170,7 @@ function keyPressed() {
             background(255);
 
             // use BoardRenderer for board exports
-            if (exportUI.currExport && typeof exportUI.currExport.boards !== 'undefined') {
+            if (exportUI.currExport) {
                 const renderConfig = exportUI._buildBoardRenderConfig();
                 if (exportUI.showingLayout) {
                     // prep layout data
@@ -194,13 +189,6 @@ function keyPressed() {
                         exportUI.currExport.cellular,
                         renderConfig
                     );
-                }
-            } else if (exportUI.currExport && typeof exportUI.currExport.previewLayout === 'function') {
-                // use CubbyExporter if not previewing boards (cubby still has preview methods)
-                if (exportUI.showingLayout) {
-                    exportUI.currExport.previewLayout();
-                } else {
-                    exportUI.currExport.previewCase();
                 }
             }
         }

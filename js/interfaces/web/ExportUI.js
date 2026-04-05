@@ -42,10 +42,6 @@ class ExportUI {
             this.updateMaterialTypeUI(materialType);
         });
 
-        // listen for cubby mode changes to update UI
-        appEvents.on('cubbyModeChanged', ({ cubbyMode }) => {
-            this.updateCubbyModeUI(cubbyMode);
-        });
     }
 
     computeState() {
@@ -97,7 +93,6 @@ class ExportUI {
             .changed(() => this.handleMaterialTypeChange());
         this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
         this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
-        this.html.materialTypeSelect.option('Clay/Plastic (3D Printer)', 'clay-plastic-3d');
 
 
         // Number of Sheets (hidden - automatically managed by export system)
@@ -185,10 +180,7 @@ class ExportUI {
 
     getCurrentSettingValue(settingName, defaultValue) {
         // Get current value from appState, handling falsy values like 0 properly
-        if (settingName === 'cubbyCurveRadius' && typeof appState.generationConfig.cubbyCurveRadius === 'number') {
-            return appState.generationConfig.cubbyCurveRadius;
-        }
-        // Add other settings that need appState sync here as needed
+        // Add settings that need appState sync here as needed
         return defaultValue;
     }
 
@@ -377,27 +369,6 @@ class ExportUI {
         // Trigger export data preparation with new material settings
         this.prepareExportData();
     }
-
-    updateCubbyModeUI(cubbyMode) {
-        // Only update if we're on the export screen and material UI is built
-        if (appState.currentScreen !== ScreenState.EXPORT) {
-            return;
-        }
-
-        // Update cubby mode UI elements if they exist
-        const currentMaterialType = this.html.materialTypeSelect.value();
-        const elementMap = this.materialElementMaps[currentMaterialType];
-
-        if (elementMap && elementMap['cubbyMode']) {
-            elementMap['cubbyMode'].selected(cubbyMode);
-        }
-
-        // Only trigger export data preparation if we have export data ready
-        if (elementMap) {
-            this.prepareExportData();
-        }
-    }
-
 
     //== button handlers
     handleBack() {
@@ -605,19 +576,6 @@ class ExportUI {
             return;
         }
 
-        // get solution for accessing fabrication type and other properties
-        const solution = appState.currentAnneal.finalSolution;
-
-        // get export config (includes all parameters for different fabrication types)
-        const cubbyCurveRadius = elementMap['cubbyCurveRadius'] ? parseFloat(elementMap['cubbyCurveRadius'].value()) : 0.5;
-        const cubbyMode = elementMap['cubbyMode'] ? elementMap['cubbyMode'].value() : 'one';
-
-        // Update appState for clay-plastic-3d materials (for consistent preview)
-        if (materialType === 'clay-plastic-3d') {
-            appState.generationConfig.cubbyCurveRadius = cubbyCurveRadius;
-            appState.generationConfig.cubbyMode = cubbyMode;
-        }
-
         const config = {
             sheetThicknessIn: thicknessIn,
             sheetWidthIn,
@@ -627,13 +585,6 @@ class ExportUI {
             caseDepthIn,
             pinMode,
             kerfIn,
-            // 3D printing specific
-            cubbyCurveRadius: cubbyCurveRadius,
-            cubbyMode: cubbyMode,
-            wallThickness: elementMap['wallThickness'] ? parseFloat(elementMap['wallThickness'].value()) : 0.25,
-            shrinkFactor: elementMap['shrinkFactor'] ? parseFloat(elementMap['shrinkFactor'].value()) : 0,
-            printBedWidth: elementMap['printBedWidth'] ? parseFloat(elementMap['printBedWidth'].value()) : 12,
-            printBedHeight: elementMap['printBedHeight'] ? parseFloat(elementMap['printBedHeight'].value()) : 12,
             // Min wall length from generation config for unit conversion
             minWallLength: appState.generationConfig.minWallLength || 1.0
         };
@@ -648,36 +599,25 @@ class ExportUI {
             squareSize: layoutProps.squareSize
         };
 
-        // Export screen is independent - determine exporter type based on selected material, not solution's fabricationType
-        // This allows viewing any solution in any export format
-        const exporterType = this.getExporterTypeForMaterial(materialType);
-
-        // Create appropriate exporter based on material type selection
+        // Create exporter configuration
         const exportConfig = {
             materialType: materialType,
             spacing: spacing,
             ...config // spread all config properties
         };
 
-        if (exporterType === 'cubbies') {
-            this.currExport = new CubbyExporter(cellData, exportConfig);
-            this.currExport.detectCubbies();
-            console.log(`📊 Export: ${this.currExport.cubbies.length} cubbies detected for solution "${appState.currentAnneal.title}"`);
-        } else {
-            // Use boards exporter for laser cut materials
-            this.currExport = new BoardExporter(cellData, exportConfig);
-            this.currExport.generateBoards();
-            console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
+        this.currExport = new BoardExporter(cellData, exportConfig);
+        this.currExport.generateBoards();
+        console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
 
-            // Check if any board is longer than the sheet width (accounting for gaps)
-            const longestBoard = this.currExport.getLongestBoard();
-            if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidthIn) {
-                this.showBoardTooLongError(longestBoard, sheetWidthIn);
-                updateButton(this.html.showButton, false);
-                updateButton(this.html.downloadDXFButton, false);
-                updateButton(this.html.downloadCaseButton, false);
-                return;
-            }
+        // Check if any board is longer than the sheet width (accounting for gaps)
+        const longestBoard = this.currExport.getLongestBoard();
+        if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidthIn) {
+            this.showBoardTooLongError(longestBoard, sheetWidthIn);
+            updateButton(this.html.showButton, false);
+            updateButton(this.html.downloadDXFButton, false);
+            updateButton(this.html.downloadCaseButton, false);
+            return;
         }
 
         // Setup layout if the exporter supports it
@@ -815,21 +755,6 @@ class ExportUI {
         }
     }
 
-    getExporterTypeForMaterial(materialType) {
-        // Determine which exporter to use based on selected material type
-        // Export screen is independent of design screen's fabrication type
-        switch (materialType) {
-            case 'plywood-laser':
-            case 'acrylic-laser':
-                return 'boards';  // Use BoardExporter for laser cut materials
-
-            case 'clay-plastic-3d':
-                return 'cubbies'; // Use CubbyExporter for 3D printed materials
-
-            default:
-                return 'boards';
-        }
-    }
 }
 
 // only export the class when in a Node.js environment (e.g., during Jest tests)

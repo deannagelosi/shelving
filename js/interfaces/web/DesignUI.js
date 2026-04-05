@@ -3,8 +3,6 @@ class DesignUI {
         //== state variables
         this.savedAnnealElements = [];
 
-        // Debug flag for bent wall testing - set to true to use golden path test data
-        this.useGoldenPathDebugData = false;
         // dom elements
         this.html = {};
         this.shapeElements = [];
@@ -13,9 +11,6 @@ class DesignUI {
         this.solutionRenderer = new SolutionRenderer();
         this.shapeRenderer = new ShapeRenderer();
         this.cellularRenderer = new CellularRenderer();
-        this.bendWallRenderer = new BendWallRenderer();
-        this.cubbyRenderer = new CubbyRenderer();
-        this.goldenPathData = null;
 
         //== web worker setup
         this.solutionWorker = null;
@@ -35,8 +30,6 @@ class DesignUI {
             }
         });
 
-        // Note: fabricationType and cubbyMode changes now handled by settingsChanged event
-
         // listen for shape preview changes
         appEvents.on('shapePreviewChanged', () => {
             this.updateShapePreview();
@@ -47,17 +40,8 @@ class DesignUI {
             switch (setting) {
                 // Shape processing settings that require regeneration
                 case 'customBufferSize':
-                case 'centerShape':
                 case 'minWallLength':
                     this.regenerateShapesWithNewSettings();
-                    break;
-
-                // UI visibility settings
-                case 'fabricationType':
-                    this.updateFabricationTypeUI(value);
-                    break;
-                case 'cubbyMode':
-                    this.updateCubbyModeUI(value);
                     break;
 
                 // Settings that don't need additional reactions (yet)
@@ -65,10 +49,6 @@ class DesignUI {
                 case 'useCustomPerimeter':
                 case 'perimeterWidthInches':
                 case 'perimeterHeightInches':
-                case 'wallAlgorithm':
-                case 'bendRadius':
-                case 'maxBends':
-                case 'cubbyCurveRadius':
                     break;
 
                 default:
@@ -81,28 +61,6 @@ class DesignUI {
         this.moveDebounceTimer = null;
         this.moveDebounceDelay = 150; // milliseconds
 
-        // this.loadGoldenPath();
-    }
-
-    loadGoldenPath() {
-        // Load golden path test data for visual validation debugging
-        // To use this data instead of the actual algorithm, set this.useGoldenPathDebugData = true
-        fetch('tests/fixtures/curved_walls_check.json')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                this.goldenPathData = data;
-                console.log('[LoadGoldenPath] Golden path test data loaded. Set useGoldenPathDebugData=true to use it for rendering.');
-                // If a solution is already being displayed, re-render it with the new data.
-                if (appState.currentScreen === ScreenState.DESIGN && appState.currentAnneal) {
-                    this.displayResult();
-                }
-            })
-            .catch(error => console.error('Error loading golden path data:', error));
     }
 
     computeState() {
@@ -327,22 +285,6 @@ class DesignUI {
         clear();
         background(255);
 
-        // Sync UI with appState (single source of truth)
-        if (this.html.fabricationTypeSelect) {
-            const fabricationType = appState.generationConfig.fabricationType;
-
-            // Force update using both p5 method and direct DOM access
-            this.html.fabricationTypeSelect.selected(fabricationType);
-
-            // Double-check and force if needed using underlying element
-            if (this.html.fabricationTypeSelect.value() !== fabricationType) {
-                this.html.fabricationTypeSelect.elt.value = fabricationType;
-            }
-
-            // Update UI visibility to match current fabrication type
-            this.updateFabricationTypeUI(fabricationType);
-        }
-
         // start with all shapes enabled in the select list
         appState.shapes.forEach((shape, index) => {
             appState.shapes[index].enabled = true;
@@ -490,9 +432,7 @@ class DesignUI {
             perimeterHeightInches: appState.generationConfig.perimeterHeightInches
         };
         const wallConfig = {
-            algorithm: currentSolution.wallAlgorithm,
-            bendRadius: currentSolution.bendRadius,
-            maxBends: currentSolution.maxBends
+            algorithm: 'cellular-organic'
         };
         const bufferConfig = {
             customBufferSize: currentSolution.customBufferSize,
@@ -680,12 +620,6 @@ class DesignUI {
                     useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
                     perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
                     perimeterHeightInches: appState.generationConfig.perimeterHeightInches,
-                    // Fabrication and Walls
-                    fabricationType: appState.generationConfig.fabricationType,
-                    wallAlgorithm: appState.generationConfig.wallAlgorithm,
-                    cubbyCurveRadius: appState.generationConfig.cubbyCurveRadius,
-                    wallBendRadius: appState.generationConfig.bendRadius,
-                    maxBends: appState.generationConfig.maxBends,
                     // Buffer Configuration
                     customBufferSize: appState.generationConfig.customBufferSize,
                     centerShape: appState.generationConfig.centerShape,
@@ -735,8 +669,6 @@ class DesignUI {
                     centerShape: appState.generationConfig.centerShape,
                     minWallLength: appState.generationConfig.minWallLength
                 },
-                // Include other settings that affect physical output
-                fabricationType: appState.generationConfig.fabricationType,
                 materialType: appState.generationConfig.materialType
             }
         };
@@ -830,15 +762,11 @@ class DesignUI {
             const config = this.getRenderConfig(solution);
 
             let wallRenderers = {
-                bendWallRenderer: this.bendWallRenderer,
-                cellularRenderer: this.cellularRenderer,
-                cubbyRenderer: this.cubbyRenderer
+                cellularRenderer: this.cellularRenderer
             };
 
             let wallRenderData = {
-                currCellular: appState.currentAnneal.cellular ? Cellular.fromDataObject(appState.currentAnneal.cellular, solution) : appState.currCellular,
-                goldenPathData: this.goldenPathData,
-                useGoldenPathDebugData: this.useGoldenPathDebugData
+                currCellular: appState.currentAnneal.cellular ? Cellular.fromDataObject(appState.currentAnneal.cellular, solution) : appState.currCellular
             };
 
             // Use unified renderer to display solution layout (without scores)
@@ -1078,14 +1006,6 @@ class DesignUI {
             .attribute('step', '0.25')
             .changed(() => this.handleCustomBufferSizeChange());
 
-        // Buffer on Bottom checkbox
-        const bufferBottomContainer = createDiv()
-            .addClass('checkbox-group')
-            .parent(processingGroup);
-        this.html.centerShapeCheckbox = createCheckbox(' Center shape vertically', appState.generationConfig.centerShape)
-            .parent(bufferBottomContainer)
-            .changed(() => this.handleCenterShapeChange());
-
         // Minimum Wall Length dropdown
         const wallLengthRow = createDiv()
             .addClass('input-row')
@@ -1115,11 +1035,6 @@ class DesignUI {
         if (!isNaN(value) && value >= 0 && value <= 1) {
             appState.setCustomBufferSize(value);
         }
-    }
-
-    updateCenterShape() {
-        const enabled = this.html.centerShapeCheckbox.checked();
-        appState.setCenterShape(enabled);
     }
 
     updateMinWallLength() {
@@ -1179,12 +1094,6 @@ class DesignUI {
         }
     }
 
-    handleCenterShapeChange() {
-        const enabled = this.html.centerShapeCheckbox.checked();
-        appState.setCenterShape(enabled);
-        appEvents.emit('settingsChanged', { setting: 'centerShape', value: enabled });
-    }
-
     handleMinWallLengthChange() {
         const value = parseFloat(this.html.minWallLengthSelect.value());
         if (!isNaN(value)) {
@@ -1192,50 +1101,6 @@ class DesignUI {
             appEvents.emit('settingsChanged', { setting: 'minWallLength', value });
         }
     }
-
-    handleFabricationTypeChange() {
-        const type = this.html.fabricationTypeSelect.value();
-        appState.generationConfig.fabricationType = type;
-        appEvents.emit('settingsChanged', { setting: 'fabricationType', value: type });
-    }
-
-    handleCubbyModeChange() {
-        const mode = this.html.cubbyModeSelect.value();
-        appState.generationConfig.cubbyMode = mode;
-        appEvents.emit('settingsChanged', { setting: 'cubbyMode', value: mode });
-    }
-
-    handleWallAlgorithmChange() {
-        const value = this.html.wallAlgorithmSelect.value();
-        const fullAlgorithm = value === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
-        appState.generationConfig.wallAlgorithm = fullAlgorithm;
-        appEvents.emit('settingsChanged', { setting: 'wallAlgorithm', value: fullAlgorithm });
-    }
-
-    handleBendRadiusChange() {
-        const value = parseFloat(this.html.curveRadiusInput.value());
-        if (!isNaN(value) && value >= 0.1 && value <= 10.0) {
-            appState.generationConfig.bendRadius = value;
-            appEvents.emit('settingsChanged', { setting: 'bendRadius', value });
-        }
-    }
-
-    handleMaxBendsChange() {
-        const value = parseInt(this.html.maxBendsInput.value());
-        if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.maxBends = value;
-            appEvents.emit('settingsChanged', { setting: 'maxBends', value });
-        }
-    }
-
-    handleCubbyCurveRadiusChange() {
-        const value = parseFloat(this.html.cubbyCurveRadiusInput.value());
-        if (!isNaN(value) && value >= 0 && value <= 1.0) {
-            appState.generationConfig.cubbyCurveRadius = value;
-            appEvents.emit('settingsChanged', { setting: 'cubbyCurveRadius', value });
-        }
-    }
-
 
     togglePerimeterInputs() {
         // Don't allow changes if the checkbox is disabled
@@ -1449,203 +1314,13 @@ class DesignUI {
     }
 
     createWallGenerationControls() {
-        // create fabrication type controls in the Results panel
-
-        // Master fabrication type dropdown
-        const modeGroup = createDiv()
-            .addClass('settings-group')
-            .parent(this.html.controlsContainer);
-        createSpan('Fabrication Type')
-            .addClass('settings-label')
-            .parent(modeGroup);
-
-        this.html.fabricationTypeSelect = createSelect()
-            .addClass('settings-select')
-            .parent(modeGroup)
-            .changed(() => this.handleFabricationTypeChange());
-        this.html.fabricationTypeSelect.option('Boards (Laser Cut)', 'boards');
-        this.html.fabricationTypeSelect.option('Cubbies (3D Print)', 'cubbies');
-        this.html.fabricationTypeSelect.option('Bent Wall', 'bent');
-        // Set to appState value or default to ensure it has a valid value
-        this.html.fabricationTypeSelect.selected(appState.generationConfig.fabricationType || 'boards');
-
-        // Cubby Mode selection (only shown for cubbies fabrication type)
-        this.html.cubbyModeGroup = createDiv()
-            .addClass('settings-group cubby-mode-group')
-            .parent(this.html.controlsContainer);
-        createSpan('Cubby Mode')
-            .addClass('settings-label')
-            .parent(this.html.cubbyModeGroup);
-        this.html.cubbyModeSelect = createSelect()
-            .addClass('settings-select')
-            .parent(this.html.cubbyModeGroup)
-            .changed(() => this.handleCubbyModeChange());
-        this.html.cubbyModeSelect.option('One (Merge)', 'one');
-        this.html.cubbyModeSelect.option('Many (Individual)', 'many');
-        // Set to appState value or default
-        this.html.cubbyModeSelect.selected(appState.generationConfig.cubbyMode || 'one');
-
-        // Wall Algorithm sub-options (for Boards and Cubbies)
-        this.html.algorithmGroup = createDiv()
-            .addClass('settings-group')
-            .parent(this.html.controlsContainer);
-        createSpan('Wall Algorithm')
-            .addClass('settings-label')
-            .parent(this.html.algorithmGroup);
-
-        this.html.wallAlgorithmSelect = createSelect()
-            .addClass('settings-select')
-            .parent(this.html.algorithmGroup)
-            .changed(() => this.handleWallAlgorithmChange());
-        this.html.wallAlgorithmSelect.option('Cellular (Organic)', 'cellular');
-        this.html.wallAlgorithmSelect.option('Rectilinear (Grid)', 'rectilinear');
-        this.html.wallAlgorithmSelect.selected('cellular'); // Default to cellular
-
-        // Corner Radius for Cubbies
-        this.html.cubbyGroup = createDiv()
-            .addClass('settings-group hidden') // Start hidden
-            .parent(this.html.controlsContainer);
-        const cubbyCurveRadiusWrapper = createDiv()
-            .addClass('settings-group')
-            .parent(this.html.cubbyGroup);
-        createSpan('Curve Radius')
-            .addClass('settings-label')
-            .parent(cubbyCurveRadiusWrapper);
-        this.html.cubbyCurveRadiusInput = createInput(appState.generationConfig.cubbyCurveRadius.toString(), 'number')
-            .addClass('settings-input')
-            .parent(cubbyCurveRadiusWrapper)
-            .attribute('min', '0')
-            .attribute('max', '1.0')
-            .attribute('step', '0.1')
-            .input(() => this.handleCubbyCurveRadiusChange());
-
-        // Curve sub-options
-        this.html.curveGroup = createDiv()
-            .addClass('settings-group hidden') // Start hidden
-            .parent(this.html.controlsContainer);
-
-        // Wrapper for Radius
-        const radiusWrapper = createDiv()
-            .addClass('settings-group')
-            .parent(this.html.curveGroup);
-        createSpan('Curve Radius (in)')
-            .addClass('settings-label')
-            .parent(radiusWrapper);
-        this.html.curveRadiusInput = createInput('1.0', 'number')
-            .addClass('settings-input')
-            .parent(radiusWrapper)
-            .attribute('min', '0.1')
-            .attribute('max', '10.0')
-            .attribute('step', '0.1')
-            .input(() => this.handleBendRadiusChange());
-
-        // Wrapper for Bends
-        const bendsWrapper = createDiv()
-            .addClass('settings-group')
-            .parent(this.html.curveGroup);
-        createSpan('Max Sequential Bends')
-            .addClass('settings-label')
-            .parent(bendsWrapper);
-        this.html.maxBendsInput = createInput('4', 'number')
-            .addClass('settings-input')
-            .parent(bendsWrapper)
-            .attribute('min', '2')
-            .attribute('max', '10')
-            .attribute('step', '1')
-            .input(() => this.handleMaxBendsChange());
-
         // Save button in Results panel
         this.html.saveButton = createButton('Save')
             .addClass('primary-button button settings-button')
             .parent(this.html.controlsContainer)
             .attribute('disabled', '') // until annealing is complete
             .mousePressed(() => this.handleSaveSolution());
-
-        // No separator needed since we have separate containers now
     }
-
-    handleFabricationTypeChange() {
-        const selectedType = this.html.fabricationTypeSelect.value();
-
-        // Update appState using centralized method
-        appState.setFabricationType(selectedType);
-
-        // If there's a current solution, update its fabrication type
-        if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
-            const solution = appState.currentAnneal.finalSolution;
-            solution.fabricationType = selectedType;
-
-            if (selectedType === 'boards' || selectedType === 'cubbies') {
-                // Read from appState, not DOM
-                solution.wallAlgorithm = appState.generationConfig.wallAlgorithm;
-            } else {
-                solution.wallAlgorithm = 'bend';
-            }
-
-            // cubbyCurveRadius is already in appState from other handlers
-            // No need to read from DOM here
-
-            this.displayResult(); // Redraw with the new fabrication type
-        }
-    }
-
-    handleCubbyModeChange() {
-        const selectedMode = this.html.cubbyModeSelect.value();
-
-        // Update appState using centralized method
-        appState.setCubbyMode(selectedMode);
-
-        // If there's a current solution and it's cubbies type, regenerate
-        if (appState.currentAnneal && appState.currentAnneal.finalSolution &&
-            appState.generationConfig.fabricationType === 'cubbies') {
-            this.displayResult();
-        }
-    }
-
-    updateFabricationTypeUI(fabricationType) {
-        // Update dropdown to match state (in case changed from elsewhere)
-        if (this.html.fabricationTypeSelect) {
-            this.html.fabricationTypeSelect.selected(fabricationType);
-
-            // Force update if p5.js didn't update properly
-            if (this.html.fabricationTypeSelect.value() !== fabricationType) {
-                this.html.fabricationTypeSelect.elt.value = fabricationType;
-            }
-        }
-
-        // Show/hide appropriate sub-options based on fabrication type
-        if (fabricationType === 'boards' || fabricationType === 'cubbies') {
-            this.html.algorithmGroup.removeClass('hidden');
-            this.html.curveGroup.addClass('hidden');
-
-            // Show corner radius and mode only for cubbies
-            if (fabricationType === 'cubbies') {
-                this.html.cubbyGroup.removeClass('hidden');
-                this.html.cubbyModeGroup.removeClass('hidden');
-            } else {
-                this.html.cubbyGroup.addClass('hidden');
-                this.html.cubbyModeGroup.addClass('hidden');
-            }
-        } else if (fabricationType === 'bent') {
-            this.html.algorithmGroup.addClass('hidden');
-            this.html.cubbyGroup.addClass('hidden');
-            this.html.cubbyModeGroup.addClass('hidden');
-            this.html.curveGroup.removeClass('hidden');
-        }
-    }
-
-    updateCubbyModeUI(cubbyMode) {
-        // Update dropdown to match state (in case changed from elsewhere)
-        if (this.html.cubbyModeSelect) {
-            this.html.cubbyModeSelect.selected(cubbyMode);
-
-            // Force update if p5.js didn't update properly
-            if (this.html.cubbyModeSelect.value() !== cubbyMode) {
-                this.html.cubbyModeSelect.elt.value = cubbyMode;
-            }
-        }
-    }
-
 
     // ============= UI Update from AppState =============
     updateUIFromAppState() {
@@ -1692,14 +1367,6 @@ class DesignUI {
             }
         }
 
-        if (this.html.centerShapeCheckbox) {
-            this.html.centerShapeCheckbox.checked(config.centerShape);
-            // Force update if p5.js didn't update properly
-            if (this.html.centerShapeCheckbox.checked() !== config.centerShape) {
-                this.html.centerShapeCheckbox.elt.checked = config.centerShape;
-            }
-        }
-
         if (this.html.minWallLengthSelect && config.minWallLength !== undefined) {
             const minWallLengthStr = String(config.minWallLength);
             this.html.minWallLengthSelect.selected(minWallLengthStr);
@@ -1709,120 +1376,8 @@ class DesignUI {
             }
         }
 
-        // Wall settings
-        if (this.html.fabricationTypeSelect) {
-            this.html.fabricationTypeSelect.selected(config.fabricationType);
-            // Force update if p5.js didn't update properly
-            if (this.html.fabricationTypeSelect.value() !== config.fabricationType) {
-                this.html.fabricationTypeSelect.elt.value = config.fabricationType;
-            }
-        }
-
-        if (this.html.cubbyModeSelect) {
-            this.html.cubbyModeSelect.selected(config.cubbyMode);
-            // Force update if p5.js didn't update properly
-            if (this.html.cubbyModeSelect.value() !== config.cubbyMode) {
-                this.html.cubbyModeSelect.elt.value = config.cubbyMode;
-            }
-        }
-
-        if (this.html.wallAlgorithmSelect) {
-            const dropdownValue = config.wallAlgorithm === 'cellular-organic' ? 'cellular' : 'cellular-rectilinear';
-            this.html.wallAlgorithmSelect.selected(dropdownValue);
-            // Force update if p5.js didn't update properly
-            if (this.html.wallAlgorithmSelect.value() !== dropdownValue) {
-                this.html.wallAlgorithmSelect.elt.value = dropdownValue;
-            }
-        }
-
-        if (this.html.curveRadiusInput) {
-            this.html.curveRadiusInput.value(config.bendRadius);
-            // Force update if p5.js didn't update properly
-            if (this.html.curveRadiusInput.value() !== config.bendRadius) {
-                this.html.curveRadiusInput.elt.value = config.bendRadius;
-            }
-        }
-
-        if (this.html.maxBendsInput) {
-            this.html.maxBendsInput.value(config.maxBends);
-            // Force update if p5.js didn't update properly
-            if (this.html.maxBendsInput.value() !== config.maxBends) {
-                this.html.maxBendsInput.elt.value = config.maxBends;
-            }
-        }
-
-        if (this.html.cubbyCurveRadiusInput) {
-            this.html.cubbyCurveRadiusInput.value(config.cubbyCurveRadius);
-            // Force update if p5.js didn't update properly
-            if (this.html.cubbyCurveRadiusInput.value() !== config.cubbyCurveRadius) {
-                this.html.cubbyCurveRadiusInput.elt.value = config.cubbyCurveRadius;
-            }
-        }
     }
 
-
-    handleWallAlgorithmChange() {
-        // Only regenerate if we have a current solution
-        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
-            return;
-        }
-
-        console.log('[UI] Wall algorithm changed');
-
-        const solution = appState.currentAnneal.finalSolution;
-        const selectedAlgorithm = this.html.wallAlgorithmSelect.value();
-        const fabricationType = this.html.fabricationTypeSelect.value();
-
-        // Update the wall algorithm
-        solution.wallAlgorithm = selectedAlgorithm === 'cellular' ? 'cellular-organic' : 'cellular-rectilinear';
-        solution.fabricationType = fabricationType;
-
-        // Create new cellular instance with the selected algorithm
-        const cellular = new Cellular(solution, false, 1);
-
-        // Run appropriate growth algorithm
-        console.log(`Regenerating walls with ${selectedAlgorithm} algorithm`);
-
-        if (selectedAlgorithm === 'cellular') {
-            cellular.growCells();
-        } else {
-            cellular.growRectilinear();
-        }
-
-        // Update the stored cellular data
-        appState.currentAnneal.cellular = {
-            cellSpace: cellular.cellSpace,
-            maxTerrain: cellular.maxTerrain,
-            numAlive: cellular.numAlive || 0
-        };
-        appState.currCellular = cellular;
-
-        // Redraw with new cellular walls
-        this.displayResult();
-    }
-
-    handleCubbyCurveRadiusChange() {
-        // Only update if we have a current solution and are in cubbies mode
-        if (!appState.currentAnneal || !appState.currentAnneal.finalSolution) {
-            return;
-        }
-
-        const fabricationType = this.html.fabricationTypeSelect.value();
-        if (fabricationType !== 'cubbies') {
-            return;
-        }
-
-        const newCurveRadius = parseFloat(this.html.cubbyCurveRadiusInput.value());
-        appState.generationConfig.cubbyCurveRadius = newCurveRadius;
-
-        // Redraw with new curve radius
-        this.displayResult();
-    }
-
-    handleCellularAlgorithmChange() {
-        // Delegate to the wall algorithm handler
-        this.handleWallAlgorithmChange();
-    }
 
     viewSavedAnneal(index) {
         if (index === null) {
@@ -1849,7 +1404,6 @@ class DesignUI {
                     centerShape: false,
                     minWallLength: 1.0
                 },
-                fabricationType: savedAnneal.finalSolution.fabricationType || 'boards',
                 materialType: 'plywood-laser'
             };
         }
@@ -1866,27 +1420,13 @@ class DesignUI {
             fabricationContext: fabricationContext // Store context with loaded solution
         };
 
-        // update fabrication UI to match loaded solution
+        // update UI to match loaded solution
         const solution = appState.currentAnneal.finalSolution;
 
-        // Ensure solution has fabricationType set
-        if (!solution.fabricationType) {
-            // Infer from wall algorithm for old saves
-            if (solution.wallAlgorithm === 'bend') {
-                solution.fabricationType = 'bent';
-            } else {
-                solution.fabricationType = 'boards'; // default for old cellular saves
-            }
-        }
-
         // Use centralized method to update appState and trigger events
-        // This will set appState.generationConfig.fabricationType and emit the event
         appState.loadSolutionConfig(solution);
 
         // Update appState with all solution settings
-        if (solution.wallAlgorithm) {
-            appState.generationConfig.wallAlgorithm = solution.wallAlgorithm;
-        }
         appState.generationConfig.aspectRatioPref = solution.aspectRatioPref;
         appState.generationConfig.useCustomPerimeter = solution.useCustomPerimeter;
         appState.generationConfig.perimeterWidthInches = solution.perimeterWidthInches;

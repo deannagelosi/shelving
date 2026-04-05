@@ -399,97 +399,14 @@ class SolutionRenderer {
 
 
     renderWalls(solution, config, wallRenderers, wallRenderData) {
-        // handles wall generation and rendering logic
+        // cellular-organic wall generation and rendering
 
-        const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
-
-        // Validate wall algorithm and renderers
-        if (!wallRenderers) {
-            console.error('[SolutionRenderer] No wall renderers provided');
+        if (!wallRenderers || !wallRenderers.cellularRenderer) {
+            console.error('[SolutionRenderer] CellularRenderer not available');
             return null;
         }
 
-        switch (wallAlgorithm) {
-            case 'bend':
-                if (!wallRenderers.bendWallRenderer) {
-                    console.error('[SolutionRenderer] BendWallRenderer not available for bend algorithm');
-                    return null;
-                }
-                this.renderBentWalls(solution, config, wallRenderers, wallRenderData);
-                return null; // Bent walls don't generate cellular data
-
-            case 'cellular-organic':
-            case 'cellular-rectilinear':
-                if (!wallRenderers.cellularRenderer) {
-                    console.error('[SolutionRenderer] CellularRenderer not available for cellular algorithm');
-                    return null;
-                }
-                return this.renderCellularWalls(solution, config, wallRenderers, wallRenderData);
-
-            default:
-                console.error(`[SolutionRenderer] Unknown wall algorithm: ${wallAlgorithm}. Using cellular-organic as fallback.`);
-                if (wallRenderers.cellularRenderer) {
-                    solution.wallAlgorithm = 'cellular-organic'; // Set fallback algorithm
-                    return this.renderCellularWalls(solution, config, wallRenderers, wallRenderData);
-                } else {
-                    console.error('[SolutionRenderer] No fallback renderer available');
-                    return null;
-                }
-        }
-    }
-
-    renderBentWalls(solution, config, wallRenderers, wallRenderData) {
-        // handles bent wall rendering
-
-        let wallPath;
-        // check for display state (with worker context fallback)
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
-
-        if (wallRenderData.useGoldenPathDebugData && wallRenderData.goldenPathData) {
-            // Use test data for visual validation
-            wallPath = wallRenderData.goldenPathData;
-            console.log('[SolutionRenderer] Using golden path test data for visual validation');
-        } else {
-            // Use actual algorithm output
-            const bendGenerator = new BendWall(solution);
-            const stepLimit = isDevMode ? (typeof appState !== 'undefined' && appState.display ? appState.display.curveStep : 0) : -1;
-            if (isDevMode) {
-                bendGenerator.setDebugMode(true);
-            }
-            wallPath = bendGenerator.generate(solution.maxBends, solution.bendRadius, stepLimit);
-            console.log('[SolutionRenderer] Using actual BendWall algorithm output');
-        }
-
-        // Render debug state or final path
-        if (isDevMode) {
-            // Create a generator instance just to get the group data for debugging
-            const bendGenerator = new BendWall(solution);
-            bendGenerator._groupShapesByY(solution.shapes); // Run grouping
-            const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
-            wallRenderers.bendWallRenderer.renderDebugState(
-                null, // No specific debug state object anymore
-                bendGenerator.groups,
-                canvasObj,
-                config
-            );
-            wallRenderers.bendWallRenderer.renderWallPath(wallPath, canvasObj, config);
-        } else {
-            if (wallPath && wallPath.length > 0) {
-                const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
-                wallRenderers.bendWallRenderer.renderWallPath(wallPath, canvasObj, config);
-            } else {
-                console.warn('[SolutionRenderer] No bent wall path to render');
-            }
-        }
-    }
-
-    renderCellularWalls(solution, config, wallRenderers, wallRenderData) {
-        // handles cellular wall rendering
-
-        const wallAlgorithm = solution.wallAlgorithm || 'cellular-organic';
-        let currCellular = wallRenderData.currCellular;
-
-        currCellular = new Cellular(solution);
+        const currCellular = new Cellular(solution);
 
         // Check for debug mode to control growth stepping
         let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
@@ -497,96 +414,32 @@ class SolutionRenderer {
 
         if (isDevMode) {
             // Debug mode: manual step-by-step growth
-            if (wallAlgorithm === 'cellular-rectilinear') {
-                // Rectilinear already has step parameter (0 means just setup, no growth)
-                currCellular.growRectilinear(currentNumGrow);
-            } else {
-                // Organic: manual stepping (setup + step-by-step growth)
-                currCellular.createTerrain();
-                currCellular.calcPathValues();
-                currCellular.makeInitialCells();
+            currCellular.createTerrain();
+            currCellular.calcPathValues();
+            currCellular.makeInitialCells();
 
-                for (let i = 0; i < currentNumGrow; i++) {
-                    currCellular.growOnce();
-                }
+            for (let i = 0; i < currentNumGrow; i++) {
+                currCellular.growOnce();
             }
         } else {
             // grow complete cellular structure
-            if (wallAlgorithm === 'cellular-rectilinear') {
-                currCellular.growRectilinear();
-            } else {
-                currCellular.growCells();
-            }
+            currCellular.growCells();
         }
 
-        // Check if this is a cubbies fabrication type
-        const fabricationType = solution.fabricationType || 'boards';
-
-        if (fabricationType === 'cubbies') {
-            // Render cubbies instead of regular cellular walls
-            const cubbyAreas = currCellular.calculateAllCubbyAreas();
-
-            if (cubbyAreas && cubbyAreas.length > 0) {
-                // Get wall thickness and curve radius from appState or defaults
-                const wallThickness = (typeof appState !== 'undefined' && appState.generationConfig.wallThickness) ?
-                    appState.generationConfig.wallThickness : 0.25;
-                const cubbyCurveRadius = (typeof appState !== 'undefined' ? appState.generationConfig.cubbyCurveRadius : 0.5);
-
-                // Create Cubby instances
-                const cubbies = cubbyAreas.map(cubbyData => {
-                    if (cubbyData.visitedCells && cubbyData.visitedCells.length > 0) {
-                        const cubby = new Cubby(
-                            cubbyData.shape_id,
-                            cubbyData.visitedCells,
-                            wallThickness,
-                            cubbyCurveRadius
-                        );
-
-                        return cubby;
-                    }
-                    return null;
-                }).filter(Boolean);
-
-                // Generate all polygon data with perimeter detection
-                const caseBounds = Cubby.calculateCaseBounds(cubbies);
-                for (const cubby of cubbies) {
-                    cubby.generateAllLines(caseBounds);
-                }
-
-                // Render all four line types with distinct colors
-                const renderOptions = {
-                    exteriorColor: '#FF8C00',  // Bright Orange
-                    exteriorWeight: 1,
-                    centerColor: '#333333',    // Dark Gray
-                    centerWeight: 1,
-                    interiorColor: '#00CC66',  // Bright Green
-                    interiorWeight: 2,         // 2px for interior lines
-                    edgeColor: 'magenta',      // Magenta for edgelines
-                    edgeWeight: 2
-                };
-
-                const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
-                wallRenderers.cubbyRenderer.renderAllLineTypes(cubbies, canvasObj, config, renderOptions);
-                wallRenderers.cubbyRenderer.renderCubbyLabels(cubbies, canvasObj, config, {
-                    textSize: 14,
-                    labelColor: 'white'
-                });
-            }
-        } else {
-            // Render normal cellular walls for boards/bent fabrication types
-            const cellLines = currCellular.getCellRenderLines();
-            const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
-            wallRenderers.cellularRenderer.renderCellLines(cellLines, canvasObj, config);
-        }
+        // Render cellular wall lines
+        const cellLines = currCellular.getCellRenderLines();
+        const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
+        wallRenderers.cellularRenderer.renderCellLines(cellLines, canvasObj, config);
 
         // Display cells and terrain in dev mode
         if (isDevMode) {
-            const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
             wallRenderers.cellularRenderer.renderTerrain(solution.layout, canvasObj, { ...config, maxTerrain: currCellular.maxTerrain });
             wallRenderers.cellularRenderer.renderCells(currCellular.cellSpace, canvasObj, config);
         }
 
-        // Return the cellular instance for potential state storage
+        // Store the cellular instance for potential state use
+        wallRenderData.currCellular = currCellular;
+
         return currCellular;
     }
 
