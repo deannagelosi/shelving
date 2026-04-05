@@ -12,9 +12,18 @@ class DesignUI {
         this.shapeRenderer = new ShapeRenderer();
         this.cellularRenderer = new CellularRenderer();
 
-        //== web worker setup
-        this.solutionWorker = null;
-        this.initializeWorker();
+        //== annealing service
+        this.annealService = new AnnealService();
+        this.annealService.onProgress = (minimalSolution) => {
+            try {
+                this.updateDisplayCallback(minimalSolution);
+            } catch (error) {
+                console.error('Error handling visual progress:', error);
+            }
+        };
+        this.annealService.onResult = (result) => this.handleWorkerResult(result);
+        this.annealService.onError = (error) => this.handleWorkerError(error);
+        this.annealService.initialize();
 
         //== initialize UI elements
         this.initBottomUI();
@@ -122,93 +131,7 @@ class DesignUI {
         //     .parent(this.html.designDiv).addClass('info-text');
     }
 
-    //== web worker methods
-    initializeWorker() {
-        try {
-            this.solutionWorker = new Worker('js/workers/solution-worker.js');
-
-            // set up message handling
-            this.solutionWorker.onmessage = (event) => {
-                this.handleWorkerMessage(event.data);
-            };
-            // set up error handling
-            this.solutionWorker.onerror = (error) => {
-                console.error('Worker error:', error);
-                this.handleWorkerError(error);
-            };
-            // initialize worker in single mode
-            this.solutionWorker.postMessage({
-                type: 'SET_MODE',
-                payload: { mode: 'single', config: {} }
-            });
-        } catch (error) {
-            console.error('Failed to initialize solution worker:', error);
-            this.solutionWorker = null;
-        }
-    }
-
-    handleWorkerMessage(data) {
-        const { type, payload } = data;
-
-        switch (type) {
-            case 'MODE_SET':
-                console.log('Worker mode set:', payload.mode);
-                break;
-            case 'PROGRESS':
-                this.handleWorkerProgress(payload);
-                break;
-            case 'RESULT':
-                this.handleWorkerResult(payload);
-                break;
-            case 'ERROR':
-                this.handleWorkerError(payload);
-                break;
-            default:
-                console.warn('Unknown worker message type:', type);
-        }
-    }
-
-    handleWorkerProgress(progress) {
-        const { progressType, mode, phase, message, score, valid, visualData } = progress;
-
-        switch (progressType) {
-            case 'PHASE_START':
-                console.log(`Starting ${phase}: ${message}`);
-                break;
-            case 'ANNEAL_PROGRESS':
-                if (mode === 'single' && visualData) {
-                    // handle visual updates in single mode (web)
-                    try {
-                        // create a minimal solution object for rendering
-                        const minimalSolution = {
-                            layout: visualData.layout,
-                            shapes: visualData.shapes,
-                            score: score,
-                            valid: valid,
-                            // Include perimeter properties from visualData
-                            useCustomPerimeter: visualData.useCustomPerimeter,
-                            perimeterWidthInches: visualData.perimeterWidthInches,
-                            perimeterHeightInches: visualData.perimeterHeightInches,
-                            goalPerimeterGrid: visualData.goalPerimeterGrid,
-                            minWallLength: visualData.minWallLength
-                        };
-                        // call the display update with the minimal solution
-                        this.updateDisplayCallback(minimalSolution);
-                    } catch (error) {
-                        console.error('Error handling visual progress:', error);
-                        // don't throw error, annealing process still continues
-                    }
-                } else {
-                    // handle progress updates if no visual data
-                    console.log(`Annealing progress: score=${score}, valid=${valid}, mode=${mode}`);
-                }
-                break;
-            case 'PHASE_COMPLETE':
-                console.log(`Completed ${phase}:`, progress);
-                break;
-        }
-    }
-
+    //== worker result handlers
     handleWorkerResult(result) {
         const { finalSolution, cellular, metadata } = result;
 
@@ -539,7 +462,7 @@ class DesignUI {
         appState.selectedShapeId = null;
 
         // check if worker is available
-        if (!this.solutionWorker) {
+        if (!this.annealService.worker) {
             alert('Solution worker is not available.');
             return;
         }
@@ -605,28 +528,8 @@ class DesignUI {
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
 
-            // appState.generationConfig is kept current by reactive form handlers
-            // no need to read from DOM - all form changes immediately sync to appState
-
-            // send generation request to worker
-            this.solutionWorker.postMessage({
-                type: 'GENERATE_SOLUTION',
-                payload: {
-                    shapes: shapesData,
-                    jobId: `single-${Date.now()}`,
-                    startId: 0,
-                    aspectRatioPref: appState.generationConfig.aspectRatioPref,
-                    // Perimeter
-                    useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
-                    perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
-                    perimeterHeightInches: appState.generationConfig.perimeterHeightInches,
-                    // Buffer Configuration
-                    customBufferSize: appState.generationConfig.customBufferSize,
-                    centerShape: appState.generationConfig.centerShape,
-                    minWallLength: appState.generationConfig.minWallLength
-                }
-            });
-
+            // send generation request via AnnealService
+            this.annealService.generate(shapesData, appState.generationConfig);
             console.log("Generation request sent to worker...");
 
         } catch (error) {
@@ -637,14 +540,8 @@ class DesignUI {
     }
 
     handleStopAnneal() {
-        // terminate and restart the worker
         console.log("Stopping annealing...");
-
-        if (this.solutionWorker) {
-            this.solutionWorker.terminate();
-            this.initializeWorker();
-        }
-
+        this.annealService.stop();
         this.drawBlankGrid();
         this.finishAnnealing();
     }
