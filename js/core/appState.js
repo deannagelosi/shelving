@@ -12,7 +12,7 @@ const appState = {
         shapesDisabled: false,  // DesignUI: whether shape interaction is disabled during generation
 
         // Development flags
-        fastReloadDev: true,  // loads a test file and solution on start for faster development
+        fastReloadDev: false,  // loads a test file and solution on start for faster development
         fastReloadScreen: ScreenState.DESIGN,  // which screen to load in fast reload mode
         testFileName: "cubbies_1.json",
         autoLoadSolution: false,
