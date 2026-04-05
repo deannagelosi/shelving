@@ -454,12 +454,14 @@ function initializeBrowserWorker() {
     importScripts(
         '../core/EventEmitter.js',
         '../core/MathUtils.js',
+        '../core/ScreenState.js',
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',
         '../core/Anneal.js',
         '../core/BoardExporter.js',
         '../core/Board.js',
+        '../core/material-configs.js',
         '../interfaces/web/RenderConfig.js'
     );
 
