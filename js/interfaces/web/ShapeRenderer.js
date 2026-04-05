@@ -278,9 +278,7 @@ class ShapeRenderer {
     // converts grid coordinates (x, y) for a shape pixel to canvas screen coordinates
     // returns {x, y, width, height} for the pixel's screen rectangle
     calculatePixelScreenPosition(shape, pixelX, pixelY, canvas, config) {
-        const minWallLength = (typeof appState !== 'undefined' && appState.generationConfig)
-            ? appState.generationConfig.minWallLength || 1.0
-            : 1.0;
+        const minWallLength = config.minWallLength || 1.0;
         const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
         const smallSquare = config.squareSize / scaleFactor;
 

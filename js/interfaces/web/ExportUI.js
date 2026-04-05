@@ -654,8 +654,7 @@ class ExportUI {
 
     _buildBoardRenderConfig(renderer = null) {
         // Build configuration object for BoardRenderer
-        // Check for dev mode
-        const isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        const isDevMode = appState.display.devMode;
 
         return {
             // Canvas dimensions

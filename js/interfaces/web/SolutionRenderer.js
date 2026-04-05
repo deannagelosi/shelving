@@ -17,9 +17,8 @@ class SolutionRenderer {
         // solution: Solution instance with layout, shapes, etc.
         // config: unified config object with canvas dimensions and layout properties
 
-        // check for display state (with worker context fallback)
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
-        let detailView = (typeof appState !== 'undefined' && appState.display) ? appState.display.detailView : false;
+        const isDevMode = config.isDevMode;
+        const detailView = config.detailView;
 
         const colors = RenderConfig.getColors(isDevMode);
 
@@ -58,7 +57,7 @@ class SolutionRenderer {
         this.renderCollision(solution.layout, config, colors);
 
         // display selection highlight (on top of everything else)
-        const selectedShapeId = (typeof appState !== 'undefined' && appState.selectedShapeId) ? appState.selectedShapeId : null;
+        const selectedShapeId = config.selectedShapeId || null;
         const canvasObj = { height: config.canvasHeight, width: config.canvasWidth };
         this.shapeRenderer.renderShapeSelection(solution.shapes, canvasObj, config, selectedShapeId);
 
@@ -174,7 +173,7 @@ class SolutionRenderer {
             let shape = shapes[i];
             let startX = shape.posX;
             let startY = shape.posY;
-            let minWallLength = (typeof appState !== 'undefined' && appState.generationConfig) ? appState.generationConfig.minWallLength || 1.0 : 1.0;
+            let minWallLength = config.minWallLength || 1.0;
             let smallSquare = config.squareSize / RenderConfig.getScaleFactor(minWallLength);
 
             let shapeWidth = shape.data.highResShape[0].length * smallSquare;
@@ -205,7 +204,7 @@ class SolutionRenderer {
 
             let startX = shape.posX;
             let startY = shape.posY;
-            let minWallLength = (typeof appState !== 'undefined' && appState.generationConfig) ? appState.generationConfig.minWallLength || 1.0 : 1.0;
+            let minWallLength = config.minWallLength || 1.0;
             let smallSquare = config.squareSize / RenderConfig.getScaleFactor(minWallLength);
 
             // Draw rectangle for each original shape square in the buffer array
@@ -243,7 +242,7 @@ class SolutionRenderer {
             // Get configuration values (same as renderHighResShapes)
             let startX = shape.posX;
             let startY = shape.posY;
-            let minWallLength = (typeof appState !== 'undefined' && appState.generationConfig) ? appState.generationConfig.minWallLength || 1.0 : 1.0;
+            let minWallLength = config.minWallLength || 1.0;
             let smallSquare = config.squareSize / RenderConfig.getScaleFactor(minWallLength);
 
             // Identify perimeter squares for proper coloring
@@ -278,9 +277,8 @@ class SolutionRenderer {
         noStroke();
         fill(colors.collisionColor);
 
-        // check for display state (with worker context fallback)
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
-        let detailView = (typeof appState !== 'undefined' && appState.display) ? appState.display.detailView : false;
+        const isDevMode = config.isDevMode;
+        const detailView = config.detailView;
 
         for (let y = 0; y < layout.length; y++) {
             for (let x = 0; x < layout[y].length; x++) {
@@ -317,8 +315,7 @@ class SolutionRenderer {
     }
 
     renderScores(layout, config) {
-        // check for display state (with worker context fallback)
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
+        const isDevMode = config.isDevMode;
 
         if (isDevMode) {
             // display anneal scores on grid
@@ -408,9 +405,8 @@ class SolutionRenderer {
 
         const currCellular = new Cellular(solution);
 
-        // Check for debug mode to control growth stepping
-        let isDevMode = (typeof appState !== 'undefined' && appState.display) ? appState.display.devMode : false;
-        let currentNumGrow = (typeof appState !== 'undefined' && appState.display) ? appState.display.numGrow : 0;
+        const isDevMode = config.isDevMode;
+        const currentNumGrow = config.numGrow || 0;
 
         if (isDevMode) {
             // Debug mode: manual step-by-step growth
@@ -452,14 +448,8 @@ class SolutionRenderer {
         // draw high-resolution grid lines within each low-res square
         // this shows the subdivision that shapes use for precise positioning
 
-        // Get the scale factor for high-res subdivision (use appState minWallLength if available)
-        let scaleFactor;
-        if (typeof appState !== 'undefined' && appState.generationConfig) {
-            const minWallLength = appState.generationConfig.minWallLength || 1.0;
-            scaleFactor = RenderConfig.getScaleFactor(minWallLength);
-        } else {
-            scaleFactor = RenderConfig.getScaleFactor(); // Default when appState not available
-        }
+        const minWallLength = config.minWallLength || 1.0;
+        const scaleFactor = RenderConfig.getScaleFactor(minWallLength);
 
         // Set up thin stroke for high-res grid lines
         stroke(colors.lineColor);

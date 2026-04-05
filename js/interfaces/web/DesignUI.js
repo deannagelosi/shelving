@@ -743,7 +743,14 @@ class DesignUI {
             // Perimeter configuration (flattened from perimeterConfig)
             useCustomPerimeter: appState.generationConfig.useCustomPerimeter,
             perimeterWidthInches: appState.generationConfig.perimeterWidthInches,
-            perimeterHeightInches: appState.generationConfig.perimeterHeightInches
+            perimeterHeightInches: appState.generationConfig.perimeterHeightInches,
+
+            // Display state (eliminates typeof appState guards in renderers)
+            isDevMode: appState.display.devMode,
+            detailView: appState.display.detailView,
+            numGrow: appState.display.numGrow,
+            selectedShapeId: appState.selectedShapeId,
+            minWallLength: appState.generationConfig.minWallLength || 1.0
         };
     }
 
