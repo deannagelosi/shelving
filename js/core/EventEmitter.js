@@ -15,6 +15,12 @@ class EventEmitter {
         this.events[eventName].push(listener);
     }
 
+    off(eventName, listener) {
+        if (this.events[eventName]) {
+            this.events[eventName] = this.events[eventName].filter(cb => cb !== listener);
+        }
+    }
+
     emit(eventName, data) {
         if (this.events[eventName]) {
             for (const listener of this.events[eventName]) {

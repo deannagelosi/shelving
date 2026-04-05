@@ -121,6 +121,62 @@ const appState = {
         }
     },
 
+    setAspectRatioPref(pref) {
+        if (this.generationConfig.aspectRatioPref !== pref) {
+            const oldPref = this.generationConfig.aspectRatioPref;
+            this.generationConfig.aspectRatioPref = pref;
+
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('aspectRatioPrefChanged', {
+                    aspectRatioPref: pref,
+                    previousPref: oldPref
+                });
+            }
+        }
+    },
+
+    setUseCustomPerimeter(enabled) {
+        if (this.generationConfig.useCustomPerimeter !== enabled) {
+            const oldEnabled = this.generationConfig.useCustomPerimeter;
+            this.generationConfig.useCustomPerimeter = enabled;
+
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('useCustomPerimeterChanged', {
+                    useCustomPerimeter: enabled,
+                    previousEnabled: oldEnabled
+                });
+            }
+        }
+    },
+
+    setPerimeterWidth(widthInches) {
+        if (this.generationConfig.perimeterWidthInches !== widthInches) {
+            const oldWidth = this.generationConfig.perimeterWidthInches;
+            this.generationConfig.perimeterWidthInches = widthInches;
+
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('perimeterDimensionsChanged', {
+                    perimeterWidthInches: widthInches,
+                    previousWidth: oldWidth
+                });
+            }
+        }
+    },
+
+    setPerimeterHeight(heightInches) {
+        if (this.generationConfig.perimeterHeightInches !== heightInches) {
+            const oldHeight = this.generationConfig.perimeterHeightInches;
+            this.generationConfig.perimeterHeightInches = heightInches;
+
+            if (typeof appEvents !== 'undefined') {
+                appEvents.emit('perimeterDimensionsChanged', {
+                    perimeterHeightInches: heightInches,
+                    previousHeight: oldHeight
+                });
+            }
+        }
+    },
+
     loadSolutionConfig(solution) {
         // Note: materialType is not stored in solutions, it's an export preference
         // so we don't override it when loading solutions

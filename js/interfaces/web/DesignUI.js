@@ -44,24 +44,12 @@ class DesignUI {
             this.updateShapePreview();
         });
 
-        // Central settings change handler - simple switch for all reactions
+        // Settings that require shape regeneration
         appEvents.on('settingsChanged', ({ setting, value }) => {
             switch (setting) {
-                // Shape processing settings that require regeneration
                 case 'customBufferSize':
                 case 'minWallLength':
                     this.regenerateShapesWithNewSettings();
-                    break;
-
-                // Settings that don't need additional reactions (yet)
-                case 'aspectRatioPref':
-                case 'useCustomPerimeter':
-                case 'perimeterWidthInches':
-                case 'perimeterHeightInches':
-                    break;
-
-                default:
-                    console.log(`[DesignUI] Unhandled setting change: ${setting} = ${value}`);
                     break;
             }
         });
@@ -420,7 +408,7 @@ class DesignUI {
     }
 
     handleAspectRatioChange(pref) {
-        appState.generationConfig.aspectRatioPref = pref;
+        appState.setAspectRatioPref(pref);
 
         // Update selected state
         this.html.tallButton.removeClass('selected');
@@ -962,31 +950,26 @@ class DesignUI {
         else if (value === 0) this.html.squareButton.addClass('selected');
         else if (value === 1) this.html.wideButton.addClass('selected');
 
-        // Write directly to appState
-        appState.generationConfig.aspectRatioPref = value;
-        appEvents.emit('settingsChanged', { setting: 'aspectRatioPref', value });
+        appState.setAspectRatioPref(value);
     }
 
     handleUseCustomPerimeterChange() {
         const enabled = this.html.usePerimeterCheckbox.checked();
-        appState.generationConfig.useCustomPerimeter = enabled;
-        appEvents.emit('settingsChanged', { setting: 'useCustomPerimeter', value: enabled });
+        appState.setUseCustomPerimeter(enabled);
         this.togglePerimeterInputs(); // UI visibility update
     }
 
     handlePerimeterWidthChange() {
         const value = parseInt(this.html.perimeterWidthInput.value());
         if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterWidthInches = value;
-            appEvents.emit('settingsChanged', { setting: 'perimeterWidthInches', value });
+            appState.setPerimeterWidth(value);
         }
     }
 
     handlePerimeterHeightChange() {
         const value = parseInt(this.html.perimeterHeightInput.value());
         if (!isNaN(value) && value >= 1) {
-            appState.generationConfig.perimeterHeightInches = value;
-            appEvents.emit('settingsChanged', { setting: 'perimeterHeightInches', value });
+            appState.setPerimeterHeight(value);
         }
     }
 
@@ -1331,10 +1314,10 @@ class DesignUI {
         appState.loadSolutionConfig(solution);
 
         // Update appState with all solution settings
-        appState.generationConfig.aspectRatioPref = solution.aspectRatioPref;
-        appState.generationConfig.useCustomPerimeter = solution.useCustomPerimeter;
-        appState.generationConfig.perimeterWidthInches = solution.perimeterWidthInches;
-        appState.generationConfig.perimeterHeightInches = solution.perimeterHeightInches;
+        appState.setAspectRatioPref(solution.aspectRatioPref);
+        appState.setUseCustomPerimeter(solution.useCustomPerimeter);
+        appState.setPerimeterWidth(solution.perimeterWidthInches);
+        appState.setPerimeterHeight(solution.perimeterHeightInches);
 
         // Update all UI elements from appState (single source of truth)
         this.updateUIFromAppState();
