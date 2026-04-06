@@ -78,10 +78,6 @@ class DesignUI {
             .parent(htmlRefs.left.buttons)
             .mousePressed(() => this.handleBack());
 
-        this.html.restoreButton = createButton('Restore Layout')
-            .addClass('button secondary-button hidden')
-            .parent(htmlRefs.left.buttons)
-            .mousePressed(() => this.handleRestore());
 
         this.html.nextButton = createButton('Next')
             .addClass('button primary-button hidden')
@@ -110,6 +106,12 @@ class DesignUI {
         this.html.clearButton = createButton('Clear')
             .parent(this.html.buttonRow).addClass('secondary-button button')
             .mousePressed(() => this.drawBlankGrid());
+
+        // Restore Layout button (appears after shapes are moved)
+        this.html.restoreButton = createButton('Restore Layout')
+            .addClass('button secondary-button hidden')
+            .parent(this.html.buttonRow)
+            .mousePressed(() => this.handleRestore());
 
         // // info text
         // this.html.diagnosticText = createP("(toggle 'd' key for diagnostics)")
@@ -157,11 +159,12 @@ class DesignUI {
     finishAnnealing() {
         // Restore UI to non-annealing state
         // switch buttons back:
-        // - regenerate -> generate
-        // - stop and clear -> just clear
+        // - stop -> generate
+        // - clear button re-shown
         // - save button enabled (if generation was successful)
         this.html.annealButton.html('Generate');
         this.html.annealButton.mousePressed(() => this.handleStartAnneal());
+        this.html.clearButton.removeClass('hidden');
         this.html.clearButton.mousePressed(() => this.drawBlankGrid());
 
         if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
@@ -178,7 +181,50 @@ class DesignUI {
             element.removeClass('disabled');
         });
 
-        // Note: Perimeter and aspect ratio controls remain locked until 'Clear' is clicked
+        // Re-enable settings controls
+        this.enableSettingsControls();
+    }
+
+    disableSettingsControls() {
+        // Disable all generation settings while annealing is running
+        const controls = [
+            this.html.customBufferSizeInput,
+            this.html.minWallLengthSelect,
+            this.html.perimeterWidthInput,
+            this.html.perimeterHeightInput
+        ];
+        controls.forEach(ctrl => { if (ctrl) ctrl.attribute('disabled', ''); });
+
+        // p5 checkbox wraps <input> in a <div> — disable the actual input element
+        if (this.html.usePerimeterCheckbox) {
+            const checkboxInput = this.html.usePerimeterCheckbox.elt.querySelector('input');
+            if (checkboxInput) checkboxInput.disabled = true;
+        }
+
+        // Aspect ratio buttons are divs — disable via class
+        [this.html.tallButton, this.html.squareButton, this.html.wideButton].forEach(btn => {
+            if (btn) btn.addClass('disabled');
+        });
+    }
+
+    enableSettingsControls() {
+        const controls = [
+            this.html.customBufferSizeInput,
+            this.html.minWallLengthSelect,
+            this.html.perimeterWidthInput,
+            this.html.perimeterHeightInput
+        ];
+        controls.forEach(ctrl => { if (ctrl) ctrl.removeAttribute('disabled'); });
+
+        // Re-enable the actual checkbox input
+        if (this.html.usePerimeterCheckbox) {
+            const checkboxInput = this.html.usePerimeterCheckbox.elt.querySelector('input');
+            if (checkboxInput) checkboxInput.disabled = false;
+        }
+
+        [this.html.tallButton, this.html.squareButton, this.html.wideButton].forEach(btn => {
+            if (btn) btn.removeClass('disabled');
+        });
     }
 
     //== helper methods
@@ -205,6 +251,9 @@ class DesignUI {
         // Initialize the sidebars to ensure all DOM elements exist before use.
         this.createShapeList();
         this.initializeResultsPanel();
+
+        // Re-sync perimeter inputs visibility (blanket unhide above shows them incorrectly)
+        this.togglePerimeterInputs();
 
         // Draw current state - either blank grid or current solution
         if (appState.currentViewedAnnealIndex !== null && appState.currentAnneal) {
@@ -309,14 +358,36 @@ class DesignUI {
             return;
         }
 
-        // Debounce the movement to prevent performance issues
-        if (this.moveDebounceTimer) {
-            clearTimeout(this.moveDebounceTimer);
+        // If already repeating this direction, let the interval handle it
+        if (this.moveRepeatInterval && this.moveRepeatDirection === direction) {
+            return;
         }
 
-        this.moveDebounceTimer = setTimeout(() => {
-            this.performShapeMovement(direction);
-        }, this.moveDebounceDelay);
+        // Stop any existing repeat from a different direction
+        this.stopArrowKeyRepeat();
+
+        // Move immediately on first press
+        this.performShapeMovement(direction);
+
+        // Start repeating after a short initial delay (250ms), then every 200ms
+        this.moveRepeatDirection = direction;
+        this.moveRepeatTimeout = setTimeout(() => {
+            this.moveRepeatInterval = setInterval(() => {
+                this.performShapeMovement(direction);
+            }, 200);
+        }, 250);
+    }
+
+    stopArrowKeyRepeat() {
+        if (this.moveRepeatTimeout) {
+            clearTimeout(this.moveRepeatTimeout);
+            this.moveRepeatTimeout = null;
+        }
+        if (this.moveRepeatInterval) {
+            clearInterval(this.moveRepeatInterval);
+            this.moveRepeatInterval = null;
+        }
+        this.moveRepeatDirection = null;
     }
 
     performShapeMovement(direction) {
@@ -372,11 +443,19 @@ class DesignUI {
                 break;
         }
 
-        // Apply coordinate normalization
+        // Apply coordinate normalization and build layout grid
         newSolution.normalizeCoordinates();
-
-        // Calculate new layout and score
         newSolution.makeLayout();
+
+        // Check for cell-level overlap — abort if any grid cell has multiple shapes.
+        // This handles irregular shapes (L, C, etc.) correctly unlike bounding-box checks.
+        const hasOverlap = newSolution.layout.some(row =>
+            row.some(cell => cell.shapes.length > 1)
+        );
+
+        if (hasOverlap) return;
+
+        // No overlap — finalize the move
         newSolution.calcScore();
 
         // Update the current solution
@@ -509,9 +588,10 @@ class DesignUI {
 
         try {
             // update UI to show annealing state
-            this.html.annealButton.html('Regenerate');
+            this.html.annealButton.html('Stop');
             this.html.annealButton.mousePressed(() => this.handleStopAnneal());
-            this.html.clearButton.mousePressed(() => this.handleStopAnneal());
+            this.html.clearButton.addClass('hidden');
+            this.disableSettingsControls();
 
             // convert shapes to plain data objects for worker
             const shapesData = selectedShapes.map(shape => shape.toDataObject());
@@ -536,6 +616,7 @@ class DesignUI {
 
     handleSaveSolution() {
         // save the current solution to the array
+        this.hideRestoreButton();
         appState.totalSavedAnneals++;
 
         // Create deep copy using toDataObject/fromDataObject
@@ -568,6 +649,7 @@ class DesignUI {
 
     drawBlankGrid() {
         // reset ui to cleared initial state
+        this.hideRestoreButton();
         // clear current selection
         appState.currentViewedAnnealIndex = null;
         appState.currentAnneal = null;
@@ -786,9 +868,16 @@ class DesignUI {
             .addClass('settings-group')
             .parent(this.html.leftControlsContainer);
 
-        createSpan('Target Aspect Ratio')
+        const aspectRatioLabel = createSpan('Target Aspect Ratio')
             .addClass('settings-label')
             .parent(aspectRatioGroup);
+        const infoWrapper = createSpan('')
+            .addClass('info-icon')
+            .attribute('data-tooltip', "Biases results toward this ratio \u2014 not a guarantee")
+            .parent(aspectRatioLabel);
+        createImg('img/info.svg', 'Info')
+            .size(14, 14)
+            .parent(infoWrapper);
 
         // Orientation buttons container
         this.html.orientationButtons = createDiv()
@@ -820,20 +909,18 @@ class DesignUI {
             .addClass('settings-group')
             .parent(this.html.leftControlsContainer);
 
-        createSpan('Custom Perimeter')
+        // Label with inline checkbox (like info icon is inline with Target Aspect Ratio)
+        const perimeterLabel = createSpan('Custom Perimeter')
             .addClass('settings-label')
             .parent(perimeterGroup);
 
-        // Checkbox for enabling/disabling
-        const checkboxContainer = createDiv()
-            .addClass('checkbox-group')
-            .parent(perimeterGroup);
-
-        this.html.usePerimeterCheckbox = createCheckbox(' Use Custom Perimeter', appState.generationConfig.useCustomPerimeter)
-            .parent(checkboxContainer)
+        this.html.usePerimeterCheckbox = createCheckbox('', appState.generationConfig.useCustomPerimeter)
+            .parent(perimeterLabel)
+            .style('display', 'inline-block')
+            .style('margin-left', '6px')
+            .style('vertical-align', 'middle')
             .changed(() => this.handleUseCustomPerimeterChange());
 
-        // Ensure checkbox state is always synchronized with appState
         this.html.usePerimeterCheckbox.checked(appState.generationConfig.useCustomPerimeter);
 
         // Container for the width/height inputs (initially hidden)
@@ -879,47 +966,47 @@ class DesignUI {
             .addClass('settings-group')
             .parent(this.html.leftControlsContainer);
 
-        createSpan('Shape Processing Options')
+        createSpan('Design Options')
             .addClass('settings-label')
             .parent(processingGroup);
 
-        // Custom Buffer Size input
-        const bufferSizeRow = createDiv()
-            .addClass('input-row')
+        // Two-column container for buffer size and wall length
+        const processingRow = createDiv()
+            .addClass('dimensions-row')
             .parent(processingGroup);
-        createSpan('Custom Buffer (in)')
-            .addClass('input-label')
-            .parent(bufferSizeRow);
+
+        // Custom Buffer Size input
+        const bufferColumn = createDiv()
+            .addClass('dimension-column')
+            .style('flex', '2')
+            .parent(processingRow);
+        createSpan('Buffer (in)')
+            .addClass('dimension-label')
+            .parent(bufferColumn);
         this.html.customBufferSizeInput = createInput(appState.generationConfig.customBufferSize.toString(), 'number')
-            .addClass('number-input')
-            .parent(bufferSizeRow)
+            .addClass('dimension-input')
+            .parent(bufferColumn)
             .attribute('min', '0')
             .attribute('max', '1')
             .attribute('step', '0.25')
             .changed(() => this.handleCustomBufferSizeChange());
 
-        // Minimum Wall Length dropdown
-        const wallLengthRow = createDiv()
-            .addClass('input-row')
-            .parent(processingGroup);
-        createSpan('Minimum Wall Length (in)')
-            .addClass('input-label')
-            .parent(wallLengthRow);
-        this.html.minWallLengthSelect = createSelect()
-            .addClass('select-input')
-            .parent(wallLengthRow)
+        // Minimum Wall Length input
+        const wallLengthColumn = createDiv()
+            .addClass('dimension-column')
+            .style('flex', '3')
+            .parent(processingRow);
+        createSpan('Min Wall Length (in)')
+            .addClass('dimension-label')
+            .parent(wallLengthColumn);
+        this.html.minWallLengthSelect = createInput(
+            appState.generationConfig.minWallLength.toString(), 'number')
+            .addClass('dimension-input')
+            .parent(wallLengthColumn)
+            .attribute('min', '0.25')
+            .attribute('max', '2')
+            .attribute('step', '0.25')
             .changed(() => this.handleMinWallLengthChange());
-
-        // Add grid square size options in ascending order
-        // Values use String() output to match programmatic selected() calls
-        this.html.minWallLengthSelect.option('0.25', '0.25');
-        this.html.minWallLengthSelect.option('0.5', '0.5');
-        this.html.minWallLengthSelect.option('1.0', '1');
-        this.html.minWallLengthSelect.option('1.5', '1.5');
-        this.html.minWallLengthSelect.option('2.0', '2');
-
-        // Set initial value
-        this.html.minWallLengthSelect.selected(String(appState.generationConfig.minWallLength));
     }
 
     updateCustomBufferSize() {
@@ -930,7 +1017,7 @@ class DesignUI {
     }
 
     updateMinWallLength() {
-        const gridSquareSize = parseFloat(this.html.minWallLengthSelect.selected());
+        const gridSquareSize = parseFloat(this.html.minWallLengthSelect.value());
         if (!isNaN(gridSquareSize)) {
             appState.setMinWallLength(gridSquareSize);
         }
@@ -1256,11 +1343,7 @@ class DesignUI {
 
         if (this.html.minWallLengthSelect && config.minWallLength !== undefined) {
             const minWallLengthStr = String(config.minWallLength);
-            this.html.minWallLengthSelect.selected(minWallLengthStr);
-            // Force update if p5.js didn't update properly
-            if (this.html.minWallLengthSelect.value() !== minWallLengthStr) {
-                this.html.minWallLengthSelect.elt.value = minWallLengthStr;
-            }
+            this.html.minWallLengthSelect.value(minWallLengthStr);
         }
 
     }

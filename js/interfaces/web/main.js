@@ -76,6 +76,9 @@ function setup() {
     designUI = new DesignUI();
     exportUI = new ExportUI();
 
+    // initialize tooltip system for [data-tooltip] elements
+    initTooltips();
+
     // start on input screen
     changeScreen(ScreenState.INPUT);
 
@@ -195,6 +198,15 @@ function keyPressed() {
     }
 }
 
+function keyReleased() {
+    if (appState.currentScreen === ScreenState.DESIGN) {
+        if (keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW ||
+            keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
+            designUI.stopArrowKeyRepeat();
+        }
+    }
+}
+
 function mousePressed() {
     if (appState.currentScreen == ScreenState.INPUT) {
         inputUI.paintAtPosition(mouseX, mouseY);
@@ -259,6 +271,49 @@ function updateButton(button, enabled) {
     } else {
         button.attribute('disabled', '');
     }
+}
+
+function initTooltips() {
+    // JS tooltip system — uses mouseover (bubbles) with delegation.
+    // Appends a fixed-position div to <body> to escape overflow clipping.
+    let tooltipEl = null;
+    let currentTarget = null;
+
+    function showTooltip(target) {
+        if (currentTarget === target) return;
+        hideTooltip();
+        currentTarget = target;
+
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'tooltip-popup';
+        tooltipEl.textContent = target.getAttribute('data-tooltip');
+        document.body.appendChild(tooltipEl);
+
+        const rect = target.getBoundingClientRect();
+        tooltipEl.style.left = (rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2) + 'px';
+        tooltipEl.style.top = (rect.top - tooltipEl.offsetHeight - 4) + 'px';
+    }
+
+    function hideTooltip() {
+        if (tooltipEl) {
+            tooltipEl.remove();
+            tooltipEl = null;
+        }
+        currentTarget = null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        // Guard: e.target may be a non-Element (text node, SVG path, etc.)
+        const el = e.target instanceof Element ? e.target : e.target.parentElement;
+        if (!el) { hideTooltip(); return; }
+
+        const target = el.closest('[data-tooltip]');
+        if (target) {
+            showTooltip(target);
+        } else {
+            hideTooltip();
+        }
+    });
 }
 
 //== data export functions
