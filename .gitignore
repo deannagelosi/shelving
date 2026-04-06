@@ -1,13 +1,12 @@
-# IDE
-.vscode/
-.cursor/
-
 # System
 .DS_Store
+
+# IDEs
+.vscode/
+.claude/
 
 # Dependencies
 node_modules/
 
-# Project
+# Reference
 examples/
-*.sqlite

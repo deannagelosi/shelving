@@ -8,8 +8,10 @@ class Shape {
             inputGrid: [[]], // (high res) user input grid
             // - occupied squares as true, unoccupied as false
             highResShape: [[]], // (high res) trimmed input grid
-            lowResShape: [[]], // 1/4th the width and height as shape, scaled to 1/4th the resolution
-            bufferShape: [[]], // low res + one extra square on right and top
+            lowResShape: [[]], // less rows/cols than high res shape, scaled to the min wall length
+            bufferShape: [[]], // low res + buffer (will be renamed to lowResBufferShape)
+            highResBufferShape: [[]], // (high res) shape + buffer for detailed visualization
+            gridArea: 0, // the number of grid squares in the shape
             title: '', // title of the shape
         };
 
@@ -19,125 +21,356 @@ class Shape {
         this.posX = 0;
         this.posY = 0;
         this.enabled = true;
+        this.id = Shape.nextId++;
     }
 
-    saveUserInput(_title, _inputGrid) {
-        // save the shape and create the rounded up and buffer shape arrays
+    static nextId = 0;
+
+    // ========================
+    // Core Utility Methods
+    // ========================
+
+    trimToBoundingBox(array) {
+        // Works with both boolean[][] and object[][] arrays
+        // Returns trimmed array with no empty rows/columns on edges
+
+        if (!array || array.length === 0) return array;
+
+        const height = array.length;
+        const width = array[0].length;
+
+        let minY = height, maxY = -1;
+        let minX = width, maxX = -1;
+
+        // Find bounds of all occupied cells
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const cell = array[y][x];
+                const isOccupied = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
+
+                if (isOccupied) {
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                }
+            }
+        }
+
+        // If no occupied cells found, return empty array
+        if (maxY < 0 || maxX < 0) return [[]];
+
+        // Trim to bounding box
+        const result = [];
+        for (let y = minY; y <= maxY; y++) {
+            const row = [];
+            for (let x = minX; x <= maxX; x++) {
+                row.push(array[y][x]);
+            }
+            result.push(row);
+        }
+
+        return result;
+    }
+
+    convertArrayType(array, targetType, originalShape = null) {
+        // Converts between boolean[][] and object[][] formats
+        // targetType: 'boolean' or 'object'
+        // originalShape: optional reference for distinguishing original vs filled cells
+
+        if (!array || array.length === 0) return array;
+
+        const result = [];
+
+        for (let y = 0; y < array.length; y++) {
+            const row = [];
+            for (let x = 0; x < array[y].length; x++) {
+                const cell = array[y][x];
+
+                if (targetType === 'boolean') {
+                    // Convert to boolean
+                    const value = typeof cell === 'boolean' ? cell : (cell && cell.occupied);
+                    row.push(value);
+                } else if (targetType === 'object') {
+                    // Convert to object
+                    if (typeof cell === 'boolean') {
+                        const isOriginal = originalShape ? originalShape[y] && originalShape[y][x] : cell;
+                        row.push({
+                            occupied: cell,
+                            isPerimeter: false,
+                            isOriginalShape: isOriginal
+                        });
+                    } else {
+                        // Already an object, just pass through
+                        row.push(cell);
+                    }
+                }
+            }
+            result.push(row);
+        }
+
+        return result;
+    }
+
+    calculateBounds(array) {
+        // Delegate to MathUtils for consistent bounds calculation
+        return MathUtils.calculateBounds(array);
+    }
+
+    detectEdgeTouching(array, bounds) {
+        // Determine if occupied cells touch any array edges
+        const height = array.length;
+        const width = array[0] ? array[0].length : 0;
+
+        return {
+            left: bounds.minX === 0,
+            right: bounds.maxX === width - 1,
+            bottom: bounds.minY === 0,
+            top: bounds.maxY === height - 1
+        };
+    }
+
+    getScaleAlignedDimensions(width, height, scaleFactor, centerShape) {
+        // Calculate dimensions and padding needed for scale factor alignment
+        const targetWidth = Math.ceil(width / scaleFactor) * scaleFactor;
+        const targetHeight = Math.ceil(height / scaleFactor) * scaleFactor;
+
+        const horizontalPadding = targetWidth - width;
+        const verticalPadding = targetHeight - height;
+
+        // Use MathUtils for consistent padding distribution
+        const hPad = MathUtils.distributePadding(horizontalPadding, true); // Always center horizontally
+        const vPad = MathUtils.distributePadding(verticalPadding, centerShape);
+
+        return {
+            width: targetWidth,
+            height: targetHeight,
+            padding: {
+                left: hPad.start,
+                right: hPad.end,
+                top: vPad.start,
+                bottom: vPad.end
+            }
+        };
+    }
+
+    saveUserInput(_title, _inputGrid, config = null) {
+        // Clean linear pipeline for shape processing
         this.data.title = _title;
         this.data.inputGrid = _inputGrid;
 
-        //== create shape
-        // trimming empty rows and columns in the input grid
-        let shapeTemp = [];
-        let leftIndex = this.data.inputGrid[0].length - 1;
-        let rightIndex = 0;
-        // find the farthest left and right indices of the shape
-        for (let y = 0; y < this.data.inputGrid.length; y++) {
-            if (this.data.inputGrid[y].includes(true)) {
-                // find the left and the right ends of the shape on this row
-                let currLeft = this.data.inputGrid[y].indexOf(true);
-                let currRight = this.data.inputGrid[y].lastIndexOf(true);
-                if (currLeft < leftIndex) {
-                    leftIndex = currLeft;
-                }
-                if (currRight > rightIndex) {
-                    rightIndex = currRight;
-                }
-            }
-        }
-        // use leftIndex and rightIndex to trim the shape
-        for (let y = 0; y < this.data.inputGrid.length; y++) {
-            if (this.data.inputGrid[y].includes(true)) {
-                let rowSlice = this.data.inputGrid[y].slice(leftIndex, rightIndex + 1);
-                shapeTemp.push(rowSlice);
-            }
-        }
-        // pad the shape with extra columns to make evenly distribute across a divisible by 4 width
-        this.data.highResShape = [];
-        const width = shapeTemp[0].length;
-        const paddedWidth = Math.ceil(width / 4) * 4;
-        const paddingLeft = Math.floor((paddedWidth - width) / 2);
-        const paddingRight = paddedWidth - width - paddingLeft;
-        // add the shape, trimmed + padded left/right for 4 dividable
-        shapeTemp.forEach(row => {
-            const newRow = new Array(paddingLeft).fill(false)
-                .concat(row)
-                .concat(new Array(paddingRight).fill(false));
-            this.data.highResShape.push(newRow);
-        });
+        // Use provided configuration or get default configuration
+        config = config || this.getDefaultProcessingConfig();
+        const scaleFactor = MathUtils.getScaleFactor(config.minWallLength);
 
-        //== create the low res shape 
-        // - scale the shape down to 1/4th the resolution
-        // - first pad the shape on the top to make it divisible by 4
-        let paddedShape = this.data.highResShape.map(row => [...row]);
-        const height = this.data.highResShape.length;
-        const paddedHeight = Math.ceil(height / 4) * 4;
-        const paddingBottom = paddedHeight - height;
-        // pad the shape on the top
-        for (let i = 0; i < paddingBottom; i++) {
-            paddedShape.push(new Array(paddedWidth).fill(false));
+        // Step 1: Trim input to bounding box
+        const trimmed = this.trimToBoundingBox(_inputGrid);
+        this.data.highResShape = trimmed; // Store pure shape content
+
+        // Step 2: Fill void spaces between occupied cells
+        const filled = this.fillVoidSpaces(trimmed);
+
+        // Step 3: Convert to object array for processing
+        let processed = this.convertArrayType(filled, 'object', trimmed);
+
+        // Step 4: Detect edges with minimal expansion
+        processed = this.detectEdges(processed, config.centerShape);
+
+        // Step 5: Initial scale factor alignment (without centering if buffer will be applied)
+        processed = this.alignToScaleFactor(processed, scaleFactor, config.customBufferSize > 0 ? false : config.centerShape);
+
+        // Store a copy before buffer for lowResShape generation
+        const preBufferProcessed = processed.map(row => row.map(cell => ({ ...cell })));
+
+        // Step 6: Apply custom buffer if specified (pure growth phase)
+        if (config.customBufferSize > 0) {
+            // convert buffer from inches to highres units (1 highres = 0.25", independent of minWallLength)
+            const bufferSteps = MathUtils.inchesToHighres(config.customBufferSize);
+
+            // apply buffer expansion (operates in highres space, no scale factor involved)
+            processed = this.applyBuffer(processed, bufferSteps, config.centerShape);
+
+            // Final trim to remove any growth artifacts
+            processed = this.trimToBoundingBox(processed);
+
+            // realign to scale factor after buffer (buffer changes dimensions, need to realign with centering)
+            processed = this.alignToScaleFactor(processed, scaleFactor, config.centerShape);
         }
-        // reduce the resolution by 4x
-        this.data.lowResShape = [];
-        const lowResHeight = Math.floor(paddedShape.length / 4);
-        const lowResWidth = Math.floor(paddedShape[0].length / 4);
-        for (let y = 0; y < lowResHeight; y++) {
-            const row = [];
-            for (let x = 0; x < lowResWidth; x++) {
-                let filledCells = 0;
-                for (let dy = 0; dy < 4; dy++) {
-                    for (let dx = 0; dx < 4; dx++) {
-                        if (paddedShape[y * 4 + dy][x * 4 + dx]) {
-                            filledCells++;
+
+        // Store high-res buffer shape (with buffer applied)
+        this.data.highResBufferShape = processed;
+
+        // Step 7: Generate low-res versions
+        // Use the pre-buffer processed shape (aligned but without buffer) for low-res scaling
+        const alignedBoolean = this.convertArrayType(preBufferProcessed, 'boolean');
+        this.data.lowResShape = this.downsampleToLowRes(alignedBoolean, scaleFactor);
+        this.data.bufferShape = this.generateLowResBufferFromHighRes(config.minWallLength);
+
+        // Step 8: Calculate shape stats
+        this.data.gridArea = this.getGridArea();
+    }
+
+    // ========================
+    // Processing Pipeline Methods
+    // ========================
+
+    detectEdges(shape, centerShape) {
+        // Detect edges using minimal expansion and flood fill
+
+        // Add minimal expansion for flood fill (1 cell on each side)
+        const minimalPadding = {
+            left: 1,
+            right: 1,
+            top: 1,
+            bottom: centerShape ? 1 : 0
+        };
+
+        const expanded = this.expandShape(shape, minimalPadding);
+
+        // Run flood fill from edges to identify perimeter
+        Shape.identifyPerimeterSquares(expanded);
+
+        // Trim back to occupied cells (expansion only added empty cells)
+        return this.trimToBoundingBox(expanded);
+    }
+
+    alignToScaleFactor(shape, scaleFactor, centerShape) {
+        // Ensure shape dimensions are divisible by scale factor
+        const height = shape.length;
+        const width = shape[0] ? shape[0].length : 0;
+
+        // Check if already divisible - if so, no padding needed
+        if (width % scaleFactor === 0 && height % scaleFactor === 0) {
+            return shape; // Perfect fit, no changes needed
+        }
+
+        // Calculate exact padding needed for scale factor divisibility
+        const widthRemainder = width % scaleFactor;
+        const heightRemainder = height % scaleFactor;
+
+        // Add minimum padding to reach next scale factor boundary
+        const widthPaddingNeeded = widthRemainder === 0 ? 0 : scaleFactor - widthRemainder;
+        const heightPaddingNeeded = heightRemainder === 0 ? 0 : scaleFactor - heightRemainder;
+
+        // Use MathUtils for consistent padding distribution
+        const hPad = MathUtils.distributePadding(widthPaddingNeeded, true); // Always center horizontally
+        const vPad = MathUtils.distributePadding(heightPaddingNeeded, centerShape);
+
+        return this.expandShape(shape, {
+            left: hPad.start,
+            right: hPad.end,
+            top: vPad.start,
+            bottom: vPad.end
+        });
+    }
+
+    applyBuffer(shape, bufferSteps, centerShape) {
+        // Apply pure buffer expansion in N steps
+        // bufferSteps: number of highres squares to expand (1 step = 0.25")
+        // Operates entirely in highres coordinate space
+        let current = shape;
+
+        for (let step = 0; step < bufferSteps; step++) {
+            // Check if shape touches any edges and needs minimal room for expansion
+            const bounds = this.calculateBounds(current);
+            const touchesEdges = this.detectEdgeTouching(current, bounds);
+
+            // Add minimal padding only where needed for expansion
+            // When centerShape is true, we allow expansion in all directions
+            // When centerShape is false, we don't expand bottom
+            const padding = {
+                left: touchesEdges.left ? 1 : 0,
+                right: touchesEdges.right ? 1 : 0,
+                top: touchesEdges.top ? 1 : 0,
+                bottom: (touchesEdges.bottom && centerShape) ? 1 : 0
+            };
+
+            // Add minimal padding if needed
+            if (padding.left || padding.right || padding.top || padding.bottom) {
+                current = this.expandShape(current, padding);
+            }
+
+            // Perform the expansion step
+            current = this.expandBufferByOneStep(current, centerShape);
+        }
+
+        return current;
+    }
+
+
+
+    downsampleToLowRes(highResShape, scaleFactor) {
+        // Pure downsampling: convert high-res shape to low-res by checking occupied squares
+        const highResHeight = highResShape.length;
+        const highResWidth = highResShape[0] ? highResShape[0].length : 0;
+
+        const lowResHeight = Math.ceil(highResHeight / scaleFactor);
+        const lowResWidth = Math.ceil(highResWidth / scaleFactor);
+
+        const result = [];
+
+        for (let lowY = 0; lowY < lowResHeight; lowY++) {
+            const lowResRow = [];
+            for (let lowX = 0; lowX < lowResWidth; lowX++) {
+                let hasOccupiedSquare = false;
+
+                // Check all high-res squares within this low-res square's area
+                const startHighY = lowY * scaleFactor;
+                const endHighY = Math.min(startHighY + scaleFactor, highResHeight);
+                const startHighX = lowX * scaleFactor;
+                const endHighX = Math.min(startHighX + scaleFactor, highResWidth);
+
+                for (let highY = startHighY; highY < endHighY; highY++) {
+                    for (let highX = startHighX; highX < endHighX; highX++) {
+                        const square = highResShape[highY][highX];
+                        const isOccupied = typeof square === 'boolean' ? square : (square && square.occupied);
+                        if (isOccupied) {
+                            hasOccupiedSquare = true;
+                            break;
                         }
                     }
+                    if (hasOccupiedSquare) break;
                 }
-                if (filledCells > 0) {
-                    row.push(true);
-                } else {
-                    row.push(false);
-                }
+
+                lowResRow.push(hasOccupiedSquare);
             }
-            this.data.lowResShape.push(row);
+            result.push(lowResRow);
         }
 
-        //== create the buffer shape 
-        // - add 1 square to right and top edges of rounded up shape
-        // 1. make buffer shape larger by 1 on x and y to make room
-        // 2. set any voids and under hang squares as true and add trues to the right and top edges
-        this.data.bufferShape = [];
-        for (let y = 0; y < this.data.lowResShape.length; y++) {
-            let newRow = [...this.data.lowResShape[y]];
-            newRow.push(false); // add extra space on the right
-            let firstTrue = newRow.indexOf(true);
-            let lastTrue = newRow.lastIndexOf(true);
-            this.setTrueBetween(newRow, firstTrue, lastTrue + 1);
-            this.data.bufferShape.push(newRow);
-        }
-        // add a row on the top of the trim shape that's the same as the row below it
-        this.data.bufferShape.push([...this.data.bufferShape[this.data.bufferShape.length - 1]]);
-        // add additional buffer squares for under hangs
-        for (let y = 0; y < this.data.bufferShape.length; y++) {
-            for (let x = 0; x < this.data.bufferShape[y].length; x++) {
-                if (this.data.bufferShape[y][x] == false) {
-                    // on rows that are not the top row, check if the square above is true
-                    if (y < (this.data.bufferShape.length - 1) && this.data.bufferShape[y + 1][x] == true) {
-                        this.data.bufferShape[y][x] = true;
-                    }
-                }
+        return result;
+    }
+
+    applyVoidFilling(lowResArray) {
+        // Fill gaps between occupied cells in each row to prevent under-hangs
+        const result = lowResArray.map(row => [...row]); // Deep copy
+
+        for (let y = 0; y < result.length; y++) {
+            const row = result[y];
+            const firstTrue = row.indexOf(true);
+            const lastTrue = row.lastIndexOf(true);
+
+            if (firstTrue !== -1 && lastTrue !== -1 && firstTrue < lastTrue) {
+                this.setTrueBetween(row, firstTrue, lastTrue);
             }
         }
-        // add additional buffer squares for over hangs
-        for (let y = this.data.bufferShape.length - 1; y >= 0; y--) {
-            for (let x = 0; x < this.data.bufferShape[y].length; x++) {
-                if (this.data.bufferShape[y][x] == false) {
-                    // on rows that are not the bottom row, check if the square below is true
-                    if (y > 0 && this.data.bufferShape[y - 1][x] == true) {
-                        this.data.bufferShape[y][x] = true;
-                    }
-                }
-            }
+
+        return result;
+    }
+
+    generateLowResBufferFromHighRes(minWallLength = 1.0) {
+        // Generate low-res buffer shape by downsampling high-res buffer and applying void filling
+        if (!this.data.highResBufferShape || this.data.highResBufferShape.length === 0) {
+            console.warn('[Shape] No high-res buffer shape available for low-res generation');
+            return [[]];
         }
+
+        const scaleFactor = MathUtils.getScaleFactor(minWallLength);
+
+        // Step 1: Pure downsampling
+        const lowResBuffer = this.downsampleToLowRes(this.data.highResBufferShape, scaleFactor);
+
+        // Step 2: Apply void filling to prevent under-hangs
+        return this.applyVoidFilling(lowResBuffer);
     }
 
     toDataObject() {
@@ -147,26 +380,37 @@ class Shape {
                 highResShape: this.data.highResShape,
                 title: this.data.title
             },
+            id: this.id,
             posX: this.posX,
             posY: this.posY,
             enabled: this.enabled
         };
     }
 
-    static fromDataObject(shapeData) {
+    static fromDataObject(shapeData, bufferConfig = null) {
         // convert Shape text object (JSON) to Shape instance (import/worker communication)
         const newShape = new Shape();
-        newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape);
+        newShape.saveUserInput(shapeData.data.title, shapeData.data.highResShape, bufferConfig);
+
+        // Restore ID if provided
+        if (shapeData.id !== undefined) {
+            newShape.id = shapeData.id;
+            // Ensure the static counter is always ahead of any loaded ID
+            Shape.nextId = Math.max(Shape.nextId, shapeData.id + 1);
+        } else {
+            // If no ID is provided, assign a new one.
+            newShape.id = Shape.nextId++;
+        }
 
         // Set position and state properties if provided
-        if (shapeData.posX !== undefined) newShape.posX = shapeData.posX;
-        if (shapeData.posY !== undefined) newShape.posY = shapeData.posY;
-        if (shapeData.enabled !== undefined) newShape.enabled = shapeData.enabled;
+        newShape.posX = shapeData.posX !== undefined ? shapeData.posX : 0;
+        newShape.posY = shapeData.posY !== undefined ? shapeData.posY : 0;
+        newShape.enabled = shapeData.enabled !== undefined ? shapeData.enabled : true;
 
         return newShape;
     }
 
-    perimeterFromMask(mask) {
+    calculatePerimeter(mask) {
         let perimeter = 0;
         const height = mask.length;
         if (height === 0) return 0;
@@ -195,7 +439,26 @@ class Shape {
     }
 
     getPerimeter() {
-        return this.perimeterFromMask(this.data.bufferShape);
+        return this.calculatePerimeter(this.data.bufferShape);
+    }
+
+    fillVoidSpaces(shape) {
+        // Fill empty spaces between occupied spaces in each row
+        // Same logic used for low-res buffer creation, adapted for high-res
+        const result = shape.map(row => [...row]); // Deep copy
+
+        for (let y = 0; y < result.length; y++) {
+            const row = result[y];
+            const firstTrue = row.indexOf(true);
+            const lastTrue = row.lastIndexOf(true);
+
+            // Only fill if we found occupied spaces in this row
+            if (firstTrue !== -1 && lastTrue !== -1 && firstTrue <= lastTrue) {
+                this.setTrueBetween(row, firstTrue, lastTrue);
+            }
+        }
+
+        return result;
     }
 
     // Function to set values to true between two indices
@@ -205,7 +468,92 @@ class Shape {
         }
     }
 
-    getArea() {
+
+    expandShape(shape, padding) {
+        // Flexible method to add specified padding to any 2D array
+        // Automatically detects data type (boolean or object) and uses appropriate fill value
+        // padding: { left: number, right: number, top: number, bottom: number }
+
+        if (!shape || shape.length === 0) return shape;
+
+        const height = shape.length;
+        const width = shape[0].length;
+
+        // Detect data type from first element
+        let fillValue;
+        const firstElement = shape[0][0];
+        if (typeof firstElement === 'boolean') {
+            fillValue = false;
+        } else if (typeof firstElement === 'object') {
+            // Create empty square object with same structure
+            fillValue = {
+                occupied: false,
+                isPerimeter: false,
+                isOriginalShape: false
+            };
+        } else {
+            // Default to false for unknown types
+            fillValue = false;
+        }
+
+        const newWidth = width + padding.left + padding.right;
+        const newHeight = height + padding.top + padding.bottom;
+
+        const result = [];
+
+        // Helper function to create a new row filled with the appropriate value
+        const createEmptyRow = (width) => {
+            const row = [];
+            for (let i = 0; i < width; i++) {
+                // Clone the fill value if it's an object
+                row.push(typeof fillValue === 'object' ? { ...fillValue } : fillValue);
+            }
+            return row;
+        };
+
+        // Add bottom padding rows first (since Y is flipped, bottom padding goes at array start)
+        for (let i = 0; i < padding.bottom; i++) {
+            result.push(createEmptyRow(newWidth));
+        }
+
+        // Copy existing rows with left and right padding
+        for (let y = 0; y < height; y++) {
+            const newRow = [];
+
+            // Add left padding
+            for (let i = 0; i < padding.left; i++) {
+                newRow.push(typeof fillValue === 'object' ? { ...fillValue } : fillValue);
+            }
+
+            // Add original row content
+            newRow.push(...shape[y]);
+
+            // Add right padding
+            for (let i = 0; i < padding.right; i++) {
+                newRow.push(typeof fillValue === 'object' ? { ...fillValue } : fillValue);
+            }
+
+            result.push(newRow);
+        }
+
+        // Add top padding rows last (since Y is flipped, top padding goes at array end)
+        for (let i = 0; i < padding.top; i++) {
+            result.push(createEmptyRow(newWidth));
+        }
+
+        return result;
+    }
+
+    getDefaultProcessingConfig() {
+        // Default configuration for shape processing when no config is provided
+        return {
+            customBufferSize: 0.25,  // inches
+            centerShape: false,
+            minWallLength: 1.0      // inches per cell
+        };
+    }
+
+    getGridArea() {
         // Calculate the area of the shape by counting true values in bufferShape
         let area = 0;
         for (let y = 0; y < this.data.bufferShape.length; y++) {
@@ -217,6 +565,146 @@ class Shape {
         }
         return area;
     }
+
+
+    expandBufferByOneStep(currentShape, centerShape = false) {
+        // Expand buffer by expanding perimeter squares outward by one step in all 8 directions
+        const height = currentShape.length;
+        const width = currentShape[0].length;
+
+        // Step 1: Find all perimeter squares (occupied squares with at least one empty neighbor)
+        const perimeterSquares = [];
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (currentShape[y][x].occupied) {
+                    // Check if this occupied square has any empty neighbors (8-directional)
+                    if (this.hasEmptyNeighbor(currentShape, x, y, width, height)) {
+                        perimeterSquares.push({ x, y });
+                    }
+                }
+            }
+        }
+
+        // Step 2: Collect all expansion targets from perimeter squares
+        const expansionTargets = new Set();
+
+        for (const { x, y } of perimeterSquares) {
+            // Check all 8 neighbors of this perimeter square
+            const neighbors = [
+                { x: x - 1, y: y - 1 }, { x: x, y: y - 1 }, { x: x + 1, y: y - 1 }, // top row
+                { x: x - 1, y: y }, { x: x + 1, y: y },   // middle row (skip center)
+                { x: x - 1, y: y + 1 }, { x: x, y: y + 1 }, { x: x + 1, y: y + 1 }  // bottom row
+            ];
+
+            for (const neighbor of neighbors) {
+                // Check if neighbor is within bounds
+                if (neighbor.x >= 0 && neighbor.x < width &&
+                    neighbor.y >= 0 && neighbor.y < height) {
+                    // If neighbor is empty, mark it for expansion
+                    if (!currentShape[neighbor.y][neighbor.x].occupied) {
+                        expansionTargets.add(`${neighbor.x},${neighbor.y}`);
+                    }
+                }
+            }
+        }
+
+        // Step 3: Apply all expansions in batch (copy current shape and apply changes)
+        const result = currentShape.map(row => [...row]); // Deep copy
+
+        for (const target of expansionTargets) {
+            const [x, y] = target.split(',').map(Number);
+            result[y][x] = {
+                occupied: true,
+                isPerimeter: false,
+                isOriginalShape: false
+            };
+        }
+
+        return result;
+    }
+
+    hasEmptyNeighbor(shape, x, y, width, height) {
+        // Check if the square at (x,y) has any empty neighbors in 8 directions
+        const neighbors = [
+            { x: x - 1, y: y - 1 }, { x: x, y: y - 1 }, { x: x + 1, y: y - 1 }, // top row
+            { x: x - 1, y: y }, { x: x + 1, y: y },   // middle row (skip center)
+            { x: x - 1, y: y + 1 }, { x: x, y: y + 1 }, { x: x + 1, y: y + 1 }  // bottom row
+        ];
+
+        for (const neighbor of neighbors) {
+            // Check bounds
+            if (neighbor.x >= 0 && neighbor.x < width &&
+                neighbor.y >= 0 && neighbor.y < height) {
+                // If neighbor is empty, this is a perimeter square
+                if (!shape[neighbor.y][neighbor.x].occupied) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+
+
+
+    // ========================
+    // Static Utility Methods
+    // ========================
+
+    static identifyPerimeterSquares(squareObjects) {
+        // Use flood fill from edge squares to identify perimeter squares
+        // Static utility method for use by renderers
+        if (!squareObjects || squareObjects.length === 0) return;
+
+        const height = squareObjects.length;
+        const width = squareObjects[0].length;
+        const visited = new Set();
+
+        // Get all edge squares as starting points
+        const startingPoints = [];
+
+        // Top and bottom edges
+        for (let x = 0; x < width; x++) {
+            startingPoints.push([x, 0]); // bottom
+            startingPoints.push([x, height - 1]); // top
+        }
+
+        // Left and right edges
+        for (let y = 0; y < height; y++) {
+            startingPoints.push([0, y]); // left
+            startingPoints.push([width - 1, y]); // right
+        }
+
+        // BFS flood fill from outside edges
+        const queue = [...startingPoints];
+
+        while (queue.length > 0) {
+            const [x, y] = queue.shift();
+            const key = `${x},${y}`;
+
+            if (visited.has(key)) continue;
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+            const square = squareObjects[y][x];
+
+            if (!square.occupied) {
+                // Empty square - continue flood fill
+                visited.add(key);
+
+                // Add 4-connected neighbors
+                queue.push([x - 1, y]);
+                queue.push([x + 1, y]);
+                queue.push([x, y - 1]);
+                queue.push([x, y + 1]);
+            } else {
+                // Occupied square adjacent to flood-filled area = perimeter
+                square.isPerimeter = true;
+            }
+        }
+    }
+
 }
 
 // Only export the class when in a Node.js environment (e.g., during Jest tests)

@@ -8,7 +8,7 @@ class SolutionWorker {
         this.Anneal = dependencies.Anneal;
         this.Cellular = dependencies.Cellular;
         this.Solution = dependencies.Solution;
-        this.Export = dependencies.Export;
+        this.BoardExporter = dependencies.BoardExporter;
         this.Board = dependencies.Board;
 
         this.mode = null; // 'single' or 'bulk'
@@ -79,18 +79,36 @@ class SolutionWorker {
             jobId,
             startId = 0,
             aspectRatioPref = 0,
-            devMode = false,
-            annealConfig = {},
             randMin = null,
-            randMax = null
+            randMax = null,
+            useCustomPerimeter = false,
+            perimeterWidthInches = 0,
+            perimeterHeightInches = 0,
+            customBufferSize = 0.25,
+            centerShape = false,
+            minWallLength = 1.0
         } = payload;
+
+        // Create configuration objects
+        const layoutConfig = {
+            aspectRatioPref: aspectRatioPref,
+            useCustomPerimeter: useCustomPerimeter,
+            perimeterWidthInches: perimeterWidthInches,
+            perimeterHeightInches: perimeterHeightInches
+        };
+
+        const bufferConfig = {
+            customBufferSize: customBufferSize,
+            centerShape: centerShape,
+            minWallLength: minWallLength
+        };
 
         this.currentJob = { jobId, startId };
 
         try {
             // Convert plain shape data objects to Shape class instances
             // (postMessage serialization strips class methods)
-            let shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData));
+            let shapeInstances = shapes.map(shapeData => Shape.fromDataObject(shapeData, bufferConfig));
 
             // Apply random sampling in bulk mode if parameters are provided
             let actualShapes = shapeInstances;
@@ -123,11 +141,7 @@ class SolutionWorker {
             this.sendProgress('PHASE_START', { phase: 'anneal', message: 'Starting annealing process...' });
 
             // create Anneal instance
-            const anneal = new this.Anneal(
-                actualShapes,
-                devMode,
-                aspectRatioPref
-            );
+            const anneal = new this.Anneal(actualShapes, layoutConfig, bufferConfig);
 
             // create progress callback for worker messaging
             const progressCallback = (solution) => {
@@ -145,9 +159,16 @@ class SolutionWorker {
                                 posY: shape.posY,
                                 data: {
                                     title: shape.data.title,
-                                    highResShape: shape.data.highResShape
+                                    highResShape: shape.data.highResShape,
+                                    highResBufferShape: shape.data.highResBufferShape
                                 }
-                            }))
+                            })),
+                            // Include perimeter properties for proper progress rendering
+                            useCustomPerimeter: solution.useCustomPerimeter,
+                            perimeterWidthInches: solution.perimeterWidthInches,
+                            perimeterHeightInches: solution.perimeterHeightInches,
+                            goalPerimeterGrid: solution.goalPerimeterGrid,
+                            minWallLength: solution.minWallLength
                         }
                     });
                 } else {
@@ -173,14 +194,14 @@ class SolutionWorker {
             let gridBaseline = null;
             if (this.mode === 'bulk') {
                 this.sendProgress('PHASE_START', { phase: 'baseline-grid', message: 'Generating grid-packing baseline...' });
-                gridBaseline = this.Solution.createGridBaseline(actualShapes, aspectRatioPref);
+                gridBaseline = this.Solution.createGridBaseline(actualShapes, aspectRatioPref, bufferConfig);
                 this.sendProgress('PHASE_COMPLETE', { phase: 'baseline-grid', score: gridBaseline.score });
             }
 
-            // Phase 2: Cellular growth
+            // Phase 2: Wall generation
             this.sendProgress('PHASE_START', { phase: 'cellular', message: 'Growing cellular structure...' });
 
-            const cellular = new this.Cellular(anneal.finalSolution, devMode);
+            const cellular = new this.Cellular(anneal.finalSolution);
             cellular.growCells();
 
             this.sendProgress('PHASE_COMPLETE', { phase: 'cellular', cellCount: cellular.numAlive || 0 });
@@ -194,7 +215,6 @@ class SolutionWorker {
                     title: `solution-${this.currentJob.startId + 1}`,
                     finalSolution: anneal.finalSolution.toDataObject(),
                     enabledShapes: actualShapes.map(() => true),
-                    solutionHistory: [], // Empty for bulk runs to reduce size
                     cellular: {
                         cellSpace: cellular.cellSpace,
                         maxTerrain: cellular.maxTerrain,
@@ -203,7 +223,6 @@ class SolutionWorker {
                     metadata: {
                         timestamp: Date.now(),
                         mode: this.mode,
-                        devMode: devMode,
                         aspectRatioPref: aspectRatioPref
                     }
                 };
@@ -304,24 +323,25 @@ class SolutionWorker {
 
         // Define export configuration (hardcoded for bulk mode)
         const exportConfig = {
-            caseDepth: 3,
-            sheetThickness: 0.23,
-            sheetWidth: 30,
-            sheetHeight: 28,
+            caseDepthIn: 3,
+            sheetThicknessIn: 0.23,
+            sheetWidthIn: 30,
+            sheetHeightIn: 28,
             numSheets: 1,
-            kerf: 0,
-            numPinSlots: 2
+            kerfIn: 0,
+            pinMode: '1-pin'
         };
 
         // Extract spacing from anneal instance
         const spacing = {
             buffer: anneal.buffer,
             xPadding: anneal.xPadding,
-            yPadding: anneal.yPadding
+            yPadding: anneal.yPadding,
+            squareSize: 25 // Default squareSize for worker calculations
         };
 
         // Calculate board counts, lengths, and render data for optimized solution
-        const optimizedExport = new this.Export(cellular, spacing, exportConfig);
+        const optimizedExport = new this.BoardExporter(cellular, exportConfig, spacing);
         optimizedExport.makeBoards();
         statistics.boardCountOptimized = optimizedExport.boards.length;
         statistics.totalBoardLengthOptimized = optimizedExport.getTotalBoardLength();
@@ -336,8 +356,7 @@ class SolutionWorker {
             savedAnneals: [{
                 title: `solution-${this.currentJob.startId + 1}`,
                 finalSolution: anneal.finalSolution.toDataObject(),
-                enabledShapes: shapeInstances.map(() => true), // All shapes enabled in bulk runs
-                solutionHistory: [] // Empty for bulk runs
+                enabledShapes: shapeInstances.map(() => true) // All shapes enabled in bulk runs
             }],
             allShapes: shapeInstances.map(shape => shape.toDataObject())
         };
@@ -353,7 +372,6 @@ class SolutionWorker {
         const metadata = {
             timestamp: Date.now(),
             mode: this.mode,
-            devMode: false, // Always false in bulk mode
             aspectRatioPref: anneal.finalSolution.aspectRatioPref
         };
 
@@ -435,16 +453,20 @@ function initializeBrowserWorker() {
     // Load dependencies
     importScripts(
         '../core/EventEmitter.js',
+        '../core/MathUtils.js',
+        '../core/ScreenState.js',
         '../core/Shape.js',
         '../core/Solution.js',
         '../core/Cellular.js',
         '../core/Anneal.js',
-        '../core/Export.js',
-        '../core/Board.js'
+        '../core/BoardExporter.js',
+        '../core/Board.js',
+        '../core/material-configs.js',
+        '../interfaces/web/RenderConfig.js'
     );
 
     // In the browser, classes are available in the global scope
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, BoardExporter, Board });
 
     // Set up browser event handlers
     self.onmessage = function (event) {
@@ -473,7 +495,7 @@ function initializeNodeWorker() {
     const Shape = require('../core/Shape.js');
     const Anneal = require('../core/Anneal.js');
     const Cellular = require('../core/Cellular.js');
-    const Export = require('../core/Export.js');
+    const BoardExporter = require('../core/BoardExporter.js');
     const Board = require('../core/Board.js');
 
     // Make dependencies available in global scope
@@ -484,7 +506,7 @@ function initializeNodeWorker() {
     }
 
     // Create worker instance
-    const worker = new SolutionWorker({ Anneal, Cellular, Solution, Export, Board });
+    const worker = new SolutionWorker({ Anneal, Cellular, Solution, BoardExporter, Board });
 
     // Store parentPort reference for message sending
     worker.parentPort = parentPort;

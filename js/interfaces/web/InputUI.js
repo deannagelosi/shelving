@@ -6,16 +6,25 @@ class InputUI {
         // dom elements
         this.html = {};
         this.shapeTitleElements = [];
-        // flags
-        this.eraseMode = "first";
+
+        //== brush settings
+        this.brushSize = 1; // size in grid squares (1 = 1x1, 2 = 2x2, etc)
+        this.drawMode = true; // true = draw/fill, false = erase
+        this.mouseGridX = -1; // current mouse position in grid coordinates
+        this.mouseGridY = -1;
 
         //== setup
+        // image mask brightness range
+        this.imgBrightness = 1.0; // initial value
+        this.imgBrightnessMin = 0.0;
+        this.imgBrightnessMax = 5.0;
+        this.maskThreshold = 0.25; // cutoff percentage
+
         // ui variables
-        this.defaultBrightness = 1.2;
-        this.imgBrightness = this.defaultBrightness;
-        this.brightStepSize = 0.01;
-        this.brightMin = 0.8;
-        this.brightMax = 1.8;
+        this.sliderStepSize = 0.01;
+        this.sliderDefault = 0.5;
+        this.sliderMin = 0;
+        this.sliderMax = 1;
         // input grid variables
         this.maxInputInches = 10; // default grid size in inches
         this.gridInchSize = SQUARE_SIZE; // inches per grid square
@@ -25,16 +34,12 @@ class InputUI {
         this.squareSize;
         this.inputGridHeight;
         this.inputGridWidth;
-        this.sidePadding;
-
-        //== mouse click delay (debounce)
-        this.lastClickTime = 0;
-        this.clickDelay = 200; // milliseconds
 
         //== initialize UI elements
         this.initHeaderUI();
         this.initBottomUI();
         this.initSidebarButtons();
+        this.initToolbar();
 
         //== event listeners
         // listen for screen changes to manage visibility
@@ -74,6 +79,84 @@ class InputUI {
             .mousePressed(() => this.handleNext());
     }
 
+    initToolbar() {
+        const BRUSH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46.7 82.8" fill="currentColor"><path d="M43.6.4c-.4-.4-1-.7-1.6-.7H4.9c-.6,0-1.2.2-1.6.6s-.6,1-.6,1.6l1.2,24.3c0,.7.4,1.3.9,1.7v-5.6c0-.5.4-.9.9-.9h2.3s-.9-17.3-.9-17.3h32.5c0,0-.9,17.3-.9,17.3h2.3c.5,0,.9.4.9.9v5.6c.5-.4.9-1,.9-1.7l1.3-24.3c0-.6-.2-1.2-.6-1.6h0Z"/><path d="M23.3,83.1c-2.4,0-4.7-1-6.3-2.8-1.6-1.7-2.5-4.1-2.3-6.5l.9-14.6c.3-4.3-1.5-8.4-4.8-11.1l-5.5-4.5c-1.7-1.4-2.6-3.5-2.6-5.6v-7.9c0-1.5,1.2-2.7,2.8-2.7h36c1.5,0,2.7,1.3,2.7,2.8v7.9c0,2.2-1,4.2-2.7,5.6l-5.5,4.5c-3.3,2.7-5.1,6.9-4.8,11.1l.9,14.6c.1,2.4-.7,4.8-2.4,6.5-1.6,1.7-4,2.7-6.4,2.7h0ZM7,31.7v6.3c0,.9.4,1.7,1,2.2l5.5,4.5c4.4,3.6,6.8,9.1,6.4,14.8l-.9,14.6c0,1.2.3,2.4,1.2,3.2.8.9,1.9,1.4,3.1,1.4s2.3-.5,3.2-1.4c.8-.9,1.2-2,1.2-3.2l-.9-14.6c-.3-5.7,2.1-11.2,6.4-14.8l5.5-4.5c.7-.6,1.1-1.4,1.1-2.2v-6.3s-32.8,0-32.8,0Z"/><path d="M42,33.4H4.8c-1.2,0-2.2-1.1-2.2-2.3v-8.8c0-1.7,1.4-3.1,3.1-3.1h35.3c1.7,0,3.1,1.5,3.1,3.2v8.8c0,1.2-1,2.2-2.2,2.2h0ZM7,28.9h32.8c0,0,0-5.3,0-5.3H7c0,0,0,5.3,0,5.3Z"/><path d="M14.1,23.5c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/><path d="M23.5,23.6c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/><path d="M32.6,23.6c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/></svg>`;
+
+        const ERASER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 69.5 84.3" fill="currentColor"><path d="M34,2.7L2.2,57.7h0c-1.6,2.7-2,6-1.2,9,.8,3.1,2.8,5.7,5.6,7.2l13.8,7.9h0c2.7,1.6,6,2,9,1.2,3.1-.8,5.7-2.8,7.2-5.6l31.8-55c1.1-1.9.4-4.3-1.4-5.4L39.4,1.3c-1.9-1.1-4.3-.4-5.4,1.5h0ZM39.2,5.8l24.1,13.9h0c.9.5,1.2,1.7.7,2.5l-23.9,41.5c-.5.9-1.7,1.2-2.5.7l-24.1-13.9c-.5-.3-.8-.7-1-1.3-.1-.5,0-1.1.2-1.6L36.4,6.5c.3-.5.7-.8,1.3-1,.5-.1,1.1,0,1.6.2h0ZM11.4,53.9l24.1,13.9h0c.9.5,1.2,1.7.7,2.5l-3,5.3c-2.2,3.8-7,5.1-10.8,2.9l-13.7-7.9c-3.8-2.2-5.1-7-2.9-10.8l2.9-5.1c.3-.5.7-.8,1.3-1,.5-.1,1.1,0,1.6.2h0Z"/></svg>`;
+
+        // Create toolbar container
+        this.html.toolbar = createDiv()
+            .addClass('paint-toolbar hidden');
+
+        // Insert before canvas in flex layout
+        const mainDiv = document.getElementById('main-div');
+        const canvasDiv = document.getElementById('canvas-div');
+        mainDiv.insertBefore(this.html.toolbar.elt, canvasDiv);
+
+        // Brush button
+        this.html.brushButton = createDiv()
+            .addClass('tool-button selected')
+            .attribute('data-tooltip', 'Draw (D)')
+            .parent(this.html.toolbar)
+            .mousePressed(() => {
+                this.drawMode = true;
+                this.updateToolbarState();
+                this.drawInputGrid();
+            });
+        this.html.brushButton.elt.innerHTML = BRUSH_SVG;
+
+        // Eraser button
+        this.html.eraserButton = createDiv()
+            .addClass('tool-button eraser')
+            .attribute('data-tooltip', 'Erase (E)')
+            .parent(this.html.toolbar)
+            .mousePressed(() => {
+                this.drawMode = false;
+                this.updateToolbarState();
+                this.drawInputGrid();
+            });
+        this.html.eraserButton.elt.innerHTML = ERASER_SVG;
+
+        // Separator
+        createDiv()
+            .addClass('toolbar-separator')
+            .parent(this.html.toolbar);
+
+        // Large size icon
+        createDiv()
+            .addClass('size-icon large')
+            .attribute('data-tooltip', 'Increase  ]')
+            .parent(this.html.toolbar);
+
+        // Vertical brush size slider
+        this.html.brushSlider = createSlider(1, 8, this.brushSize, 1)
+            .addClass('brush-size-slider')
+            .parent(this.html.toolbar)
+            .input(() => {
+                this.brushSize = parseInt(this.html.brushSlider.value());
+                this.drawInputGrid();
+            });
+
+        // Small size icon
+        createDiv()
+            .addClass('size-icon')
+            .attribute('data-tooltip', 'Decrease  [')
+            .parent(this.html.toolbar);
+    }
+
+    updateToolbarState() {
+        if (this.drawMode) {
+            this.html.brushButton.addClass('selected');
+            this.html.eraserButton.removeClass('selected');
+        } else {
+            this.html.brushButton.removeClass('selected');
+            this.html.eraserButton.addClass('selected');
+        }
+        if (this.html.brushSlider) {
+            this.html.brushSlider.value(this.brushSize);
+        }
+    }
+
     initHeaderUI() {
         // create header elements  (hidden until screen is shown)
         // setup image upload and slider
@@ -88,12 +171,12 @@ class InputUI {
             .parent(this.html.imageControls);
 
         // label
-        this.html.gridLabel = createSpan('Grid size (in): ')
+        this.html.gridLabel = createSpan('Image Height (in): ')
             .parent(gridSizeDiv);
         // grid size input
         this.html.gridSizeInput = createInput(String(this.maxInputInches), 'number')
             .attribute('min', '1')
-            .attribute('max', '12')
+            .attribute('max', '40')
             .parent(gridSizeDiv)
             .input(() => this.adjustGridSize());
 
@@ -117,15 +200,21 @@ class InputUI {
         this.html.sliderDiv = createDiv()
             .class('slider-control')
             .parent(this.html.imageControls);
-        this.html.fillBox = createDiv()
-            .class('slider-icon filled')
-            .parent(this.html.sliderDiv);
-        this.html.headerSlider = createSlider(this.brightMin, this.brightMax, this.imgBrightness, this.brightStepSize)
-            .addClass('slider')
-            .parent(this.html.sliderDiv)
-            .input(() => this.handleSliderChange());
         this.html.emptyBox = createDiv()
             .class('slider-icon empty')
+            .parent(this.html.sliderDiv);
+        this.html.headerSlider = createSlider(
+            this.sliderMin,
+            this.sliderMax,
+            this.sliderDefault,
+            this.sliderStepSize
+        )
+            .addClass('slider')
+            .attribute('disabled', '')
+            .parent(this.html.sliderDiv)
+            .input(() => this.handleSliderChange());
+        this.html.fillBox = createDiv()
+            .class('slider-icon filled')
             .parent(this.html.sliderDiv);
 
         // create and append the clear button
@@ -190,14 +279,41 @@ class InputUI {
         this.displayShapeTitles();
     }
 
+    //== helper methods
+    mapSliderToBrightness(sliderValue) {
+        // Map slider range to brightness range (inverted)
+        // slider min -> brightness max = no mask
+        // slider max -> brightness min = max mask
+        const sliderRange = this.sliderMax - this.sliderMin;
+        const brightnessRange = this.imgBrightnessMax - this.imgBrightnessMin;
+        const normalizedSlider = (sliderValue - this.sliderMin) / sliderRange; // 0 to 1
+        const invertedNormalized = 1 - normalizedSlider; // flip it
+        const brightness = this.imgBrightnessMin + (invertedNormalized * brightnessRange);
+
+        // Round to slider step precision for consistent cache keys
+        const precision = 1 / this.sliderStepSize; // 0.01 -> 100
+        return Math.round(brightness * precision) / precision;
+    }
+
     //== button handlers
     async handleSliderChange() {
-        // get slider value
-        this.imgBrightness = this.html.headerSlider.value();
-        await this.adjustImgBrightness();
+        // get slider value (represents "mask amount")
+        const sliderValue = this.html.headerSlider.value();
 
-        // update the mask for the new brightness and redraw the display
-        await this.createImageMask();
+        // map slider value to inverted brightness value
+        this.imgBrightness = this.mapSliderToBrightness(sliderValue);
+
+        // check if we have a cached mask for this brightness value
+        if (this.imgData.maskCache && this.imgData.maskCache[this.imgBrightness]) {
+            // use cached mask directly
+            this.inputGrid = this.imgData.maskCache[this.imgBrightness];
+        } else {
+            // no cached mask - need to adjust brightness and create mask
+            await this.adjustImgBrightness();
+            await this.createImageMask();
+        }
+
+        // redraw the display
         this.drawInputGrid();
     }
 
@@ -210,13 +326,21 @@ class InputUI {
                     // setup image
                     this.imgData.img = img;
                     await this.resizeImg();
+
+                    // Set initial mask and display (show image immediately)
                     await this.adjustImgBrightness();
                     await this.createImageMask();
-                    // update the input grid display
-                    this.html.headerSlider.attribute('disabled', '');
                     this.drawInputGrid();
-                    // enable the brightness slider
+
+                    // Disable slider during mask pre-calculation
+                    this.html.headerSlider.attribute('disabled', '');
+
+                    // Pre-calculate all mask levels in background
+                    await this.precalculateMasks();
+
+                    // Enable the brightness slider
                     this.html.headerSlider.removeAttribute('disabled');
+
                     // add file name as initial title
                     this.html.titleInput.value(file.name.split('.')[0]);
                 });
@@ -238,7 +362,13 @@ class InputUI {
         // save the shape
         let newShape = new Shape();
         let gridCopy = this.inputGrid.map(colArray => [...colArray]);
-        newShape.saveUserInput(titleValue, gridCopy); // save a copy of the input grid
+        // Create explicit configuration for shape processing
+        const config = {
+            customBufferSize: appState.generationConfig.customBufferSize,
+            centerShape: appState.generationConfig.centerShape,
+            minWallLength: appState.generationConfig.minWallLength
+        };
+        newShape.saveUserInput(titleValue, gridCopy, config); // save a copy of the input grid
         appState.shapes.push(newShape);
 
         // reset active shape and UI
@@ -276,41 +406,45 @@ class InputUI {
 
     loadJsonData(_importedData) {
         // handles loading saved shapes from json file
-        let shapeData = _importedData.allShapes;
-        let annealData = _importedData.savedAnneals;
+        const shapeData = _importedData.allShapes || [];
+        const annealData = _importedData.savedAnneals || [];
 
         // process shape data
-        let loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
-        // add shapes
+        const loadedShapes = shapeData.map(shapeData => Shape.fromDataObject(shapeData));
         appState.shapes.push(...loadedShapes);
 
         // process anneal data
         let maxSolutionNum = 0;
-        let loadedAnneals = [];
-        for (let anneal of annealData) {
-            // find the largest anneal number (ex: 4 on 'solution-4')
-            let titleNumber = parseInt(anneal.title.split('-')[1]);
-            maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+        const loadedAnneals = annealData.map(anneal => {
+            let titleNumber = 0;
+            if (anneal.title) {
+                const parts = anneal.title.split('-');
+                if (parts.length > 1) {
+                    titleNumber = parseInt(parts[1], 10);
+                }
+            }
+
+            if (!isNaN(titleNumber)) {
+                maxSolutionNum = Math.max(maxSolutionNum, titleNumber);
+            }
+
             // create new solution from saved data to restore class methods
             anneal.finalSolution = Solution.fromDataObject(anneal.finalSolution);
+            return anneal;
+        });
 
-            loadedAnneals.push(anneal);
-        }
         // add anneals and the highest solution number
         appState.savedAnneals.push(...loadedAnneals);
-        appState.totalSavedAnneals = maxSolutionNum;
+        appState.totalSavedAnneals = Math.max(appState.totalSavedAnneals || 0, maxSolutionNum);
 
-        // reset UI
-        this.resetCanvas();
         // notify ui update manager
         appEvents.emit('stateChanged');
     }
 
     adjustGridSize() {
         // adjust the grid size in inches
-        const newValue = parseInt(this.html.gridSizeInput.value());
+        const newSize = parseInt(this.html.gridSizeInput.value());
 
-        let newSize = constrain(newValue, 1, 12);
         this.html.gridSizeInput.value(newSize);
         this.maxInputInches = newSize;
         this.updateGridSize();
@@ -321,12 +455,11 @@ class InputUI {
         background(255);
         this.html.titleInput.value('');
         this.imgData = {};
-        this.imgBrightness = this.defaultBrightness;
-        this.html.headerSlider.value(this.imgBrightness); // update the slider position
+        this.html.headerSlider.value(this.sliderDefault); // reset slider to default position
         this.html.headerSlider.attribute('disabled', '');
 
-        this.resetInputGrid();
-        this.drawInputGrid();
+        // Reset grid to square dimensions when clearing
+        this.updateGridSize();
         this.displayShapeTitles();
     }
 
@@ -343,17 +476,20 @@ class InputUI {
     drawInputGrid() {
         background(255);
 
-        if (this.imgData.img) {
-            // add image to the canvas
-            let topX = this.sidePadding + (this.inputGridWidth - this.imgData.img.width) / 2;
-            let topY = this.sidePadding;
-            image(this.imgData.img, topX, topY);
+        if (this.imgData.original) {
+            // display original image (unchanged brightness) while mask uses brightness-adjusted version
+            let topX = this.xSidePadding + (this.inputGridWidth - this.imgData.original.width) / 2;
+            let topY = this.ySidePadding;
+            image(this.imgData.original, topX, topY);
         }
 
-        const yOffset = canvasHeight - this.sidePadding - this.squareSize;
-        const xOffset = this.sidePadding;
+        const colors = RenderConfig.getColors();
+        const strokeWeights = RenderConfig.getStrokeWeights();
+        const yOffset = canvasHeight - this.ySidePadding - this.squareSize;
+        const xOffset = this.xSidePadding;
 
         // draw grid
+        strokeWeight(strokeWeights.gridLine);
         for (let y = 0; y < this.inputRows; y++) {
             for (let x = 0; x < this.inputCols; x++) {
                 // draw input square
@@ -363,12 +499,12 @@ class InputUI {
                 // Fill selected squares
                 if (this.inputGrid[y][x]) {
                     // semi-transparent color squares for selected
-                    stroke("rgba(204,204,204, 0.25)");
-                    fill("rgba(111, 0, 255, 0.5)"); // purple
+                    stroke(colors.inputSelectedStroke);
+                    fill(colors.inputSelectedColor);
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 } else {
                     // transparent squares for unselected
-                    stroke("rgb(204,204,204)");
+                    stroke(colors.lineColor);
                     noFill();
                     rect(rectX, rectY, this.squareSize, this.squareSize);
                 }
@@ -376,7 +512,8 @@ class InputUI {
         }
 
         // draw inch marker lines
-        stroke(0);
+        stroke(colors.numColor);
+        strokeWeight(strokeWeights.boundingBox);
         for (let y = 0; y < this.inputRows + 1; y++) {
             // draw a line for every 4th y value
             if (y % 4 === 0) {
@@ -400,6 +537,32 @@ class InputUI {
                 }
             }
         }
+
+        // Draw brush preview overlay
+        if (this.mouseGridX >= 0 && this.mouseGridY >= 0) {
+            this.drawBrushPreview(xOffset, yOffset);
+        }
+    }
+
+    drawBrushPreview(xOffset, yOffset) {
+        // Draw brush preview at current mouse position
+        const bounds = this.getBrushBounds(this.mouseGridX, this.mouseGridY);
+
+        // Convert to screen coordinates
+        const brushX = xOffset + (bounds.minX * this.squareSize);
+        const brushY = yOffset - (bounds.maxY * this.squareSize);
+        const brushWidth = this.brushSize * this.squareSize;
+        const brushHeight = this.brushSize * this.squareSize;
+
+        // Get colors from config
+        const brushColors = RenderConfig.getBrushColors();
+        const colors = this.drawMode ? brushColors.draw : brushColors.erase;
+
+        // Draw single rectangle for entire brush area
+        fill(colors.fill);
+        stroke(colors.stroke);
+        strokeWeight(2);
+        rect(brushX, brushY, brushWidth, brushHeight);
     }
 
     displayShapeTitles() {
@@ -407,60 +570,50 @@ class InputUI {
         if (!htmlRefs.right) return;
         if (appState.currentScreen !== ScreenState.INPUT) return;
 
-        // clear the list
-        htmlRefs.right.list.html(''); // Clear all content
+        htmlRefs.right.list.html('');
         this.shapeTitleElements = [];
 
-        // create the list
         for (let i = 0; i < appState.shapes.length; i++) {
-            // create item row div
-            let titleRow = createDiv().addClass('shape-title');
-            titleRow.parent(htmlRefs.right.list);
+            let shapeItem = createDiv()
+                .addClass('saved-anneal-item')
+                .parent(htmlRefs.right.list);
 
-            // create view icon
-            let viewIcon = createImg('img/view.svg', 'View');
-            viewIcon.size(24, 24);
-            viewIcon.style('display', 'inline-block');
-            viewIcon.style('cursor', 'pointer');
-            viewIcon.style('margin-left', '5px');
-            viewIcon.addClass('icon-button');
-            viewIcon.parent(titleRow);
-            viewIcon.mousePressed(() => this.loadShape(i));
+            createImg('img/view.svg', 'Preview')
+                .addClass('icon-button')
+                .size(16, 16)
+                .parent(shapeItem)
+                .mousePressed(() => this.loadShape(i));
 
-            // create shape title
-            let shapeTitle = createP(`${appState.shapes[i].data.title}`);
-            shapeTitle.attribute('data-index', i);
-            shapeTitle.parent(titleRow);
+            createSpan(appState.shapes[i].data.title)
+                .addClass('anneal-title')
+                .parent(shapeItem);
 
-            // create trash icon
-            let trashIcon = createImg('img/trash.svg', '🗑️'); // emoji backup if svg issue
-            trashIcon.size(24, 24);
-            trashIcon.style('display', 'inline-block');
-            trashIcon.style('cursor', 'pointer');
-            trashIcon.style('margin-left', '5px');
-            trashIcon.addClass('icon-button');
-            trashIcon.parent(titleRow);
+            createImg('img/trash.svg', 'Delete')
+                .addClass('icon-button')
+                .size(16, 16)
+                .parent(shapeItem)
+                .mousePressed(() => {
+                    appState.shapes.splice(i, 1);
+                    appEvents.emit('stateChanged');
+                });
 
-            // save row for removal later
-            this.shapeTitleElements.push(titleRow);
-
-            // add event listener to trash icon
-            // removes a shape from the list
-            trashIcon.mousePressed(() => {
-                let index = shapeTitle.attribute('data-index');
-                appState.shapes.splice(index, 1);
-
-                // notify ui update manager
-                appEvents.emit('stateChanged');
-            });
+            this.shapeTitleElements.push(shapeItem);
         }
     }
 
     loadShape(index) {
         // load a saved shape into the input grid for editing
         const shape = appState.shapes[index];
+        const shapeGrid = shape.data.highResShape;
 
-        // clear current state (preserve grid size but clear content)
+        // Preserve canvas baseline dimensions; shape is placed within them.
+        const shapeHeight = shapeGrid.length;
+        const shapeWidth = shapeGrid[0].length;
+        if (shapeHeight > this.inputRows || shapeWidth > this.inputCols) {
+            console.warn(`Shape (${shapeWidth}x${shapeHeight}) exceeds canvas baseline (${this.inputCols}x${this.inputRows}); it will be clipped. Increase Image Height to view the full shape.`);
+        }
+
+        // clear current state (baseline dims unchanged)
         this.resetInputGrid();
         this.imgData = {};
 
@@ -494,17 +647,24 @@ class InputUI {
         }
     }
 
-    updateGridSize() {
-        // recalculate grid-related variables
-        this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
-        this.inputCols = this.inputRows;
-        this.squareSize = Math.floor((Math.min(canvasWidth, canvasHeight) / (this.inputRows + 1)));
-        this.inputGridHeight = (this.inputRows * this.squareSize);
-        this.inputGridWidth = (this.inputCols * this.squareSize);
+    calcGridSizing() {
+        // Calculate square size based on both width and height constraints
+        const heightConstraint = canvasHeight / (this.inputRows + 1);
+        const widthConstraint = canvasWidth / (this.inputCols + 1);
+        this.squareSize = Math.floor(Math.min(heightConstraint, widthConstraint));
+
+        this.inputGridHeight = this.inputRows * this.squareSize;
+        this.inputGridWidth = this.inputCols * this.squareSize;
 
         this.xSidePadding = (canvasWidth - this.inputGridWidth) / 2;
         this.ySidePadding = (canvasHeight - this.inputGridHeight) / 2;
-        this.sidePadding = Math.max(this.xSidePadding, this.ySidePadding);
+    }
+
+    updateGridSize() {
+        // Set up square grid based on height
+        this.inputRows = Math.floor(this.maxInputInches / this.gridInchSize);
+        this.inputCols = this.inputRows;
+        this.calcGridSizing();
 
         // reset and redraw the input grid
         this.resetInputGrid();
@@ -512,103 +672,209 @@ class InputUI {
     }
 
     //== mouse event handler
-    selectInputSquare(mouseX, mouseY, isDragging = false) {
-        // check if mouse click is within input grid
-        // factor in padding on all sides
-        let xValid = mouseX >= this.sidePadding && mouseX <= this.inputGridWidth + this.sidePadding;
-        let yValid = mouseY >= this.sidePadding && mouseY <= this.inputGridHeight + this.sidePadding;
-        if (xValid && yValid) {
-            let gridX = Math.floor((mouseX - this.sidePadding) / this.squareSize); // column
-            let gridY = Math.floor((this.inputGridHeight + this.sidePadding - mouseY) / this.squareSize); // row
+    screenToGrid(mouseX, mouseY) {
+        // Convert screen coordinates to grid coordinates
+        // Returns {x, y} or null if out of bounds
+        const xValid = mouseX >= this.xSidePadding && mouseX <= this.inputGridWidth + this.xSidePadding;
+        const yValid = mouseY >= this.ySidePadding && mouseY <= this.inputGridHeight + this.ySidePadding;
 
-            if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
-                let currentTime = millis();
-                if (isDragging || (currentTime - this.lastClickTime > this.clickDelay)) {
-                    if (isDragging) {
-                        // check if need to initialize erase mode
-                        if (this.eraseMode === "first") {
-                            this.eraseMode = !this.inputGrid[gridY][gridX];
-                        }
-                        // set the square based on the current erase mode
-                        this.inputGrid[gridY][gridX] = !this.eraseMode;
-                    } else {
-                        // used when clicking mouse
-                        this.inputGrid[gridY][gridX] = !this.inputGrid[gridY][gridX];
-                        this.lastClickTime = currentTime;
-                    }
-                    this.drawInputGrid();
+        if (!xValid || !yValid) {
+            return null;
+        }
+
+        const gridX = Math.floor((mouseX - this.xSidePadding) / this.squareSize);
+        const gridY = Math.floor((this.inputGridHeight + this.ySidePadding - mouseY) / this.squareSize);
+
+        // Bounds check
+        if (gridX >= 0 && gridX < this.inputCols && gridY >= 0 && gridY < this.inputRows) {
+            return { x: gridX, y: gridY };
+        }
+
+        return null;
+    }
+
+    updateMouseGridPosition(mouseX, mouseY) {
+        // Update current mouse position in grid coordinates for brush preview
+        const gridPos = this.screenToGrid(mouseX, mouseY);
+        if (gridPos) {
+            this.mouseGridX = gridPos.x;
+            this.mouseGridY = gridPos.y;
+        } else {
+            this.mouseGridX = -1;
+            this.mouseGridY = -1;
+        }
+    }
+
+    getBrushBounds(centerX, centerY) {
+        // Calculate brush area bounds in grid coordinates
+        const offset = Math.floor(this.brushSize / 2);
+        return {
+            minX: centerX - offset,
+            maxX: centerX + (this.brushSize - offset - 1),
+            minY: centerY - (this.brushSize - offset - 1),
+            maxY: centerY + offset
+        };
+    }
+
+    applyBrush(centerX, centerY) {
+        // Apply brush centered on cursor (odd sizes) or offset up-left in screen space (even sizes)
+        const bounds = this.getBrushBounds(centerX, centerY);
+
+        for (let dy = bounds.minY; dy <= bounds.maxY; dy++) {
+            for (let dx = bounds.minX; dx <= bounds.maxX; dx++) {
+                // Check bounds
+                if (dx >= 0 && dx < this.inputCols && dy >= 0 && dy < this.inputRows) {
+                    this.inputGrid[dy][dx] = this.drawMode;
                 }
             }
+        }
+    }
+
+    paintAtPosition(mouseX, mouseY, isDragging = false) {
+        // Apply brush at the given screen position
+        const gridPos = this.screenToGrid(mouseX, mouseY);
+        if (gridPos) {
+            this.applyBrush(gridPos.x, gridPos.y);
+            this.drawInputGrid();
+        }
+    }
+
+    handleKeyPress(key) {
+        // Handle keyboard shortcuts for brush controls
+        if (key === '[') {
+            this.brushSize = Math.max(1, this.brushSize - 1);
+            this.updateToolbarState();
+            this.drawInputGrid();
+        } else if (key === ']') {
+            this.brushSize = Math.min(8, this.brushSize + 1);
+            this.updateToolbarState();
+            this.drawInputGrid();
+        } else if (key === 'd' || key === 'D') {
+            this.drawMode = true;
+            this.updateToolbarState();
+            this.drawInputGrid();
+        } else if (key === 'e' || key === 'E') {
+            this.drawMode = false;
+            this.updateToolbarState();
+            this.drawInputGrid();
         }
     }
 
     //== image handling methods
-    async resizeImg() {
-        if (this.imgData.img) {
-            const aspectRatio = this.inputGridHeight / this.imgData.img.height;
-            const newHeight = this.inputGridHeight;
-            const newWidth = this.imgData.img.width * aspectRatio;
-            // const newHeight = this.inputGridHeight;
-            // const newWidth = this.inputGridWidth;
-            await this.imgData.img.resize(newWidth, newHeight);
-            this.imgData.original = await this.imgData.img.get();
-            await this.imgData.original.loadPixels();
+    async precalculateMasks() {
+        // Pre-calculate all possible mask levels for smooth slider interaction
+        if (!this.imgData.img) return;
+
+        // Initialize mask cache
+        this.imgData.maskCache = {};
+
+        // Calculate all brightness values from slider range
+        const sliderValues = [];
+        for (let sliderValue = this.sliderMin; sliderValue <= this.sliderMax; sliderValue += this.sliderStepSize) {
+            sliderValues.push(sliderValue);
+        }
+
+        // Process in chunks to avoid blocking UI
+        for (let i = 0; i < sliderValues.length; i++) {
+            const brightness = this.mapSliderToBrightness(sliderValues[i]);
+
+            // Adjust brightness and create mask for this level
+            await this.adjustImgBrightness(brightness);
+            await this.createImageMask(brightness);
+
+            // Yield to UI thread every 5 iterations
+            if (i % 5 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
         }
     }
 
-    async adjustImgBrightness() {
-        if (this.imgData.img && this.imgData.original) {
-            // load image pixels if not already loaded
-            if (!this.imgData.img.pixels || this.imgData.img.pixels.length === 0) {
-                await this.imgData.img.loadPixels();
+    async resizeImg() {
+        if (this.imgData.img) {
+            // Preserve canvas baseline dimensions (square grid set by Image Height field).
+            // Scale the image so its height matches the grid height; derive width from aspect ratio.
+            const aspectRatio = this.inputGridHeight / this.imgData.img.height;
+            const newHeight = this.inputGridHeight;
+            const newWidth = this.imgData.img.width * aspectRatio;
+
+            if (newWidth > this.inputGridWidth) {
+                console.warn(`Imported image width (${Math.round(newWidth)}px) exceeds canvas grid width (${this.inputGridWidth}px); image will overflow horizontally.`);
             }
+
+            await this.imgData.img.resize(newWidth, newHeight);
+            this.imgData.original = await this.imgData.img.get();
+            await this.imgData.original.loadPixels();
+
+            // Reset the input grid array (baseline dims unchanged)
+            this.resetInputGrid();
+        }
+    }
+
+    async adjustImgBrightness(brightness = null) {
+        const brightnessValue = brightness !== null ? brightness : this.imgBrightness;
+
+        if (this.imgData.original) {
+            // load original image pixels if not already loaded
             if (!this.imgData.original.pixels || this.imgData.original.pixels.length === 0) {
                 await this.imgData.original.loadPixels();
             }
 
-            if (this.imgData.brightData && this.imgData.brightData[this.imgBrightness]) {
-                // reuse stored image if brightness has been adjusted before
-                this.imgData['img'] = this.imgData.brightData[this.imgBrightness].objectImage;
-            } else {
-                // Create a new version of the image with adjusted brightness
-                let newImg = await this.imgData.img.get();
-                await newImg.loadPixels();
+            // Create a brightness-adjusted version for masking (not cached, not displayed)
+            let newImg = await this.imgData.original.get();
+            await newImg.loadPixels();
 
-                for (let y = 0; y < newImg.height; y++) {
-                    for (let x = 0; x < newImg.width; x++) {
-                        let index = (x + y * newImg.width) * 4;
-                        newImg.pixels[index] = min(255, this.imgData.original.pixels[index] * this.imgBrightness); // Red
-                        newImg.pixels[index + 1] = min(255, this.imgData.original.pixels[index + 1] * this.imgBrightness); // Green
-                        newImg.pixels[index + 2] = min(255, this.imgData.original.pixels[index + 2] * this.imgBrightness); // Blue
-                        // alpha channel unchanged
-                    }
+            for (let y = 0; y < newImg.height; y++) {
+                for (let x = 0; x < newImg.width; x++) {
+                    let index = (x + y * newImg.width) * 4;
+                    newImg.pixels[index] = min(255, this.imgData.original.pixels[index] * brightnessValue); // Red
+                    newImg.pixels[index + 1] = min(255, this.imgData.original.pixels[index + 1] * brightnessValue); // Green
+                    newImg.pixels[index + 2] = min(255, this.imgData.original.pixels[index + 2] * brightnessValue); // Blue
+                    // alpha channel unchanged
                 }
-                await newImg.updatePixels();
-                this.imgData.img = newImg;
-
-                await this.setPixelBuffer();
-
-                // save adjusted results for future use
-                if (!this.imgData.brightData) this.imgData.brightData = {};
-                if (!this.imgData.brightData[this.imgBrightness]) this.imgData.brightData[this.imgBrightness] = {};
-                this.imgData.brightData[this.imgBrightness].objectImage = newImg;
             }
+            await newImg.updatePixels();
+            this.imgData.img = newImg;
+
+            await this.setPixelBuffer();
         }
     }
 
-    async createImageMask() {
+    async createImageMask(brightness = null) {
+        const brightnessValue = brightness !== null ? brightness : this.imgBrightness;
+
         if (this.imgData.img) {
-            // check if an image mask for this brightness has already been created
-            if (this.imgData.brightData && this.imgData.brightData[this.imgBrightness] && this.imgData.brightData[this.imgBrightness].inputGrid) {
-                // reuse stored mask if it exists
-                this.inputGrid = this.imgData.brightData[this.imgBrightness].inputGrid;
+            // if brightness is at max (slider at min), clear the mask (but keep the image visible)
+            if (brightnessValue === this.imgBrightnessMax) {
+                // create empty grid (no purple mask)
+                let emptyGrid = [];
+                for (let y = 0; y < this.inputRows; y++) {
+                    emptyGrid.push([]);
+                    for (let x = 0; x < this.inputCols; x++) {
+                        emptyGrid[y].push(false);
+                    }
+                }
+                if (brightness === null) {
+                    this.inputGrid = emptyGrid;
+                }
+                // Cache this empty grid
+                if (!this.imgData.maskCache) this.imgData.maskCache = {};
+                this.imgData.maskCache[brightnessValue] = emptyGrid;
+                return;
+            }
+
+            // check if mask for this brightness value has already been cached
+            if (this.imgData.maskCache && this.imgData.maskCache[brightnessValue]) {
+                // reuse cached mask
+                if (brightness === null) {
+                    this.inputGrid = this.imgData.maskCache[brightnessValue];
+                }
                 return;
             }
 
             // ensure pixel buffer is setup (an offscreen rendering of just the image)
             if (!this.imgData.maskBuffer) await this.setPixelBuffer();
 
-            // loop the gird and find the mask value for each square
+            // loop the grid and find the mask value for each square
             let tempGrid = [];
             for (let y = 0; y < this.inputRows; y++) {
                 tempGrid.push([]);
@@ -619,13 +885,14 @@ class InputUI {
             // flip the grid vertically (make 0,0 be bottom left. default is top left)
             tempGrid.reverse();
 
-            // save the image mask for future use
-            if (!this.imgData.brightData) this.imgData.brightData = {};
-            if (!this.imgData.brightData[this.imgBrightness]) this.imgData.brightData[this.imgBrightness] = {};
-            this.imgData.brightData[this.imgBrightness].inputGrid = tempGrid;
+            // cache the mask for this brightness value
+            if (!this.imgData.maskCache) this.imgData.maskCache = {};
+            this.imgData.maskCache[brightnessValue] = tempGrid;
 
-            // update the input grid
-            this.inputGrid = tempGrid.map(colArray => [...colArray]);
+            // update the input grid only if this is for current brightness
+            if (brightness === null) {
+                this.inputGrid = tempGrid.map(colArray => [...colArray]);
+            }
         } else {
             console.error('No image or pixel buffer to create mask');
         }
@@ -685,7 +952,7 @@ class InputUI {
             return false;
         }
 
-        return minBrightness < (255 * 0.5); // 50% threshold
+        return minBrightness < (255 * this.maskThreshold);
     }
 }
 

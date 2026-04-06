@@ -3,6 +3,7 @@
 
 <head>
     <title>Uniquely Shaped Spaces</title>
+    <link rel="icon" href="data:,">
     <script src="lib/p5-1.6.0.js"></script>
     <script src="lib/dxf-writer-1.18.4-bundle.js"></script>
     <link rel="stylesheet" type="text/css" href="css/app.css">
@@ -38,20 +39,36 @@
         <div id="bottom-div"></div>
     </div>
 
-    <script src="js/interfaces/web/main.js"></script>
-    <script src="js/core/appState.js"></script>
+    <!-- Core: zero dependencies -->
+    <script src="js/core/MathUtils.js"></script>
     <script src="js/core/EventEmitter.js"></script>
-    <script src="js/interfaces/web/SolutionRenderer.js"></script>
-    <script src="js/interfaces/web/CellularRenderer.js"></script>
-    <script src="js/interfaces/web/InputUI.js"></script>
-    <script src="js/interfaces/web/DesignUI.js"></script>
-    <script src="js/interfaces/web/ExportUI.js"></script>
+    <script src="js/core/ScreenState.js"></script>
+    <script src="js/core/Board.js"></script>
+    <script src="js/core/material-configs.js"></script>
+
+    <!-- Core: has dependencies -->
+    <script src="js/core/appState.js"></script>
     <script src="js/core/Shape.js"></script>
     <script src="js/core/Solution.js"></script>
     <script src="js/core/Anneal.js"></script>
     <script src="js/core/Cellular.js"></script>
-    <script src="js/core/Board.js"></script>
-    <script src="js/core/Export.js"></script>
+    <script src="js/core/BoardExporter.js"></script>
+
+    <!-- Web interface: renderers -->
+    <script src="js/interfaces/web/RenderConfig.js"></script>
+    <script src="js/interfaces/web/ShapeRenderer.js"></script>
+    <script src="js/interfaces/web/SolutionRenderer.js"></script>
+    <script src="js/interfaces/web/CellularRenderer.js"></script>
+    <script src="js/interfaces/web/BoardRenderer.js"></script>
+
+    <!-- Web interface: services -->
+    <script src="js/services/AnnealService.js"></script>
+
+    <!-- Web interface: UI + entry point -->
+    <script src="js/interfaces/web/InputUI.js"></script>
+    <script src="js/interfaces/web/DesignUI.js"></script>
+    <script src="js/interfaces/web/ExportUI.js"></script>
+    <script src="js/interfaces/web/main.js"></script>
 </body>
 
 </html>

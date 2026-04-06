@@ -3,9 +3,6 @@ const canvasWidth = 650;
 const canvasHeight = 650;
 const SQUARE_SIZE = 0.25; // in inches
 
-//== state variables
-let numGrow = 0; // cell growth amount in dev mode
-
 //== UI class instances
 let inputUI;
 let designUI;
@@ -18,18 +15,6 @@ let isExporting = false;
 
 //== static DOM element references
 let htmlRefs = {};
-
-//== screens enum
-const ScreenState = {
-    INPUT: 'input',
-    DESIGN: 'design',
-    EXPORT: 'export'
-};
-
-//== flags
-let detailView = false;
-let devMode = false;
-let aspectRatioPref = 0;
 
 function setup() {
     let canvasElement = createCanvas(canvasWidth, canvasHeight);
@@ -91,8 +76,44 @@ function setup() {
     designUI = new DesignUI();
     exportUI = new ExportUI();
 
+    // initialize tooltip system for [data-tooltip] elements
+    initTooltips();
+
     // start on input screen
     changeScreen(ScreenState.INPUT);
+
+    // If fast reload is enabled, load the test data
+    if (appState.display.fastReloadDev) {
+        loadTestData();
+    }
+}
+
+function loadTestData() {
+    fetch(`examples/${appState.display.testFileName}`)
+        .then(response => response.json())
+        .then(data => {
+            // load the data
+            inputUI.loadJsonData(data);
+
+            // switch the screen
+            changeScreen(appState.display.fastReloadScreen);
+
+            if (appState.display.autoLoadSolution) {
+                // Use setTimeout to ensure the UI has finished its render cycle
+                setTimeout(() => {
+                    let uiClass = (appState.display.fastReloadScreen === ScreenState.DESIGN) ? designUI : exportUI;
+                    if (uiClass) {
+                        const targetSolutionIndex = appState.savedAnneals.findIndex(anneal => anneal.title === appState.display.testSolutionName);
+                        if (targetSolutionIndex !== -1) {
+                            uiClass.viewSavedAnneal(targetSolutionIndex);
+                        } else {
+                            console.error(`Fast Reload Error: Could not find '${appState.display.testSolutionName}' in the loaded data.`);
+                        }
+                    }
+                }, 0);
+            }
+        })
+        .catch(error => console.error('Error loading test data:', error));
 }
 
 function draw() {
@@ -106,49 +127,105 @@ function keyPressed() {
         if (key === '~') {
             // toggle export button visibility
             inputUI.html.exportButton.toggleClass('hidden');
+        } else {
+            // Handle brush controls
+            inputUI.handleKeyPress(key);
         }
     }
     // Design screen key commands
     else if (appState.currentScreen == ScreenState.DESIGN) {
         if (key === 'd') {
             // toggle dev mode on and off
-            devMode = !devMode;
-            numGrow = 0;
+            appState.display.devMode = !appState.display.devMode;
+            // reset step counters
+            appState.display.numGrow = 0;
+            appState.display.curveStep = 0;
             if (appState.currentAnneal && appState.currentAnneal.finalSolution) {
                 designUI.displayResult();
             }
         }
-        else if (key === 'g' && devMode) {
-            // advance one growth at a time in dev mode
-            numGrow++;
+        else if (key === 'g' && appState.display.devMode) {
+            appState.display.numGrow++;
             designUI.displayResult();
+        }
+        // Arrow key handling for shape movement
+        else if (keyCode === LEFT_ARROW) {
+            designUI.handleArrowKey('left');
+        }
+        else if (keyCode === RIGHT_ARROW) {
+            designUI.handleArrowKey('right');
+        }
+        else if (keyCode === UP_ARROW) {
+            designUI.handleArrowKey('up');
+        }
+        else if (keyCode === DOWN_ARROW) {
+            designUI.handleArrowKey('down');
         }
     }
     // Export screen key commands
     else if (appState.currentScreen == ScreenState.EXPORT) {
         if (key === 'd') {
-            // toggle dev mode on and off
-            devMode = !devMode;
-            appEvents.emit('resetToLayoutView');
+            // toggle dev mode on and off (shows extra detail in current view)
+            appState.display.devMode = !appState.display.devMode;
+
+            // redraw current view with updated devMode
+            clear();
+            background(255);
+
+            // use BoardRenderer for board exports
+            if (exportUI.currExport) {
+                const renderConfig = exportUI._buildBoardRenderConfig();
+                if (exportUI.showingLayout) {
+                    // prep layout data
+                    if (exportUI.currExport.sheetOutline.length === 0 || exportUI.currExport.cutList.length === 0 || exportUI.currExport.etchList.length === 0) {
+                        exportUI.currExport.prepLayout();
+                    }
+                    exportUI.boardRenderer.renderLayout(
+                        exportUI.currExport.cutList,
+                        exportUI.currExport.etchList,
+                        exportUI.currExport.sheetOutline,
+                        renderConfig
+                    );
+                } else {
+                    exportUI.boardRenderer.renderCase(
+                        exportUI.currExport.boards,
+                        exportUI.currExport.cellular,
+                        renderConfig
+                    );
+                }
+            }
+        }
+    }
+}
+
+function keyReleased() {
+    if (appState.currentScreen === ScreenState.DESIGN) {
+        if (keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW ||
+            keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
+            designUI.stopArrowKeyRepeat();
         }
     }
 }
 
 function mousePressed() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.selectInputSquare(mouseX, mouseY);
+        inputUI.paintAtPosition(mouseX, mouseY);
+    } else if (appState.currentScreen == ScreenState.DESIGN) {
+        designUI.handleCanvasClick(mouseX, mouseY);
     }
 }
 
 function mouseDragged() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.selectInputSquare(mouseX, mouseY, true);
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.paintAtPosition(mouseX, mouseY, true);
     }
 }
 
-function mouseReleased() {
+function mouseMoved() {
     if (appState.currentScreen == ScreenState.INPUT) {
-        inputUI.eraseMode = "first";
+        inputUI.updateMouseGridPosition(mouseX, mouseY);
+        inputUI.drawInputGrid();
     }
 }
 
@@ -196,6 +273,49 @@ function updateButton(button, enabled) {
     }
 }
 
+function initTooltips() {
+    // JS tooltip system — uses mouseover (bubbles) with delegation.
+    // Appends a fixed-position div to <body> to escape overflow clipping.
+    let tooltipEl = null;
+    let currentTarget = null;
+
+    function showTooltip(target) {
+        if (currentTarget === target) return;
+        hideTooltip();
+        currentTarget = target;
+
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'tooltip-popup';
+        tooltipEl.textContent = target.getAttribute('data-tooltip');
+        document.body.appendChild(tooltipEl);
+
+        const rect = target.getBoundingClientRect();
+        tooltipEl.style.left = (rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2) + 'px';
+        tooltipEl.style.top = (rect.top - tooltipEl.offsetHeight - 4) + 'px';
+    }
+
+    function hideTooltip() {
+        if (tooltipEl) {
+            tooltipEl.remove();
+            tooltipEl = null;
+        }
+        currentTarget = null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        // Guard: e.target may be a non-Element (text node, SVG path, etc.)
+        const el = e.target instanceof Element ? e.target : e.target.parentElement;
+        if (!el) { hideTooltip(); return; }
+
+        const target = el.closest('[data-tooltip]');
+        if (target) {
+            showTooltip(target);
+        } else {
+            hideTooltip();
+        }
+    });
+}
+
 //== data export functions
 function handleFileExport() {
     // export saved shapes and solutions
@@ -209,7 +329,6 @@ function handleFileExport() {
         let annealsCopy = appState.savedAnneals.map(anneal => {
             return {
                 ...anneal,
-                solutionHistory: [], // temporarily set to empty to reduce file size
                 finalSolution: anneal.finalSolution.toDataObject()
             };
         });

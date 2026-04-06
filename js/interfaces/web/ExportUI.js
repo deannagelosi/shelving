@@ -8,6 +8,10 @@ class ExportUI {
         // flags
         this.showingLayout = true;
 
+        //== renderer instances
+        this.solutionRenderer = new SolutionRenderer();
+        this.boardRenderer = new BoardRenderer();
+
         //== initialize UI elements
         this.initSidebarButtons();
         this.initExportSettings();
@@ -22,10 +26,10 @@ class ExportUI {
             }
         });
 
-        // listen for requests from Export.js for additional sheets
-        appEvents.on('addSheetRequested', () => {
-            let numSheets = parseInt(this.html.numSheetsInput.value());
-            this.html.numSheetsInput.value(numSheets + 1);
+        // listen for requests from Export.js to adjust sheet count
+        // Updates the hidden numSheets input when export system calculates optimal count
+        appEvents.on('adjustSheetsRequested', ({ optimalSheets }) => {
+            this.html.numSheetsInput.value(optimalSheets);
         });
 
         // listen for requests from Export.js to refresh layout
@@ -33,11 +37,11 @@ class ExportUI {
             this.prepareExportData();
         });
 
-        // listen for requests to reset to layout view (dev mode toggle)
-        appEvents.on('resetToLayoutView', () => {
-            this.showingLayout = true;
-            this.handleShow();
+        // listen for material type changes to update UI
+        appEvents.on('materialTypeChanged', ({ materialType }) => {
+            this.updateMaterialTypeUI(materialType);
         });
+
     }
 
     computeState() {
@@ -63,109 +67,50 @@ class ExportUI {
     }
 
     initExportSettings() {
-        // create settings elements (hidden until screen is shown)
-
         // bind prepareExportData to this instance of the input values
         this.prepareExportData = this.prepareExportData.bind(this);
-        // Material Thickness Input
-        this.html.sheetThicknessGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.sheetThicknessLabel = createSpan('Material Thickness (in)')
-            .parent(this.html.sheetThicknessGroup)
-            .addClass('input-label');
-        this.html.sheetThicknessInput = createInput('0.23')
-            .parent(this.html.sheetThicknessGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '0.13')
-            .attribute('max', '0.5')
-            .attribute('step', '0.01')
-            .input(this.prepareExportData);
 
-        // Case Depth Input
-        this.html.caseDepthGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.caseDepthLabel = createSpan('Case Depth (in)')
-            .parent(this.html.caseDepthGroup)
-            .addClass('input-label');
-        this.html.caseDepthInput = createInput('3')
-            .parent(this.html.caseDepthGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('max', '10')
-            .attribute('step', '0.5')
-            .input(this.prepareExportData);
+        // session-only cache of user-edited setting values, keyed by setting name
+        // (shared-name fields stay persistent across material toggles)
+        this.settingValueCache = {};
 
-        // Kerf Input
-        this.html.kerfGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.kerfLabel = createSpan('Kerf Width')
-            .parent(this.html.kerfGroup)
-            .addClass('input-label');
-        this.html.kerfInput = createInput('0')
-            .parent(this.html.kerfGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '0')
-            .attribute('max', '.04')
-            .attribute('step', '0.01')
-            .input(this.prepareExportData);
+        // Material Type dropdown (full width) - always present
+        this.html.materialTypeGroup = createDiv()
+            .addClass('settings-group hidden');
+        this.html.materialTypeLabel = createSpan('Material Type')
+            .parent(this.html.materialTypeGroup)
+            .addClass('settings-label');
 
-        // Number of Pin/Slots Selector
-        this.html.pinSlotGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.pinSlotLabel = createSpan('# of pin/slots')
-            .parent(this.html.pinSlotGroup)
-            .addClass('input-label');
-        this.html.pinSlotSelect = createSelect()
-            .parent(this.html.pinSlotGroup)
-            .addClass('input-field')
-            .changed(this.prepareExportData);
-        this.html.pinSlotSelect.option('2', '2');
-        this.html.pinSlotSelect.option('1', '1');
+        // Create layout row for material type select
+        const materialTypeRow = createDiv()
+            .addClass('dimensions-row')
+            .parent(this.html.materialTypeGroup);
 
-        // Sheet Dimensions Input
-        this.html.sheetDimensionsGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.sheetDimensionsLabel = createSpan('Sheet Dimensions (width x height)')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-label');
-        this.html.sheetWidthInput = createInput('30')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
-        this.html.sheetHeightInput = createInput('28')
-            .parent(this.html.sheetDimensionsGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
-            .attribute('min', '1')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
+        // Create column for the select
+        const materialTypeColumn = createDiv()
+            .addClass('dimension-column')
+            .parent(materialTypeRow);
 
-        // Number of Sheets Input
-        this.html.numSheetsGroup = createDiv()
-            .addClass('export-selector hidden');
-        this.html.numSheetsLabel = createSpan('Number of Sheets')
-            .parent(this.html.numSheetsGroup)
-            .addClass('input-label');
+        this.html.materialTypeSelect = createSelect()
+            .parent(materialTypeColumn)
+            .addClass('settings-select')
+            .changed(() => this.handleMaterialTypeChange());
+        this.html.materialTypeSelect.option('Plywood', 'plywood-laser');
+        this.html.materialTypeSelect.option('Acrylic', 'acrylic-laser');
+
+
+        // Number of Sheets (hidden - automatically managed by export system)
         this.html.numSheetsInput = createInput('1')
-            .parent(this.html.numSheetsGroup)
-            .addClass('input-field')
-            .attribute('type', 'number')
+            .style('display', 'none')
+            .attribute('type', 'hidden')
             .attribute('min', '1')
-            .attribute('max', '10')
-            .attribute('step', '1')
-            .input(this.prepareExportData);
+            .attribute('max', '50');
 
-        // buttons for settings
+        // Buttons for settings - always present
         this.html.buttonList = createDiv()
             .addClass('export-button-list hidden');
 
-        this.html.showButton = createButton('Show Case')
+        this.html.showButton = createButton('Show Shelving')
             .parent(this.html.buttonList)
             .addClass('button primary-button')
             .attribute('disabled', '')
@@ -177,30 +122,196 @@ class ExportUI {
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadDXF());
 
-        this.html.downloadCaseButton = createButton('Download Case Plan')
+        this.html.downloadCaseButton = createButton('Download Shelving Plan')
             .parent(this.html.buttonList)
             .addClass('button secondary-button')
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadCase());
+
+        // Initialize with empty containers and element maps
+        this.html.materialContainers = {};
+        this.materialElementMaps = {};
+    }
+
+    buildUIForMaterial(materialType) {
+        // Clear existing material-specific UI
+        this.clearMaterialUI();
+
+        if (!MATERIAL_CONFIGS || !MATERIAL_CONFIGS[materialType]) {
+            console.error(`Material config not found for: ${materialType}`);
+            return;
+        }
+
+        const materialConfig = MATERIAL_CONFIGS[materialType];
+        this.materialElementMaps[materialType] = {};
+
+        // Build containers first
+        this.buildContainers(materialType, materialConfig.containers);
+
+        // Build settings within containers
+        this.buildSettings(materialType, materialConfig.settings);
+    }
+
+    buildContainers(materialType, containerDefinitions) {
+        for (const [containerName, containerDef] of Object.entries(containerDefinitions)) {
+            // Create container group
+            const containerGroup = createDiv()
+                .addClass(containerDef.cssClass + ' hidden');
+
+            // Create container label
+            createSpan(containerDef.label)
+                .parent(containerGroup)
+                .addClass('settings-label');
+
+            // Create layout row for settings
+            const layoutRow = createDiv()
+                .addClass('dimensions-row')
+                .parent(containerGroup);
+
+            // Store references
+            this.html.materialContainers[containerName] = {
+                group: containerGroup,
+                row: layoutRow
+            };
+        }
+    }
+
+    getCurrentSettingValue(settingName, defaultValue) {
+        // Return cached user-edited value if present; otherwise the material default.
+        // Cache is session-only and keyed by setting name, so shared fields persist
+        // across material toggles.
+        return settingName in this.settingValueCache
+            ? this.settingValueCache[settingName]
+            : defaultValue;
+    }
+
+    buildSettings(materialType, settingsDefinitions) {
+        for (const setting of settingsDefinitions) {
+            const container = this.html.materialContainers[setting.container];
+            if (!container) {
+                console.error(`Container not found: ${setting.container}`);
+                continue;
+            }
+
+            // Create column for this setting
+            const column = createDiv()
+                .addClass('dimension-column')
+                .parent(container.row);
+
+            // Create label
+            createSpan(setting.label)
+                .addClass('dimension-label')
+                .parent(column);
+
+            // Create input element
+            let inputElement;
+            if (setting.inputType === 'select') {
+                inputElement = createSelect()
+                    .parent(column)
+                    .addClass(setting.cssClass);
+                inputElement.changed(() => {
+                    this.settingValueCache[setting.name] = inputElement.value();
+                    this.prepareExportData();
+                });
+
+                // Add options for select
+                if (setting.options) {
+                    for (const option of setting.options) {
+                        inputElement.option(option.text, option.value);
+                    }
+                }
+                // Use cached value if the user has edited it; otherwise the material default.
+                const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
+                inputElement.value(currentValue);
+            } else {
+                // Use cached value if the user has edited it; otherwise the material default.
+                const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
+                inputElement = createInput(currentValue.toString())
+                    .parent(column)
+                    .addClass(setting.cssClass)
+                    .attribute('type', setting.inputType);
+                inputElement.input(() => {
+                    this.settingValueCache[setting.name] = inputElement.value();
+                    this.prepareExportData();
+                });
+
+                // Add validation attributes
+                if (setting.validation) {
+                    for (const [attr, value] of Object.entries(setting.validation)) {
+                        inputElement.attribute(attr, value);
+                    }
+                }
+            }
+
+            // Store element reference
+            this.materialElementMaps[materialType][setting.name] = inputElement;
+        }
+    }
+
+    clearMaterialUI() {
+        // Remove all existing material containers
+        for (const containerName of Object.keys(this.html.materialContainers)) {
+            if (this.html.materialContainers[containerName].group) {
+                this.html.materialContainers[containerName].group.remove();
+            }
+        }
+        this.html.materialContainers = {};
     }
 
     //== show/hide functions
     // manage visibility and screen-specific setup
     show() {
-        // show all export screen elements
-        Object.values(this.html).forEach(element => element.removeClass('hidden'));
+        // show sidebar buttons
+        this.html.backButton.removeClass('hidden');
+        this.html.exportButton.removeClass('hidden');
+
+        // show basic UI elements (material type dropdown and buttons)
+        this.html.materialTypeGroup.removeClass('hidden');
+        this.html.buttonList.removeClass('hidden');
+
+
+        // initialize material type selection from appState and build UI
+        const currentMaterialType = appState.generationConfig.materialType;
+        this.html.materialTypeSelect.selected(currentMaterialType);
+
+        // build UI for current material type (setup phase, not triggered by user change)
+        this.buildUIForMaterial(currentMaterialType);
+        this.displaySettings();
 
         // reset the canvas
         clear();
         background(255);
 
-        // prepare active solution for export
-        this.prepareExportData();
+        // create the saved solutions list in left sidebar
+        this.createAnnealList();
+
+        // Update highlights to show current selection
+        this.updateSavedAnnealHighlight();
+
+        // If there's a selected solution, prepare its export data
+        if (appState.currentViewedAnnealIndex !== null) {
+            // Use setTimeout to ensure UI is fully built
+            setTimeout(() => {
+                this.prepareExportData();
+            }, 0);
+        }
     }
 
     hide() {
-        // hide all export screen elements
-        Object.values(this.html).forEach(element => element.addClass('hidden'));
+        // hide sidebar buttons
+        this.html.backButton.addClass('hidden');
+        this.html.exportButton.addClass('hidden');
+
+        // hide basic UI elements
+        this.html.materialTypeGroup.addClass('hidden');
+        this.html.buttonList.addClass('hidden');
+
+        // hide all material-specific containers
+        for (const containerData of Object.values(this.html.materialContainers)) {
+            if (containerData.group) {
+                containerData.group.addClass('hidden');
+            }
+        }
     }
 
     update() {
@@ -226,14 +337,43 @@ class ExportUI {
         // clear the list to ensure clean state
         htmlRefs.right.list.html('');
 
-        // add all settings elements to the right sidebar list section
-        this.html.sheetThicknessGroup.parent(htmlRefs.right.list);
-        this.html.caseDepthGroup.parent(htmlRefs.right.list);
-        this.html.kerfGroup.parent(htmlRefs.right.list);
-        this.html.pinSlotGroup.parent(htmlRefs.right.list);
-        this.html.sheetDimensionsGroup.parent(htmlRefs.right.list);
-        this.html.numSheetsGroup.parent(htmlRefs.right.list);
+        // add material type dropdown
+        this.html.materialTypeGroup.parent(htmlRefs.right.list);
+
+        // add all material-specific containers to the right sidebar
+        for (const containerData of Object.values(this.html.materialContainers)) {
+            if (containerData.group) {
+                containerData.group.parent(htmlRefs.right.list);
+                containerData.group.removeClass('hidden');
+            }
+        }
+
+        // add buttons
         this.html.buttonList.parent(htmlRefs.right.list);
+    }
+
+    handleMaterialTypeChange() {
+        const selectedMaterial = this.html.materialTypeSelect.value();
+
+        // Update appState using centralized method
+        appState.setMaterialType(selectedMaterial);
+    }
+
+
+    updateMaterialTypeUI(materialType) {
+        // Update dropdown to match state (in case changed from elsewhere)
+        if (this.html.materialTypeSelect) {
+            this.html.materialTypeSelect.selected(materialType);
+        }
+
+        // Build UI for the selected material
+        this.buildUIForMaterial(materialType);
+
+        // Display the new settings in the sidebar
+        this.displaySettings();
+
+        // Trigger export data preparation with new material settings
+        this.prepareExportData();
     }
 
     //== button handlers
@@ -254,10 +394,27 @@ class ExportUI {
         this.showingLayout = !this.showingLayout;
 
         if (this.showingLayout) {
-            this.currExport.previewLayout();
-            this.html.showButton.html('Show Case');
+            // Ensure layout data is prepared
+            if (this.currExport.sheetOutline.length === 0 || this.currExport.cutList.length === 0 || this.currExport.etchList.length === 0) {
+                this.currExport.prepLayout();
+            }
+            // Render using BoardRenderer
+            const renderConfig = this._buildBoardRenderConfig();
+            this.boardRenderer.renderLayout(
+                this.currExport.cutList,
+                this.currExport.etchList,
+                this.currExport.sheetOutline,
+                renderConfig
+            );
+            this.html.showButton.html('Show Shelving');
         } else {
-            this.currExport.previewCase();
+            // Render using BoardRenderer
+            const renderConfig = this._buildBoardRenderConfig();
+            this.boardRenderer.renderCase(
+                this.currExport.boards,
+                this.currExport.cellular,
+                renderConfig
+            );
             this.html.showButton.html('Show Layout');
         }
     }
@@ -279,35 +436,56 @@ class ExportUI {
     handleDownloadCase() {
         // draw case plan in an offscreen buffer and save it
         const imageBuffer = createGraphics(canvasWidth, canvasHeight);
-        this.currExport.previewCase(imageBuffer);
+        const renderConfig = this._buildBoardRenderConfig(imageBuffer);
+        this.boardRenderer.renderCase(
+            this.currExport.boards,
+            this.currExport.cellular,
+            renderConfig
+        );
 
-        // todo: file name  based on solution name
-        imageBuffer.save('case_preview.png');
+        // todo: file name based on solution name
+        imageBuffer.save('shelving_preview.png');
     }
+
     //== end button handlers
 
     showBoardTooLongError(longestBoard, sheetWidth) {
         clear();
         background(255);
+
+        // Set text stroke and fill
+        stroke(0);
+        strokeWeight(1);
         fill('red');
         textAlign(CENTER, CENTER);
         textSize(16);
+
+        // Show the error message
+        const spaceNeeded = longestBoard.getLength() + (this.currExport.gap * 2); // board + gaps
         text(
             `Error: Board #${longestBoard.id} is too long for the current sheet.\n\n` +
-            `Board Length: ${longestBoard.len.toFixed(2)} inches\n` +
+            `Board Length: ${longestBoard.getLength().toFixed(2)} inches\n` +
+            `Space Needed (including gaps): ${spaceNeeded.toFixed(2)} inches\n` +
             `Sheet Width: ${sheetWidth.toFixed(2)} inches\n\n` +
-            `Please increase the sheet width in the settings to continue.`,
+            `Please increase the sheet width to at least ${Math.ceil(spaceNeeded)} inches.`,
             width / 2,
             height / 2
         );
     }
 
     prepareExportData() {
-        // if no current anneal, set to first saved anneal
-        if (!appState.currentAnneal) {
-            let validIndex = appState.currentViewedAnnealIndex != null;
-            let index = validIndex ? appState.currentViewedAnnealIndex : 0;
+        // Check if there are any saved anneals
+        if (appState.savedAnneals.length === 0) {
+            console.log("No saved solutions to export");
+            return;
+        }
 
+        // Ensure we're using the currently viewed anneal if one is selected
+        if (appState.currentViewedAnnealIndex !== null && appState.savedAnneals[appState.currentViewedAnnealIndex]) {
+            appState.currentAnneal = appState.savedAnneals[appState.currentViewedAnnealIndex];
+        } else if (!appState.currentAnneal) {
+            // if no current anneal, set to first saved anneal
+            let index = 0;
             appState.currentViewedAnnealIndex = index;
             appState.currentAnneal = appState.savedAnneals[index];
         }
@@ -326,60 +504,100 @@ class ExportUI {
             cellularInstance = Cellular.fromDataObject(appState.currentAnneal.cellular, appState.currentAnneal.finalSolution);
         }
 
-        const caseDepth = parseFloat(this.html.caseDepthInput.value());
-        const sheetThickness = parseFloat(this.html.sheetThicknessInput.value());
-        const sheetWidth = parseFloat(this.html.sheetWidthInput.value());
-        const sheetHeight = parseFloat(this.html.sheetHeightInput.value());
-        const numSheets = parseInt(this.html.numSheetsInput.value());
-        const numPinSlots = parseInt(this.html.pinSlotSelect.value());
-        const kerf = parseFloat(this.html.kerfInput.value());
+        const materialType = this.html.materialTypeSelect.value();
+        const elementMap = this.materialElementMaps[materialType];
 
-        if (isNaN(sheetThickness) || isNaN(caseDepth) || isNaN(sheetWidth) || isNaN(sheetHeight) || isNaN(numSheets) || isNaN(numPinSlots) || isNaN(kerf)) {
+        if (!elementMap) {
+            console.error(`No element map found for material: ${materialType}`);
+            return;
+        }
+
+        // Get values from dynamic element map
+        const thicknessIn = elementMap['thicknessIn'] ? parseFloat(elementMap['thicknessIn'].value()) : 0.73;
+        const kerfIn = elementMap['kerfIn'] ? parseFloat(elementMap['kerfIn'].value()) : 0;
+        const caseDepthIn = elementMap['caseDepthIn'] ? parseFloat(elementMap['caseDepthIn'].value()) : 3;
+        const sheetWidthIn = elementMap['sheetWidthIn'] ? parseFloat(elementMap['sheetWidthIn'].value()) : 30;
+        const sheetHeightIn = elementMap['sheetHeightIn'] ? parseFloat(elementMap['sheetHeightIn'].value()) : 28;
+        const gapIn = elementMap['gapIn'] ? parseFloat(elementMap['gapIn'].value()) : 0.5;
+        const pinMode = elementMap['pinMode'] ? elementMap['pinMode'].value() : 'lazy';
+        const numSheets = parseInt(this.html.numSheetsInput.value());
+
+        // Validate inputs
+        const invalidInputs = [thicknessIn, kerfIn, caseDepthIn, sheetWidthIn, sheetHeightIn, gapIn, numSheets].some(val => isNaN(val));
+
+        if (invalidInputs) {
             alert("Invalid input for one or more fields");
             return;
         }
-        // get laser config
+
         const config = {
-            caseDepth,
-            sheetThickness,
-            sheetWidth,
-            sheetHeight,
+            sheetThicknessIn: thicknessIn,
+            sheetWidthIn,
+            sheetHeightIn,
             numSheets,
-            numPinSlots,
-            kerf
+            gapIn,
+            caseDepthIn,
+            pinMode,
+            kerfIn,
+            // Min wall length from generation config for unit conversion
+            minWallLength: appState.generationConfig.minWallLength || 1.0
         };
         // get cellular layout data (case lines)
         const cellData = cellularInstance;
-        // get spacing data
-        const buffer = appState.currentAnneal.finalSolution.buffer;
-        const yPadding = appState.currentAnneal.finalSolution.yPadding;
-        const xPadding = appState.currentAnneal.finalSolution.xPadding;
-        const spacing = { buffer, yPadding, xPadding };
+        // calculate layout properties using SolutionRenderer
+        const layoutProps = this.solutionRenderer.calculateLayoutProperties(appState.currentAnneal.finalSolution, canvasWidth, canvasHeight);
+        const spacing = {
+            buffer: layoutProps.buffer,
+            yPadding: layoutProps.yPadding,
+            xPadding: layoutProps.xPadding,
+            squareSize: layoutProps.squareSize
+        };
 
-        // create new export
-        this.currExport = new Export(cellData, spacing, config);
-        this.currExport.makeBoards();
+        // Create exporter configuration
+        const exportConfig = {
+            materialType: materialType,
+            spacing: spacing,
+            ...config // spread all config properties
+        };
 
-        // log the number of boards created
+        this.currExport = new BoardExporter(cellData, exportConfig);
+        this.currExport.generateBoards();
         console.log(`📊 Export: ${this.currExport.boards.length} boards created for solution "${appState.currentAnneal.title}"`);
 
-        // Check if any board is longer than the sheet width
+        // Check if any board is longer than the sheet width (accounting for gaps)
         const longestBoard = this.currExport.getLongestBoard();
-        if (longestBoard && longestBoard.len > sheetWidth) {
-            this.showBoardTooLongError(longestBoard, sheetWidth);
+        if (longestBoard && (longestBoard.getLength() + (this.currExport.gap * 2)) > sheetWidthIn) {
+            this.showBoardTooLongError(longestBoard, sheetWidthIn);
             updateButton(this.html.showButton, false);
             updateButton(this.html.downloadDXFButton, false);
             updateButton(this.html.downloadCaseButton, false);
             return;
         }
 
-        this.currExport.prepLayout();
+        // Setup layout if the exporter supports it
+        if (typeof this.currExport.setupSheets === 'function') {
+            this.currExport.setupSheets();
+        }
 
-        // preview the layout or chase
+        // preview the layout or case using BoardRenderer
+        const renderConfig = this._buildBoardRenderConfig();
         if (this.showingLayout) {
-            this.currExport.previewLayout();
+            // Ensure layout data is prepared
+            if (this.currExport.sheetOutline.length === 0 || this.currExport.cutList.length === 0 || this.currExport.etchList.length === 0) {
+                this.currExport.prepLayout();
+            }
+            this.boardRenderer.renderLayout(
+                this.currExport.cutList,
+                this.currExport.etchList,
+                this.currExport.sheetOutline,
+                renderConfig
+            );
         } else {
-            this.currExport.previewCase();
+            this.boardRenderer.renderCase(
+                this.currExport.boards,
+                this.currExport.cellular,
+                renderConfig
+            );
         }
 
         // enable show and download buttons
@@ -388,22 +606,70 @@ class ExportUI {
         updateButton(this.html.downloadCaseButton, true);
     }
 
+    _buildBoardRenderConfig(renderer = null) {
+        // Build configuration object for BoardRenderer
+        const isDevMode = appState.display.devMode;
+
+        return {
+            // Canvas dimensions
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+
+            // Sheet dimensions (for layout preview)
+            sheetWidthIn: this.currExport.sheetWidthIn,
+            sheetHeightIn: this.currExport.sheetHeightIn,
+            numSheets: this.currExport.numSheets,
+            fontSizeIn: this.currExport.fontSizeIn,
+
+            // Grid/pixel conversion (for case preview)
+            squareSize: this.currExport.squareSize,
+            buffer: this.currExport.buffer,
+            xPadding: this.currExport.xPadding,
+            yPadding: this.currExport.yPadding,
+            minWallLength: this.currExport.minWallLength,
+
+            // Debug/dev options
+            showDevMarkers: isDevMode,
+
+            // Optional offscreen renderer
+            renderer: renderer
+        };
+    }
+
     //== Display functions
     createAnnealList() {
         // create list of solutions to select
         if (!htmlRefs.left) return;
 
-        // clear the list
+        // clear the list and set up scrollable container structure
         htmlRefs.left.list.html('');
+        htmlRefs.left.list.addClass('sidebar-with-controls');
         this.savedAnnealElements = [];
+
+        // Create scrollable container for solutions
+        this.html.leftScrollContainer = createDiv()
+            .addClass('sidebar-scroll')
+            .parent(htmlRefs.left.list);
+
+        // Add the solutions label
+        createSpan('Solutions')
+            .addClass('settings-label')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
+
+        // Create the solutions container
+        this.html.solutionsContainer = createDiv()
+            .addClass('solutions-container')
+            .style('padding', '0 10px')
+            .parent(this.html.leftScrollContainer);
 
         // create the list
         for (let i = 0; i < appState.savedAnneals.length; i++) {
             let savedAnnealItem = createDiv().addClass('saved-anneal-item');
-            if (appState.currentAnneal === appState.savedAnneals[i]) {
+            if (i === appState.currentViewedAnnealIndex) {
                 savedAnnealItem.addClass('highlighted');
             }
-            savedAnnealItem.parent(htmlRefs.left.list);
+            savedAnnealItem.parent(this.html.solutionsContainer);
 
             let viewIcon = createImg('img/view.svg', 'View')
                 .addClass('icon-button')
@@ -434,13 +700,14 @@ class ExportUI {
 
     updateSavedAnnealHighlight() {
         for (let i = 0; i < this.savedAnnealElements.length; i++) {
-            if (appState.currentAnneal === appState.savedAnneals[i]) {
+            if (i === appState.currentViewedAnnealIndex) {
                 this.savedAnnealElements[i].addClass('highlighted');
             } else {
                 this.savedAnnealElements[i].removeClass('highlighted');
             }
         }
     }
+
 }
 
 // only export the class when in a Node.js environment (e.g., during Jest tests)
