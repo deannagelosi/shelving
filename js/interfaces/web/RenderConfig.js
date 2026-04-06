@@ -94,12 +94,12 @@ class RenderConfig {
     static getBrushColors() {
         return {
             draw: {
-                fill: 'rgba(0, 150, 255, 0.15)',
-                stroke: 'rgba(0, 150, 255, 1.0)'
+                fill: 'rgba(63, 80, 181, 0.15)',
+                stroke: 'rgba(63, 80, 181, 1.0)'
             },
             erase: {
-                fill: 'rgba(255, 100, 100, 0.15)',
-                stroke: 'rgba(255, 50, 50, 1.0)'
+                fill: 'rgba(220, 50, 50, 0.15)',
+                stroke: 'rgba(220, 50, 50, 1.0)'
             }
         };
     }

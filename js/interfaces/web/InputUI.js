@@ -39,6 +39,7 @@ class InputUI {
         this.initHeaderUI();
         this.initBottomUI();
         this.initSidebarButtons();
+        this.initToolbar();
 
         //== event listeners
         // listen for screen changes to manage visibility
@@ -76,6 +77,84 @@ class InputUI {
             .addClass('button primary-button hidden')
             .parent(htmlRefs.right.buttons)
             .mousePressed(() => this.handleNext());
+    }
+
+    initToolbar() {
+        const BRUSH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46.7 82.8" fill="currentColor"><path d="M43.6.4c-.4-.4-1-.7-1.6-.7H4.9c-.6,0-1.2.2-1.6.6s-.6,1-.6,1.6l1.2,24.3c0,.7.4,1.3.9,1.7v-5.6c0-.5.4-.9.9-.9h2.3s-.9-17.3-.9-17.3h32.5c0,0-.9,17.3-.9,17.3h2.3c.5,0,.9.4.9.9v5.6c.5-.4.9-1,.9-1.7l1.3-24.3c0-.6-.2-1.2-.6-1.6h0Z"/><path d="M23.3,83.1c-2.4,0-4.7-1-6.3-2.8-1.6-1.7-2.5-4.1-2.3-6.5l.9-14.6c.3-4.3-1.5-8.4-4.8-11.1l-5.5-4.5c-1.7-1.4-2.6-3.5-2.6-5.6v-7.9c0-1.5,1.2-2.7,2.8-2.7h36c1.5,0,2.7,1.3,2.7,2.8v7.9c0,2.2-1,4.2-2.7,5.6l-5.5,4.5c-3.3,2.7-5.1,6.9-4.8,11.1l.9,14.6c.1,2.4-.7,4.8-2.4,6.5-1.6,1.7-4,2.7-6.4,2.7h0ZM7,31.7v6.3c0,.9.4,1.7,1,2.2l5.5,4.5c4.4,3.6,6.8,9.1,6.4,14.8l-.9,14.6c0,1.2.3,2.4,1.2,3.2.8.9,1.9,1.4,3.1,1.4s2.3-.5,3.2-1.4c.8-.9,1.2-2,1.2-3.2l-.9-14.6c-.3-5.7,2.1-11.2,6.4-14.8l5.5-4.5c.7-.6,1.1-1.4,1.1-2.2v-6.3s-32.8,0-32.8,0Z"/><path d="M42,33.4H4.8c-1.2,0-2.2-1.1-2.2-2.3v-8.8c0-1.7,1.4-3.1,3.1-3.1h35.3c1.7,0,3.1,1.5,3.1,3.2v8.8c0,1.2-1,2.2-2.2,2.2h0ZM7,28.9h32.8c0,0,0-5.3,0-5.3H7c0,0,0,5.3,0,5.3Z"/><path d="M14.1,23.5c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/><path d="M23.5,23.6c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/><path d="M32.6,23.6c-1.2,0-2.2-1-2.2-2.2V1.9c0-1.2,1-2.2,2.2-2.2s2.2,1,2.2,2.2v19.5c0,1.2-1,2.2-2.2,2.2Z"/></svg>`;
+
+        const ERASER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 69.5 84.3" fill="currentColor"><path d="M34,2.7L2.2,57.7h0c-1.6,2.7-2,6-1.2,9,.8,3.1,2.8,5.7,5.6,7.2l13.8,7.9h0c2.7,1.6,6,2,9,1.2,3.1-.8,5.7-2.8,7.2-5.6l31.8-55c1.1-1.9.4-4.3-1.4-5.4L39.4,1.3c-1.9-1.1-4.3-.4-5.4,1.5h0ZM39.2,5.8l24.1,13.9h0c.9.5,1.2,1.7.7,2.5l-23.9,41.5c-.5.9-1.7,1.2-2.5.7l-24.1-13.9c-.5-.3-.8-.7-1-1.3-.1-.5,0-1.1.2-1.6L36.4,6.5c.3-.5.7-.8,1.3-1,.5-.1,1.1,0,1.6.2h0ZM11.4,53.9l24.1,13.9h0c.9.5,1.2,1.7.7,2.5l-3,5.3c-2.2,3.8-7,5.1-10.8,2.9l-13.7-7.9c-3.8-2.2-5.1-7-2.9-10.8l2.9-5.1c.3-.5.7-.8,1.3-1,.5-.1,1.1,0,1.6.2h0Z"/></svg>`;
+
+        // Create toolbar container
+        this.html.toolbar = createDiv()
+            .addClass('paint-toolbar hidden');
+
+        // Insert before canvas in flex layout
+        const mainDiv = document.getElementById('main-div');
+        const canvasDiv = document.getElementById('canvas-div');
+        mainDiv.insertBefore(this.html.toolbar.elt, canvasDiv);
+
+        // Brush button
+        this.html.brushButton = createDiv()
+            .addClass('tool-button selected')
+            .attribute('data-tooltip', 'Draw (D)')
+            .parent(this.html.toolbar)
+            .mousePressed(() => {
+                this.drawMode = true;
+                this.updateToolbarState();
+                this.drawInputGrid();
+            });
+        this.html.brushButton.elt.innerHTML = BRUSH_SVG;
+
+        // Eraser button
+        this.html.eraserButton = createDiv()
+            .addClass('tool-button eraser')
+            .attribute('data-tooltip', 'Erase (E)')
+            .parent(this.html.toolbar)
+            .mousePressed(() => {
+                this.drawMode = false;
+                this.updateToolbarState();
+                this.drawInputGrid();
+            });
+        this.html.eraserButton.elt.innerHTML = ERASER_SVG;
+
+        // Separator
+        createDiv()
+            .addClass('toolbar-separator')
+            .parent(this.html.toolbar);
+
+        // Large size icon
+        createDiv()
+            .addClass('size-icon large')
+            .attribute('data-tooltip', 'Increase  ]')
+            .parent(this.html.toolbar);
+
+        // Vertical brush size slider
+        this.html.brushSlider = createSlider(1, 8, this.brushSize, 1)
+            .addClass('brush-size-slider')
+            .parent(this.html.toolbar)
+            .input(() => {
+                this.brushSize = parseInt(this.html.brushSlider.value());
+                this.drawInputGrid();
+            });
+
+        // Small size icon
+        createDiv()
+            .addClass('size-icon')
+            .attribute('data-tooltip', 'Decrease  [')
+            .parent(this.html.toolbar);
+    }
+
+    updateToolbarState() {
+        if (this.drawMode) {
+            this.html.brushButton.addClass('selected');
+            this.html.eraserButton.removeClass('selected');
+        } else {
+            this.html.brushButton.removeClass('selected');
+            this.html.eraserButton.addClass('selected');
+        }
+        if (this.html.brushSlider) {
+            this.html.brushSlider.value(this.brushSize);
+        }
     }
 
     initHeaderUI() {
@@ -131,6 +210,7 @@ class InputUI {
             this.sliderStepSize
         )
             .addClass('slider')
+            .attribute('disabled', '')
             .parent(this.html.sliderDiv)
             .input(() => this.handleSliderChange());
         this.html.fillBox = createDiv()
@@ -483,13 +563,6 @@ class InputUI {
         stroke(colors.stroke);
         strokeWeight(2);
         rect(brushX, brushY, brushWidth, brushHeight);
-
-        // Draw brush info text
-        fill(0);
-        noStroke();
-        textSize(12);
-        textAlign(LEFT, TOP);
-        text(`Brush: ${this.brushSize}x${this.brushSize} | Mode: ${this.drawMode ? 'Draw (D)' : 'Erase (E)'} | Size: [ ]`, 10, 10);
     }
 
     displayShapeTitles() {
@@ -497,52 +570,34 @@ class InputUI {
         if (!htmlRefs.right) return;
         if (appState.currentScreen !== ScreenState.INPUT) return;
 
-        // clear the list
-        htmlRefs.right.list.html(''); // Clear all content
+        htmlRefs.right.list.html('');
         this.shapeTitleElements = [];
 
-        // create the list
         for (let i = 0; i < appState.shapes.length; i++) {
-            // create item row div
-            let titleRow = createDiv().addClass('shape-title');
-            titleRow.parent(htmlRefs.right.list);
+            let shapeItem = createDiv()
+                .addClass('saved-anneal-item')
+                .parent(htmlRefs.right.list);
 
-            // create view icon
-            let viewIcon = createImg('img/view.svg', 'View');
-            viewIcon.size(24, 24);
-            viewIcon.style('display', 'inline-block');
-            viewIcon.style('cursor', 'pointer');
-            viewIcon.style('margin-left', '5px');
-            viewIcon.addClass('icon-button');
-            viewIcon.parent(titleRow);
-            viewIcon.mousePressed(() => this.loadShape(i));
+            createImg('img/view.svg', 'Preview')
+                .addClass('icon-button')
+                .size(16, 16)
+                .parent(shapeItem)
+                .mousePressed(() => this.loadShape(i));
 
-            // create shape title
-            let shapeTitle = createP(`${appState.shapes[i].data.title}`);
-            shapeTitle.attribute('data-index', i);
-            shapeTitle.parent(titleRow);
+            createSpan(appState.shapes[i].data.title)
+                .addClass('anneal-title')
+                .parent(shapeItem);
 
-            // create trash icon
-            let trashIcon = createImg('img/trash.svg', '🗑️'); // emoji backup if svg issue
-            trashIcon.size(24, 24);
-            trashIcon.style('display', 'inline-block');
-            trashIcon.style('cursor', 'pointer');
-            trashIcon.style('margin-left', '5px');
-            trashIcon.addClass('icon-button');
-            trashIcon.parent(titleRow);
+            createImg('img/trash.svg', 'Delete')
+                .addClass('icon-button')
+                .size(16, 16)
+                .parent(shapeItem)
+                .mousePressed(() => {
+                    appState.shapes.splice(i, 1);
+                    appEvents.emit('stateChanged');
+                });
 
-            // save row for removal later
-            this.shapeTitleElements.push(titleRow);
-
-            // add event listener to trash icon
-            // removes a shape from the list
-            trashIcon.mousePressed(() => {
-                let index = shapeTitle.attribute('data-index');
-                appState.shapes.splice(index, 1);
-
-                // notify ui update manager
-                appEvents.emit('stateChanged');
-            });
+            this.shapeTitleElements.push(shapeItem);
         }
     }
 
@@ -551,14 +606,14 @@ class InputUI {
         const shape = appState.shapes[index];
         const shapeGrid = shape.data.highResShape;
 
-        // set grid to shape's actual dimensions (for preview display)
-        this.inputRows = shapeGrid.length;
-        this.inputCols = shapeGrid[0].length;
+        // Preserve canvas baseline dimensions; shape is placed within them.
+        const shapeHeight = shapeGrid.length;
+        const shapeWidth = shapeGrid[0].length;
+        if (shapeHeight > this.inputRows || shapeWidth > this.inputCols) {
+            console.warn(`Shape (${shapeWidth}x${shapeHeight}) exceeds canvas baseline (${this.inputCols}x${this.inputRows}); it will be clipped. Increase Image Height to view the full shape.`);
+        }
 
-        // recalculate grid sizing to fit canvas
-        this.calcGridSizing();
-
-        // clear current state with new grid dimensions
+        // clear current state (baseline dims unchanged)
         this.resetInputGrid();
         this.imgData = {};
 
@@ -687,20 +742,20 @@ class InputUI {
     handleKeyPress(key) {
         // Handle keyboard shortcuts for brush controls
         if (key === '[') {
-            // Decrease brush size
             this.brushSize = Math.max(1, this.brushSize - 1);
+            this.updateToolbarState();
             this.drawInputGrid();
         } else if (key === ']') {
-            // Increase brush size
-            this.brushSize = Math.min(9, this.brushSize + 1);
+            this.brushSize = Math.min(8, this.brushSize + 1);
+            this.updateToolbarState();
             this.drawInputGrid();
         } else if (key === 'd' || key === 'D') {
-            // Draw mode
             this.drawMode = true;
+            this.updateToolbarState();
             this.drawInputGrid();
         } else if (key === 'e' || key === 'E') {
-            // Erase mode
             this.drawMode = false;
+            this.updateToolbarState();
             this.drawInputGrid();
         }
     }
@@ -736,26 +791,21 @@ class InputUI {
 
     async resizeImg() {
         if (this.imgData.img) {
-            // First, calculate how many columns we need based on image aspect ratio
-            // Use current squareSize as initial estimate
-            const imageAspectRatio = this.imgData.img.width / this.imgData.img.height;
-            const estimatedCols = Math.ceil(this.inputRows * imageAspectRatio);
-            this.inputCols = estimatedCols;
-
-            // Recalculate all grid dimensions with both width and height constraints
-            // This may adjust squareSize to fit the grid in the canvas
-            this.calcGridSizing();
-
-            // Now scale the image to the final grid dimensions
+            // Preserve canvas baseline dimensions (square grid set by Image Height field).
+            // Scale the image so its height matches the grid height; derive width from aspect ratio.
             const aspectRatio = this.inputGridHeight / this.imgData.img.height;
             const newHeight = this.inputGridHeight;
             const newWidth = this.imgData.img.width * aspectRatio;
+
+            if (newWidth > this.inputGridWidth) {
+                console.warn(`Imported image width (${Math.round(newWidth)}px) exceeds canvas grid width (${this.inputGridWidth}px); image will overflow horizontally.`);
+            }
 
             await this.imgData.img.resize(newWidth, newHeight);
             this.imgData.original = await this.imgData.img.get();
             await this.imgData.original.loadPixels();
 
-            // Resize the input grid array to match new dimensions
+            // Reset the input grid array (baseline dims unchanged)
             this.resetInputGrid();
         }
     }
