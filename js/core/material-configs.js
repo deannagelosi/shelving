@@ -8,7 +8,7 @@ const COMMON_SETTINGS = {
         inputType: 'number',
         label: 'Thickness (in)',
         cssClass: 'dimension-input',
-        defaultValue: 0.73,
+        defaultValue: 0.25,
         validation: { min: 0.13, max: 0.75, step: 0.01 }
     },
     kerfIn: {
@@ -31,7 +31,7 @@ const COMMON_SETTINGS = {
     },
     sheetWidthIn: {
         name: 'sheetWidthIn',
-        defaultValue: 63,
+        defaultValue: 36,
         container: 'sheetLayout',
         inputType: 'number',
         label: 'Width (in)',
@@ -40,7 +40,7 @@ const COMMON_SETTINGS = {
     },
     sheetHeightIn: {
         name: 'sheetHeightIn',
-        defaultValue: 44,
+        defaultValue: 24,
         container: 'sheetLayout',
         inputType: 'number',
         label: 'Height (in)',
@@ -49,7 +49,7 @@ const COMMON_SETTINGS = {
     },
     gapIn: {
         name: 'gapIn',
-        defaultValue: 2,
+        defaultValue: 0.5,
         container: 'sheetLayout',
         inputType: 'number',
         label: 'Gap (in)',
@@ -64,11 +64,11 @@ const COMMON_CONTAINERS = {
         cssClass: 'settings-group'
     },
     caseProps: {
-        label: 'Case Properties',
+        label: 'Shelving Properties',
         cssClass: 'settings-group'
     },
     sheetLayout: {
-        label: 'Sheet Layout',
+        label: 'Sheet Size',
         cssClass: 'settings-group'
     }
 };

@@ -70,6 +70,10 @@ class ExportUI {
         // bind prepareExportData to this instance of the input values
         this.prepareExportData = this.prepareExportData.bind(this);
 
+        // session-only cache of user-edited setting values, keyed by setting name
+        // (shared-name fields stay persistent across material toggles)
+        this.settingValueCache = {};
+
         // Material Type dropdown (full width) - always present
         this.html.materialTypeGroup = createDiv()
             .addClass('settings-group hidden');
@@ -91,8 +95,8 @@ class ExportUI {
             .parent(materialTypeColumn)
             .addClass('settings-select')
             .changed(() => this.handleMaterialTypeChange());
-        this.html.materialTypeSelect.option('Plywood (Laser)', 'plywood-laser');
-        this.html.materialTypeSelect.option('Acrylic (Laser)', 'acrylic-laser');
+        this.html.materialTypeSelect.option('Plywood', 'plywood-laser');
+        this.html.materialTypeSelect.option('Acrylic', 'acrylic-laser');
 
 
         // Number of Sheets (hidden - automatically managed by export system)
@@ -106,7 +110,7 @@ class ExportUI {
         this.html.buttonList = createDiv()
             .addClass('export-button-list hidden');
 
-        this.html.showButton = createButton('Show Case')
+        this.html.showButton = createButton('Show Shelving')
             .parent(this.html.buttonList)
             .addClass('button primary-button')
             .attribute('disabled', '')
@@ -118,17 +122,11 @@ class ExportUI {
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadDXF());
 
-        this.html.downloadCaseButton = createButton('Download Case Plan')
+        this.html.downloadCaseButton = createButton('Download Shelving Plan')
             .parent(this.html.buttonList)
             .addClass('button secondary-button')
             .attribute('disabled', '')
             .mousePressed(() => this.handleDownloadCase());
-
-        this.html.downloadBoardDataButton = createButton('Download Board Data')
-            .parent(this.html.buttonList)
-            .addClass('button secondary-button')
-            .attribute('disabled', '')
-            .mousePressed(() => this.handleDownloadBoardData());
 
         // Initialize with empty containers and element maps
         this.html.materialContainers = {};
@@ -179,9 +177,12 @@ class ExportUI {
     }
 
     getCurrentSettingValue(settingName, defaultValue) {
-        // Get current value from appState, handling falsy values like 0 properly
-        // Add settings that need appState sync here as needed
-        return defaultValue;
+        // Return cached user-edited value if present; otherwise the material default.
+        // Cache is session-only and keyed by setting name, so shared fields persist
+        // across material toggles.
+        return settingName in this.settingValueCache
+            ? this.settingValueCache[settingName]
+            : defaultValue;
     }
 
     buildSettings(materialType, settingsDefinitions) {
@@ -207,8 +208,11 @@ class ExportUI {
             if (setting.inputType === 'select') {
                 inputElement = createSelect()
                     .parent(column)
-                    .addClass(setting.cssClass)
-                    .changed(this.prepareExportData);
+                    .addClass(setting.cssClass);
+                inputElement.changed(() => {
+                    this.settingValueCache[setting.name] = inputElement.value();
+                    this.prepareExportData();
+                });
 
                 // Add options for select
                 if (setting.options) {
@@ -216,17 +220,20 @@ class ExportUI {
                         inputElement.option(option.text, option.value);
                     }
                 }
-                // Use current appState value if available, otherwise use default
+                // Use cached value if the user has edited it; otherwise the material default.
                 const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
                 inputElement.value(currentValue);
             } else {
-                // Use current appState value if available, otherwise use default
+                // Use cached value if the user has edited it; otherwise the material default.
                 const currentValue = this.getCurrentSettingValue(setting.name, setting.defaultValue);
                 inputElement = createInput(currentValue.toString())
                     .parent(column)
                     .addClass(setting.cssClass)
-                    .attribute('type', setting.inputType)
-                    .input(this.prepareExportData);
+                    .attribute('type', setting.inputType);
+                inputElement.input(() => {
+                    this.settingValueCache[setting.name] = inputElement.value();
+                    this.prepareExportData();
+                });
 
                 // Add validation attributes
                 if (setting.validation) {
@@ -314,7 +321,6 @@ class ExportUI {
         updateButton(this.html.showButton, state.canShowDownload);
         updateButton(this.html.downloadDXFButton, state.canShowDownload);
         updateButton(this.html.downloadCaseButton, state.canShowDownload);
-        updateButton(this.html.downloadBoardDataButton, state.canShowDownload);
 
         // update dynamic lists
         this.createAnnealList();
@@ -400,7 +406,7 @@ class ExportUI {
                 this.currExport.sheetOutline,
                 renderConfig
             );
-            this.html.showButton.html('Show Case');
+            this.html.showButton.html('Show Shelving');
         } else {
             // Render using BoardRenderer
             const renderConfig = this._buildBoardRenderConfig();
@@ -438,61 +444,9 @@ class ExportUI {
         );
 
         // todo: file name based on solution name
-        imageBuffer.save('case_preview.png');
+        imageBuffer.save('shelving_preview.png');
     }
 
-    handleDownloadBoardData() {
-        // Extract board data with exact values used for DXF generation
-        const boardData = this.currExport.boards.map(board => ({
-            id: board.id,
-            length: board.getLength(),
-            orientation: board.orientation,
-            poi: {
-                start: board.poi.start,
-                end: board.poi.end,
-                tJoints: [...board.poi.tJoints], // Copy arrays to avoid references
-                xJoints: [...board.poi.xJoints]
-            },
-            // Include original coordinates for verification
-            coords: {
-                start: { ...board.coords.start },
-                end: { ...board.coords.end }
-            }
-        }));
-
-        // Include material settings for context
-        const debugData = {
-            timestamp: new Date().toISOString(),
-            materialType: this.currExport.materialType,
-            config: {
-                caseDepthIn: this.currExport.caseDepthIn,
-                sheetThicknessIn: this.currExport.sheetThicknessIn,
-                kerfIn: this.currExport.kerfIn,
-                numPinSlots: this.currExport.numPinSlots
-            },
-            boards: boardData,
-            // Include summary stats for quick verification
-            summary: {
-                totalBoards: boardData.length,
-                horizontalBoards: boardData.filter(b => b.orientation === 'x').length,
-                verticalBoards: boardData.filter(b => b.orientation === 'y').length,
-                totalTJoints: boardData.reduce((sum, b) => sum + b.poi.tJoints.length, 0),
-                totalXJoints: boardData.reduce((sum, b) => sum + b.poi.xJoints.length, 0)
-            }
-        };
-
-        // Download as JSON
-        const jsonString = JSON.stringify(debugData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'board_debug_data.json';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
     //== end button handlers
 
     showBoardTooLongError(longestBoard, sheetWidth) {

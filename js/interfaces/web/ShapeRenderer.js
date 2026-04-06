@@ -259,19 +259,6 @@ class ShapeRenderer {
             rect(blueBoxStartX, blueBoxStartY, blueBoxWidth, blueBoxHeight);
         }
 
-        // Add debug labels  
-        const bufferInches = config.customBufferSize;
-        const steps = Math.round(bufferInches * scaleFactor);
-
-        fill('red');
-        noStroke();
-        textAlign(LEFT, TOP);
-        textSize(RenderConfig.getTextSizes().debug);
-        text(`Hi-Res Buffer: ${bufferArrayWidth}x${bufferArrayHeight}`, redBoxStartX + 5, redBoxStartY + 5);
-        text(`Shape: ${originalWidth}x${originalHeight}`, redBoxStartX + 5, redBoxStartY + 20);
-        text(`Lo-Res Buffer: ${shape.data.bufferShape ? shape.data.bufferShape[0].length + 'x' + shape.data.bufferShape.length : 'N/A'}`, redBoxStartX + 5, redBoxStartY + 35);
-        text(`Buffer: ${bufferInches}" (${steps} steps)`, redBoxStartX + 5, redBoxStartY + 50);
-        text(`Bottom Buffer: ${config.centerShape ? 'ON' : 'OFF'}`, redBoxStartX + 5, redBoxStartY + 65);
     }
 
 
