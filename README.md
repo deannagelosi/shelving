@@ -2,13 +2,13 @@
 
 ![Uniquely Shaped Spaces workflow](img/software.png)
 
-Generate and fabricate custom shelving that “wraps” around the silhouettes of your own objects.
+Generate and fabricate custom shelving that "wraps" around the silhouettes of your own objects.
 
 [https://deannagelosi.github.io/shelving](https://deannagelosi.github.io/shelving)
 
 ---
 
-## What you’ll make
+## What you'll make
 
 - A custom shelf design where each object gets a fitted void (based on its 2D silhouette).
 - A fabrication-ready **DXF** export with **numbered parts** and **joinery** so you can laser cut and assemble.
@@ -28,15 +28,18 @@ Photo tips:
 - Keep camera angle consistent (straight-on is easiest).
 
 ### 2) Set your grid scale in the tool
-Before importing photos, set the grid dimensions based on the **largest object’s height and width**.
+Before importing photos, set the grid dimensions based on the **largest object's height and width**.
 
 - Each grid cell corresponds to a real-world unit (the interface uses a **¼-inch grid**), so your shelf dimensions will match your collection.
 
 ### 3) Upload each object and make a mask
+Before uploading: **crop the photo to the ruler** so the photo's height equals a known physical height in inches. Then **set the "Image Height (in)" field** on the Input screen to that height *before* clicking Upload — this is how the tool scales the image to real-world inches.
+
 For each object:
+- Set **Image Height (in)** to match the cropped photo's height.
 - Click **Upload image**.
 - Use the **auto-mask slider** to get a rough outline.
-- Refine by clicking individual grid cells to clean edges and fix gaps.
+- Use the **brush** and **eraser** tools to refine the mask — adjust the brush size with the slider for larger or finer edits.
 - **Save** the object (give it a name). Saved objects appear in your list for layout generation.
 
 Masking advice:
@@ -51,28 +54,35 @@ This is a powerful lever:
 - Removing one awkward object can dramatically improve the overall footprint.
 
 ### 5) Generate layouts (and curate)
-Click **Generate** to start a layout search. You’ll see an animation as objects rearrange.
+Click **Generate** to start a layout search. You'll see an animation as objects rearrange.
+
+Before generating, you can adjust **Design Options** to influence results:
+- **Target Aspect Ratio** biases layouts toward tall, square, or wide proportions.
+- **Custom Perimeter** constrains the layout to a specific width and height.
+- **Buffer** and **Min Wall Length** control the spacing around objects and the minimum board length.
 
 When it finishes:
 - The tool grows walls around/between objects automatically.
+- Click a shape to select it, then **nudge it with the arrow keys** to fine-tune placement. Click **Restore Layout** to revert to the original generated positions.
 - Click **Generate** again to explore more options.
 - **Save** any promising layouts so you can compare them side-by-side in the results stack.
 
 Curation tips:
 - If you have a target silhouette (tall/narrow vs. short/wide), you may need to:
   - try different subsets of objects, or
-  - re-mask one object to change how “dominant” it is in the layout.
-- Don’t aim for a single “perfect” run—treat generation as browsing a set of candidates.
+  - re-mask one object to change how "dominant" it is in the layout.
+- Don't aim for a single "perfect" run—treat generation as browsing a set of candidates.
 
 ### 6) Pick one layout and prep it for fabrication
 In the **Solutions/Export** panel:
 - Select the layout you want to fabricate.
+- Choose a **material** - plywood (finger-jointed assembly) or acrylic (welded, with etch-line guides). This affects board lengths, joint cuts, and export layers.
 - Set fabrication parameters (at minimum):
   - **Material thickness** (match your sheet stock)
-  - **Board depth** (how far the shelf extends out from the wall): set to your deepest object
+  - **Shelving depth** (how far the shelf extends out from the wall): set to your deepest object
   - **Kerf** (if you know it for your laser/material)
 
-Use **Show Design** (preview) to check:
+Use **Show Shelving** to check:
 - overall footprint (will it fit your space?)
 - part count and orientation
 - part numbering for assembly
@@ -83,7 +93,7 @@ Export a **DXF** containing all boards with joinery and labels.
 ### 8) Cut, assemble, and install
 Typical process:
 - Laser cut the parts from plywood or acrylic.
-- Dry-fit first, then glue/clamp in sub-assemblies (often easier than “all at once”).
+- Dry-fit first, then glue/clamp in sub-assemblies (often easier than "all at once").
 - Sand/finish as needed.
 - Install (wall-mounted or tabletop) and place objects.
 
@@ -93,14 +103,16 @@ Typical process:
 
 **My layouts are huge or awkward**
 - Try removing one object that forces a wide footprint.
-- Re-mask the “dominant” object (often the widest/tallest).
+- Re-mask the "dominant" object (often the widest/tallest).
 - Generate several times and compare saved candidates.
 
 **A void is too tight / too loose**
 - Adjust the mask for that object (smaller = tighter void; larger = more clearance).
 - Re-generate and re-check.
 
-**The tool doesn’t give me the “shape” I want (e.g., tall and narrow)**
+**The tool doesn't give me the "shape" I want (e.g., tall and narrow)**
+- Set the **Target Aspect Ratio** to bias toward that proportion.
+- Use **Custom Perimeter** to constrain the layout to specific dimensions.
 - Change the object subset (even removing one object can shift the overall aspect).
 - Generate many candidates, then curate.
 
